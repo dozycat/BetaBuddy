@@ -1,0 +1,203 @@
+from pydantic import BaseModel, Field
+from typing import Optional
+from datetime import datetime
+from enum import Enum
+
+
+# Enums
+class AnalysisStatusEnum(str, Enum):
+    PENDING = "pending"
+    PROCESSING = "processing"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+# Keypoint schemas
+class Keypoint(BaseModel):
+    x: float
+    y: float
+    z: Optional[float] = None
+    visibility: float
+    name: str
+
+
+class KeypointFrame(BaseModel):
+    keypoints: list[Keypoint]
+    timestamp: float
+
+
+# Frame analysis schemas
+class FrameAnalysis(BaseModel):
+    frame_number: int
+    timestamp: float
+    keypoints: list[Keypoint]
+    center_of_mass: tuple[float, float]
+    joint_angles: dict[str, float]
+    stability_score: float
+    velocity: Optional[tuple[float, float]] = None
+    acceleration: Optional[tuple[float, float]] = None
+
+
+# Video schemas
+class VideoBase(BaseModel):
+    original_filename: str
+
+
+class VideoCreate(VideoBase):
+    pass
+
+
+class VideoMetadata(BaseModel):
+    duration: Optional[float] = None
+    fps: Optional[float] = None
+    width: Optional[int] = None
+    height: Optional[int] = None
+    total_frames: Optional[int] = None
+
+
+class VideoResponse(BaseModel):
+    id: str
+    filename: str
+    original_filename: str
+    file_path: str
+    file_size: int
+    duration: Optional[float] = None
+    fps: Optional[float] = None
+    width: Optional[int] = None
+    height: Optional[int] = None
+    total_frames: Optional[int] = None
+    created_at: datetime
+    preview_url: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class VideoListResponse(BaseModel):
+    videos: list[VideoResponse]
+    total: int
+
+
+# Analysis task schemas
+class AnalysisTaskCreate(BaseModel):
+    video_id: str
+
+
+class AnalysisTaskResponse(BaseModel):
+    id: str
+    video_id: str
+    status: AnalysisStatusEnum
+    progress: float
+    error_message: Optional[str] = None
+    created_at: datetime
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    websocket_url: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+# Analysis result schemas
+class JointAngleStats(BaseModel):
+    left_elbow: dict[str, float]  # min, max, avg
+    right_elbow: dict[str, float]
+    left_shoulder: dict[str, float]
+    right_shoulder: dict[str, float]
+    left_hip: dict[str, float]
+    right_hip: dict[str, float]
+    left_knee: dict[str, float]
+    right_knee: dict[str, float]
+
+
+class SummaryStats(BaseModel):
+    avg_stability_score: float
+    min_stability_score: float
+    max_stability_score: float
+    avg_efficiency: float
+    max_velocity: float
+    max_acceleration: float
+    dyno_count: int
+    total_distance: float
+
+
+class AnalysisResultResponse(BaseModel):
+    id: str
+    task_id: str
+    total_frames_analyzed: int
+    avg_stability_score: Optional[float] = None
+    avg_efficiency: Optional[float] = None
+    max_acceleration: Optional[float] = None
+    dyno_detected: int = 0
+    summary_stats: Optional[dict] = None
+    joint_angle_stats: Optional[dict] = None
+    com_trajectory: Optional[list[tuple[float, float]]] = None
+    beta_suggestion: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class VideoAnalysisResult(BaseModel):
+    video_id: str
+    total_frames: int
+    fps: float
+    duration: float
+    frames: list[FrameAnalysis]
+    summary: dict
+    beta_suggestion: Optional[str] = None
+
+
+# Beta suggestion schemas
+class BetaSuggestionRequest(BaseModel):
+    video_id: str
+    metrics_summary: Optional[dict] = None
+
+
+class BetaSuggestionResponse(BaseModel):
+    video_id: str
+    suggestion: str
+    metrics_used: dict
+    generated_at: datetime
+
+
+# WebSocket message schemas
+class WSMessage(BaseModel):
+    type: str  # progress, keypoints, metrics, complete, error
+    data: dict
+
+
+class WSProgressMessage(BaseModel):
+    type: str = "progress"
+    progress: float
+    current_frame: int
+    total_frames: int
+
+
+class WSKeypointsMessage(BaseModel):
+    type: str = "keypoints"
+    frame_number: int
+    keypoints: list[Keypoint]
+    center_of_mass: tuple[float, float]
+
+
+class WSMetricsMessage(BaseModel):
+    type: str = "metrics"
+    frame_number: int
+    joint_angles: dict[str, float]
+    stability_score: float
+    velocity: Optional[tuple[float, float]] = None
+
+
+class WSCompleteMessage(BaseModel):
+    type: str = "complete"
+    task_id: str
+    result_id: str
+    summary: dict
+
+
+class WSErrorMessage(BaseModel):
+    type: str = "error"
+    message: str
+    details: Optional[str] = None

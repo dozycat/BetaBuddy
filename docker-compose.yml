@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: betabuddy-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/uploads:/app/uploads
+      - ./backend/betabuddy.db:/app/betabuddy.db
+    environment:
+      - DEBUG=false
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: betabuddy-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  # Optional: Redis for caching
+  # redis:
+  #   image: redis:alpine
+  #   container_name: betabuddy-redis
+  #   ports:
+  #     - "6379:6379"
+  #   restart: unless-stopped
+
+volumes:
+  uploads:
