@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { betaApi } from '../api/client';
 
 interface BetaSuggestionProps {
@@ -10,6 +11,7 @@ export const BetaSuggestion: React.FC<BetaSuggestionProps> = ({
   videoId,
   initialSuggestion,
 }) => {
+  const { t } = useTranslation();
   const [suggestion, setSuggestion] = useState<string | null>(initialSuggestion || null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,7 +24,7 @@ export const BetaSuggestion: React.FC<BetaSuggestionProps> = ({
       const result = await betaApi.getSuggestion(videoId);
       setSuggestion(result.suggestion);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to generate suggestion');
+      setError(err instanceof Error ? err.message : t('beta.failed'));
     } finally {
       setIsLoading(false);
     }
@@ -33,7 +35,7 @@ export const BetaSuggestion: React.FC<BetaSuggestionProps> = ({
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold flex items-center gap-2">
           <span className="text-2xl">💡</span>
-          AI Beta Suggestion
+          {t('beta.title')}
         </h3>
         <button
           onClick={handleGenerate}
@@ -62,12 +64,12 @@ export const BetaSuggestion: React.FC<BetaSuggestionProps> = ({
                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
                 />
               </svg>
-              Generating...
+              {t('beta.generating')}
             </span>
           ) : suggestion ? (
-            'Regenerate'
+            t('beta.regenerate')
           ) : (
-            'Generate Suggestion'
+            t('beta.generate')
           )}
         </button>
       </div>
@@ -109,8 +111,8 @@ export const BetaSuggestion: React.FC<BetaSuggestionProps> = ({
         </div>
       ) : (
         <div className="text-center py-8 text-gray-500">
-          <p>Click "Generate Suggestion" to get AI-powered climbing advice</p>
-          <p className="text-sm mt-2">Based on your movement analysis data</p>
+          <p>{t('beta.placeholder')}</p>
+          <p className="text-sm mt-2">{t('beta.basedOn')}</p>
         </div>
       )}
     </div>

@@ -1,4 +1,5 @@
 import React, { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { videoApi } from '../api/client';
 import type { Video } from '../types';
 
@@ -7,6 +8,7 @@ interface VideoUploaderProps {
 }
 
 export const VideoUploader: React.FC<VideoUploaderProps> = ({ onUploadComplete }) => {
+  const { t } = useTranslation();
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -14,7 +16,7 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({ onUploadComplete }
 
   const handleFile = async (file: File) => {
     if (!file.type.startsWith('video/')) {
-      setError('Please select a valid video file');
+      setError(t('upload.invalidFile'));
       return;
     }
 
@@ -26,7 +28,7 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({ onUploadComplete }
       const video = await videoApi.upload(file);
       onUploadComplete(video);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Upload failed');
+      setError(err instanceof Error ? err.message : t('upload.uploadFailed'));
     } finally {
       setIsUploading(false);
       setUploadProgress(0);
@@ -74,7 +76,7 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({ onUploadComplete }
       {isUploading ? (
         <div className="space-y-4">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto"></div>
-          <p className="text-gray-600">Uploading video...</p>
+          <p className="text-gray-600">{t('upload.uploading')}</p>
           {uploadProgress > 0 && (
             <div className="w-full bg-gray-200 rounded-full h-2">
               <div
@@ -101,13 +103,13 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({ onUploadComplete }
           </svg>
           <div>
             <p className="text-lg font-medium text-gray-700">
-              Drag and drop your climbing video here
+              {t('upload.dragAndDrop')}
             </p>
-            <p className="text-sm text-gray-500">or</p>
+            <p className="text-sm text-gray-500">{t('upload.or')}</p>
           </div>
           <label className="inline-block">
             <span className="px-4 py-2 bg-primary-500 text-white rounded-lg cursor-pointer hover:bg-primary-600 transition-colors">
-              Select File
+              {t('upload.selectFile')}
             </span>
             <input
               type="file"
@@ -117,7 +119,7 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({ onUploadComplete }
             />
           </label>
           <p className="text-xs text-gray-400">
-            Supported formats: MP4, AVI, MOV, MKV, WebM (max 500MB)
+            {t('upload.supportedFormats')}
           </p>
         </div>
       )}

@@ -1,4 +1,5 @@
 import React, { useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface VideoPlayerProps {
   src: string;
@@ -6,6 +7,7 @@ interface VideoPlayerProps {
 }
 
 export const VideoPlayer: React.FC<VideoPlayerProps> = ({ src, onTimeUpdate }) => {
+  const { t } = useTranslation();
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
@@ -28,7 +30,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ src, onTimeUpdate }) =
         controls
         className="w-full h-auto max-h-[500px]"
       >
-        Your browser does not support the video tag.
+        {t('video.unsupported')}
       </video>
     </div>
   );

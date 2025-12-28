@@ -5,6 +5,15 @@ import json
 from app.config import settings
 
 
+def get_current_model() -> str:
+    """Get the currently configured model from runtime config."""
+    try:
+        from app.api.routes.llm import get_current_model as _get_model
+        return _get_model()
+    except ImportError:
+        return settings.ollama_model
+
+
 BETA_PROMPT_TEMPLATE = """你是一位专业的攀岩教练，请根据以下视频分析数据，为攀岩者提供改进建议。
 
 ## 分析数据摘要
@@ -34,12 +43,23 @@ class OllamaClient:
     def __init__(
         self,
         base_url: str = settings.ollama_base_url,
-        model: str = settings.ollama_model,
+        model: Optional[str] = None,
         timeout: int = settings.llm_timeout,
     ):
         self.base_url = base_url.rstrip("/")
-        self.model = model
+        self.model = model or get_current_model()
         self.timeout = timeout
+
+    async def list_models(self) -> list[dict]:
+        """List all available models from Ollama."""
+        try:
+            async with httpx.AsyncClient(timeout=10) as client:
+                response = await client.get(f"{self.base_url}/api/tags")
+                response.raise_for_status()
+                data = response.json()
+                return data.get("models", [])
+        except Exception:
+            return []
 
     async def generate(self, prompt: str) -> Optional[str]:
         """

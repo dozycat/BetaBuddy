@@ -1,0 +1,120 @@
+{
+  "app": {
+    "name": "BetaBuddy",
+    "tagline": "AI驱动的攀岩视频分析"
+  },
+  "nav": {
+    "home": "首页",
+    "analysis": "分析",
+    "backToHome": "返回首页"
+  },
+  "home": {
+    "uploadVideo": "上传视频",
+    "yourVideos": "我的视频",
+    "features": "功能特点"
+  },
+  "upload": {
+    "dragAndDrop": "将攀岩视频拖放到这里",
+    "or": "或",
+    "selectFile": "选择文件",
+    "supportedFormats": "支持格式：MP4、AVI、MOV、MKV、WebM（最大500MB）",
+    "uploading": "正在上传视频...",
+    "invalidFile": "请选择有效的视频文件",
+    "uploadFailed": "上传失败"
+  },
+  "videoList": {
+    "noVideos": "还没有上传视频",
+    "getStarted": "上传视频开始分析",
+    "deleteVideo": "删除视频",
+    "confirmDelete": "确定要删除这个视频吗？"
+  },
+  "analysis": {
+    "videoAnalysis": "视频分析",
+    "startAnalysis": "开始分析",
+    "reAnalyze": "重新分析",
+    "readyToAnalyze": "准备分析",
+    "readyDescription": "点击「开始分析」进行姿态检测和生物力学计算",
+    "inProgress": "正在分析",
+    "processingFrames": "正在处理帧...",
+    "processingFrame": "正在处理第 {{frame}} 帧",
+    "detectingPose": "正在检测姿态关键点并计算生物力学指标...",
+    "failed": "分析失败",
+    "videoNotFound": "视频未找到"
+  },
+  "metrics": {
+    "stabilityScore": "稳定性评分",
+    "efficiency": "效率",
+    "duration": "时长",
+    "dynoMoves": "动态动作",
+    "maxVelocity": "最大速度",
+    "maxAcceleration": "最大加速度",
+    "totalDistance": "总距离",
+    "comTrajectory": "重心轨迹",
+    "avgJointAngles": "平均关节角度",
+    "jointAngleDetails": "关节角度详情",
+    "joint": "关节",
+    "min": "最小",
+    "avg": "平均",
+    "max": "最大",
+    "frame": "帧",
+    "xPosition": "X位置",
+    "yPosition": "Y位置",
+    "angle": "角度",
+    "resolution": "分辨率",
+    "fps": "帧率"
+  },
+  "joints": {
+    "leftElbow": "左肘",
+    "rightElbow": "右肘",
+    "leftShoulder": "左肩",
+    "rightShoulder": "右肩",
+    "leftHip": "左髋",
+    "rightHip": "右髋",
+    "leftKnee": "左膝",
+    "rightKnee": "右膝"
+  },
+  "beta": {
+    "title": "AI攀岩建议",
+    "generate": "生成建议",
+    "regenerate": "重新生成",
+    "generating": "生成中...",
+    "placeholder": "点击「生成建议」获取AI攀岩指导",
+    "basedOn": "基于您的动作分析数据",
+    "failed": "生成建议失败"
+  },
+  "features": {
+    "poseDetection": {
+      "title": "姿态检测",
+      "description": "使用MediaPipe进行33点人体关键点检测，精确追踪动作"
+    },
+    "biomechanics": {
+      "title": "生物力学分析",
+      "description": "实时计算重心、关节角度、速度和加速度"
+    },
+    "aiSuggestions": {
+      "title": "AI攀岩建议",
+      "description": "根据您的动作模式获取个性化攀岩技巧建议"
+    }
+  },
+  "language": {
+    "select": "语言",
+    "en": "英语",
+    "zh": "中文",
+    "es": "西班牙语",
+    "ja": "日语",
+    "ko": "韩语"
+  },
+  "video": {
+    "unsupported": "您的浏览器不支持视频标签。"
+  },
+  "common": {
+    "loading": "加载中...",
+    "error": "错误",
+    "success": "成功",
+    "cancel": "取消",
+    "confirm": "确认",
+    "close": "关闭",
+    "save": "保存",
+    "delete": "删除"
+  }
+}

@@ -1,0 +1,120 @@
+{
+  "app": {
+    "name": "BetaBuddy",
+    "tagline": "Análisis de video de escalada con IA"
+  },
+  "nav": {
+    "home": "Inicio",
+    "analysis": "Análisis",
+    "backToHome": "Volver al Inicio"
+  },
+  "home": {
+    "uploadVideo": "Subir Video",
+    "yourVideos": "Tus Videos",
+    "features": "Características"
+  },
+  "upload": {
+    "dragAndDrop": "Arrastra y suelta tu video de escalada aquí",
+    "or": "o",
+    "selectFile": "Seleccionar Archivo",
+    "supportedFormats": "Formatos soportados: MP4, AVI, MOV, MKV, WebM (máx 500MB)",
+    "uploading": "Subiendo video...",
+    "invalidFile": "Por favor selecciona un archivo de video válido",
+    "uploadFailed": "Error al subir"
+  },
+  "videoList": {
+    "noVideos": "No hay videos subidos",
+    "getStarted": "Sube un video para comenzar",
+    "deleteVideo": "Eliminar video",
+    "confirmDelete": "¿Estás seguro de que quieres eliminar este video?"
+  },
+  "analysis": {
+    "videoAnalysis": "Análisis de Video",
+    "startAnalysis": "Iniciar Análisis",
+    "reAnalyze": "Re-analizar",
+    "readyToAnalyze": "Listo para Analizar",
+    "readyDescription": "Haz clic en \"Iniciar Análisis\" para comenzar la detección de poses y cálculo biomecánico",
+    "inProgress": "Análisis en Progreso",
+    "processingFrames": "Procesando fotogramas...",
+    "processingFrame": "Procesando fotograma {{frame}}",
+    "detectingPose": "Detectando puntos clave de pose y calculando métricas biomecánicas...",
+    "failed": "Análisis fallido",
+    "videoNotFound": "Video no encontrado"
+  },
+  "metrics": {
+    "stabilityScore": "Puntuación de Estabilidad",
+    "efficiency": "Eficiencia",
+    "duration": "Duración",
+    "dynoMoves": "Movimientos Dinámicos",
+    "maxVelocity": "Velocidad Máxima",
+    "maxAcceleration": "Aceleración Máxima",
+    "totalDistance": "Distancia Total",
+    "comTrajectory": "Trayectoria del Centro de Masa",
+    "avgJointAngles": "Ángulos Articulares Promedio",
+    "jointAngleDetails": "Detalles de Ángulos Articulares",
+    "joint": "Articulación",
+    "min": "Mín",
+    "avg": "Prom",
+    "max": "Máx",
+    "frame": "Fotograma",
+    "xPosition": "Posición X",
+    "yPosition": "Posición Y",
+    "angle": "Ángulo",
+    "resolution": "Resolución",
+    "fps": "FPS"
+  },
+  "joints": {
+    "leftElbow": "Codo Izquierdo",
+    "rightElbow": "Codo Derecho",
+    "leftShoulder": "Hombro Izquierdo",
+    "rightShoulder": "Hombro Derecho",
+    "leftHip": "Cadera Izquierda",
+    "rightHip": "Cadera Derecha",
+    "leftKnee": "Rodilla Izquierda",
+    "rightKnee": "Rodilla Derecha"
+  },
+  "beta": {
+    "title": "Sugerencia Beta con IA",
+    "generate": "Generar Sugerencia",
+    "regenerate": "Regenerar",
+    "generating": "Generando...",
+    "placeholder": "Haz clic en \"Generar Sugerencia\" para obtener consejos de escalada con IA",
+    "basedOn": "Basado en tus datos de análisis de movimiento",
+    "failed": "Error al generar sugerencia"
+  },
+  "features": {
+    "poseDetection": {
+      "title": "Detección de Poses",
+      "description": "Detección de 33 puntos clave del cuerpo usando MediaPipe para seguimiento preciso de movimientos"
+    },
+    "biomechanics": {
+      "title": "Análisis Biomecánico",
+      "description": "Calcula centro de masa, ángulos articulares, velocidad y aceleración en tiempo real"
+    },
+    "aiSuggestions": {
+      "title": "Sugerencias Beta con IA",
+      "description": "Obtén consejos personalizados de escalada basados en tus patrones de movimiento"
+    }
+  },
+  "language": {
+    "select": "Idioma",
+    "en": "Inglés",
+    "zh": "Chino",
+    "es": "Español",
+    "ja": "Japonés",
+    "ko": "Coreano"
+  },
+  "video": {
+    "unsupported": "Tu navegador no soporta la etiqueta de video."
+  },
+  "common": {
+    "loading": "Cargando...",
+    "error": "Error",
+    "success": "Éxito",
+    "cancel": "Cancelar",
+    "confirm": "Confirmar",
+    "close": "Cerrar",
+    "save": "Guardar",
+    "delete": "Eliminar"
+  }
+}

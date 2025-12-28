@@ -1,0 +1,120 @@
+{
+  "app": {
+    "name": "BetaBuddy",
+    "tagline": "AI搭載クライミング動画分析"
+  },
+  "nav": {
+    "home": "ホーム",
+    "analysis": "分析",
+    "backToHome": "ホームに戻る"
+  },
+  "home": {
+    "uploadVideo": "動画をアップロード",
+    "yourVideos": "あなたの動画",
+    "features": "機能"
+  },
+  "upload": {
+    "dragAndDrop": "クライミング動画をここにドラッグ＆ドロップ",
+    "or": "または",
+    "selectFile": "ファイルを選択",
+    "supportedFormats": "対応形式：MP4、AVI、MOV、MKV、WebM（最大500MB）",
+    "uploading": "動画をアップロード中...",
+    "invalidFile": "有効な動画ファイルを選択してください",
+    "uploadFailed": "アップロードに失敗しました"
+  },
+  "videoList": {
+    "noVideos": "動画がアップロードされていません",
+    "getStarted": "動画をアップロードして開始",
+    "deleteVideo": "動画を削除",
+    "confirmDelete": "この動画を削除してもよろしいですか？"
+  },
+  "analysis": {
+    "videoAnalysis": "動画分析",
+    "startAnalysis": "分析開始",
+    "reAnalyze": "再分析",
+    "readyToAnalyze": "分析準備完了",
+    "readyDescription": "「分析開始」をクリックしてポーズ検出とバイオメカニクス計算を開始",
+    "inProgress": "分析中",
+    "processingFrames": "フレームを処理中...",
+    "processingFrame": "フレーム {{frame}} を処理中",
+    "detectingPose": "ポーズキーポイントを検出し、バイオメカニクス指標を計算中...",
+    "failed": "分析に失敗しました",
+    "videoNotFound": "動画が見つかりません"
+  },
+  "metrics": {
+    "stabilityScore": "安定性スコア",
+    "efficiency": "効率",
+    "duration": "時間",
+    "dynoMoves": "ダイナミックムーブ",
+    "maxVelocity": "最大速度",
+    "maxAcceleration": "最大加速度",
+    "totalDistance": "総移動距離",
+    "comTrajectory": "重心軌跡",
+    "avgJointAngles": "平均関節角度",
+    "jointAngleDetails": "関節角度詳細",
+    "joint": "関節",
+    "min": "最小",
+    "avg": "平均",
+    "max": "最大",
+    "frame": "フレーム",
+    "xPosition": "X位置",
+    "yPosition": "Y位置",
+    "angle": "角度",
+    "resolution": "解像度",
+    "fps": "FPS"
+  },
+  "joints": {
+    "leftElbow": "左肘",
+    "rightElbow": "右肘",
+    "leftShoulder": "左肩",
+    "rightShoulder": "右肩",
+    "leftHip": "左股関節",
+    "rightHip": "右股関節",
+    "leftKnee": "左膝",
+    "rightKnee": "右膝"
+  },
+  "beta": {
+    "title": "AIベータ提案",
+    "generate": "提案を生成",
+    "regenerate": "再生成",
+    "generating": "生成中...",
+    "placeholder": "「提案を生成」をクリックしてAIクライミングアドバイスを取得",
+    "basedOn": "あなたの動作分析データに基づく",
+    "failed": "提案の生成に失敗しました"
+  },
+  "features": {
+    "poseDetection": {
+      "title": "ポーズ検出",
+      "description": "MediaPipeを使用した33点の身体キーポイント検出で正確な動作追跡"
+    },
+    "biomechanics": {
+      "title": "バイオメカニクス分析",
+      "description": "重心、関節角度、速度、加速度をリアルタイムで計算"
+    },
+    "aiSuggestions": {
+      "title": "AIベータ提案",
+      "description": "動作パターンに基づいたパーソナライズされたクライミングアドバイス"
+    }
+  },
+  "language": {
+    "select": "言語",
+    "en": "英語",
+    "zh": "中国語",
+    "es": "スペイン語",
+    "ja": "日本語",
+    "ko": "韓国語"
+  },
+  "video": {
+    "unsupported": "お使いのブラウザはビデオタグをサポートしていません。"
+  },
+  "common": {
+    "loading": "読み込み中...",
+    "error": "エラー",
+    "success": "成功",
+    "cancel": "キャンセル",
+    "confirm": "確認",
+    "close": "閉じる",
+    "save": "保存",
+    "delete": "削除"
+  }
+}

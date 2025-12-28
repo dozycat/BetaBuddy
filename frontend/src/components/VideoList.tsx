@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Video } from '../types';
 
 interface VideoListProps {
@@ -14,6 +15,8 @@ export const VideoList: React.FC<VideoListProps> = ({
   onDelete,
   selectedId,
 }) => {
+  const { t } = useTranslation();
+
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -30,8 +33,8 @@ export const VideoList: React.FC<VideoListProps> = ({
   if (videos.length === 0) {
     return (
       <div className="text-center py-8 text-gray-500">
-        <p>No videos uploaded yet</p>
-        <p className="text-sm mt-1">Upload a video to get started</p>
+        <p>{t('videoList.noVideos')}</p>
+        <p className="text-sm mt-1">{t('videoList.getStarted')}</p>
       </div>
     );
   }
@@ -72,7 +75,7 @@ export const VideoList: React.FC<VideoListProps> = ({
                   onDelete(video.id);
                 }}
                 className="p-2 text-gray-400 hover:text-red-500 transition-colors"
-                title="Delete video"
+                title={t('videoList.deleteVideo')}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path

@@ -8,7 +8,7 @@ export default defineConfig({
     port: 3000,
     headers: {
       // Allow eval() for Vite HMR in development
-      'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self' ws: wss:; img-src 'self' data: blob:; media-src 'self' blob:;",
+      'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self' ws: wss: http://localhost:8000 ws://localhost:8000; img-src 'self' data: blob:; media-src 'self' blob:;",
     },
     proxy: {
       '/api': {
@@ -16,8 +16,10 @@ export default defineConfig({
         changeOrigin: true,
       },
       '/ws': {
-        target: 'ws://localhost:8000',
+        target: 'http://localhost:8000',
+        changeOrigin: true,
         ws: true,
+        rewrite: (path) => path,
       },
       '/uploads': {
         target: 'http://localhost:8000',

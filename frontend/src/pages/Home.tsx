@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { VideoUploader } from '../components/VideoUploader';
 import { VideoList } from '../components/VideoList';
+import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { videoApi } from '../api/client';
 import type { Video } from '../types';
 
 export const Home: React.FC = () => {
+  const { t } = useTranslation();
   const [videos, setVideos] = useState<Video[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
@@ -35,7 +38,7 @@ export const Home: React.FC = () => {
   };
 
   const handleDeleteVideo = async (videoId: string) => {
-    if (!confirm('Are you sure you want to delete this video?')) {
+    if (!confirm(t('videoList.confirmDelete'))) {
       return;
     }
 
@@ -52,8 +55,13 @@ export const Home: React.FC = () => {
       {/* Header */}
       <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-6">
-          <h1 className="text-3xl font-bold text-gray-900">BetaBuddy</h1>
-          <p className="mt-1 text-gray-500">AI-powered climbing video analysis</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">{t('app.name')}</h1>
+              <p className="mt-1 text-gray-500">{t('app.tagline')}</p>
+            </div>
+            <LanguageSwitcher />
+          </div>
         </div>
       </header>
 
@@ -62,13 +70,13 @@ export const Home: React.FC = () => {
         <div className="grid lg:grid-cols-2 gap-8">
           {/* Upload section */}
           <div>
-            <h2 className="text-xl font-semibold mb-4">Upload Video</h2>
+            <h2 className="text-xl font-semibold mb-4">{t('home.uploadVideo')}</h2>
             <VideoUploader onUploadComplete={handleUploadComplete} />
           </div>
 
           {/* Video list section */}
           <div>
-            <h2 className="text-xl font-semibold mb-4">Your Videos</h2>
+            <h2 className="text-xl font-semibold mb-4">{t('home.yourVideos')}</h2>
             {isLoading ? (
               <div className="flex items-center justify-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500" />
@@ -85,22 +93,22 @@ export const Home: React.FC = () => {
 
         {/* Features section */}
         <div className="mt-12">
-          <h2 className="text-xl font-semibold mb-6">Features</h2>
+          <h2 className="text-xl font-semibold mb-6">{t('home.features')}</h2>
           <div className="grid md:grid-cols-3 gap-6">
             <FeatureCard
               icon="🦴"
-              title="Pose Detection"
-              description="33-point body keypoint detection using MediaPipe for accurate movement tracking"
+              title={t('features.poseDetection.title')}
+              description={t('features.poseDetection.description')}
             />
             <FeatureCard
               icon="⚖️"
-              title="Biomechanics Analysis"
-              description="Calculate center of mass, joint angles, velocity, and acceleration in real-time"
+              title={t('features.biomechanics.title')}
+              description={t('features.biomechanics.description')}
             />
             <FeatureCard
               icon="💡"
-              title="AI Beta Suggestions"
-              description="Get personalized climbing tips based on your movement patterns"
+              title={t('features.aiSuggestions.title')}
+              description={t('features.aiSuggestions.description')}
             />
           </div>
         </div>

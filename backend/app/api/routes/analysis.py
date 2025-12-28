@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 import json
+import cv2
 
 from app.config import settings
 from app.models.database import get_db, Video, AnalysisTask, AnalysisResult, AnalysisStatus
@@ -21,6 +22,15 @@ router = APIRouter()
 
 # Store for active analysis tasks and their connections
 active_tasks: dict[str, dict] = {}
+
+# WebSocket manager reference (set by main.py to avoid circular import)
+ws_manager = None
+
+
+def set_ws_manager(manager):
+    """Set the WebSocket manager reference."""
+    global ws_manager
+    ws_manager = manager
 
 
 async def run_analysis(
@@ -55,7 +65,6 @@ async def run_analysis(
 
                 for frame_num, frame in video.read_frames():
                     # Convert BGR to RGB
-                    import cv2
                     frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
                     # Detect pose
@@ -69,14 +78,38 @@ async def run_analysis(
                             keypoints=keypoints,
                         )
 
-                        # Store frame data (subset for storage efficiency)
+                        # Store frame data with keypoints for video annotation
+                        keypoints_data = [kp.to_dict() for kp in keypoints]
                         frame_data.append({
                             "frame_number": frame_metrics.frame_number,
                             "timestamp": frame_metrics.timestamp,
                             "center_of_mass": frame_metrics.center_of_mass,
                             "joint_angles": frame_metrics.joint_angles,
                             "stability_score": frame_metrics.stability_score,
+                            "velocity": frame_metrics.velocity,
+                            "acceleration": frame_metrics.acceleration,
+                            "keypoints": keypoints_data,
                         })
+
+                        # Broadcast real-time keypoints and metrics via WebSocket
+                        if ws_manager is not None:
+                            # Send keypoints
+                            keypoints_data = [kp.to_dict() for kp in keypoints]
+                            await ws_manager.send_keypoints(
+                                task_id=task_id,
+                                frame_number=frame_num,
+                                keypoints=keypoints_data,
+                                center_of_mass=frame_metrics.center_of_mass,
+                            )
+                            # Send metrics (CoM, joint angles, velocity, acceleration)
+                            await ws_manager.send_metrics(
+                                task_id=task_id,
+                                frame_number=frame_num,
+                                joint_angles=frame_metrics.joint_angles,
+                                stability_score=frame_metrics.stability_score,
+                                velocity=frame_metrics.velocity,
+                                acceleration=frame_metrics.acceleration,
+                            )
 
                     # Update progress
                     progress = (frame_num + 1) / total_frames * 100
@@ -127,7 +160,23 @@ async def run_analysis(
             task.completed_at = datetime.utcnow()
             await db.commit()
 
-            # Notify completion
+            # Notify completion via WebSocket with full summary
+            if ws_manager is not None:
+                await ws_manager.send_complete(
+                    task_id=task_id,
+                    result_id=analysis_result.id,
+                    summary={
+                        "duration": summary.duration,
+                        "total_frames": summary.total_frames,
+                        "avg_stability_score": summary.avg_stability_score,
+                        "avg_efficiency": summary.avg_efficiency,
+                        "max_velocity": summary.max_velocity,
+                        "max_acceleration": summary.max_acceleration,
+                        "dyno_count": summary.dyno_count,
+                    },
+                )
+
+            # Notify completion (legacy)
             if task_id in active_tasks:
                 active_tasks[task_id]["status"] = "completed"
                 active_tasks[task_id]["result_id"] = analysis_result.id
@@ -256,6 +305,13 @@ async def get_analysis_results(
             detail="Analysis result not found",
         )
 
+    # Build annotated video URL if available
+    annotated_video_url = None
+    if analysis_result.annotated_video_path:
+        from pathlib import Path
+        annotated_filename = Path(analysis_result.annotated_video_path).name
+        annotated_video_url = f"/uploads/{annotated_filename}"
+
     return AnalysisResultResponse(
         id=analysis_result.id,
         task_id=analysis_result.task_id,
@@ -268,6 +324,7 @@ async def get_analysis_results(
         joint_angle_stats=analysis_result.joint_angle_stats,
         com_trajectory=analysis_result.com_trajectory,
         beta_suggestion=analysis_result.beta_suggestion,
+        annotated_video_url=annotated_video_url,
         created_at=analysis_result.created_at,
     )
 

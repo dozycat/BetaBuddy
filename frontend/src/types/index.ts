@@ -71,13 +71,32 @@ export interface BetaSuggestion {
 }
 
 export interface WSMessage {
-  type: 'progress' | 'complete' | 'error' | 'status' | 'pong';
+  type: 'progress' | 'keypoints' | 'metrics' | 'complete' | 'error' | 'status' | 'pong';
   data?: {
     progress?: number;
     current_frame?: number;
     status?: string;
     task_id?: string;
     result_id?: string;
+    // Keypoints message data
+    frame_number?: number;
+    keypoints?: Array<{
+      x: number;
+      y: number;
+      z?: number;
+      visibility?: number;
+      name?: string;
+    }>;
+    center_of_mass?: [number, number];
+    // Metrics message data
+    joint_angles?: Record<string, number>;
+    stability_score?: number;
+    velocity?: [number, number];
+    acceleration?: [number, number];
+    // Complete message data
+    summary?: SummaryStats;
+    // Error message data
+    message?: string;
   };
   message?: string;
 }

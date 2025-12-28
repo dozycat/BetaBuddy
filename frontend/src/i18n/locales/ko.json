@@ -1,0 +1,120 @@
+{
+  "app": {
+    "name": "BetaBuddy",
+    "tagline": "AI 기반 클라이밍 영상 분석"
+  },
+  "nav": {
+    "home": "홈",
+    "analysis": "분석",
+    "backToHome": "홈으로 돌아가기"
+  },
+  "home": {
+    "uploadVideo": "영상 업로드",
+    "yourVideos": "내 영상",
+    "features": "기능"
+  },
+  "upload": {
+    "dragAndDrop": "클라이밍 영상을 여기에 드래그 앤 드롭하세요",
+    "or": "또는",
+    "selectFile": "파일 선택",
+    "supportedFormats": "지원 형식: MP4, AVI, MOV, MKV, WebM (최대 500MB)",
+    "uploading": "영상 업로드 중...",
+    "invalidFile": "유효한 영상 파일을 선택해 주세요",
+    "uploadFailed": "업로드 실패"
+  },
+  "videoList": {
+    "noVideos": "업로드된 영상이 없습니다",
+    "getStarted": "영상을 업로드하여 시작하세요",
+    "deleteVideo": "영상 삭제",
+    "confirmDelete": "이 영상을 삭제하시겠습니까?"
+  },
+  "analysis": {
+    "videoAnalysis": "영상 분석",
+    "startAnalysis": "분석 시작",
+    "reAnalyze": "재분석",
+    "readyToAnalyze": "분석 준비 완료",
+    "readyDescription": "\"분석 시작\"을 클릭하여 포즈 감지 및 생체역학 계산을 시작하세요",
+    "inProgress": "분석 진행 중",
+    "processingFrames": "프레임 처리 중...",
+    "processingFrame": "프레임 {{frame}} 처리 중",
+    "detectingPose": "포즈 키포인트 감지 및 생체역학 지표 계산 중...",
+    "failed": "분석 실패",
+    "videoNotFound": "영상을 찾을 수 없습니다"
+  },
+  "metrics": {
+    "stabilityScore": "안정성 점수",
+    "efficiency": "효율성",
+    "duration": "시간",
+    "dynoMoves": "다이나믹 무브",
+    "maxVelocity": "최대 속도",
+    "maxAcceleration": "최대 가속도",
+    "totalDistance": "총 이동 거리",
+    "comTrajectory": "무게중심 궤적",
+    "avgJointAngles": "평균 관절 각도",
+    "jointAngleDetails": "관절 각도 상세",
+    "joint": "관절",
+    "min": "최소",
+    "avg": "평균",
+    "max": "최대",
+    "frame": "프레임",
+    "xPosition": "X 위치",
+    "yPosition": "Y 위치",
+    "angle": "각도",
+    "resolution": "해상도",
+    "fps": "FPS"
+  },
+  "joints": {
+    "leftElbow": "왼쪽 팔꿈치",
+    "rightElbow": "오른쪽 팔꿈치",
+    "leftShoulder": "왼쪽 어깨",
+    "rightShoulder": "오른쪽 어깨",
+    "leftHip": "왼쪽 엉덩이",
+    "rightHip": "오른쪽 엉덩이",
+    "leftKnee": "왼쪽 무릎",
+    "rightKnee": "오른쪽 무릎"
+  },
+  "beta": {
+    "title": "AI 베타 제안",
+    "generate": "제안 생성",
+    "regenerate": "재생성",
+    "generating": "생성 중...",
+    "placeholder": "\"제안 생성\"을 클릭하여 AI 클라이밍 조언을 받으세요",
+    "basedOn": "동작 분석 데이터 기반",
+    "failed": "제안 생성 실패"
+  },
+  "features": {
+    "poseDetection": {
+      "title": "포즈 감지",
+      "description": "MediaPipe를 사용한 33점 신체 키포인트 감지로 정확한 동작 추적"
+    },
+    "biomechanics": {
+      "title": "생체역학 분석",
+      "description": "무게중심, 관절 각도, 속도, 가속도를 실시간으로 계산"
+    },
+    "aiSuggestions": {
+      "title": "AI 베타 제안",
+      "description": "동작 패턴에 기반한 개인 맞춤 클라이밍 팁 제공"
+    }
+  },
+  "language": {
+    "select": "언어",
+    "en": "영어",
+    "zh": "중국어",
+    "es": "스페인어",
+    "ja": "일본어",
+    "ko": "한국어"
+  },
+  "video": {
+    "unsupported": "브라우저가 비디오 태그를 지원하지 않습니다."
+  },
+  "common": {
+    "loading": "로딩 중...",
+    "error": "오류",
+    "success": "성공",
+    "cancel": "취소",
+    "confirm": "확인",
+    "close": "닫기",
+    "save": "저장",
+    "delete": "삭제"
+  }
+}

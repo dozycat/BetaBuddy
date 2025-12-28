@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Float, Integer, DateTime, Text, JSON, ForeignKey, Enum as SQLEnum
+from sqlalchemy import Column, String, Float, Integer, DateTime, Text, JSON, ForeignKey, Enum as SQLEnum, text
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker, declarative_base, relationship
 import enum
@@ -76,6 +76,9 @@ class AnalysisResult(Base):
     # Beta suggestion
     beta_suggestion = Column(Text, nullable=True)
 
+    # Annotated video
+    annotated_video_path = Column(String, nullable=True)
+
     created_at = Column(DateTime, default=datetime.utcnow)
 
     task = relationship("AnalysisTask", back_populates="results")
@@ -84,6 +87,25 @@ class AnalysisResult(Base):
 async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+        # Run migrations for existing databases
+        if await _column_missing(conn, 'analysis_results', 'annotated_video_path'):
+            try:
+                await conn.execute(
+                    text("ALTER TABLE analysis_results ADD COLUMN annotated_video_path TEXT")
+                )
+            except Exception:
+                pass  # Column might already exist
+
+
+async def _column_missing(conn, table: str, column: str) -> bool:
+    """Check if a column is missing from a table (SQLite specific)."""
+    try:
+        result = await conn.execute(text(f"PRAGMA table_info({table})"))
+        columns = [row[1] for row in result.fetchall()]
+        return column not in columns
+    except Exception:
+        return False
 
 
 async def get_db():

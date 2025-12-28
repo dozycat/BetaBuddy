@@ -5,8 +5,9 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
 from app.models.database import init_db
-from app.api.routes import videos, analysis, beta
-from app.api.websocket import router as ws_router
+from app.api.routes import videos, analysis, beta, llm
+from app.api.websocket import router as ws_router, manager as ws_manager
+from app.api.routes.analysis import set_ws_manager
 
 
 @asynccontextmanager
@@ -14,6 +15,8 @@ async def lifespan(app: FastAPI):
     # Startup
     settings.upload_dir.mkdir(parents=True, exist_ok=True)
     await init_db()
+    # Wire up WebSocket manager for real-time metrics broadcasting
+    set_ws_manager(ws_manager)
     yield
     # Shutdown
 
@@ -41,6 +44,7 @@ app.mount("/uploads", StaticFiles(directory=str(settings.upload_dir)), name="upl
 app.include_router(videos.router, prefix="/api/v1/videos", tags=["videos"])
 app.include_router(analysis.router, prefix="/api/v1", tags=["analysis"])
 app.include_router(beta.router, prefix="/api/v1/beta", tags=["beta"])
+app.include_router(llm.router, prefix="/api/v1/llm", tags=["llm"])
 app.include_router(ws_router, tags=["websocket"])
 
 

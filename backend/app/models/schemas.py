@@ -133,10 +133,27 @@ class AnalysisResultResponse(BaseModel):
     joint_angle_stats: Optional[dict] = None
     com_trajectory: Optional[list[tuple[float, float]]] = None
     beta_suggestion: Optional[str] = None
+    annotated_video_url: Optional[str] = None
     created_at: datetime
 
     class Config:
         from_attributes = True
+
+
+class AnnotateVideoRequest(BaseModel):
+    """Request to generate annotated video."""
+    draw_keypoints: bool = True
+    draw_skeleton: bool = True
+    draw_com: bool = True
+    draw_com_trajectory: bool = True
+    draw_metrics_overlay: bool = True
+
+
+class AnnotateVideoResponse(BaseModel):
+    """Response after generating annotated video."""
+    video_id: str
+    annotated_video_url: str
+    message: str
 
 
 class VideoAnalysisResult(BaseModel):

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   LineChart,
   Line,
@@ -20,6 +21,7 @@ interface MetricsPanelProps {
 }
 
 export const MetricsPanel: React.FC<MetricsPanelProps> = ({ result }) => {
+  const { t } = useTranslation();
   const summary = result.summary_stats;
   const jointAngles = result.joint_angle_stats;
 
@@ -57,24 +59,24 @@ export const MetricsPanel: React.FC<MetricsPanelProps> = ({ result }) => {
       {/* Summary Metrics */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <MetricCard
-          label="Stability Score"
+          label={t('metrics.stabilityScore')}
           value={(summary?.avg_stability_score || 0) * 100}
           unit="%"
           color={(summary?.avg_stability_score || 0) > 0.7 ? 'text-green-600' : 'text-orange-500'}
         />
         <MetricCard
-          label="Efficiency"
+          label={t('metrics.efficiency')}
           value={(summary?.avg_efficiency || 0) * 100}
           unit="%"
           color={(summary?.avg_efficiency || 0) > 0.7 ? 'text-green-600' : 'text-orange-500'}
         />
         <MetricCard
-          label="Duration"
+          label={t('metrics.duration')}
           value={summary?.duration || 0}
           unit="s"
         />
         <MetricCard
-          label="Dyno Moves"
+          label={t('metrics.dynoMoves')}
           value={summary?.dyno_count || 0}
           color={summary?.dyno_count ? 'text-blue-600' : undefined}
         />
@@ -83,17 +85,17 @@ export const MetricsPanel: React.FC<MetricsPanelProps> = ({ result }) => {
       {/* Additional Metrics */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         <MetricCard
-          label="Max Velocity"
+          label={t('metrics.maxVelocity')}
           value={summary?.max_velocity || 0}
           unit="units/s"
         />
         <MetricCard
-          label="Max Acceleration"
+          label={t('metrics.maxAcceleration')}
           value={summary?.max_acceleration || 0}
           unit="units/s²"
         />
         <MetricCard
-          label="Total Distance"
+          label={t('metrics.totalDistance')}
           value={summary?.total_distance || 0}
           unit="units"
         />
@@ -104,25 +106,25 @@ export const MetricsPanel: React.FC<MetricsPanelProps> = ({ result }) => {
         {/* Center of Mass Trajectory */}
         {trajectoryData.length > 0 && (
           <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
-            <h3 className="text-lg font-semibold mb-4">Center of Mass Trajectory</h3>
+            <h3 className="text-lg font-semibold mb-4">{t('metrics.comTrajectory')}</h3>
             <ResponsiveContainer width="100%" height={250}>
               <LineChart data={trajectoryData}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="frame" label={{ value: 'Frame', position: 'bottom' }} />
+                <XAxis dataKey="frame" label={{ value: t('metrics.frame'), position: 'bottom' }} />
                 <YAxis domain={[0, 1]} />
                 <Tooltip />
                 <Line
                   type="monotone"
                   dataKey="x"
                   stroke="#3b82f6"
-                  name="X Position"
+                  name={t('metrics.xPosition')}
                   dot={false}
                 />
                 <Line
                   type="monotone"
                   dataKey="y"
                   stroke="#f97316"
-                  name="Y Position"
+                  name={t('metrics.yPosition')}
                   dot={false}
                 />
               </LineChart>
@@ -133,14 +135,14 @@ export const MetricsPanel: React.FC<MetricsPanelProps> = ({ result }) => {
         {/* Joint Angles Radar */}
         {radarData.length > 0 && (
           <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
-            <h3 className="text-lg font-semibold mb-4">Average Joint Angles</h3>
+            <h3 className="text-lg font-semibold mb-4">{t('metrics.avgJointAngles')}</h3>
             <ResponsiveContainer width="100%" height={250}>
               <RadarChart data={radarData}>
                 <PolarGrid />
                 <PolarAngleAxis dataKey="joint" tick={{ fontSize: 10 }} />
                 <PolarRadiusAxis domain={[0, 180]} />
                 <Radar
-                  name="Angle"
+                  name={t('metrics.angle')}
                   dataKey="angle"
                   stroke="#22c55e"
                   fill="#22c55e"
@@ -156,15 +158,15 @@ export const MetricsPanel: React.FC<MetricsPanelProps> = ({ result }) => {
       {/* Detailed Joint Angle Stats */}
       {jointAngles && (
         <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
-          <h3 className="text-lg font-semibold mb-4">Joint Angle Details</h3>
+          <h3 className="text-lg font-semibold mb-4">{t('metrics.jointAngleDetails')}</h3>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left py-2 px-3">Joint</th>
-                  <th className="text-right py-2 px-3">Min</th>
-                  <th className="text-right py-2 px-3">Avg</th>
-                  <th className="text-right py-2 px-3">Max</th>
+                  <th className="text-left py-2 px-3">{t('metrics.joint')}</th>
+                  <th className="text-right py-2 px-3">{t('metrics.min')}</th>
+                  <th className="text-right py-2 px-3">{t('metrics.avg')}</th>
+                  <th className="text-right py-2 px-3">{t('metrics.max')}</th>
                 </tr>
               </thead>
               <tbody>

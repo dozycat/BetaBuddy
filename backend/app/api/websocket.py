@@ -2,6 +2,7 @@ import asyncio
 import json
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from sqlalchemy import select
+from typing import Optional
 
 from app.models.database import async_session, AnalysisTask, AnalysisStatus
 from app.api.routes.analysis import active_tasks
@@ -37,6 +38,64 @@ class ConnectionManager:
     async def broadcast(self, message: dict):
         for task_id in self.active_connections:
             await self.send_message(message, task_id)
+
+    async def send_keypoints(
+        self,
+        task_id: str,
+        frame_number: int,
+        keypoints: list[dict],
+        center_of_mass: tuple[float, float],
+    ):
+        """Send keypoints data to connected clients."""
+        message = {
+            "type": "keypoints",
+            "data": {
+                "frame_number": frame_number,
+                "keypoints": keypoints,
+                "center_of_mass": center_of_mass,
+            },
+        }
+        await self.send_message(message, task_id)
+
+    async def send_metrics(
+        self,
+        task_id: str,
+        frame_number: int,
+        joint_angles: dict[str, float],
+        stability_score: float,
+        velocity: Optional[tuple[float, float]] = None,
+        acceleration: Optional[tuple[float, float]] = None,
+    ):
+        """Send real-time metrics to connected clients."""
+        message = {
+            "type": "metrics",
+            "data": {
+                "frame_number": frame_number,
+                "joint_angles": joint_angles,
+                "stability_score": stability_score,
+                "velocity": velocity,
+                "acceleration": acceleration,
+            },
+        }
+        await self.send_message(message, task_id)
+
+    async def send_complete(
+        self,
+        task_id: str,
+        result_id: str,
+        summary: dict,
+    ):
+        """Send analysis complete message with summary."""
+        message = {
+            "type": "complete",
+            "data": {
+                "task_id": task_id,
+                "result_id": result_id,
+                "status": "completed",
+                "summary": summary,
+            },
+        }
+        await self.send_message(message, task_id)
 
 
 manager = ConnectionManager()

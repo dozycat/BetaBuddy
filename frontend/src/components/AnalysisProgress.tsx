@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface AnalysisProgressProps {
   progress: number;
@@ -11,10 +12,12 @@ export const AnalysisProgress: React.FC<AnalysisProgressProps> = ({
   currentFrame,
   status,
 }) => {
+  const { t } = useTranslation();
+
   return (
     <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-100">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold">Analysis in Progress</h3>
+        <h3 className="text-lg font-semibold">{t('analysis.inProgress')}</h3>
         <span className="text-sm text-gray-500 capitalize">{status}</span>
       </div>
 
@@ -22,7 +25,7 @@ export const AnalysisProgress: React.FC<AnalysisProgressProps> = ({
         {/* Progress bar */}
         <div>
           <div className="flex items-center justify-between text-sm mb-1">
-            <span className="text-gray-600">Processing frames...</span>
+            <span className="text-gray-600">{t('analysis.processingFrames')}</span>
             <span className="font-medium">{progress.toFixed(1)}%</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-3">
@@ -52,13 +55,13 @@ export const AnalysisProgress: React.FC<AnalysisProgressProps> = ({
                 d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
               />
             </svg>
-            <span>Processing frame {currentFrame}</span>
+            <span>{t('analysis.processingFrame', { frame: currentFrame })}</span>
           </div>
         </div>
 
         {/* Info */}
         <div className="text-xs text-gray-400">
-          Detecting pose keypoints and calculating biomechanical metrics...
+          {t('analysis.detectingPose')}
         </div>
       </div>
     </div>
