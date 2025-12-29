@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Video, VideoListResponse, AnalysisTask, AnalysisResult, BetaSuggestion, AnnotateResponse } from '../types';
+import type { Video, VideoListResponse, AnalysisTask, AnalysisResult, BetaSuggestion, AnnotateResponse, ThumbnailResponse } from '../types';
 
 const api = axios.create({
   baseURL: '/api/v1',
@@ -33,6 +33,11 @@ export const videoApi = {
 
   annotate: async (videoId: string): Promise<AnnotateResponse> => {
     const response = await api.post<AnnotateResponse>(`/videos/${videoId}/annotate`);
+    return response.data;
+  },
+
+  regenerateThumbnail: async (videoId: string): Promise<ThumbnailResponse> => {
+    const response = await api.post<ThumbnailResponse>(`/videos/${videoId}/thumbnail`);
     return response.data;
   },
 };

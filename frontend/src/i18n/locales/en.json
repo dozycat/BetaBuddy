@@ -26,7 +26,8 @@
     "noVideos": "No videos uploaded yet",
     "getStarted": "Upload a video to get started",
     "deleteVideo": "Delete video",
-    "confirmDelete": "Are you sure you want to delete this video?"
+    "confirmDelete": "Are you sure you want to delete this video?",
+    "regenerateThumbnail": "Regenerate thumbnail"
   },
   "analysis": {
     "videoAnalysis": "Video Analysis",

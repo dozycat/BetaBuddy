@@ -26,7 +26,8 @@
     "noVideos": "動画がアップロードされていません",
     "getStarted": "動画をアップロードして開始",
     "deleteVideo": "動画を削除",
-    "confirmDelete": "この動画を削除してもよろしいですか？"
+    "confirmDelete": "この動画を削除してもよろしいですか？",
+    "regenerateThumbnail": "サムネイルを再生成"
   },
   "analysis": {
     "videoAnalysis": "動画分析",

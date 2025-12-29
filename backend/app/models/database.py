@@ -32,6 +32,7 @@ class Video(Base):
     width = Column(Integer, nullable=True)
     height = Column(Integer, nullable=True)
     total_frames = Column(Integer, nullable=True)
+    thumbnail_path = Column(String, nullable=True)  # GIF thumbnail path
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -103,6 +104,14 @@ async def init_db():
             try:
                 await conn.execute(
                     text("ALTER TABLE analysis_results ADD COLUMN meters_per_unit FLOAT")
+                )
+            except Exception:
+                pass  # Column might already exist
+
+        if await _column_missing(conn, 'videos', 'thumbnail_path'):
+            try:
+                await conn.execute(
+                    text("ALTER TABLE videos ADD COLUMN thumbnail_path TEXT")
                 )
             except Exception:
                 pass  # Column might already exist

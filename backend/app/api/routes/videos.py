@@ -12,8 +12,9 @@ from app.models.schemas import (
     VideoListResponse,
     AnnotateVideoRequest,
     AnnotateVideoResponse,
+    ThumbnailResponse,
 )
-from app.utils.video_utils import get_video_metadata, is_valid_video_format
+from app.utils.video_utils import get_video_metadata, is_valid_video_format, generate_gif_thumbnail
 
 router = APIRouter()
 
@@ -71,6 +72,11 @@ async def upload_video(
             detail=f"Failed to process video: {str(e)}",
         )
 
+    # Generate GIF thumbnail
+    thumbnail_filename = f"{video_id}_thumb.gif"
+    thumbnail_path = settings.upload_dir / thumbnail_filename
+    thumbnail_success = generate_gif_thumbnail(file_path, thumbnail_path)
+
     # Create database record
     video = Video(
         id=video_id,
@@ -83,6 +89,7 @@ async def upload_video(
         width=metadata.get("width"),
         height=metadata.get("height"),
         total_frames=metadata.get("total_frames"),
+        thumbnail_path=str(thumbnail_path) if thumbnail_success else None,
     )
 
     db.add(video)
@@ -102,6 +109,7 @@ async def upload_video(
         total_frames=video.total_frames,
         created_at=video.created_at,
         preview_url=f"/uploads/{video.filename}",
+        thumbnail_url=f"/uploads/{thumbnail_filename}" if thumbnail_success else None,
     )
 
 
@@ -134,6 +142,7 @@ async def list_videos(
                 total_frames=v.total_frames,
                 created_at=v.created_at,
                 preview_url=f"/uploads/{v.filename}",
+                thumbnail_url=f"/uploads/{Path(v.thumbnail_path).name}" if v.thumbnail_path and Path(v.thumbnail_path).exists() else None,
             )
             for v in videos
         ],
@@ -155,6 +164,10 @@ async def get_video(
             detail="Video not found",
         )
 
+    thumbnail_url = None
+    if video.thumbnail_path and Path(video.thumbnail_path).exists():
+        thumbnail_url = f"/uploads/{Path(video.thumbnail_path).name}"
+
     return VideoResponse(
         id=video.id,
         filename=video.filename,
@@ -168,6 +181,7 @@ async def get_video(
         total_frames=video.total_frames,
         created_at=video.created_at,
         preview_url=f"/uploads/{video.filename}",
+        thumbnail_url=thumbnail_url,
     )
 
 
@@ -185,14 +199,64 @@ async def delete_video(
             detail="Video not found",
         )
 
-    # Delete file
+    # Delete video file
     file_path = Path(video.file_path)
     if file_path.exists():
         file_path.unlink()
 
+    # Delete thumbnail file
+    if video.thumbnail_path:
+        thumb_path = Path(video.thumbnail_path)
+        if thumb_path.exists():
+            thumb_path.unlink()
+
     # Delete database record
     await db.execute(delete(Video).where(Video.id == video_id))
     await db.commit()
+
+
+@router.post("/{video_id}/thumbnail", response_model=ThumbnailResponse)
+async def regenerate_thumbnail(
+    video_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Regenerate the GIF thumbnail for a video.
+    """
+    result = await db.execute(select(Video).where(Video.id == video_id))
+    video = result.scalar_one_or_none()
+
+    if not video:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Video not found",
+        )
+
+    # Generate thumbnail
+    thumbnail_filename = f"{video_id}_thumb.gif"
+    thumbnail_path = settings.upload_dir / thumbnail_filename
+
+    # Delete existing thumbnail if present
+    if thumbnail_path.exists():
+        thumbnail_path.unlink()
+
+    success = generate_gif_thumbnail(video.file_path, thumbnail_path)
+
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to generate thumbnail. Ensure ffmpeg is available.",
+        )
+
+    # Update database
+    video.thumbnail_path = str(thumbnail_path)
+    await db.commit()
+
+    return ThumbnailResponse(
+        video_id=video_id,
+        thumbnail_url=f"/uploads/{thumbnail_filename}",
+        message="Thumbnail regenerated successfully",
+    )
 
 
 @router.post("/{video_id}/annotate", response_model=AnnotateVideoResponse)

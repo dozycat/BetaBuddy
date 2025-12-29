@@ -1,9 +1,15 @@
 import cv2
+import logging
+import random
+import shutil
+import subprocess
 from pathlib import Path
 from typing import Optional
 import numpy as np
 
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 class VideoProcessor:
@@ -108,3 +114,109 @@ def generate_thumbnail(video_path: str | Path, output_path: str | Path, frame_nu
     except Exception:
         pass
     return False
+
+
+def get_ffmpeg_path() -> Optional[str]:
+    """Get ffmpeg executable path, checking system and imageio-ffmpeg."""
+    if shutil.which("ffmpeg"):
+        return "ffmpeg"
+    try:
+        import imageio_ffmpeg
+        return imageio_ffmpeg.get_ffmpeg_exe()
+    except ImportError:
+        return None
+
+
+def generate_gif_thumbnail(
+    video_path: str | Path,
+    output_path: str | Path,
+    num_frames: int = 10,
+    width: int = 320,
+    fps: int = 5,
+) -> bool:
+    """
+    Generate an animated GIF thumbnail from randomly sampled video frames.
+
+    Args:
+        video_path: Path to source video
+        output_path: Path for output GIF
+        num_frames: Number of frames to sample (default 10)
+        width: Output GIF width in pixels (height auto-calculated)
+        fps: Output GIF frame rate
+
+    Returns:
+        True if successful, False otherwise
+    """
+    video_path = Path(video_path)
+    output_path = Path(output_path)
+
+    ffmpeg_path = get_ffmpeg_path()
+    if not ffmpeg_path:
+        logger.warning("ffmpeg not found, cannot generate GIF thumbnail")
+        return False
+
+    # Get total frame count
+    try:
+        with VideoProcessor(video_path) as processor:
+            total_frames = processor.metadata.get("total_frames", 0)
+            if total_frames < 1:
+                logger.error("Video has no frames")
+                return False
+
+            if total_frames <= num_frames:
+                # If video has fewer frames than requested, use evenly spaced frames
+                frame_numbers = list(range(0, total_frames, max(1, total_frames // num_frames)))[:num_frames]
+            else:
+                # Randomly sample frames spread across the video
+                # Divide video into segments and pick one random frame from each
+                segment_size = total_frames // num_frames
+                frame_numbers = []
+                for i in range(num_frames):
+                    start = i * segment_size
+                    end = start + segment_size
+                    frame_numbers.append(random.randint(start, min(end - 1, total_frames - 1)))
+                frame_numbers.sort()
+    except Exception as e:
+        logger.error(f"Failed to get video metadata: {e}")
+        return False
+
+    if not frame_numbers:
+        logger.error("No frames to sample")
+        return False
+
+    # Build ffmpeg select filter
+    select_expr = "+".join([f"eq(n\\,{f})" for f in frame_numbers])
+
+    # Build ffmpeg command
+    cmd = [
+        ffmpeg_path,
+        "-y",  # Overwrite output
+        "-i", str(video_path),
+        "-vf", f"select='{select_expr}',setpts=N/{fps}/TB,scale={width}:-1:flags=lanczos",
+        "-r", str(fps),
+        "-loop", "0",  # Infinite loop
+        "-loglevel", "warning",
+        str(output_path)
+    ]
+
+    try:
+        logger.info(f"Generating GIF thumbnail with {len(frame_numbers)} frames from {video_path.name}")
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+
+        if result.returncode != 0:
+            logger.error(f"ffmpeg error: {result.stderr}")
+            return False
+
+        if output_path.exists():
+            size_kb = output_path.stat().st_size / 1024
+            logger.info(f"GIF thumbnail generated: {size_kb:.1f}KB")
+            return True
+
+        return False
+
+    except subprocess.TimeoutExpired:
+        logger.error("GIF generation timed out")
+        return False
+    except Exception as e:
+        logger.error(f"GIF generation failed: {e}")
+        return False

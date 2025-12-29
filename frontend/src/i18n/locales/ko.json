@@ -26,7 +26,8 @@
     "noVideos": "업로드된 영상이 없습니다",
     "getStarted": "영상을 업로드하여 시작하세요",
     "deleteVideo": "영상 삭제",
-    "confirmDelete": "이 영상을 삭제하시겠습니까?"
+    "confirmDelete": "이 영상을 삭제하시겠습니까?",
+    "regenerateThumbnail": "썸네일 재생성"
   },
   "analysis": {
     "videoAnalysis": "영상 분석",

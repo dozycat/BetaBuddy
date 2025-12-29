@@ -67,9 +67,17 @@ class VideoResponse(BaseModel):
     total_frames: Optional[int] = None
     created_at: datetime
     preview_url: Optional[str] = None
+    thumbnail_url: Optional[str] = None  # GIF thumbnail URL
 
     class Config:
         from_attributes = True
+
+
+class ThumbnailResponse(BaseModel):
+    """Response after generating/regenerating thumbnail."""
+    video_id: str
+    thumbnail_url: str
+    message: str
 
 
 class VideoListResponse(BaseModel):

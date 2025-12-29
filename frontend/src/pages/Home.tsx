@@ -50,6 +50,12 @@ export const Home: React.FC = () => {
     }
   };
 
+  const handleVideoUpdate = (updatedVideo: Video) => {
+    setVideos((prev) =>
+      prev.map((v) => (v.id === updatedVideo.id ? updatedVideo : v))
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -86,6 +92,7 @@ export const Home: React.FC = () => {
                 videos={videos}
                 onSelect={handleSelectVideo}
                 onDelete={handleDeleteVideo}
+                onVideoUpdate={handleVideoUpdate}
               />
             )}
           </div>

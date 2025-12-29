@@ -11,6 +11,13 @@ export interface Video {
   total_frames: number | null;
   created_at: string;
   preview_url: string | null;
+  thumbnail_url: string | null;
+}
+
+export interface ThumbnailResponse {
+  video_id: string;
+  thumbnail_url: string;
+  message: string;
 }
 
 export interface VideoListResponse {

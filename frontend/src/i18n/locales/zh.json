@@ -26,7 +26,8 @@
     "noVideos": "还没有上传视频",
     "getStarted": "上传视频开始分析",
     "deleteVideo": "删除视频",
-    "confirmDelete": "确定要删除这个视频吗？"
+    "confirmDelete": "确定要删除这个视频吗？",
+    "regenerateThumbnail": "重新生成缩略图"
   },
   "analysis": {
     "videoAnalysis": "视频分析",

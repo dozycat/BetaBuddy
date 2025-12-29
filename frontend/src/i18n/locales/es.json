@@ -26,7 +26,8 @@
     "noVideos": "No hay videos subidos",
     "getStarted": "Sube un video para comenzar",
     "deleteVideo": "Eliminar video",
-    "confirmDelete": "¿Estás seguro de que quieres eliminar este video?"
+    "confirmDelete": "¿Estás seguro de que quieres eliminar este video?",
+    "regenerateThumbnail": "Regenerar miniatura"
   },
   "analysis": {
     "videoAnalysis": "Análisis de Video",
