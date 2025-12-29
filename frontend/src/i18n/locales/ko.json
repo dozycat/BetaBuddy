@@ -39,10 +39,13 @@
     "processingFrame": "프레임 {{frame}} 처리 중",
     "detectingPose": "포즈 키포인트 감지 및 생체역학 지표 계산 중...",
     "failed": "분석 실패",
-    "videoNotFound": "영상을 찾을 수 없습니다"
+    "videoNotFound": "영상을 찾을 수 없습니다",
+    "climberMetrics": "클라이머 측정값 (선택사항)",
+    "climberMetricsDescription": "키와 팔 길이를 입력하면 정규화된 단위 대신 실제 단위(미터)로 지표를 표시합니다.",
+    "height": "키 (m)",
+    "armSpan": "팔 길이 (m)"
   },
   "metrics": {
-    "stabilityScore": "안정성 점수",
     "efficiency": "효율성",
     "duration": "시간",
     "dynoMoves": "다이나믹 무브",
@@ -61,7 +64,21 @@
     "yPosition": "Y 위치",
     "angle": "각도",
     "resolution": "해상도",
-    "fps": "FPS"
+    "fps": "FPS",
+    "quality": {
+      "excellent": "우수",
+      "good": "양호",
+      "average": "보통",
+      "poor": "미흡"
+    },
+    "tooltips": {
+      "efficiency": "목표를 향한 유효한 움직임과 총 움직임의 비율입니다. 높은 값은 낭비되는 동작이 적은 직접적이고 경제적인 클라이밍을 나타냅니다.",
+      "duration": "첫 번째 프레임부터 마지막 감지된 프레임까지의 분석된 클라이밍 시퀀스의 총 시간입니다.",
+      "dyno": "가속도가 임계값을 초과할 때 감지되는 다이나믹 무브 횟수로, 점프나 일시적으로 접촉이 끊어지는 강력한 움직임을 나타냅니다.",
+      "velocity": "클라이밍 중 무게중심의 최고 속도입니다. 프레임 간 위치 변화율로 계산됩니다.",
+      "acceleration": "속도 변화의 최대 비율로, 클라이밍 중 가장 폭발적이거나 역동적인 순간을 나타냅니다.",
+      "distance": "클라이밍 전체에 걸쳐 무게중심이 이동한 총 경로 길이입니다."
+    }
   },
   "joints": {
     "leftElbow": "왼쪽 팔꿈치",

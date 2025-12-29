@@ -4,7 +4,7 @@ import type { WSMessage } from '../types';
 interface UseWebSocketOptions {
   onProgress?: (progress: number, currentFrame: number) => void;
   onKeypoints?: (frameNumber: number, keypoints: any[], centerOfMass: [number, number]) => void;
-  onMetrics?: (frameNumber: number, jointAngles: Record<string, number>, stabilityScore: number, velocity?: [number, number], acceleration?: [number, number]) => void;
+  onMetrics?: (frameNumber: number, jointAngles: Record<string, number>, velocity?: [number, number], acceleration?: [number, number]) => void;
   onComplete?: (taskId: string, resultId?: string, summary?: any) => void;
   onError?: (message: string) => void;
 }
@@ -76,7 +76,6 @@ export function useWebSocket(taskId: string | null, options: UseWebSocketOptions
               opts.onMetrics?.(
                 message.data.frame_number,
                 message.data.joint_angles,
-                message.data.stability_score ?? 0,
                 message.data.velocity,
                 message.data.acceleration
               );

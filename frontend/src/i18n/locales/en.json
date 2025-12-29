@@ -39,10 +39,13 @@
     "processingFrame": "Processing frame {{frame}}",
     "detectingPose": "Detecting pose keypoints and calculating biomechanical metrics...",
     "failed": "Analysis failed",
-    "videoNotFound": "Video not found"
+    "videoNotFound": "Video not found",
+    "climberMetrics": "Climber Measurements (Optional)",
+    "climberMetricsDescription": "Enter your height and arm span to display metrics in real-world units (meters) instead of normalized units.",
+    "height": "Height (m)",
+    "armSpan": "Arm Span (m)"
   },
   "metrics": {
-    "stabilityScore": "Stability Score",
     "efficiency": "Efficiency",
     "duration": "Duration",
     "dynoMoves": "Dyno Moves",
@@ -61,7 +64,21 @@
     "yPosition": "Y Position",
     "angle": "Angle",
     "resolution": "Resolution",
-    "fps": "FPS"
+    "fps": "FPS",
+    "quality": {
+      "excellent": "Excellent",
+      "good": "Good",
+      "average": "Average",
+      "poor": "Poor"
+    },
+    "tooltips": {
+      "efficiency": "Ratio of useful movement toward the goal vs total movement. Higher values indicate more direct, economical climbing with less wasted motion.",
+      "duration": "Total time of the analyzed climbing sequence from first to last detected frame.",
+      "dyno": "Count of dynamic moves detected when acceleration exceeds a threshold, indicating jumps or powerful movements where contact is momentarily lost.",
+      "velocity": "Peak speed of the center of mass during the climb. Calculated as the rate of position change between frames.",
+      "acceleration": "Maximum rate of velocity change, indicating the most explosive or dynamic moment in the climb.",
+      "distance": "Total path length traveled by the center of mass throughout the climb."
+    }
   },
   "joints": {
     "leftElbow": "Left Elbow",

@@ -62,7 +62,6 @@ class AnalysisResult(Base):
 
     # Summary statistics
     total_frames_analyzed = Column(Integer, default=0)
-    avg_stability_score = Column(Float, nullable=True)
     avg_efficiency = Column(Float, nullable=True)
     max_acceleration = Column(Float, nullable=True)
     dyno_detected = Column(Integer, default=0)
@@ -79,6 +78,9 @@ class AnalysisResult(Base):
     # Annotated video
     annotated_video_path = Column(String, nullable=True)
 
+    # Unit conversion factor (normalized units to meters)
+    meters_per_unit = Column(Float, nullable=True)
+
     created_at = Column(DateTime, default=datetime.utcnow)
 
     task = relationship("AnalysisTask", back_populates="results")
@@ -93,6 +95,14 @@ async def init_db():
             try:
                 await conn.execute(
                     text("ALTER TABLE analysis_results ADD COLUMN annotated_video_path TEXT")
+                )
+            except Exception:
+                pass  # Column might already exist
+
+        if await _column_missing(conn, 'analysis_results', 'meters_per_unit'):
+            try:
+                await conn.execute(
+                    text("ALTER TABLE analysis_results ADD COLUMN meters_per_unit FLOAT")
                 )
             except Exception:
                 pass  # Column might already exist

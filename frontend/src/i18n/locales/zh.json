@@ -39,10 +39,13 @@
     "processingFrame": "正在处理第 {{frame}} 帧",
     "detectingPose": "正在检测姿态关键点并计算生物力学指标...",
     "failed": "分析失败",
-    "videoNotFound": "视频未找到"
+    "videoNotFound": "视频未找到",
+    "climberMetrics": "攀岩者测量数据（可选）",
+    "climberMetricsDescription": "输入您的身高和臂展，以真实单位（米）显示指标，而不是归一化单位。",
+    "height": "身高 (m)",
+    "armSpan": "臂展 (m)"
   },
   "metrics": {
-    "stabilityScore": "稳定性评分",
     "efficiency": "效率",
     "duration": "时长",
     "dynoMoves": "动态动作",
@@ -61,7 +64,21 @@
     "yPosition": "Y位置",
     "angle": "角度",
     "resolution": "分辨率",
-    "fps": "帧率"
+    "fps": "帧率",
+    "quality": {
+      "excellent": "优秀",
+      "good": "良好",
+      "average": "一般",
+      "poor": "较差"
+    },
+    "tooltips": {
+      "efficiency": "有效移动与总移动量的比率。数值越高表示攀爬更直接、更经济，浪费动作更少。",
+      "duration": "从第一帧到最后一帧检测到的攀爬序列的总时间。",
+      "dyno": "当加速度超过阈值时检测到的动态动作次数，表示跳跃或短暂失去接触的强力动作。",
+      "velocity": "攀爬过程中重心的峰值速度。通过帧间位置变化率计算。",
+      "acceleration": "速度变化的最大速率，表示攀爬中最具爆发力或动态的时刻。",
+      "distance": "整个攀爬过程中重心移动的总路径长度。"
+    }
   },
   "joints": {
     "leftElbow": "左肘",

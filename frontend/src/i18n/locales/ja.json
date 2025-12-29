@@ -39,10 +39,13 @@
     "processingFrame": "フレーム {{frame}} を処理中",
     "detectingPose": "ポーズキーポイントを検出し、バイオメカニクス指標を計算中...",
     "failed": "分析に失敗しました",
-    "videoNotFound": "動画が見つかりません"
+    "videoNotFound": "動画が見つかりません",
+    "climberMetrics": "クライマーの測定値（任意）",
+    "climberMetricsDescription": "身長とリーチを入力すると、正規化単位ではなく実際の単位（メートル）でメトリクスを表示します。",
+    "height": "身長 (m)",
+    "armSpan": "リーチ (m)"
   },
   "metrics": {
-    "stabilityScore": "安定性スコア",
     "efficiency": "効率",
     "duration": "時間",
     "dynoMoves": "ダイナミックムーブ",
@@ -61,7 +64,21 @@
     "yPosition": "Y位置",
     "angle": "角度",
     "resolution": "解像度",
-    "fps": "FPS"
+    "fps": "FPS",
+    "quality": {
+      "excellent": "優秀",
+      "good": "良好",
+      "average": "普通",
+      "poor": "要改善"
+    },
+    "tooltips": {
+      "efficiency": "目標への有効な動きと総動作量の比率。高い値ほど無駄のない効率的なクライミングを示します。",
+      "duration": "最初から最後の検出フレームまでの分析されたクライミングシーケンスの総時間。",
+      "dyno": "加速度がしきい値を超えた時に検出されるダイナミックムーブの回数。ジャンプや一時的に接触が失われる力強い動きを示します。",
+      "velocity": "クライミング中の重心の最高速度。フレーム間の位置変化率として計算されます。",
+      "acceleration": "速度変化の最大率。クライミング中の最も爆発的またはダイナミックな瞬間を示します。",
+      "distance": "クライミング全体を通じて重心が移動した総経路長。"
+    }
   },
   "joints": {
     "leftElbow": "左肘",

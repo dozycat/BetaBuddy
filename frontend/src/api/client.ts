@@ -38,8 +38,16 @@ export const videoApi = {
 };
 
 export const analysisApi = {
-  start: async (videoId: string): Promise<AnalysisTask> => {
-    const response = await api.get<AnalysisTask>(`/videos/${videoId}/analyze`);
+  start: async (
+    videoId: string,
+    heightM?: number,
+    armSpanM?: number
+  ): Promise<AnalysisTask> => {
+    const params: Record<string, number> = {};
+    if (heightM !== undefined) params.height_m = heightM;
+    if (armSpanM !== undefined) params.arm_span_m = armSpanM;
+
+    const response = await api.get<AnalysisTask>(`/videos/${videoId}/analyze`, { params });
     return response.data;
   },
 

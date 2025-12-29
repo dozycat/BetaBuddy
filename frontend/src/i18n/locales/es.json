@@ -39,10 +39,13 @@
     "processingFrame": "Procesando fotograma {{frame}}",
     "detectingPose": "Detectando puntos clave de pose y calculando métricas biomecánicas...",
     "failed": "Análisis fallido",
-    "videoNotFound": "Video no encontrado"
+    "videoNotFound": "Video no encontrado",
+    "climberMetrics": "Medidas del Escalador (Opcional)",
+    "climberMetricsDescription": "Ingresa tu altura y envergadura para mostrar métricas en unidades reales (metros) en lugar de unidades normalizadas.",
+    "height": "Altura (m)",
+    "armSpan": "Envergadura (m)"
   },
   "metrics": {
-    "stabilityScore": "Puntuación de Estabilidad",
     "efficiency": "Eficiencia",
     "duration": "Duración",
     "dynoMoves": "Movimientos Dinámicos",
@@ -61,7 +64,21 @@
     "yPosition": "Posición Y",
     "angle": "Ángulo",
     "resolution": "Resolución",
-    "fps": "FPS"
+    "fps": "FPS",
+    "quality": {
+      "excellent": "Excelente",
+      "good": "Bueno",
+      "average": "Regular",
+      "poor": "Bajo"
+    },
+    "tooltips": {
+      "efficiency": "Proporción de movimiento útil hacia el objetivo vs movimiento total. Valores más altos indican escalada más directa y económica con menos movimiento desperdiciado.",
+      "duration": "Tiempo total de la secuencia de escalada analizada desde el primer hasta el último fotograma detectado.",
+      "dyno": "Número de movimientos dinámicos detectados cuando la aceleración supera un umbral, indicando saltos o movimientos potentes donde se pierde contacto momentáneamente.",
+      "velocity": "Velocidad máxima del centro de masa durante la escalada. Calculada como la tasa de cambio de posición entre fotogramas.",
+      "acceleration": "Tasa máxima de cambio de velocidad, indicando el momento más explosivo o dinámico de la escalada.",
+      "distance": "Longitud total del camino recorrido por el centro de masa durante toda la escalada."
+    }
   },
   "joints": {
     "leftElbow": "Codo Izquierdo",

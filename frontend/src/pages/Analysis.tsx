@@ -26,6 +26,11 @@ export const Analysis: React.FC = () => {
   const [isGeneratingAnnotation, setIsGeneratingAnnotation] = useState(false);
   const [showAnnotated, setShowAnnotated] = useState(true);
 
+  // Climber metrics for unit conversion
+  const [heightM, setHeightM] = useState<string>('');
+  const [armSpanM, setArmSpanM] = useState<string>('');
+  const [showClimberMetrics, setShowClimberMetrics] = useState(false);
+
   // WebSocket connection for real-time updates
   // Connect for both 'pending' and 'processing' to catch status transitions
   useWebSocket(
@@ -104,7 +109,11 @@ export const Analysis: React.FC = () => {
     setAnnotatedVideoUrl(null);
 
     try {
-      const analysisTask = await analysisApi.start(videoId);
+      // Parse climber metrics (convert to numbers, undefined if empty)
+      const height = heightM ? parseFloat(heightM) : undefined;
+      const armSpan = armSpanM ? parseFloat(armSpanM) : undefined;
+
+      const analysisTask = await analysisApi.start(videoId, height, armSpan);
       setTask(analysisTask);
       setResult(null);
     } catch (err) {
@@ -312,6 +321,65 @@ export const Analysis: React.FC = () => {
                 <p className="text-gray-600 mb-4">
                   {t('analysis.readyDescription')}
                 </p>
+
+                {/* Climber Metrics Section */}
+                <div className="mb-6">
+                  <button
+                    onClick={() => setShowClimberMetrics(!showClimberMetrics)}
+                    className="text-sm text-primary-600 hover:text-primary-700 flex items-center gap-1 mx-auto"
+                  >
+                    <svg
+                      className={`w-4 h-4 transition-transform ${showClimberMetrics ? 'rotate-180' : ''}`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                    {t('analysis.climberMetrics')}
+                  </button>
+
+                  {showClimberMetrics && (
+                    <div className="mt-4 p-4 bg-gray-50 rounded-lg text-left">
+                      <p className="text-xs text-gray-500 mb-3">
+                        {t('analysis.climberMetricsDescription')}
+                      </p>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            {t('analysis.height')}
+                          </label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0.5"
+                            max="2.5"
+                            placeholder="1.75"
+                            value={heightM}
+                            onChange={(e) => setHeightM(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            {t('analysis.armSpan')}
+                          </label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0.5"
+                            max="3.0"
+                            placeholder="1.80"
+                            value={armSpanM}
+                            onChange={(e) => setArmSpanM(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <button
                   onClick={handleStartAnalysis}
                   className="px-6 py-3 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"

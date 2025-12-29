@@ -1,13 +1,11 @@
 import numpy as np
 from typing import Optional
-from scipy.spatial import ConvexHull
 from dataclasses import dataclass, field
 
 from app.core.pose_estimator import KeypointData
 from app.core.physics_engine import (
     calculate_center_of_mass,
     calculate_all_joint_angles,
-    get_support_points,
     calculate_trajectory_length,
     calculate_distance,
 )
@@ -19,7 +17,6 @@ class FrameMetrics:
     timestamp: float
     center_of_mass: tuple[float, float]
     joint_angles: dict[str, float]
-    stability_score: float
     velocity: Optional[tuple[float, float]] = None
     acceleration: Optional[tuple[float, float]] = None
 
@@ -28,9 +25,6 @@ class FrameMetrics:
 class AnalysisSummary:
     total_frames: int
     duration: float
-    avg_stability_score: float
-    min_stability_score: float
-    max_stability_score: float
     avg_efficiency: float
     max_velocity: float
     max_acceleration: float
@@ -77,10 +71,6 @@ class ClimbingMetrics:
         # Calculate joint angles
         joint_angles = calculate_all_joint_angles(keypoints)
 
-        # Calculate stability
-        support_points = get_support_points(keypoints)
-        stability_score = self.calculate_stability(com, support_points)
-
         # Calculate velocity/acceleration if we have history
         velocity = None
         acceleration = None
@@ -105,77 +95,12 @@ class ClimbingMetrics:
             timestamp=timestamp,
             center_of_mass=com,
             joint_angles=joint_angles,
-            stability_score=stability_score,
             velocity=velocity,
             acceleration=acceleration,
         )
 
         self.frame_metrics.append(metrics)
         return metrics
-
-    def calculate_stability(
-        self,
-        com: tuple[float, float],
-        support_points: np.ndarray,
-    ) -> float:
-        """
-        Calculate stability score based on whether COM is within support polygon.
-
-        Args:
-            com: Center of mass (x, y)
-            support_points: Array of contact points
-
-        Returns:
-            Stability score from 0 to 1
-        """
-        if len(support_points) < 3:
-            # Not enough points for a polygon, use distance-based metric
-            if len(support_points) == 0:
-                return 0.0
-            centroid = np.mean(support_points, axis=0)
-            dist = calculate_distance(np.array(com), centroid)
-            return max(0.0, 1.0 - dist * 2)
-
-        try:
-            hull = ConvexHull(support_points)
-            in_hull = self._point_in_hull(np.array(com), hull, support_points)
-
-            if in_hull:
-                # Calculate how centered the COM is within the hull
-                centroid = np.mean(support_points[hull.vertices], axis=0)
-                dist = calculate_distance(np.array(com), centroid)
-                return max(0.5, 1.0 - dist)
-            else:
-                # COM is outside, calculate distance to hull
-                dist = self._distance_to_hull(np.array(com), hull, support_points)
-                return max(0.0, 0.5 - dist)
-
-        except Exception:
-            return 0.5
-
-    def _point_in_hull(
-        self,
-        point: np.ndarray,
-        hull: ConvexHull,
-        points: np.ndarray,
-    ) -> bool:
-        """Check if a point is inside the convex hull."""
-        try:
-            new_hull = ConvexHull(np.vstack([points[hull.vertices], point]))
-            return np.array_equal(new_hull.vertices, hull.vertices)
-        except Exception:
-            return False
-
-    def _distance_to_hull(
-        self,
-        point: np.ndarray,
-        hull: ConvexHull,
-        points: np.ndarray,
-    ) -> float:
-        """Calculate minimum distance from point to hull boundary."""
-        hull_points = points[hull.vertices]
-        distances = [calculate_distance(point, hp) for hp in hull_points]
-        return min(distances)
 
     def calculate_efficiency(self) -> float:
         """
@@ -232,9 +157,6 @@ class ClimbingMetrics:
             return AnalysisSummary(
                 total_frames=0,
                 duration=0.0,
-                avg_stability_score=0.0,
-                min_stability_score=0.0,
-                max_stability_score=0.0,
                 avg_efficiency=0.0,
                 max_velocity=0.0,
                 max_acceleration=0.0,
@@ -242,7 +164,6 @@ class ClimbingMetrics:
                 total_distance=0.0,
             )
 
-        stability_scores = [fm.stability_score for fm in self.frame_metrics]
         total_frames = len(self.frame_metrics)
         duration = total_frames / fps
 
@@ -272,9 +193,6 @@ class ClimbingMetrics:
         return AnalysisSummary(
             total_frames=total_frames,
             duration=duration,
-            avg_stability_score=float(np.mean(stability_scores)),
-            min_stability_score=float(np.min(stability_scores)),
-            max_stability_score=float(np.max(stability_scores)),
             avg_efficiency=self.calculate_efficiency(),
             max_velocity=float(max(velocity_magnitudes)) if velocity_magnitudes else 0.0,
             max_acceleration=float(max(acceleration_magnitudes)) if acceleration_magnitudes else 0.0,

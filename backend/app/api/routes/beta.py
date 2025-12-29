@@ -33,7 +33,7 @@ async def get_beta_suggestion(
         .where(AnalysisTask.status == AnalysisStatus.COMPLETED)
         .order_by(AnalysisTask.completed_at.desc())
     )
-    task = result.scalar_one_or_none()
+    task = result.scalars().first()
 
     if not task:
         raise HTTPException(

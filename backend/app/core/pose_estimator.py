@@ -12,6 +12,20 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
+# Check GPU availability
+def _check_gpu_available() -> bool:
+    """Check if GPU delegate is available."""
+    try:
+        # Try to create a simple GPU-enabled option to test availability
+        test_options = python.BaseOptions(
+            model_asset_path=str(MODEL_PATH) if MODEL_PATH.exists() else "",
+            delegate=python.BaseOptions.Delegate.GPU
+        )
+        return True
+    except Exception as e:
+        logger.debug(f"GPU delegate not available: {e}")
+        return False
+
 # Model configuration
 MODEL_URL = "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/latest/pose_landmarker_full.task"
 MODEL_PATH = Path(__file__).parent.parent.parent / "models" / "pose_landmarker_full.task"
@@ -75,20 +89,66 @@ class PoseEstimator:
         model_complexity: int = settings.pose_model_complexity,
         min_detection_confidence: float = settings.min_detection_confidence,
         min_tracking_confidence: float = settings.min_tracking_confidence,
+        use_gpu: bool = True,
+        video_mode: bool = False,
     ):
         # Ensure model is downloaded
         _ensure_model_exists()
 
-        # New MediaPipe Tasks API
-        base_options = python.BaseOptions(model_asset_path=str(MODEL_PATH))
+        self.video_mode = video_mode
+        self.use_gpu = use_gpu
+
+        # Determine delegate (GPU or CPU)
+        delegate = None
+        if use_gpu:
+            try:
+                delegate = python.BaseOptions.Delegate.GPU
+                logger.info("Attempting to use GPU delegate for pose estimation")
+            except Exception as e:
+                logger.warning(f"GPU delegate not available, falling back to CPU: {e}")
+                delegate = None
+
+        # Build base options
+        if delegate:
+            base_options = python.BaseOptions(
+                model_asset_path=str(MODEL_PATH),
+                delegate=delegate
+            )
+        else:
+            base_options = python.BaseOptions(model_asset_path=str(MODEL_PATH))
+
+        # Set running mode: VIDEO for sequential frames (faster), IMAGE for single frames
+        running_mode = vision.RunningMode.VIDEO if video_mode else vision.RunningMode.IMAGE
+
         options = vision.PoseLandmarkerOptions(
             base_options=base_options,
-            running_mode=vision.RunningMode.IMAGE,
+            running_mode=running_mode,
             min_pose_detection_confidence=min_detection_confidence,
             min_tracking_confidence=min_tracking_confidence,
             output_segmentation_masks=False,
         )
-        self.pose = vision.PoseLandmarker.create_from_options(options)
+
+        try:
+            self.pose = vision.PoseLandmarker.create_from_options(options)
+            mode_str = "VIDEO" if video_mode else "IMAGE"
+            gpu_str = "GPU" if delegate else "CPU"
+            logger.info(f"PoseEstimator initialized: {mode_str} mode, {gpu_str}")
+        except Exception as e:
+            # Fallback to CPU if GPU initialization fails
+            if delegate:
+                logger.warning(f"GPU initialization failed, falling back to CPU: {e}")
+                base_options = python.BaseOptions(model_asset_path=str(MODEL_PATH))
+                options = vision.PoseLandmarkerOptions(
+                    base_options=base_options,
+                    running_mode=running_mode,
+                    min_pose_detection_confidence=min_detection_confidence,
+                    min_tracking_confidence=min_tracking_confidence,
+                    output_segmentation_masks=False,
+                )
+                self.pose = vision.PoseLandmarker.create_from_options(options)
+                self.use_gpu = False
+            else:
+                raise
 
     def __enter__(self):
         return self
@@ -99,12 +159,15 @@ class PoseEstimator:
     def close(self):
         self.pose.close()
 
-    def process_frame(self, frame_rgb: np.ndarray) -> Optional[list[KeypointData]]:
+    def process_frame(
+        self, frame_rgb: np.ndarray, timestamp_ms: Optional[int] = None
+    ) -> Optional[list[KeypointData]]:
         """
         Process a single RGB frame and extract pose landmarks.
 
         Args:
             frame_rgb: RGB image as numpy array (H, W, 3)
+            timestamp_ms: Frame timestamp in milliseconds (required for VIDEO mode)
 
         Returns:
             List of 33 KeypointData objects or None if no pose detected
@@ -112,7 +175,13 @@ class PoseEstimator:
         # Convert numpy array to MediaPipe Image
         mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame_rgb)
 
-        results = self.pose.detect(mp_image)
+        # VIDEO mode requires timestamp, IMAGE mode uses detect()
+        if self.video_mode:
+            if timestamp_ms is None:
+                raise ValueError("timestamp_ms is required for VIDEO mode")
+            results = self.pose.detect_for_video(mp_image, timestamp_ms)
+        else:
+            results = self.pose.detect(mp_image)
 
         if not results.pose_landmarks or len(results.pose_landmarks) == 0:
             return None
@@ -134,9 +203,15 @@ class PoseEstimator:
 
         return keypoints
 
-    def process_frame_world(self, frame_rgb: np.ndarray) -> Optional[tuple[list[KeypointData], list[KeypointData]]]:
+    def process_frame_world(
+        self, frame_rgb: np.ndarray, timestamp_ms: Optional[int] = None
+    ) -> Optional[tuple[list[KeypointData], list[KeypointData]]]:
         """
         Process frame and return both normalized and world coordinates.
+
+        Args:
+            frame_rgb: RGB image as numpy array (H, W, 3)
+            timestamp_ms: Frame timestamp in milliseconds (required for VIDEO mode)
 
         Returns:
             Tuple of (normalized_keypoints, world_keypoints) or None
@@ -144,7 +219,13 @@ class PoseEstimator:
         # Convert numpy array to MediaPipe Image
         mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame_rgb)
 
-        results = self.pose.detect(mp_image)
+        # VIDEO mode requires timestamp, IMAGE mode uses detect()
+        if self.video_mode:
+            if timestamp_ms is None:
+                raise ValueError("timestamp_ms is required for VIDEO mode")
+            results = self.pose.detect_for_video(mp_image, timestamp_ms)
+        else:
+            results = self.pose.detect(mp_image)
 
         if not results.pose_landmarks or len(results.pose_landmarks) == 0:
             return None

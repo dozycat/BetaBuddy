@@ -62,7 +62,6 @@ class ConnectionManager:
         task_id: str,
         frame_number: int,
         joint_angles: dict[str, float],
-        stability_score: float,
         velocity: Optional[tuple[float, float]] = None,
         acceleration: Optional[tuple[float, float]] = None,
     ):
@@ -72,7 +71,6 @@ class ConnectionManager:
             "data": {
                 "frame_number": frame_number,
                 "joint_angles": joint_angles,
-                "stability_score": stability_score,
                 "velocity": velocity,
                 "acceleration": acceleration,
             },

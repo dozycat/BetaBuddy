@@ -6,6 +6,8 @@ from sqlalchemy import select
 import json
 import cv2
 
+from typing import Optional
+
 from app.config import settings
 from app.models.database import get_db, Video, AnalysisTask, AnalysisResult, AnalysisStatus
 from app.models.schemas import (
@@ -15,6 +17,7 @@ from app.models.schemas import (
 )
 from app.core.pose_estimator import PoseEstimator
 from app.core.metrics import ClimbingMetrics
+from app.core.unit_converter import calculate_meters_per_unit
 from app.utils.video_utils import VideoProcessor
 
 
@@ -39,6 +42,8 @@ async def run_analysis(
     video_path: str,
     fps: float,
     db_session_factory,
+    height_m: Optional[float] = None,
+    arm_span_m: Optional[float] = None,
 ):
     """Background task to run video analysis."""
     async with db_session_factory() as db:
@@ -58,8 +63,11 @@ async def run_analysis(
             # Initialize analysis components
             metrics = ClimbingMetrics()
             frame_data = []
+            meters_per_unit = None
+            calibration_keypoints = []  # Collect keypoints for calibration
 
-            with VideoProcessor(video_path) as video, PoseEstimator() as pose_estimator:
+            # Use VIDEO mode with GPU for faster sequential frame processing
+            with VideoProcessor(video_path) as video, PoseEstimator(video_mode=True, use_gpu=True) as pose_estimator:
                 total_frames = video.metadata["total_frames"]
                 video_fps = video.metadata["fps"] or fps
 
@@ -67,10 +75,26 @@ async def run_analysis(
                     # Convert BGR to RGB
                     frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-                    # Detect pose
-                    keypoints = pose_estimator.process_frame(frame_rgb)
+                    # Calculate timestamp in milliseconds for VIDEO mode
+                    timestamp_ms = int((frame_num / video_fps) * 1000)
+
+                    # Detect pose with timestamp for VIDEO mode optimization
+                    keypoints = pose_estimator.process_frame(frame_rgb, timestamp_ms=timestamp_ms)
 
                     if keypoints:
+                        # Collect keypoints for unit conversion calibration (first 30 frames)
+                        if (height_m or arm_span_m) and len(calibration_keypoints) < 30:
+                            calibration_keypoints.append(keypoints)
+                            # Calculate conversion factor once we have enough samples
+                            if len(calibration_keypoints) == 30 and meters_per_unit is None:
+                                factors = []
+                                for kps in calibration_keypoints:
+                                    factor = calculate_meters_per_unit(kps, height_m, arm_span_m)
+                                    if factor:
+                                        factors.append(factor)
+                                if factors:
+                                    meters_per_unit = sum(factors) / len(factors)
+
                         timestamp = frame_num / video_fps
                         frame_metrics = metrics.process_frame(
                             frame_number=frame_num,
@@ -85,7 +109,6 @@ async def run_analysis(
                             "timestamp": frame_metrics.timestamp,
                             "center_of_mass": frame_metrics.center_of_mass,
                             "joint_angles": frame_metrics.joint_angles,
-                            "stability_score": frame_metrics.stability_score,
                             "velocity": frame_metrics.velocity,
                             "acceleration": frame_metrics.acceleration,
                             "keypoints": keypoints_data,
@@ -106,7 +129,6 @@ async def run_analysis(
                                 task_id=task_id,
                                 frame_number=frame_num,
                                 joint_angles=frame_metrics.joint_angles,
-                                stability_score=frame_metrics.stability_score,
                                 velocity=frame_metrics.velocity,
                                 acceleration=frame_metrics.acceleration,
                             )
@@ -128,28 +150,36 @@ async def run_analysis(
             # Generate summary
             summary = metrics.get_summary(fps=video_fps)
 
+            # Calculate meters_per_unit if not already done (fallback for short videos)
+            if (height_m or arm_span_m) and meters_per_unit is None and calibration_keypoints:
+                factors = []
+                for kps in calibration_keypoints:
+                    factor = calculate_meters_per_unit(kps, height_m, arm_span_m)
+                    if factor:
+                        factors.append(factor)
+                if factors:
+                    meters_per_unit = sum(factors) / len(factors)
+
             # Create analysis result
             analysis_result = AnalysisResult(
                 task_id=task_id,
                 total_frames_analyzed=summary.total_frames,
-                avg_stability_score=summary.avg_stability_score,
                 avg_efficiency=summary.avg_efficiency,
                 max_acceleration=summary.max_acceleration,
                 dyno_detected=summary.dyno_count,
                 frame_data=frame_data,
                 summary_stats={
                     "duration": summary.duration,
-                    "avg_stability_score": summary.avg_stability_score,
-                    "min_stability_score": summary.min_stability_score,
-                    "max_stability_score": summary.max_stability_score,
                     "avg_efficiency": summary.avg_efficiency,
                     "max_velocity": summary.max_velocity,
                     "max_acceleration": summary.max_acceleration,
                     "dyno_count": summary.dyno_count,
                     "total_distance": summary.total_distance,
+                    "meters_per_unit": meters_per_unit,
                 },
                 joint_angle_stats=summary.joint_angle_stats,
                 com_trajectory=metrics.get_com_trajectory(),
+                meters_per_unit=meters_per_unit,
             )
 
             db.add(analysis_result)
@@ -168,7 +198,6 @@ async def run_analysis(
                     summary={
                         "duration": summary.duration,
                         "total_frames": summary.total_frames,
-                        "avg_stability_score": summary.avg_stability_score,
                         "avg_efficiency": summary.avg_efficiency,
                         "max_velocity": summary.max_velocity,
                         "max_acceleration": summary.max_acceleration,
@@ -202,8 +231,16 @@ async def start_analysis(
     video_id: str,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
+    height_m: Optional[float] = None,
+    arm_span_m: Optional[float] = None,
 ):
-    """Start video analysis task."""
+    """Start video analysis task.
+
+    Args:
+        video_id: ID of the video to analyze
+        height_m: Optional user height in meters for unit conversion
+        arm_span_m: Optional user arm span in meters for unit conversion
+    """
     # Check if video exists
     result = await db.execute(select(Video).where(Video.id == video_id))
     video = result.scalar_one_or_none()
@@ -257,6 +294,8 @@ async def start_analysis(
         video.file_path,
         video.fps or settings.default_fps,
         async_session,
+        height_m,
+        arm_span_m,
     )
 
     return AnalysisTaskResponse(
@@ -285,7 +324,7 @@ async def get_analysis_results(
         .where(AnalysisTask.status == AnalysisStatus.COMPLETED)
         .order_by(AnalysisTask.completed_at.desc())
     )
-    task = result.scalar_one_or_none()
+    task = result.scalars().first()
 
     if not task:
         raise HTTPException(
@@ -316,7 +355,6 @@ async def get_analysis_results(
         id=analysis_result.id,
         task_id=analysis_result.task_id,
         total_frames_analyzed=analysis_result.total_frames_analyzed,
-        avg_stability_score=analysis_result.avg_stability_score,
         avg_efficiency=analysis_result.avg_efficiency,
         max_acceleration=analysis_result.max_acceleration,
         dyno_detected=analysis_result.dyno_detected,
@@ -325,6 +363,7 @@ async def get_analysis_results(
         com_trajectory=analysis_result.com_trajectory,
         beta_suggestion=analysis_result.beta_suggestion,
         annotated_video_url=annotated_video_url,
+        meters_per_unit=analysis_result.meters_per_unit,
         created_at=analysis_result.created_at,
     )
 

@@ -38,21 +38,18 @@ export interface JointAngleStats {
 
 export interface SummaryStats {
   duration: number;
-  avg_stability_score: number;
-  min_stability_score: number;
-  max_stability_score: number;
   avg_efficiency: number;
   max_velocity: number;
   max_acceleration: number;
   dyno_count: number;
   total_distance: number;
+  meters_per_unit?: number;  // Conversion factor from normalized units to meters
 }
 
 export interface AnalysisResult {
   id: string;
   task_id: string;
   total_frames_analyzed: number;
-  avg_stability_score: number | null;
   avg_efficiency: number | null;
   max_acceleration: number | null;
   dyno_detected: number;
@@ -61,6 +58,7 @@ export interface AnalysisResult {
   com_trajectory: [number, number][] | null;
   beta_suggestion: string | null;
   annotated_video_url: string | null;
+  meters_per_unit: number | null;  // Conversion factor from normalized units to meters
   created_at: string;
 }
 
@@ -97,7 +95,6 @@ export interface WSMessage {
     center_of_mass?: [number, number];
     // Metrics message data
     joint_angles?: Record<string, number>;
-    stability_score?: number;
     velocity?: [number, number];
     acceleration?: [number, number];
     // Complete message data

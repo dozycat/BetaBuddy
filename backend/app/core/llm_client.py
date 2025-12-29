@@ -1,8 +1,11 @@
 import httpx
 from typing import Optional
 import json
+import logging
 
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 def get_current_model() -> str:
@@ -18,7 +21,6 @@ BETA_PROMPT_TEMPLATE = """你是一位专业的攀岩教练，请根据以下视
 
 ## 分析数据摘要
 - 攀爬时长: {duration:.1f}秒
-- 平均稳定性评分: {avg_stability:.1f}%
 - 动作效率: {efficiency:.1f}%
 - 动态爆发次数: {dyno_count}次
 - 最大速度: {max_velocity:.2f}
@@ -127,12 +129,6 @@ def detect_issues(summary: dict) -> str:
     """Detect potential issues from the analysis summary."""
     issues = []
 
-    avg_stability = summary.get("avg_stability_score", 0) * 100
-    if avg_stability < 50:
-        issues.append("- 稳定性较低，重心控制需要加强")
-    elif avg_stability < 70:
-        issues.append("- 稳定性一般，可以进一步优化重心位置")
-
     efficiency = summary.get("avg_efficiency", 0) * 100
     if efficiency < 50:
         issues.append("- 动作效率较低，路线选择或动作序列需要优化")
@@ -177,17 +173,12 @@ async def generate_beta_suggestion(
     if client is None:
         client = OllamaClient()
 
-    # Check if LLM is available
-    if not await client.is_available():
-        return generate_fallback_suggestion(summary)
-
-    # Format the prompt
+    # Format the prompt first (for logging)
     joint_angles_text = format_joint_angles(summary.get("joint_angle_stats", {}))
     detected_issues = detect_issues(summary)
 
     prompt = BETA_PROMPT_TEMPLATE.format(
         duration=summary.get("duration", 0),
-        avg_stability=summary.get("avg_stability_score", 0) * 100,
         efficiency=summary.get("avg_efficiency", 0) * 100,
         dyno_count=summary.get("dyno_count", 0),
         max_velocity=summary.get("max_velocity", 0),
@@ -196,6 +187,14 @@ async def generate_beta_suggestion(
         detected_issues=detected_issues,
     )
 
+    logger.info(f"Beta suggestion prompt:\n{prompt}")
+
+    # Check if LLM is available
+    if not await client.is_available():
+        logger.warning(f"Ollama not available at {client.base_url}, using fallback suggestion")
+        return generate_fallback_suggestion(summary)
+
+    logger.info(f"Sending prompt to Ollama model: {client.model}")
     suggestion = await client.generate(prompt)
 
     if suggestion is None:
@@ -208,14 +207,7 @@ def generate_fallback_suggestion(summary: dict) -> str:
     """Generate a basic suggestion when LLM is not available."""
     suggestions = []
 
-    avg_stability = summary.get("avg_stability_score", 0) * 100
-
-    if avg_stability < 50:
-        suggestions.append("**重心控制**: 建议加强核心力量训练，注意将重心保持在支撑点范围内。")
-    elif avg_stability < 70:
-        suggestions.append("**重心控制**: 重心控制尚可，可以通过练习静态动作来进一步提高稳定性。")
-    else:
-        suggestions.append("**重心控制**: 重心控制良好，继续保持当前的身体姿态意识。")
+    suggestions.append("**重心控制**: 注意将重心保持在支撑点范围内，通过练习静态动作来提高稳定性。")
 
     efficiency = summary.get("avg_efficiency", 0) * 100
     if efficiency < 60:

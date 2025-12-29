@@ -33,7 +33,6 @@ class FrameAnalysis(BaseModel):
     keypoints: list[Keypoint]
     center_of_mass: tuple[float, float]
     joint_angles: dict[str, float]
-    stability_score: float
     velocity: Optional[tuple[float, float]] = None
     acceleration: Optional[tuple[float, float]] = None
 
@@ -111,21 +110,18 @@ class JointAngleStats(BaseModel):
 
 
 class SummaryStats(BaseModel):
-    avg_stability_score: float
-    min_stability_score: float
-    max_stability_score: float
     avg_efficiency: float
     max_velocity: float
     max_acceleration: float
     dyno_count: int
     total_distance: float
+    meters_per_unit: Optional[float] = None  # Conversion factor from units to meters
 
 
 class AnalysisResultResponse(BaseModel):
     id: str
     task_id: str
     total_frames_analyzed: int
-    avg_stability_score: Optional[float] = None
     avg_efficiency: Optional[float] = None
     max_acceleration: Optional[float] = None
     dyno_detected: int = 0
@@ -134,10 +130,17 @@ class AnalysisResultResponse(BaseModel):
     com_trajectory: Optional[list[list[float]]] = None
     beta_suggestion: Optional[str] = None
     annotated_video_url: Optional[str] = None
+    meters_per_unit: Optional[float] = None  # Conversion factor from units to meters
     created_at: datetime
 
     class Config:
         from_attributes = True
+
+
+class AnalysisStartRequest(BaseModel):
+    """Request parameters for starting video analysis."""
+    height_m: Optional[float] = Field(None, gt=0, le=3, description="User height in meters")
+    arm_span_m: Optional[float] = Field(None, gt=0, le=4, description="User arm span in meters")
 
 
 class AnnotateVideoRequest(BaseModel):
@@ -203,7 +206,6 @@ class WSMetricsMessage(BaseModel):
     type: str = "metrics"
     frame_number: int
     joint_angles: dict[str, float]
-    stability_score: float
     velocity: Optional[tuple[float, float]] = None
 
 

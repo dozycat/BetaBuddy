@@ -3,11 +3,94 @@ Video annotation module for drawing keypoints, skeleton, and metrics on video fr
 """
 import cv2
 import numpy as np
+import subprocess
+import shutil
 from pathlib import Path
 from typing import Optional
 from dataclasses import dataclass
+import logging
 
 from app.core.pose_estimator import KeypointData, LANDMARK_NAMES
+
+logger = logging.getLogger(__name__)
+
+
+def get_ffmpeg_path() -> Optional[str]:
+    """Get ffmpeg executable path, checking system and imageio-ffmpeg."""
+    # Check system ffmpeg first
+    if shutil.which("ffmpeg"):
+        return "ffmpeg"
+
+    # Try imageio-ffmpeg bundled version
+    try:
+        import imageio_ffmpeg
+        return imageio_ffmpeg.get_ffmpeg_exe()
+    except ImportError:
+        pass
+
+    return None
+
+
+def compress_video_h264(input_path: Path, output_path: Path, crf: int = 28, preset: str = "slow") -> bool:
+    """
+    Re-encode video with H.264 for better compression.
+
+    Args:
+        input_path: Path to input video (uncompressed/poorly compressed)
+        output_path: Path to output video (H.264 compressed)
+        crf: Constant Rate Factor (0-51, lower = better quality).
+             18 = visually lossless, 23 = default, 28 = good for web, 32 = smaller file
+        preset: Encoding speed/quality tradeoff.
+                ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow
+                Slower presets = better compression efficiency at same quality
+
+    Returns:
+        True if successful, False otherwise
+    """
+    # Check if ffmpeg is available (system or bundled)
+    ffmpeg_path = get_ffmpeg_path()
+    if not ffmpeg_path:
+        logger.warning("ffmpeg not found (install ffmpeg or imageio-ffmpeg), skipping compression")
+        return False
+
+    try:
+        # Use ffmpeg to re-encode with H.264
+        cmd = [
+            ffmpeg_path,
+            "-y",  # Overwrite output
+            "-i", str(input_path),
+            "-c:v", "libx264",  # H.264 codec
+            "-preset", preset,  # Slower = better compression
+            "-crf", str(crf),  # Quality (28 = good balance for web)
+            "-pix_fmt", "yuv420p",  # Ensure compatibility with all players
+            "-profile:v", "high",  # H.264 High profile for better compression
+            "-level", "4.1",  # Compatibility level
+            "-tune", "film",  # Optimize for real-world video content
+            "-c:a", "aac",  # Audio codec (if any)
+            "-b:a", "128k",  # Audio bitrate
+            "-movflags", "+faststart",  # Web optimization (metadata at start)
+            "-loglevel", "warning",
+            str(output_path)
+        ]
+
+        logger.info(f"Compressing video with CRF={crf}, preset={preset}")
+        result = subprocess.run(cmd, capture_output=True, text=True)
+
+        if result.returncode != 0:
+            logger.error(f"ffmpeg error: {result.stderr}")
+            return False
+
+        # Log compression ratio
+        if output_path.exists():
+            input_size = input_path.stat().st_size
+            output_size = output_path.stat().st_size
+            ratio = input_size / output_size if output_size > 0 else 0
+            logger.info(f"Compression: {input_size/1024/1024:.1f}MB -> {output_size/1024/1024:.1f}MB (ratio: {ratio:.1f}x)")
+
+        return output_path.exists()
+    except Exception as e:
+        logger.error(f"Compression failed: {e}")
+        return False
 
 
 # MediaPipe Pose skeleton connections
@@ -190,11 +273,6 @@ class VideoAnnotator:
         if "frame_number" in metrics:
             lines.append(f"Frame: {metrics['frame_number']}")
 
-        # Stability
-        if "stability_score" in metrics:
-            stability = metrics["stability_score"] * 100
-            lines.append(f"Stability: {stability:.1f}%")
-
         # Center of mass
         if "center_of_mass" in metrics:
             com = metrics["center_of_mass"]
@@ -344,19 +422,28 @@ class AnnotatedVideoGenerator:
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-        # Create output video writer
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
         self.output_path.parent.mkdir(parents=True, exist_ok=True)
-        out = cv2.VideoWriter(str(self.output_path), fourcc, fps, (width, height))
+
+        # Write to temporary file first, then compress with ffmpeg
+        temp_path = self.output_path.with_suffix('.temp.mp4')
+
+        # Try H.264 codec directly in OpenCV (if available), fallback to mp4v
+        # OpenCV H.264 requires the codec to be installed on the system
+        fourcc = cv2.VideoWriter_fourcc(*'avc1')  # H.264 codec
+        out = cv2.VideoWriter(str(temp_path), fourcc, fps, (width, height))
+        if not out.isOpened():
+            # Fallback to mp4v if avc1 not available
+            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+            out = cv2.VideoWriter(str(temp_path), fourcc, fps, (width, height))
 
         # Create lookup for frame data
         frame_lookup = {fd["frame_number"]: fd for fd in frame_data}
 
-        # Process frames with pose estimation
+        # Process frames with pose estimation (VIDEO mode + GPU for speed)
         frame_num = 0
         trajectory_so_far = []
 
-        with PoseEstimator() as pose_estimator:
+        with PoseEstimator(video_mode=True, use_gpu=True) as pose_estimator:
             while True:
                 ret, frame = cap.read()
                 if not ret:
@@ -364,7 +451,10 @@ class AnnotatedVideoGenerator:
 
                 # Convert to RGB for pose estimation
                 frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                keypoints = pose_estimator.process_frame(frame_rgb)
+
+                # Calculate timestamp in milliseconds for VIDEO mode
+                timestamp_ms = int((frame_num / fps) * 1000)
+                keypoints = pose_estimator.process_frame(frame_rgb, timestamp_ms=timestamp_ms)
 
                 if keypoints and frame_num in frame_lookup:
                     metrics = frame_lookup[frame_num]
@@ -387,6 +477,16 @@ class AnnotatedVideoGenerator:
         cap.release()
         out.release()
 
+        # Compress with H.264 for much smaller file size
+        if temp_path.exists():
+            if compress_video_h264(temp_path, self.output_path):
+                temp_path.unlink()  # Delete temp file
+                logger.info(f"Compressed video saved to {self.output_path}")
+            else:
+                # Fallback: rename temp to output if compression fails
+                temp_path.rename(self.output_path)
+                logger.warning("ffmpeg compression failed, using uncompressed video")
+
         return self.output_path.exists()
 
     def generate_from_existing_keypoints(
@@ -402,9 +502,6 @@ class AnnotatedVideoGenerator:
         Returns:
             True if successful, False otherwise
         """
-        import logging
-        logger = logging.getLogger(__name__)
-
         cap = cv2.VideoCapture(str(self.input_path))
         if not cap.isOpened():
             logger.error(f"Failed to open input video: {self.input_path}")
@@ -416,22 +513,24 @@ class AnnotatedVideoGenerator:
 
         logger.info(f"Input video: {width}x{height} @ {fps}fps")
 
-        # Try different codecs for compatibility
         self.output_path.parent.mkdir(parents=True, exist_ok=True)
 
-        # Use mp4v codec for .mp4 files
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        out = cv2.VideoWriter(str(self.output_path), fourcc, fps, (width, height))
+        # Write to temporary file first, then compress with ffmpeg
+        temp_path = self.output_path.with_suffix('.temp.mp4')
+
+        # Try H.264 codec directly in OpenCV (if available), fallback to mp4v
+        fourcc = cv2.VideoWriter_fourcc(*'avc1')  # H.264 codec
+        out = cv2.VideoWriter(str(temp_path), fourcc, fps, (width, height))
+        if not out.isOpened():
+            # Fallback to mp4v if avc1 not available
+            logger.info("avc1 codec not available, falling back to mp4v")
+            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+            out = cv2.VideoWriter(str(temp_path), fourcc, fps, (width, height))
 
         if not out.isOpened():
-            # Fallback to XVID
-            fourcc = cv2.VideoWriter_fourcc(*'XVID')
-            output_avi = str(self.output_path).replace('.mp4', '.avi')
-            out = cv2.VideoWriter(output_avi, fourcc, fps, (width, height))
-            if not out.isOpened():
-                logger.error("Failed to create video writer")
-                cap.release()
-                return False
+            logger.error("Failed to create video writer")
+            cap.release()
+            return False
 
         # Create lookup for frame data
         frame_lookup = {fd["frame_number"]: fd for fd in frame_data}
@@ -480,4 +579,15 @@ class AnnotatedVideoGenerator:
         out.release()
 
         logger.info(f"Annotated {annotated_count} frames out of {frame_num} total")
+
+        # Compress with H.264 for much smaller file size
+        if temp_path.exists():
+            if compress_video_h264(temp_path, self.output_path):
+                temp_path.unlink()  # Delete temp file
+                logger.info(f"Compressed video saved to {self.output_path}")
+            else:
+                # Fallback: rename temp to output if compression fails
+                temp_path.rename(self.output_path)
+                logger.warning("ffmpeg compression failed, using uncompressed video")
+
         return self.output_path.exists()
