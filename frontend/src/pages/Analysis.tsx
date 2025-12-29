@@ -22,10 +22,14 @@ export const Analysis: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
   const [currentFrame, setCurrentFrame] = useState(0);
+  const [annotatedVideoUrl, setAnnotatedVideoUrl] = useState<string | null>(null);
+  const [isGeneratingAnnotation, setIsGeneratingAnnotation] = useState(false);
+  const [showAnnotated, setShowAnnotated] = useState(true);
 
   // WebSocket connection for real-time updates
+  // Connect for both 'pending' and 'processing' to catch status transitions
   useWebSocket(
-    task?.status === 'processing' ? task.id : null,
+    task?.status === 'pending' || task?.status === 'processing' ? task.id : null,
     {
       onProgress: (prog, frame) => {
         setProgress(prog);
@@ -38,6 +42,13 @@ export const Analysis: React.FC = () => {
             const analysisResult = await analysisApi.getResults(videoId);
             setResult(analysisResult);
             setTask((prev) => prev ? { ...prev, status: 'completed' } : null);
+
+            // Auto-generate annotated video after analysis completes
+            if (!analysisResult.annotated_video_url) {
+              generateAnnotatedVideo();
+            } else {
+              setAnnotatedVideoUrl(analysisResult.annotated_video_url);
+            }
           } catch (err) {
             console.error('Failed to fetch results:', err);
           }
@@ -67,6 +78,10 @@ export const Analysis: React.FC = () => {
         try {
           const analysisResult = await analysisApi.getResults(videoId);
           setResult(analysisResult);
+          // Set annotated video URL if available
+          if (analysisResult.annotated_video_url) {
+            setAnnotatedVideoUrl(analysisResult.annotated_video_url);
+          }
         } catch {
           // No existing results, that's fine
         }
@@ -86,6 +101,7 @@ export const Analysis: React.FC = () => {
     setError(null);
     setProgress(0);
     setCurrentFrame(0);
+    setAnnotatedVideoUrl(null);
 
     try {
       const analysisTask = await analysisApi.start(videoId);
@@ -93,6 +109,20 @@ export const Analysis: React.FC = () => {
       setResult(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('analysis.failed'));
+    }
+  };
+
+  const generateAnnotatedVideo = async () => {
+    if (!videoId || isGeneratingAnnotation) return;
+
+    setIsGeneratingAnnotation(true);
+    try {
+      const response = await videoApi.annotate(videoId);
+      setAnnotatedVideoUrl(response.annotated_video_url);
+    } catch (err) {
+      console.error('Failed to generate annotated video:', err);
+    } finally {
+      setIsGeneratingAnnotation(false);
     }
   };
 
@@ -167,7 +197,62 @@ export const Analysis: React.FC = () => {
         <div className="grid lg:grid-cols-2 gap-8">
           {/* Video player */}
           <div>
-            <VideoPlayer src={video.preview_url || `/uploads/${video.filename}`} />
+            {/* Video toggle for annotated/original */}
+            {result && (
+              <div className="mb-4 flex items-center justify-between bg-white rounded-lg p-3 shadow-sm">
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-medium text-gray-700">
+                    {t('video.viewMode')}:
+                  </span>
+                  <div className="flex bg-gray-100 rounded-lg p-1">
+                    <button
+                      onClick={() => setShowAnnotated(false)}
+                      className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                        !showAnnotated
+                          ? 'bg-white text-primary-600 shadow-sm'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      {t('video.original')}
+                    </button>
+                    <button
+                      onClick={() => setShowAnnotated(true)}
+                      disabled={!annotatedVideoUrl && !isGeneratingAnnotation}
+                      className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                        showAnnotated && annotatedVideoUrl
+                          ? 'bg-white text-primary-600 shadow-sm'
+                          : 'text-gray-600 hover:text-gray-900'
+                      } ${!annotatedVideoUrl && !isGeneratingAnnotation ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      {t('video.annotated')}
+                    </button>
+                  </div>
+                </div>
+                {!annotatedVideoUrl && !isGeneratingAnnotation && (
+                  <button
+                    onClick={generateAnnotatedVideo}
+                    className="px-3 py-1 text-sm bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+                  >
+                    {t('video.generateAnnotated')}
+                  </button>
+                )}
+                {isGeneratingAnnotation && (
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-500" />
+                    {t('video.generatingAnnotated')}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <VideoPlayer
+              src={
+                showAnnotated && annotatedVideoUrl
+                  ? annotatedVideoUrl
+                  : video.preview_url || `/uploads/${video.filename}`
+              }
+              key={showAnnotated && annotatedVideoUrl ? 'annotated' : 'original'}
+            />
 
             {/* Video info */}
             <div className="mt-4 grid grid-cols-3 gap-4 text-sm">
@@ -192,8 +277,8 @@ export const Analysis: React.FC = () => {
 
           {/* Analysis section */}
           <div className="space-y-6">
-            {/* Show progress if analyzing */}
-            {task?.status === 'processing' && (
+            {/* Show progress if analyzing (pending or processing) */}
+            {(task?.status === 'pending' || task?.status === 'processing') && (
               <AnalysisProgress
                 progress={progress}
                 currentFrame={currentFrame}

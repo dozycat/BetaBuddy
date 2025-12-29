@@ -105,7 +105,12 @@
     "ko": "Korean"
   },
   "video": {
-    "unsupported": "Your browser does not support the video tag."
+    "unsupported": "Your browser does not support the video tag.",
+    "viewMode": "View",
+    "original": "Original",
+    "annotated": "Annotated",
+    "generateAnnotated": "Generate Annotated Video",
+    "generatingAnnotated": "Generating annotated video..."
   },
   "common": {
     "loading": "Loading...",

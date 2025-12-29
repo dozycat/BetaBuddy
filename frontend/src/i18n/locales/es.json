@@ -105,7 +105,12 @@
     "ko": "Coreano"
   },
   "video": {
-    "unsupported": "Tu navegador no soporta la etiqueta de video."
+    "unsupported": "Tu navegador no soporta la etiqueta de video.",
+    "viewMode": "Ver",
+    "original": "Original",
+    "annotated": "Anotado",
+    "generateAnnotated": "Generar Video Anotado",
+    "generatingAnnotated": "Generando video anotado..."
   },
   "common": {
     "loading": "Cargando...",

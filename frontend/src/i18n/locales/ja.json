@@ -105,7 +105,12 @@
     "ko": "韓国語"
   },
   "video": {
-    "unsupported": "お使いのブラウザはビデオタグをサポートしていません。"
+    "unsupported": "お使いのブラウザはビデオタグをサポートしていません。",
+    "viewMode": "表示",
+    "original": "オリジナル",
+    "annotated": "アノテーション",
+    "generateAnnotated": "アノテーション動画を生成",
+    "generatingAnnotated": "アノテーション動画を生成中..."
   },
   "common": {
     "loading": "読み込み中...",

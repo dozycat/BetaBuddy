@@ -114,6 +114,11 @@ The annotated video includes:
 - Real-time metrics overlay (stability, velocity, acceleration)
 - Joint angles panel
 
+**Frontend Features:**
+- Annotated videos are automatically generated after analysis completes
+- Toggle between original and annotated video views
+- Progress bar displays during analysis with real-time frame updates
+
 ## Architecture
 
 ```

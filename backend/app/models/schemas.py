@@ -131,7 +131,7 @@ class AnalysisResultResponse(BaseModel):
     dyno_detected: int = 0
     summary_stats: Optional[dict] = None
     joint_angle_stats: Optional[dict] = None
-    com_trajectory: Optional[list[tuple[float, float]]] = None
+    com_trajectory: Optional[list[list[float]]] = None
     beta_suggestion: Optional[str] = None
     annotated_video_url: Optional[str] = None
     created_at: datetime

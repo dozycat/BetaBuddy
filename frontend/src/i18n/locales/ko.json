@@ -105,7 +105,12 @@
     "ko": "한국어"
   },
   "video": {
-    "unsupported": "브라우저가 비디오 태그를 지원하지 않습니다."
+    "unsupported": "브라우저가 비디오 태그를 지원하지 않습니다.",
+    "viewMode": "보기",
+    "original": "원본",
+    "annotated": "주석",
+    "generateAnnotated": "주석 영상 생성",
+    "generatingAnnotated": "주석 영상 생성 중..."
   },
   "common": {
     "loading": "로딩 중...",

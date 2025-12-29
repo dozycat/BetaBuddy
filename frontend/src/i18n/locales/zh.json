@@ -105,7 +105,12 @@
     "ko": "韩语"
   },
   "video": {
-    "unsupported": "您的浏览器不支持视频标签。"
+    "unsupported": "您的浏览器不支持视频标签。",
+    "viewMode": "查看",
+    "original": "原始",
+    "annotated": "标注",
+    "generateAnnotated": "生成标注视频",
+    "generatingAnnotated": "正在生成标注视频..."
   },
   "common": {
     "loading": "加载中...",

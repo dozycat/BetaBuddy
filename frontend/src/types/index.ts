@@ -60,7 +60,14 @@ export interface AnalysisResult {
   joint_angle_stats: Record<string, JointAngleStats> | null;
   com_trajectory: [number, number][] | null;
   beta_suggestion: string | null;
+  annotated_video_url: string | null;
   created_at: string;
+}
+
+export interface AnnotateResponse {
+  video_id: string;
+  annotated_video_url: string;
+  message: string;
 }
 
 export interface BetaSuggestion {
