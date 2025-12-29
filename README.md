@@ -37,13 +37,20 @@ npm install
 npm run dev
 ```
 
-### Ollama Setup (Optional, for AI suggestions)
+### Ollama Setup (Required for AI Beta Suggestions)
 
 ```bash
-# Install Ollama from https://ollama.ai
+# Install Ollama
+curl -fsSL https://ollama.ai/install.sh | sh
+
+# Pull the default model (4.7GB download)
 ollama pull qwen2.5:7b
+
+# Start Ollama server (run in background or separate terminal)
 ollama serve
 ```
+
+**Note:** Without Ollama running, the app will use fallback rule-based suggestions instead of AI-generated ones.
 
 ## API Overview
 
