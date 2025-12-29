@@ -320,6 +320,7 @@ async def generate_annotated_video(
         draw_com=request.draw_com,
         draw_com_trajectory=request.draw_com_trajectory,
         draw_metrics_overlay=request.draw_metrics_overlay,
+        draw_movements=request.draw_movements,
     )
 
     # Generate annotated video using stored keypoints
@@ -329,9 +330,15 @@ async def generate_annotated_video(
         config=config,
     )
 
+    # Get movement data if available and requested
+    movement_data = None
+    if request.draw_movements and analysis_result.movement_data:
+        movement_data = analysis_result.movement_data
+
     # Use generate_from_existing_keypoints for faster processing
     success = generator.generate_from_existing_keypoints(
         frame_data=analysis_result.frame_data,
+        movement_data=movement_data,
     )
 
     if not success:

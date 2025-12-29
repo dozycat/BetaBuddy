@@ -224,3 +224,166 @@ def generate_fallback_suggestion(summary: dict) -> str:
     suggestions.append("**训练建议**: 建议进行针对性的核心力量和指力训练，每周保持2-3次攀爬练习。")
 
     return "\n\n".join(suggestions)
+
+
+# Movement description prompt template
+MOVEMENT_DESCRIPTION_PROMPT_TEMPLATE = """你是一位专业的攀岩教练。请为检测到的攀岩动作生成简洁的中文描述。
+
+## 检测到的动作
+- 动作类型: {movement_type_cn}
+- 持续时间: {duration:.1f}秒
+- 使用侧: {side_cn}
+- 难度等级: {difficulty}
+
+## 关键角度数据
+{angles_text}
+
+## 请生成描述
+要求:
+1. 简洁描述动作特点和执行质量（1-2句话）
+2. 如果是高难度动作，突出其挑战性
+3. 使用专业但易懂的语言
+
+示例格式:
+"侧拉: 左侧拉动，肘部角度75°，保持良好的身体张力。"
+
+请直接输出描述，不要包含其他内容。"""
+
+
+def format_movement_angles(key_angles: dict) -> str:
+    """Format movement angles for the prompt."""
+    angle_names = {
+        "elbow": "肘部角度",
+        "shoulder": "肩部角度",
+        "hip": "髋部角度",
+        "knee": "膝部角度",
+        "h_displacement": "水平位移",
+        "extension": "延伸距离",
+        "acceleration": "加速度",
+        "velocity": "速度",
+    }
+
+    lines = []
+    for key, value in key_angles.items():
+        cn_name = angle_names.get(key, key)
+        if isinstance(value, float):
+            if key in ["h_displacement", "extension"]:
+                lines.append(f"- {cn_name}: {value:.2f}")
+            else:
+                lines.append(f"- {cn_name}: {value:.1f}°")
+        else:
+            lines.append(f"- {cn_name}: {value}")
+
+    return "\n".join(lines) if lines else "- 无详细数据"
+
+
+def generate_movement_fallback_description(movement: dict) -> str:
+    """Generate a basic movement description without LLM."""
+    movement_type_cn = movement.get("movement_name_cn", "未知动作")
+    side_cn = movement.get("side_cn", "")
+    duration = movement.get("end_timestamp", 0) - movement.get("start_timestamp", 0)
+    is_challenging = movement.get("is_challenging", False)
+    key_angles = movement.get("key_angles", {})
+
+    # Build description based on movement type
+    difficulty_text = "高难度" if is_challenging else ""
+
+    # Get primary angle info
+    angle_info = ""
+    if "elbow" in key_angles:
+        angle_info = f"肘部角度{key_angles['elbow']:.0f}°"
+    elif "knee" in key_angles:
+        angle_info = f"膝部角度{key_angles['knee']:.0f}°"
+    elif "hip" in key_angles:
+        angle_info = f"髋部角度{key_angles['hip']:.0f}°"
+
+    if angle_info:
+        return f"{difficulty_text}{movement_type_cn}: {side_cn}执行，{angle_info}，持续{duration:.1f}秒。"
+    else:
+        return f"{difficulty_text}{movement_type_cn}: {side_cn}执行，持续{duration:.1f}秒。"
+
+
+async def generate_movement_description(
+    movement: dict,
+    client: Optional[OllamaClient] = None,
+) -> str:
+    """
+    Generate Chinese description for a single movement using LLM.
+
+    Args:
+        movement: Movement dictionary with type, angles, etc.
+        client: Optional OllamaClient instance
+
+    Returns:
+        Generated description text
+    """
+    if client is None:
+        client = OllamaClient()
+
+    # Check if LLM is available
+    if not await client.is_available():
+        return generate_movement_fallback_description(movement)
+
+    # Format the prompt
+    movement_type_cn = movement.get("movement_name_cn", "未知动作")
+    side_cn = movement.get("side_cn", "")
+    duration = movement.get("end_timestamp", 0) - movement.get("start_timestamp", 0)
+    is_challenging = movement.get("is_challenging", False)
+    key_angles = movement.get("key_angles", {})
+
+    difficulty = "高难度动作" if is_challenging else "标准动作"
+    angles_text = format_movement_angles(key_angles)
+
+    prompt = MOVEMENT_DESCRIPTION_PROMPT_TEMPLATE.format(
+        movement_type_cn=movement_type_cn,
+        duration=duration,
+        side_cn=side_cn,
+        difficulty=difficulty,
+        angles_text=angles_text,
+    )
+
+    description = await client.generate(prompt)
+
+    if description is None:
+        return generate_movement_fallback_description(movement)
+
+    # Clean up the response (remove extra whitespace/newlines)
+    return description.strip()
+
+
+async def generate_movement_descriptions(
+    movements: list[dict],
+    client: Optional[OllamaClient] = None,
+    use_llm: bool = True,
+) -> list[dict]:
+    """
+    Generate Chinese descriptions for all movements.
+
+    Args:
+        movements: List of movement dictionaries
+        client: Optional OllamaClient instance
+        use_llm: Whether to use LLM (False = use fallback only)
+
+    Returns:
+        List of movements with description_cn field populated
+    """
+    if client is None:
+        client = OllamaClient()
+
+    # Check LLM availability once
+    llm_available = use_llm and await client.is_available()
+
+    if llm_available:
+        logger.info(f"Generating LLM descriptions for {len(movements)} movements")
+    else:
+        logger.info(f"Using fallback descriptions for {len(movements)} movements")
+
+    for movement in movements:
+        if llm_available:
+            description = await generate_movement_description(movement, client)
+        else:
+            description = generate_movement_fallback_description(movement)
+
+        movement["description_cn"] = description
+
+    return movements

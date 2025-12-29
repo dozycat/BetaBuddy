@@ -6,7 +6,8 @@ AI-powered climbing video analysis system with real-time pose estimation, biomec
 
 - **Real-Time Pose Detection**: MediaPipe 33-keypoint detection for accurate body tracking
 - **Biomechanical Analysis**: Center of mass, joint angles, velocity, and acceleration calculations
-- **Video Annotation**: Generate annotated videos with skeleton overlay and metrics display
+- **Movement Detection**: Automatic identification of climbing techniques (side pull, undercling, heel hook, flag, drop knee, etc.)
+- **Video Annotation**: Generate annotated videos with skeleton overlay, metrics display, and movement labels
 - **AI Beta Suggestions**: LLM-powered climbing technique recommendations
 - **Configurable LLM**: Runtime model selection (Qwen2.5, Llama3, Mistral, etc.)
 - **WebSocket Streaming**: Real-time metrics during video analysis
@@ -74,6 +75,18 @@ curl http://localhost:8000/api/v1/videos/{video_id}/results
 curl -X POST http://localhost:8000/api/v1/videos/{video_id}/annotate
 ```
 
+### Movement Detection
+
+```bash
+# Detect climbing techniques
+curl -X POST http://localhost:8000/api/v1/videos/{video_id}/detect-movements \
+  -H "Content-Type: application/json" \
+  -d '{"generate_descriptions": true}'
+
+# Get cached movement data
+curl http://localhost:8000/api/v1/videos/{video_id}/movements
+```
+
 ### LLM Configuration
 
 ```bash
@@ -112,19 +125,44 @@ Connect to `ws://localhost:8000/ws/analysis/{task_id}` to receive:
 | Efficiency | Direct distance / actual path length |
 | Dyno Detection | Dynamic move detection via acceleration peaks |
 
+## Movement Detection
+
+Automatically identifies common climbing techniques from pose and angle data:
+
+| Movement | Chinese | Detection Criteria |
+|----------|---------|-------------------|
+| Side Pull | 侧拉 | Arm pulling sideways, body leaning opposite |
+| Undercling | 反提 | Hand below shoulder, elbow bent pulling upward |
+| Gaston | 推撑 | Elbow pointed outward, pushing motion |
+| Heel Hook | 跟勾 | Heel at or above hip level |
+| Toe Hook | 趾勾 | Toe elevated with foot rotated |
+| Flag | 旗杆 | Leg extended for balance |
+| Drop Knee | 埃及步 | Hip rotation with knee dropped inward |
+| Dyno | 动态跳跃 | High acceleration dynamic moves |
+
+**Features:**
+- Timestamps and duration for each detected movement
+- Confidence scores and challenging move indicators
+- LLM-generated Chinese descriptions (with fallback when Ollama unavailable)
+- Movement labels overlay on annotated videos
+- Interactive timeline in the frontend
+
 ## Video Annotation
 
 The annotated video includes:
 - Colored keypoints (green=high confidence, yellow=medium, red=low)
 - Skeleton connections between joints
 - Center of mass point with trajectory trail
-- Real-time metrics overlay (stability, velocity, acceleration)
+- Real-time metrics overlay (velocity, acceleration)
 - Joint angles panel
+- Movement technique labels (when detected)
 
 **Frontend Features:**
 - Annotated videos are automatically generated after analysis completes
 - Toggle between original and annotated video views
 - Progress bar displays during analysis with real-time frame updates
+- Interactive movement timeline with expandable details
+- Click movements to seek video to that timestamp
 
 ## Architecture
 

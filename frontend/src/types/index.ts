@@ -111,3 +111,48 @@ export interface WSMessage {
   };
   message?: string;
 }
+
+// Movement detection types
+export interface DetectedMovement {
+  movement_type: string;
+  movement_name_cn: string;
+  start_frame: number;
+  end_frame: number;
+  start_timestamp: number;
+  end_timestamp: number;
+  side: 'left' | 'right' | 'both';
+  side_cn: string;
+  confidence: number;
+  is_challenging: boolean;
+  key_angles: Record<string, number>;
+  peak_frame: number;
+  description_cn?: string;
+}
+
+export interface TimelineEntry {
+  timestamp: number;
+  frame: number;
+  movements: string[];
+}
+
+export interface MovementSummary {
+  total_movements: number;
+  by_type: Record<string, number>;
+  challenging_count: number;
+  total_duration: number;
+}
+
+export interface MovementDetectionResponse {
+  video_id: string;
+  total_movements: number;
+  challenging_count: number;
+  movements: DetectedMovement[];
+  timeline: TimelineEntry[];
+  summary: MovementSummary;
+}
+
+export interface MovementDetectionRequest {
+  min_duration_frames?: number;
+  confidence_threshold?: number;
+  generate_descriptions?: boolean;
+}

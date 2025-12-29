@@ -140,6 +140,7 @@ class AnnotationConfig:
     draw_com: bool = True
     draw_com_trajectory: bool = True
     draw_metrics_overlay: bool = True
+    draw_movements: bool = True  # Draw movement technique labels
     keypoint_radius: int = 5
     skeleton_thickness: int = 2
     com_radius: int = 8
@@ -147,6 +148,8 @@ class AnnotationConfig:
     visibility_threshold: float = 0.5
     font_scale: float = 0.6
     font_thickness: int = 1
+    movement_font_scale: float = 0.7
+    movement_display_frames: int = 45  # Frames to show label after movement starts
 
 
 class VideoAnnotator:
@@ -340,6 +343,109 @@ class VideoAnnotator:
 
         return frame
 
+    def draw_movement_labels(
+        self,
+        frame: np.ndarray,
+        active_movements: list[dict],
+        frame_height: int,
+        frame_width: int,
+    ) -> np.ndarray:
+        """
+        Draw movement technique labels on the frame.
+
+        Args:
+            frame: Video frame to annotate
+            active_movements: List of movements active at this frame
+            frame_height: Frame height in pixels
+            frame_width: Frame width in pixels
+
+        Returns:
+            Annotated frame
+        """
+        if not active_movements:
+            return frame
+
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        y_start = frame_height - 40
+        x_offset = 10
+        line_height = 35
+
+        # Show at most 3 movements to avoid clutter
+        for i, movement in enumerate(active_movements[:3]):
+            name = movement.get("movement_name_cn", "")
+            is_challenging = movement.get("is_challenging", False)
+
+            if not name:
+                continue
+
+            # Background color based on difficulty
+            if is_challenging:
+                bg_color = (0, 80, 180)  # Blue-ish for challenging (BGR)
+                border_color = (0, 120, 255)  # Brighter border
+            else:
+                bg_color = (80, 80, 80)  # Gray for normal
+                border_color = (120, 120, 120)
+
+            text_color = (255, 255, 255)  # White text
+
+            # Calculate text size
+            text_size, baseline = cv2.getTextSize(
+                name, font, self.config.movement_font_scale, 2
+            )
+
+            padding = 8
+            box_width = text_size[0] + padding * 2
+            box_height = text_size[1] + padding * 2 + baseline
+
+            # Position: bottom-left, stacking upward
+            box_y = y_start - i * line_height - box_height
+            box_x = x_offset
+
+            # Draw rounded rectangle background
+            cv2.rectangle(
+                frame,
+                (box_x, box_y),
+                (box_x + box_width, box_y + box_height),
+                bg_color,
+                -1,
+            )
+            # Draw border
+            cv2.rectangle(
+                frame,
+                (box_x, box_y),
+                (box_x + box_width, box_y + box_height),
+                border_color,
+                2,
+            )
+
+            # Draw text
+            text_y = box_y + padding + text_size[1]
+            cv2.putText(
+                frame,
+                name,
+                (box_x + padding, text_y),
+                font,
+                self.config.movement_font_scale,
+                text_color,
+                2,
+                cv2.LINE_AA,
+            )
+
+            # Add star indicator for challenging moves
+            if is_challenging:
+                star_x = box_x + box_width + 5
+                cv2.putText(
+                    frame,
+                    "*",
+                    (star_x, text_y),
+                    font,
+                    0.6,
+                    (0, 215, 255),  # Gold color (BGR)
+                    2,
+                )
+
+        return frame
+
     def annotate_frame(
         self,
         frame: np.ndarray,
@@ -492,12 +598,14 @@ class AnnotatedVideoGenerator:
     def generate_from_existing_keypoints(
         self,
         frame_data: list[dict],
+        movement_data: Optional[list[dict]] = None,
     ) -> bool:
         """
         Generate annotated video using stored keypoint data (faster, no re-detection).
 
         Args:
             frame_data: List of frame data including keypoints
+            movement_data: Optional list of detected movements for overlay
 
         Returns:
             True if successful, False otherwise
@@ -536,6 +644,23 @@ class AnnotatedVideoGenerator:
         frame_lookup = {fd["frame_number"]: fd for fd in frame_data}
         logger.info(f"Frame data contains {len(frame_data)} frames with keypoints")
 
+        # Build movement frame lookup if movement data is provided
+        movement_by_frame = {}
+        if movement_data and self.config.draw_movements:
+            for m in movement_data:
+                # Show movement label from start to end frame, plus some extra frames
+                start = m.get("start_frame", 0)
+                end = m.get("end_frame", start) + self.config.movement_display_frames
+                for f in range(start, end + 1):
+                    if f not in movement_by_frame:
+                        movement_by_frame[f] = []
+                    # Avoid duplicates
+                    if not any(existing.get("movement_type") == m.get("movement_type") and
+                              existing.get("side") == m.get("side")
+                              for existing in movement_by_frame[f]):
+                        movement_by_frame[f].append(m)
+            logger.info(f"Movement data contains {len(movement_data)} movements")
+
         frame_num = 0
         trajectory_so_far = []
         annotated_count = 0
@@ -571,6 +696,15 @@ class AnnotatedVideoGenerator:
                         trajectory_so_far if self.config.draw_com_trajectory else None,
                     )
                     annotated_count += 1
+
+            # Draw movement labels if enabled and present for this frame
+            if self.config.draw_movements and frame_num in movement_by_frame:
+                frame = self.annotator.draw_movement_labels(
+                    frame,
+                    movement_by_frame[frame_num],
+                    height,
+                    width,
+                )
 
             out.write(frame)
             frame_num += 1

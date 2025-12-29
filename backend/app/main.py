@@ -5,7 +5,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
 from app.models.database import init_db
-from app.api.routes import videos, analysis, beta, llm
+from app.api.routes import videos, analysis, beta, llm, movements
 from app.api.websocket import router as ws_router, manager as ws_manager
 from app.api.routes.analysis import set_ws_manager
 
@@ -45,6 +45,7 @@ app.include_router(videos.router, prefix="/api/v1/videos", tags=["videos"])
 app.include_router(analysis.router, prefix="/api/v1", tags=["analysis"])
 app.include_router(beta.router, prefix="/api/v1/beta", tags=["beta"])
 app.include_router(llm.router, prefix="/api/v1/llm", tags=["llm"])
+app.include_router(movements.router, prefix="/api/v1", tags=["movements"])
 app.include_router(ws_router, tags=["websocket"])
 
 

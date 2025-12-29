@@ -158,6 +158,7 @@ class AnnotateVideoRequest(BaseModel):
     draw_com: bool = True
     draw_com_trajectory: bool = True
     draw_metrics_overlay: bool = True
+    draw_movements: bool = True  # Draw detected movement labels
 
 
 class AnnotateVideoResponse(BaseModel):
@@ -228,3 +229,53 @@ class WSErrorMessage(BaseModel):
     type: str = "error"
     message: str
     details: Optional[str] = None
+
+
+# Movement detection schemas
+class MovementDetectionRequest(BaseModel):
+    """Request parameters for movement detection."""
+    min_duration_frames: int = Field(5, ge=1, le=30, description="Minimum frames to consider a movement")
+    confidence_threshold: float = Field(0.6, ge=0.0, le=1.0, description="Minimum confidence to report")
+    generate_descriptions: bool = Field(True, description="Whether to generate LLM descriptions")
+
+
+class DetectedMovementSchema(BaseModel):
+    """Schema for a detected climbing movement."""
+    movement_type: str
+    movement_name_cn: str
+    start_frame: int
+    end_frame: int
+    start_timestamp: float
+    end_timestamp: float
+    side: str  # "left", "right", or "both"
+    side_cn: str
+    confidence: float
+    is_challenging: bool
+    key_angles: dict[str, float]
+    peak_frame: int
+    description_cn: Optional[str] = None
+
+
+class TimelineEntry(BaseModel):
+    """Entry in the movement timeline."""
+    timestamp: float
+    frame: int
+    movements: list[str]  # Movement names active at this point
+
+
+class MovementSummary(BaseModel):
+    """Summary of detected movements."""
+    total_movements: int
+    by_type: dict[str, int]  # Movement type -> count
+    challenging_count: int
+    total_duration: float
+
+
+class MovementDetectionResponse(BaseModel):
+    """Response from movement detection endpoint."""
+    video_id: str
+    total_movements: int
+    challenging_count: int
+    movements: list[DetectedMovementSchema]
+    timeline: list[TimelineEntry]
+    summary: MovementSummary

@@ -5,10 +5,11 @@ import { VideoPlayer } from '../components/VideoPlayer';
 import { MetricsPanel } from '../components/MetricsPanel';
 import { BetaSuggestion } from '../components/BetaSuggestion';
 import { AnalysisProgress } from '../components/AnalysisProgress';
+import { MovementTimeline } from '../components/MovementTimeline';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { useWebSocket } from '../hooks/useWebSocket';
-import { videoApi, analysisApi } from '../api/client';
-import type { Video, AnalysisTask, AnalysisResult } from '../types';
+import { videoApi, analysisApi, movementApi } from '../api/client';
+import type { Video, AnalysisTask, AnalysisResult, MovementDetectionResponse } from '../types';
 
 export const Analysis: React.FC = () => {
   const { t } = useTranslation();
@@ -30,6 +31,10 @@ export const Analysis: React.FC = () => {
   const [heightM, setHeightM] = useState<string>('');
   const [armSpanM, setArmSpanM] = useState<string>('');
   const [showClimberMetrics, setShowClimberMetrics] = useState(false);
+
+  // Movement detection
+  const [movementData, setMovementData] = useState<MovementDetectionResponse | null>(null);
+  const [isDetectingMovements, setIsDetectingMovements] = useState(false);
 
   // WebSocket connection for real-time updates
   // Connect for both 'pending' and 'processing' to catch status transitions
@@ -134,6 +139,40 @@ export const Analysis: React.FC = () => {
       setIsGeneratingAnnotation(false);
     }
   };
+
+  const handleDetectMovements = async () => {
+    if (!videoId || isDetectingMovements) return;
+
+    setIsDetectingMovements(true);
+    try {
+      const response = await movementApi.detect(videoId, {
+        generate_descriptions: true,
+      });
+      setMovementData(response);
+    } catch (err) {
+      console.error('Failed to detect movements:', err);
+    } finally {
+      setIsDetectingMovements(false);
+    }
+  };
+
+  // Try to load existing movement data when results are loaded
+  useEffect(() => {
+    if (!videoId || !result) return;
+
+    const loadMovements = async () => {
+      try {
+        const response = await movementApi.get(videoId);
+        if (response.movements.length > 0) {
+          setMovementData(response);
+        }
+      } catch {
+        // No existing movement data, that's fine
+      }
+    };
+
+    loadMovements();
+  }, [videoId, result]);
 
   if (isLoading) {
     return (
@@ -306,6 +345,12 @@ export const Analysis: React.FC = () => {
             {result && (
               <>
                 <MetricsPanel result={result} />
+                <MovementTimeline
+                  data={movementData}
+                  videoDuration={video.duration || 0}
+                  loading={isDetectingMovements}
+                  onDetect={handleDetectMovements}
+                />
                 <BetaSuggestion
                   videoId={video.id}
                   initialSuggestion={result.beta_suggestion}

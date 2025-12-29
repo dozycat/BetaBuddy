@@ -76,6 +76,9 @@ class AnalysisResult(Base):
     # Beta suggestion
     beta_suggestion = Column(Text, nullable=True)
 
+    # Movement detection data
+    movement_data = Column(JSON, nullable=True)  # List of detected movements
+
     # Annotated video
     annotated_video_path = Column(String, nullable=True)
 
@@ -112,6 +115,14 @@ async def init_db():
             try:
                 await conn.execute(
                     text("ALTER TABLE videos ADD COLUMN thumbnail_path TEXT")
+                )
+            except Exception:
+                pass  # Column might already exist
+
+        if await _column_missing(conn, 'analysis_results', 'movement_data'):
+            try:
+                await conn.execute(
+                    text("ALTER TABLE analysis_results ADD COLUMN movement_data JSON")
                 )
             except Exception:
                 pass  # Column might already exist

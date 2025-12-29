@@ -1,5 +1,15 @@
 import axios from 'axios';
-import type { Video, VideoListResponse, AnalysisTask, AnalysisResult, BetaSuggestion, AnnotateResponse, ThumbnailResponse } from '../types';
+import type {
+  Video,
+  VideoListResponse,
+  AnalysisTask,
+  AnalysisResult,
+  BetaSuggestion,
+  AnnotateResponse,
+  ThumbnailResponse,
+  MovementDetectionResponse,
+  MovementDetectionRequest,
+} from '../types';
 
 const api = axios.create({
   baseURL: '/api/v1',
@@ -77,6 +87,26 @@ export const betaApi = {
 
   checkStatus: async (): Promise<{ available: boolean; model: string }> => {
     const response = await api.get('/beta/status');
+    return response.data;
+  },
+};
+
+export const movementApi = {
+  detect: async (
+    videoId: string,
+    options?: MovementDetectionRequest
+  ): Promise<MovementDetectionResponse> => {
+    const response = await api.post<MovementDetectionResponse>(
+      `/videos/${videoId}/detect-movements`,
+      options || {}
+    );
+    return response.data;
+  },
+
+  get: async (videoId: string): Promise<MovementDetectionResponse> => {
+    const response = await api.get<MovementDetectionResponse>(
+      `/videos/${videoId}/movements`
+    );
     return response.data;
   },
 };
