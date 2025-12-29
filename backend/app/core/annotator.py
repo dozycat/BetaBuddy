@@ -423,22 +423,22 @@ class VideoAnnotator:
         if not active_movements:
             return frame
 
-        line_height = 28
-        x_offset = frame_width - 180  # Right side, aligned with joint angles panel
+        line_height = 140  # 28 * 5
+        x_offset = 20  # Move to left side for larger text
         y_offset = y_start_offset
 
         # Draw header using Chinese text
         frame = put_chinese_text(
             frame,
             "技术动作",
-            (x_offset, y_offset - 5),
-            font_size=18,
+            (x_offset, y_offset),
+            font_size=90,  # 18 * 5
             color=COLORS["text"],
         )
-        y_offset += 22
+        y_offset += 110  # 22 * 5
 
-        # Show at most 4 movements to avoid clutter
-        for i, movement in enumerate(active_movements[:4]):
+        # Show at most 3 movements to avoid clutter with larger font
+        for i, movement in enumerate(active_movements[:3]):
             name = movement.get("movement_name_cn", "")
             side_cn = movement.get("side_cn", "")
             is_challenging = movement.get("is_challenging", False)
@@ -466,7 +466,7 @@ class VideoAnnotator:
                 frame,
                 display_text,
                 (x_offset, y_offset + i * line_height),
-                font_size=16,
+                font_size=80,  # 16 * 5
                 color=text_color,
             )
 
@@ -494,7 +494,7 @@ class VideoAnnotator:
         if not active_movements:
             return frame
 
-        font_size = 20
+        font_size = 40  # Reduced for bottom subtitle
 
         # Build subtitle text from first active movement
         movement = active_movements[0]
@@ -539,10 +539,10 @@ class VideoAnnotator:
 
         # Position: centered at bottom
         x = (frame_width - text_width) // 2
-        y = frame_height - 35
+        y = frame_height - 60  # Adjusted for 40px font
 
         # Draw semi-transparent background
-        padding = 8
+        padding = 12
         bg_x1 = x - padding
         bg_y1 = y - padding
         bg_x2 = x + text_width + padding
@@ -555,7 +555,7 @@ class VideoAnnotator:
 
         # Draw border
         border_color = (0, 215, 255) if is_challenging else (200, 200, 200)
-        cv2.rectangle(frame, (bg_x1, bg_y1), (bg_x2, bg_y2), border_color, 1)
+        cv2.rectangle(frame, (bg_x1, bg_y1), (bg_x2, bg_y2), border_color, 2)  # Thicker border
 
         # Draw text using PIL for Chinese support
         frame = put_chinese_text(
