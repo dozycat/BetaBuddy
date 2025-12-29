@@ -29,16 +29,19 @@ BETA_PROMPT_TEMPLATE = """你是一位专业的攀岩教练，请根据以下视
 ## 关节角度统计
 {joint_angles_text}
 
+## 检测到的攀岩动作
+{movements_text}
+
 ## 检测到的问题
 {detected_issues}
 
 ## 请提供以下建议:
 1. **重心控制**: 针对重心偏移的改进方法
 2. **发力技巧**: 如何更好地利用身体各部位
-3. **动作优化**: 具体的动作调整建议
+3. **动作优化**: 针对检测到的具体动作，给出改进建议
 4. **训练建议**: 针对性的训练方法
 
-请用简洁专业的语言回答，每个部分2-3句话。"""
+请用简洁专业的语言回答，每个部分2-3句话。如果检测到特定的攀岩动作（如跟勾、侧拉等），请针对这些动作给出专业建议。"""
 
 
 class OllamaClient:
@@ -156,8 +159,64 @@ def detect_issues(summary: dict) -> str:
     return "\n".join(issues)
 
 
+def format_movements(movements: list[dict]) -> str:
+    """Format detected movements for the prompt."""
+    if not movements:
+        return "- 未检测到特定攀岩动作"
+
+    lines = []
+
+    # Group movements by type
+    by_type: dict[str, list[dict]] = {}
+    for m in movements:
+        type_name = m.get("movement_name_cn", m.get("movement_type", "未知"))
+        if type_name not in by_type:
+            by_type[type_name] = []
+        by_type[type_name].append(m)
+
+    for type_name, type_movements in by_type.items():
+        count = len(type_movements)
+        challenging_count = sum(1 for m in type_movements if m.get("is_challenging", False))
+
+        # Get representative movement details
+        sample = type_movements[0]
+        side_cn = sample.get("side_cn", "")
+        key_angles = sample.get("key_angles", {})
+
+        # Build description
+        desc_parts = [f"- {type_name}: {count}次"]
+        if side_cn and side_cn != "双侧":
+            desc_parts.append(f"({side_cn}为主)")
+        if challenging_count > 0:
+            desc_parts.append(f"，其中{challenging_count}次为高难度")
+
+        # Add key angle info if available
+        angle_info = []
+        if "elbow" in key_angles:
+            angle_info.append(f"肘部角度约{key_angles['elbow']:.0f}°")
+        if "knee" in key_angles:
+            angle_info.append(f"膝部角度约{key_angles['knee']:.0f}°")
+        if "hip" in key_angles:
+            angle_info.append(f"髋部角度约{key_angles['hip']:.0f}°")
+
+        if angle_info:
+            desc_parts.append(f"，{', '.join(angle_info)}")
+
+        lines.append("".join(desc_parts))
+
+    # Add summary
+    total = len(movements)
+    total_challenging = sum(1 for m in movements if m.get("is_challenging", False))
+    lines.append(f"- 总计: {total}个技术动作")
+    if total_challenging > 0:
+        lines.append(f"- 高难度动作: {total_challenging}次")
+
+    return "\n".join(lines)
+
+
 async def generate_beta_suggestion(
     summary: dict,
+    movements: Optional[list[dict]] = None,
     client: Optional[OllamaClient] = None,
 ) -> Optional[str]:
     """
@@ -165,6 +224,7 @@ async def generate_beta_suggestion(
 
     Args:
         summary: Analysis summary dictionary
+        movements: Optional list of detected movements from movement detector
         client: Optional OllamaClient instance
 
     Returns:
@@ -175,6 +235,7 @@ async def generate_beta_suggestion(
 
     # Format the prompt first (for logging)
     joint_angles_text = format_joint_angles(summary.get("joint_angle_stats", {}))
+    movements_text = format_movements(movements or [])
     detected_issues = detect_issues(summary)
 
     prompt = BETA_PROMPT_TEMPLATE.format(
@@ -184,6 +245,7 @@ async def generate_beta_suggestion(
         max_velocity=summary.get("max_velocity", 0),
         max_acceleration=summary.get("max_acceleration", 0),
         joint_angles_text=joint_angles_text,
+        movements_text=movements_text,
         detected_issues=detected_issues,
     )
 

@@ -9,10 +9,66 @@ from pathlib import Path
 from typing import Optional
 from dataclasses import dataclass
 import logging
+from PIL import Image, ImageDraw, ImageFont
 
 from app.core.pose_estimator import KeypointData, LANDMARK_NAMES
 
 logger = logging.getLogger(__name__)
+
+# Path to Chinese font
+CHINESE_FONT_PATH = Path(__file__).parent.parent / "fonts" / "NotoSansCJKsc-Regular.otf"
+
+# Cache for loaded fonts
+_font_cache: dict[int, ImageFont.FreeTypeFont] = {}
+
+
+def get_chinese_font(size: int = 20) -> ImageFont.FreeTypeFont:
+    """Get Chinese font with caching."""
+    if size not in _font_cache:
+        if CHINESE_FONT_PATH.exists():
+            _font_cache[size] = ImageFont.truetype(str(CHINESE_FONT_PATH), size)
+        else:
+            logger.warning(f"Chinese font not found at {CHINESE_FONT_PATH}, using default")
+            _font_cache[size] = ImageFont.load_default()
+    return _font_cache[size]
+
+
+def put_chinese_text(
+    img: np.ndarray,
+    text: str,
+    position: tuple[int, int],
+    font_size: int = 20,
+    color: tuple[int, int, int] = (255, 255, 255),
+) -> np.ndarray:
+    """
+    Draw Chinese text on OpenCV image using PIL.
+
+    Args:
+        img: OpenCV image (BGR format)
+        text: Text to draw (supports Chinese)
+        position: (x, y) position for text
+        font_size: Font size in pixels
+        color: Text color in BGR format
+
+    Returns:
+        Image with text drawn
+    """
+    # Convert BGR to RGB for PIL
+    img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    pil_img = Image.fromarray(img_rgb)
+    draw = ImageDraw.Draw(pil_img)
+
+    # Get font
+    font = get_chinese_font(font_size)
+
+    # Convert BGR color to RGB for PIL
+    rgb_color = (color[2], color[1], color[0])
+
+    # Draw text
+    draw.text(position, text, font=font, fill=rgb_color)
+
+    # Convert back to BGR for OpenCV
+    return cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
 
 
 def get_ffmpeg_path() -> Optional[str]:
@@ -349,9 +405,82 @@ class VideoAnnotator:
         active_movements: list[dict],
         frame_height: int,
         frame_width: int,
+        y_start_offset: int = 200,
     ) -> np.ndarray:
         """
-        Draw movement technique labels on the frame.
+        Draw movement technique labels on the RIGHT side of the frame.
+
+        Args:
+            frame: Video frame to annotate
+            active_movements: List of movements active at this frame
+            frame_height: Frame height in pixels
+            frame_width: Frame width in pixels
+            y_start_offset: Y offset from top to start drawing (below joint angles)
+
+        Returns:
+            Annotated frame
+        """
+        if not active_movements:
+            return frame
+
+        line_height = 28
+        x_offset = frame_width - 180  # Right side, aligned with joint angles panel
+        y_offset = y_start_offset
+
+        # Draw header using Chinese text
+        frame = put_chinese_text(
+            frame,
+            "技术动作",
+            (x_offset, y_offset - 5),
+            font_size=18,
+            color=COLORS["text"],
+        )
+        y_offset += 22
+
+        # Show at most 4 movements to avoid clutter
+        for i, movement in enumerate(active_movements[:4]):
+            name = movement.get("movement_name_cn", "")
+            side_cn = movement.get("side_cn", "")
+            is_challenging = movement.get("is_challenging", False)
+
+            if not name:
+                continue
+
+            # Build display text
+            if side_cn and side_cn != "双侧":
+                display_text = f"{name}({side_cn})"
+            else:
+                display_text = name
+
+            # Add star for challenging moves
+            if is_challenging:
+                display_text = "★ " + display_text
+
+            # Color based on difficulty
+            if is_challenging:
+                text_color = (0, 215, 255)  # Gold for challenging (BGR)
+            else:
+                text_color = (0, 255, 200)  # Cyan for normal (BGR)
+
+            frame = put_chinese_text(
+                frame,
+                display_text,
+                (x_offset, y_offset + i * line_height),
+                font_size=16,
+                color=text_color,
+            )
+
+        return frame
+
+    def draw_movement_subtitle(
+        self,
+        frame: np.ndarray,
+        active_movements: list[dict],
+        frame_height: int,
+        frame_width: int,
+    ) -> np.ndarray:
+        """
+        Draw movement technical details as centered subtitle at bottom.
 
         Args:
             frame: Video frame to annotate
@@ -365,84 +494,77 @@ class VideoAnnotator:
         if not active_movements:
             return frame
 
-        font = cv2.FONT_HERSHEY_SIMPLEX
-        y_start = frame_height - 40
-        x_offset = 10
-        line_height = 35
+        font_size = 20
 
-        # Show at most 3 movements to avoid clutter
-        for i, movement in enumerate(active_movements[:3]):
-            name = movement.get("movement_name_cn", "")
-            is_challenging = movement.get("is_challenging", False)
+        # Build subtitle text from first active movement
+        movement = active_movements[0]
+        name = movement.get("movement_name_cn", "")
+        side_cn = movement.get("side_cn", "")
+        is_challenging = movement.get("is_challenging", False)
+        key_angles = movement.get("key_angles", {})
 
-            if not name:
-                continue
+        if not name:
+            return frame
 
-            # Background color based on difficulty
-            if is_challenging:
-                bg_color = (0, 80, 180)  # Blue-ish for challenging (BGR)
-                border_color = (0, 120, 255)  # Brighter border
-            else:
-                bg_color = (80, 80, 80)  # Gray for normal
-                border_color = (120, 120, 120)
+        # Build detailed subtitle
+        parts = [name]
+        if side_cn and side_cn != "双侧":
+            parts.append(f"({side_cn})")
 
-            text_color = (255, 255, 255)  # White text
+        # Add key angle details
+        angle_parts = []
+        if "elbow" in key_angles:
+            angle_parts.append(f"肘{key_angles['elbow']:.0f}°")
+        if "knee" in key_angles:
+            angle_parts.append(f"膝{key_angles['knee']:.0f}°")
+        if "hip" in key_angles:
+            angle_parts.append(f"髋{key_angles['hip']:.0f}°")
+        if "shoulder" in key_angles:
+            angle_parts.append(f"肩{key_angles['shoulder']:.0f}°")
 
-            # Calculate text size
-            text_size, baseline = cv2.getTextSize(
-                name, font, self.config.movement_font_scale, 2
-            )
+        if angle_parts:
+            parts.append(" | " + " ".join(angle_parts))
 
-            padding = 8
-            box_width = text_size[0] + padding * 2
-            box_height = text_size[1] + padding * 2 + baseline
+        if is_challenging:
+            parts.append(" [高难度]")
 
-            # Position: bottom-left, stacking upward
-            box_y = y_start - i * line_height - box_height
-            box_x = x_offset
+        subtitle_text = "".join(parts)
 
-            # Draw rounded rectangle background
-            cv2.rectangle(
-                frame,
-                (box_x, box_y),
-                (box_x + box_width, box_y + box_height),
-                bg_color,
-                -1,
-            )
-            # Draw border
-            cv2.rectangle(
-                frame,
-                (box_x, box_y),
-                (box_x + box_width, box_y + box_height),
-                border_color,
-                2,
-            )
+        # Calculate text size using PIL font
+        pil_font = get_chinese_font(font_size)
+        # Use getbbox for text size (returns (left, top, right, bottom))
+        bbox = pil_font.getbbox(subtitle_text)
+        text_width = bbox[2] - bbox[0]
+        text_height = bbox[3] - bbox[1]
 
-            # Draw text
-            text_y = box_y + padding + text_size[1]
-            cv2.putText(
-                frame,
-                name,
-                (box_x + padding, text_y),
-                font,
-                self.config.movement_font_scale,
-                text_color,
-                2,
-                cv2.LINE_AA,
-            )
+        # Position: centered at bottom
+        x = (frame_width - text_width) // 2
+        y = frame_height - 35
 
-            # Add star indicator for challenging moves
-            if is_challenging:
-                star_x = box_x + box_width + 5
-                cv2.putText(
-                    frame,
-                    "*",
-                    (star_x, text_y),
-                    font,
-                    0.6,
-                    (0, 215, 255),  # Gold color (BGR)
-                    2,
-                )
+        # Draw semi-transparent background
+        padding = 8
+        bg_x1 = x - padding
+        bg_y1 = y - padding
+        bg_x2 = x + text_width + padding
+        bg_y2 = y + text_height + padding
+
+        # Create overlay for semi-transparent background
+        overlay = frame.copy()
+        cv2.rectangle(overlay, (bg_x1, bg_y1), (bg_x2, bg_y2), (0, 0, 0), -1)
+        cv2.addWeighted(overlay, 0.6, frame, 0.4, 0, frame)
+
+        # Draw border
+        border_color = (0, 215, 255) if is_challenging else (200, 200, 200)
+        cv2.rectangle(frame, (bg_x1, bg_y1), (bg_x2, bg_y2), border_color, 1)
+
+        # Draw text using PIL for Chinese support
+        frame = put_chinese_text(
+            frame,
+            subtitle_text,
+            (x, y),
+            font_size=font_size,
+            color=(255, 255, 255),
+        )
 
         return frame
 
@@ -531,16 +653,30 @@ class AnnotatedVideoGenerator:
         self.output_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Write to temporary file first, then compress with ffmpeg
-        temp_path = self.output_path.with_suffix('.temp.mp4')
+        # Try multiple codecs in order of preference
+        codecs_to_try = [
+            ('XVID', '.avi'),   # Widely available
+            ('MJPG', '.avi'),   # Always available, larger files
+            ('mp4v', '.mp4'),   # MPEG-4
+        ]
 
-        # Try H.264 codec directly in OpenCV (if available), fallback to mp4v
-        # OpenCV H.264 requires the codec to be installed on the system
-        fourcc = cv2.VideoWriter_fourcc(*'avc1')  # H.264 codec
-        out = cv2.VideoWriter(str(temp_path), fourcc, fps, (width, height))
-        if not out.isOpened():
-            # Fallback to mp4v if avc1 not available
-            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        out = None
+        temp_path = self.output_path.with_suffix('.temp.avi')
+        for codec, ext in codecs_to_try:
+            temp_path = self.output_path.with_suffix(f'.temp{ext}')
+            fourcc = cv2.VideoWriter_fourcc(*codec)
             out = cv2.VideoWriter(str(temp_path), fourcc, fps, (width, height))
+            if out.isOpened():
+                logger.info(f"Using codec: {codec}")
+                break
+            else:
+                logger.info(f"Codec {codec} not available, trying next...")
+                out = None
+
+        if out is None or not out.isOpened():
+            logger.error("Failed to create video writer - no compatible codec found")
+            cap.release()
+            return False
 
         # Create lookup for frame data
         frame_lookup = {fd["frame_number"]: fd for fd in frame_data}
@@ -624,19 +760,29 @@ class AnnotatedVideoGenerator:
         self.output_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Write to temporary file first, then compress with ffmpeg
-        temp_path = self.output_path.with_suffix('.temp.mp4')
+        temp_path = self.output_path.with_suffix('.temp.avi')
 
-        # Try H.264 codec directly in OpenCV (if available), fallback to mp4v
-        fourcc = cv2.VideoWriter_fourcc(*'avc1')  # H.264 codec
-        out = cv2.VideoWriter(str(temp_path), fourcc, fps, (width, height))
-        if not out.isOpened():
-            # Fallback to mp4v if avc1 not available
-            logger.info("avc1 codec not available, falling back to mp4v")
-            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        # Try multiple codecs in order of preference
+        codecs_to_try = [
+            ('XVID', '.avi'),   # Widely available
+            ('MJPG', '.avi'),   # Always available, larger files
+            ('mp4v', '.mp4'),   # MPEG-4
+        ]
+
+        out = None
+        for codec, ext in codecs_to_try:
+            temp_path = self.output_path.with_suffix(f'.temp{ext}')
+            fourcc = cv2.VideoWriter_fourcc(*codec)
             out = cv2.VideoWriter(str(temp_path), fourcc, fps, (width, height))
+            if out.isOpened():
+                logger.info(f"Using codec: {codec}")
+                break
+            else:
+                logger.info(f"Codec {codec} not available, trying next...")
+                out = None
 
-        if not out.isOpened():
-            logger.error("Failed to create video writer")
+        if out is None or not out.isOpened():
+            logger.error("Failed to create video writer - no compatible codec found")
             cap.release()
             return False
 
@@ -659,11 +805,12 @@ class AnnotatedVideoGenerator:
                               existing.get("side") == m.get("side")
                               for existing in movement_by_frame[f]):
                         movement_by_frame[f].append(m)
-            logger.info(f"Movement data contains {len(movement_data)} movements")
+            logger.info(f"Movement data contains {len(movement_data)} movements, frames with overlays: {len(movement_by_frame)}")
 
         frame_num = 0
         trajectory_so_far = []
         annotated_count = 0
+        movement_frames_drawn = 0
 
         while True:
             ret, frame = cap.read()
@@ -697,11 +844,24 @@ class AnnotatedVideoGenerator:
                     )
                     annotated_count += 1
 
-            # Draw movement labels if enabled and present for this frame
+            # Draw movement overlays if enabled and present for this frame
             if self.config.draw_movements and frame_num in movement_by_frame:
+                active_movements = movement_by_frame[frame_num]
+                movement_frames_drawn += 1
+
+                # Draw movement labels on right side (below joint angles)
                 frame = self.annotator.draw_movement_labels(
                     frame,
-                    movement_by_frame[frame_num],
+                    active_movements,
+                    height,
+                    width,
+                    y_start_offset=200,  # Below joint angles panel
+                )
+
+                # Draw technical details as subtitle at bottom
+                frame = self.annotator.draw_movement_subtitle(
+                    frame,
+                    active_movements,
                     height,
                     width,
                 )
@@ -712,7 +872,7 @@ class AnnotatedVideoGenerator:
         cap.release()
         out.release()
 
-        logger.info(f"Annotated {annotated_count} frames out of {frame_num} total")
+        logger.info(f"Annotated {annotated_count} frames, movements on {movement_frames_drawn} frames, total {frame_num}")
 
         # Compress with H.264 for much smaller file size
         if temp_path.exists():
@@ -720,8 +880,10 @@ class AnnotatedVideoGenerator:
                 temp_path.unlink()  # Delete temp file
                 logger.info(f"Compressed video saved to {self.output_path}")
             else:
-                # Fallback: rename temp to output if compression fails
-                temp_path.rename(self.output_path)
+                # Fallback: move temp to output if compression fails (handles overwrite)
+                if self.output_path.exists():
+                    self.output_path.unlink()  # Remove existing file first
+                shutil.move(str(temp_path), str(self.output_path))
                 logger.warning("ffmpeg compression failed, using uncompressed video")
 
         return self.output_path.exists()

@@ -60,8 +60,11 @@ async def get_beta_suggestion(
         metrics_summary = analysis_result.summary_stats or {}
         metrics_summary["joint_angle_stats"] = analysis_result.joint_angle_stats or {}
 
-    # Generate beta suggestion
-    suggestion = await generate_beta_suggestion(metrics_summary)
+    # Get movement data from analysis result
+    movements = analysis_result.movement_data or []
+
+    # Generate beta suggestion with movement data
+    suggestion = await generate_beta_suggestion(metrics_summary, movements=movements)
 
     if suggestion is None:
         raise HTTPException(

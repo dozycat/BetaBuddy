@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 import logging
 
+from app.config import settings
 from app.models.database import get_db, Video, AnalysisTask, AnalysisResult, AnalysisStatus
 from app.models.schemas import (
     MovementDetectionRequest,
@@ -16,6 +17,7 @@ from app.models.schemas import (
 )
 from app.core.movement_detector import MovementDetector, get_movement_summary
 from app.core.llm_client import generate_movement_descriptions
+from app.core.annotator import AnnotatedVideoGenerator, AnnotationConfig
 
 logger = logging.getLogger(__name__)
 
@@ -143,6 +145,39 @@ async def detect_movements(
     analysis_result.movement_data = movements_data
     await db.commit()
 
+    # Regenerate annotated video with movement overlays
+    if movements_data and analysis_result.frame_data:
+        logger.info(f"Regenerating annotated video with {len(movements_data)} movements")
+        output_filename = f"{video_id}_annotated.mp4"
+        output_path = settings.upload_dir / output_filename
+
+        config = AnnotationConfig(
+            draw_keypoints=True,
+            draw_skeleton=True,
+            draw_com=True,
+            draw_com_trajectory=True,
+            draw_metrics_overlay=True,
+            draw_movements=True,
+        )
+
+        generator = AnnotatedVideoGenerator(
+            input_path=video.file_path,
+            output_path=str(output_path),
+            config=config,
+        )
+
+        success = generator.generate_from_existing_keypoints(
+            frame_data=analysis_result.frame_data,
+            movement_data=movements_data,
+        )
+
+        if success:
+            analysis_result.annotated_video_path = str(output_path)
+            await db.commit()
+            logger.info(f"Annotated video regenerated: {output_path}")
+        else:
+            logger.warning("Failed to regenerate annotated video")
+
     # Build timeline
     duration = video.duration or (len(analysis_result.frame_data) / fps)
     timeline = build_timeline(movements_data, duration)
@@ -176,6 +211,11 @@ async def detect_movements(
         for m in movements_data
     ]
 
+    # Build annotated video URL
+    annotated_video_url = None
+    if analysis_result.annotated_video_path:
+        annotated_video_url = f"/uploads/{video_id}_annotated.mp4"
+
     return MovementDetectionResponse(
         video_id=video_id,
         total_movements=len(movements_response),
@@ -183,6 +223,7 @@ async def detect_movements(
         movements=movements_response,
         timeline=timeline,
         summary=summary,
+        annotated_video_url=annotated_video_url,
     )
 
 
@@ -286,6 +327,11 @@ async def get_movements(
         for m in movements_data
     ]
 
+    # Build annotated video URL
+    annotated_video_url = None
+    if analysis_result.annotated_video_path:
+        annotated_video_url = f"/uploads/{video_id}_annotated.mp4"
+
     return MovementDetectionResponse(
         video_id=video_id,
         total_movements=len(movements_response),
@@ -293,4 +339,5 @@ async def get_movements(
         movements=movements_response,
         timeline=timeline,
         summary=summary,
+        annotated_video_url=annotated_video_url,
     )

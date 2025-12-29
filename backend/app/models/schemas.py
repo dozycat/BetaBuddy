@@ -279,3 +279,4 @@ class MovementDetectionResponse(BaseModel):
     movements: list[DetectedMovementSchema]
     timeline: list[TimelineEntry]
     summary: MovementSummary
+    annotated_video_url: Optional[str] = None
