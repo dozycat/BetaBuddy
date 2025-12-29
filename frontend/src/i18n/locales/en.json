@@ -54,16 +54,9 @@
     "maxAcceleration": "Max Acceleration",
     "totalDistance": "Total Distance",
     "comTrajectory": "Center of Mass Trajectory",
-    "avgJointAngles": "Average Joint Angles",
-    "jointAngleDetails": "Joint Angle Details",
-    "joint": "Joint",
-    "min": "Min",
-    "avg": "Avg",
-    "max": "Max",
     "frame": "Frame",
     "xPosition": "X Position",
     "yPosition": "Y Position",
-    "angle": "Angle",
     "resolution": "Resolution",
     "fps": "FPS",
     "quality": {
@@ -80,16 +73,6 @@
       "acceleration": "Maximum rate of velocity change, indicating the most explosive or dynamic moment in the climb.",
       "distance": "Total path length traveled by the center of mass throughout the climb."
     }
-  },
-  "joints": {
-    "leftElbow": "Left Elbow",
-    "rightElbow": "Right Elbow",
-    "leftShoulder": "Left Shoulder",
-    "rightShoulder": "Right Shoulder",
-    "leftHip": "Left Hip",
-    "rightHip": "Right Hip",
-    "leftKnee": "Left Knee",
-    "rightKnee": "Right Knee"
   },
   "beta": {
     "title": "AI Beta Suggestion",

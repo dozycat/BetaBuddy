@@ -54,16 +54,9 @@
     "maxAcceleration": "最大加速度",
     "totalDistance": "总距离",
     "comTrajectory": "重心轨迹",
-    "avgJointAngles": "平均关节角度",
-    "jointAngleDetails": "关节角度详情",
-    "joint": "关节",
-    "min": "最小",
-    "avg": "平均",
-    "max": "最大",
     "frame": "帧",
     "xPosition": "X位置",
     "yPosition": "Y位置",
-    "angle": "角度",
     "resolution": "分辨率",
     "fps": "帧率",
     "quality": {
@@ -80,16 +73,6 @@
       "acceleration": "速度变化的最大速率，表示攀爬中最具爆发力或动态的时刻。",
       "distance": "整个攀爬过程中重心移动的总路径长度。"
     }
-  },
-  "joints": {
-    "leftElbow": "左肘",
-    "rightElbow": "右肘",
-    "leftShoulder": "左肩",
-    "rightShoulder": "右肩",
-    "leftHip": "左髋",
-    "rightHip": "右髋",
-    "leftKnee": "左膝",
-    "rightKnee": "右膝"
   },
   "beta": {
     "title": "AI攀岩建议",

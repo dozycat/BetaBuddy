@@ -54,16 +54,9 @@
     "maxAcceleration": "최대 가속도",
     "totalDistance": "총 이동 거리",
     "comTrajectory": "무게중심 궤적",
-    "avgJointAngles": "평균 관절 각도",
-    "jointAngleDetails": "관절 각도 상세",
-    "joint": "관절",
-    "min": "최소",
-    "avg": "평균",
-    "max": "최대",
     "frame": "프레임",
     "xPosition": "X 위치",
     "yPosition": "Y 위치",
-    "angle": "각도",
     "resolution": "해상도",
     "fps": "FPS",
     "quality": {
@@ -80,16 +73,6 @@
       "acceleration": "속도 변화의 최대 비율로, 클라이밍 중 가장 폭발적이거나 역동적인 순간을 나타냅니다.",
       "distance": "클라이밍 전체에 걸쳐 무게중심이 이동한 총 경로 길이입니다."
     }
-  },
-  "joints": {
-    "leftElbow": "왼쪽 팔꿈치",
-    "rightElbow": "오른쪽 팔꿈치",
-    "leftShoulder": "왼쪽 어깨",
-    "rightShoulder": "오른쪽 어깨",
-    "leftHip": "왼쪽 엉덩이",
-    "rightHip": "오른쪽 엉덩이",
-    "leftKnee": "왼쪽 무릎",
-    "rightKnee": "오른쪽 무릎"
   },
   "beta": {
     "title": "AI 베타 제안",

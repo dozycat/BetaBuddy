@@ -54,16 +54,9 @@
     "maxAcceleration": "Aceleración Máxima",
     "totalDistance": "Distancia Total",
     "comTrajectory": "Trayectoria del Centro de Masa",
-    "avgJointAngles": "Ángulos Articulares Promedio",
-    "jointAngleDetails": "Detalles de Ángulos Articulares",
-    "joint": "Articulación",
-    "min": "Mín",
-    "avg": "Prom",
-    "max": "Máx",
     "frame": "Fotograma",
     "xPosition": "Posición X",
     "yPosition": "Posición Y",
-    "angle": "Ángulo",
     "resolution": "Resolución",
     "fps": "FPS",
     "quality": {
@@ -80,16 +73,6 @@
       "acceleration": "Tasa máxima de cambio de velocidad, indicando el momento más explosivo o dinámico de la escalada.",
       "distance": "Longitud total del camino recorrido por el centro de masa durante toda la escalada."
     }
-  },
-  "joints": {
-    "leftElbow": "Codo Izquierdo",
-    "rightElbow": "Codo Derecho",
-    "leftShoulder": "Hombro Izquierdo",
-    "rightShoulder": "Hombro Derecho",
-    "leftHip": "Cadera Izquierda",
-    "rightHip": "Cadera Derecha",
-    "leftKnee": "Rodilla Izquierda",
-    "rightKnee": "Rodilla Derecha"
   },
   "beta": {
     "title": "Sugerencia Beta con IA",

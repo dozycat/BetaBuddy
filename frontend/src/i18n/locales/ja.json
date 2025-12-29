@@ -54,16 +54,9 @@
     "maxAcceleration": "最大加速度",
     "totalDistance": "総移動距離",
     "comTrajectory": "重心軌跡",
-    "avgJointAngles": "平均関節角度",
-    "jointAngleDetails": "関節角度詳細",
-    "joint": "関節",
-    "min": "最小",
-    "avg": "平均",
-    "max": "最大",
     "frame": "フレーム",
     "xPosition": "X位置",
     "yPosition": "Y位置",
-    "angle": "角度",
     "resolution": "解像度",
     "fps": "FPS",
     "quality": {
@@ -80,16 +73,6 @@
       "acceleration": "速度変化の最大率。クライミング中の最も爆発的またはダイナミックな瞬間を示します。",
       "distance": "クライミング全体を通じて重心が移動した総経路長。"
     }
-  },
-  "joints": {
-    "leftElbow": "左肘",
-    "rightElbow": "右肘",
-    "leftShoulder": "左肩",
-    "rightShoulder": "右肩",
-    "leftHip": "左股関節",
-    "rightHip": "右股関節",
-    "leftKnee": "左膝",
-    "rightKnee": "右膝"
   },
   "beta": {
     "title": "AIベータ提案",
