@@ -2,6 +2,12 @@
 
 AI-powered climbing video analysis system with real-time pose estimation, biomechanical metrics, and beta suggestions.
 
+## Demo
+
+[Introduction Video](docs/introduction.mp4)
+
+*Watch the introduction video to see BetaBuddy in action.*
+
 ## Features
 
 - **Real-Time Pose Detection**: MediaPipe 33-keypoint detection for accurate body tracking
