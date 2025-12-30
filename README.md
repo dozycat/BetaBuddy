@@ -4,9 +4,11 @@ AI-powered climbing video analysis system with real-time pose estimation, biomec
 
 ## Demo
 
-<video src="docs/introduction.mp4" controls width="100%"></video>
+[![BetaBuddy Introduction](https://img.youtube.com/vi/vLHmmoO2aOU/maxresdefault.jpg)](https://www.youtube.com/watch?v=vLHmmoO2aOU)
 
-*Introduction video showing BetaBuddy in action. If the video doesn't play, [download it here](docs/introduction.mp4).*
+**[▶️ Watch Introduction Video on YouTube](https://www.youtube.com/watch?v=vLHmmoO2aOU)**
+
+*Click the thumbnail above to see BetaBuddy in action.*
 
 ## Features
 
