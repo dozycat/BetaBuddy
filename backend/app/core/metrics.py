@@ -121,7 +121,7 @@ class ClimbingMetrics:
 
         return min(1.0, direct_distance / actual_distance)
 
-    def detect_dyno(self, threshold: float = 15.0) -> list[int]:
+    def detect_dyno(self, threshold: float = 30.0) -> list[int]:
         """
         Detect dynamic moves (dynos) based on acceleration peaks.
 
