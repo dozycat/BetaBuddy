@@ -17,7 +17,12 @@ def get_current_model() -> str:
         return settings.ollama_model
 
 
-BETA_PROMPT_TEMPLATE = """你是一位专业的攀岩教练，请根据以下视频分析数据，为攀岩者提供改进建议。
+BETA_PROMPT_TEMPLATE = """# Role
+
+你是一位拥有20年经验的资深攀岩教练和运动生物力学专家。擅长通过数据分析发现攀岩者的潜在弱点，并提供通俗易懂但技术精准的改进方案。# Context
+
+我将为你提供一段攀岩视频的传感器分析数据。数据包含时间、效率、加速度以及关键关节的角度统计。
+# Data
 
 ## 分析数据摘要
 - 攀爬时长: {duration:.1f}秒
@@ -35,13 +40,9 @@ BETA_PROMPT_TEMPLATE = """你是一位专业的攀岩教练，请根据以下视
 ## 检测到的问题
 {detected_issues}
 
-## 请提供以下建议:
-1. **重心控制**: 针对重心偏移的改进方法
-2. **发力技巧**: 如何更好地利用身体各部位
-3. **动作优化**: 针对检测到的具体动作，给出改进建议
-4. **训练建议**: 针对性的训练方法
+# Task
 
-请用简洁专业的语言回答，每个部分2-3句话。如果检测到特定的攀岩动作（如跟勾、侧拉等），请针对这些动作给出专业建议。"""
+请分步骤分析这组数据，并生成一份改进报告：1. **数据洞察**：不要只复述数据。请分析数据之间的关联。例如，观察关节角度（特别是左右差异）与动作效率、加速度之间的关系。2. **问题诊断**：找出导致“动作效率”低下的核心原因（是核心不稳、发力过猛还是肢体僵硬？）。3. **行动建议**： - 重心控制（基于关节角度分析） - 发力技巧（基于加速度和爆发次数分析） - 动作优化（针对检测到的旗杆/Dyno动作） - 训练建议（针对性练习）# Constraints- 语气：专业、鼓励、客观。- 格式：使用Markdown，重点词加粗。- 避免：不要使用过于晦涩的学术术语，要转化为攀岩者听得懂的语言（如“锁臂”、“死点”）。- 长度：每个建议部分控制在150字以内。"""
 
 
 class OllamaClient:
@@ -249,7 +250,7 @@ async def generate_beta_suggestion(
         detected_issues=detected_issues,
     )
 
-    logger.info(f"Beta suggestion prompt:\n{prompt}")
+    logger.warning(f"Beta suggestion prompt:\n{prompt}")
 
     # Check if LLM is available
     if not await client.is_available():

@@ -37,6 +37,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Ensure upload directory exists before mounting
+settings.upload_dir.mkdir(parents=True, exist_ok=True)
+
 # Mount static files for video access
 app.mount("/uploads", StaticFiles(directory=str(settings.upload_dir)), name="uploads")
 

@@ -22,13 +22,38 @@ AI-powered climbing video analysis system with real-time pose estimation, biomec
 
 ## Quick Start
 
-### Prerequisites
+### One-Command Setup (Recommended)
+
+The easiest way to get started is using the automated startup script:
+
+```bash
+# Automatically installs dependencies and starts both backend and frontend
+./startup.sh
+
+# When done, stop all services with
+./shutdown.sh
+```
+
+The startup script will:
+- Auto-install Python3, Node.js, and npm if missing (macOS/Linux)
+- Set up Python virtual environment
+- Install all dependencies (backend + frontend)
+- Create .env from .env.example if needed
+- Start backend on http://localhost:8000
+- Start frontend on http://localhost:5173
+- Display logs in `backend/backend.log` and `frontend/frontend.log`
+
+### Manual Setup
+
+If you prefer manual setup:
+
+#### Prerequisites
 
 - Python 3.10+
 - Node.js 18+
 - Ollama (for AI suggestions)
 
-### Backend Setup
+#### Backend Setup
 
 ```bash
 cd backend
@@ -38,7 +63,7 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-### Frontend Setup
+#### Frontend Setup
 
 ```bash
 cd frontend

@@ -428,13 +428,6 @@ class VideoAnnotator:
         y_offset = y_start_offset
 
         # Draw header using Chinese text
-        frame = put_chinese_text(
-            frame,
-            "技术动作",
-            (x_offset, y_offset),
-            font_size=90,  # 18 * 5
-            color=COLORS["text"],
-        )
         y_offset += 110  # 22 * 5
 
         # Show at most 3 movements to avoid clutter with larger font
