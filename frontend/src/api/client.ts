@@ -9,6 +9,8 @@ import type {
   ThumbnailResponse,
   MovementDetectionResponse,
   MovementDetectionRequest,
+  VideoComparisonRequest,
+  VideoComparisonResponse,
 } from '../types';
 
 const api = axios.create({
@@ -106,6 +108,18 @@ export const movementApi = {
   get: async (videoId: string): Promise<MovementDetectionResponse> => {
     const response = await api.get<MovementDetectionResponse>(
       `/videos/${videoId}/movements`
+    );
+    return response.data;
+  },
+};
+
+export const comparisonApi = {
+  compare: async (
+    request: VideoComparisonRequest
+  ): Promise<VideoComparisonResponse> => {
+    const response = await api.post<VideoComparisonResponse>(
+      '/comparisons/auto-beta',
+      request
     );
     return response.data;
   },
