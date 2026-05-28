@@ -66,7 +66,16 @@ export const Home: React.FC = () => {
               <h1 className="text-3xl font-bold text-gray-900">{t('app.name')}</h1>
               <p className="mt-1 text-gray-500">{t('app.tagline')}</p>
             </div>
-            <LanguageSwitcher />
+            <div className="flex items-center gap-4">
+              <button
+                type="button"
+                onClick={() => navigate('/compare')}
+                className="px-4 py-2 rounded-lg bg-primary-600 text-white font-medium hover:bg-primary-700"
+              >
+                Compare attempts
+              </button>
+              <LanguageSwitcher />
+            </div>
           </div>
         </div>
       </header>

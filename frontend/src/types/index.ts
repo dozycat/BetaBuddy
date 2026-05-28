@@ -156,3 +156,56 @@ export interface MovementDetectionRequest {
   confidence_threshold?: number;
   generate_descriptions?: boolean;
 }
+
+export interface ComparedVideo {
+  id: string;
+  original_filename: string;
+  preview_url: string | null;
+  annotated_video_url: string | null;
+}
+
+export interface MetricComparison {
+  metric: string;
+  baseline: number | null;
+  comparison: number | null;
+  delta: number | null;
+  percent_change: number | null;
+  unit: string;
+  interpretation: string;
+}
+
+export interface PhaseComparison {
+  phase: string;
+  start_percent: number;
+  end_percent: number;
+  baseline_path_length: number;
+  comparison_path_length: number;
+  path_delta: number;
+  baseline_vertical_gain: number;
+  comparison_vertical_gain: number;
+  vertical_gain_delta: number;
+  insight: string;
+}
+
+export interface VideoComparisonRequest {
+  baseline_video_id: string;
+  comparison_video_id: string;
+}
+
+export interface VideoComparisonResponse {
+  baseline_video: ComparedVideo;
+  comparison_video: ComparedVideo;
+  metric_deltas: MetricComparison[];
+  joint_angle_deltas: Record<string, MetricComparison>;
+  phase_comparisons: PhaseComparison[];
+  movement_summary: {
+    baseline_total: number;
+    comparison_total: number;
+    baseline_challenging: number;
+    comparison_challenging: number;
+    baseline_types: Record<string, number>;
+    comparison_types: Record<string, number>;
+  };
+  coaching_notes: string[];
+  alignment_notes: string[];
+}

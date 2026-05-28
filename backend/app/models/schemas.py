@@ -151,6 +151,52 @@ class AnalysisStartRequest(BaseModel):
     arm_span_m: Optional[float] = Field(None, gt=0, le=4, description="User arm span in meters")
 
 
+class VideoComparisonRequest(BaseModel):
+    baseline_video_id: str
+    comparison_video_id: str
+
+
+class ComparedVideo(BaseModel):
+    id: str
+    original_filename: str
+    preview_url: Optional[str] = None
+    annotated_video_url: Optional[str] = None
+
+
+class MetricComparison(BaseModel):
+    metric: str
+    baseline: Optional[float] = None
+    comparison: Optional[float] = None
+    delta: Optional[float] = None
+    percent_change: Optional[float] = None
+    unit: str = ""
+    interpretation: str
+
+
+class PhaseComparison(BaseModel):
+    phase: str
+    start_percent: float
+    end_percent: float
+    baseline_path_length: float
+    comparison_path_length: float
+    path_delta: float
+    baseline_vertical_gain: float
+    comparison_vertical_gain: float
+    vertical_gain_delta: float
+    insight: str
+
+
+class VideoComparisonResponse(BaseModel):
+    baseline_video: ComparedVideo
+    comparison_video: ComparedVideo
+    metric_deltas: list[MetricComparison]
+    joint_angle_deltas: dict[str, MetricComparison]
+    phase_comparisons: list[PhaseComparison]
+    movement_summary: dict
+    coaching_notes: list[str]
+    alignment_notes: list[str]
+
+
 class AnnotateVideoRequest(BaseModel):
     """Request to generate annotated video."""
     draw_keypoints: bool = True
