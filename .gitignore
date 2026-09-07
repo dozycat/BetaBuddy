@@ -34,3 +34,14 @@ dist/
 
 # Logs
 *.log
+
+# iOS generated dependencies and builds
+ios/Vendor/
+ios/build/
+ios/.derivedData/
+*.xcuserstate
+xcuserdata/
+ios/.build/
+
+# Separately versioned Sites checkout
+/release-site/

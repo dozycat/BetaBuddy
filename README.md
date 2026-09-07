@@ -1,5 +1,20 @@
 # BetaBuddy
 
+## iPhone 原生版本（当前开发主线）
+
+SwiftUI 攀岩回看与训练手账，优先 iOS 17+。保留原有 MediaPipe Full 33 点模型，权重随安装包内置；视频分析、训练记录全部在手机本地完成，不依赖 Python 服务或 LLM。
+
+**[iOS 构建与运行](ios/README.md)** · **[产品与交互设计](docs/ios/product-design.md)** · **[验证记录](docs/ios/validation.md)**
+
+```sh
+./ios/scripts/bootstrap.sh
+open ios/BetaBuddy.xcodeproj
+```
+
+下面内容是保留的旧版 Web/Python 实现。其服务器、模型下载和 Ollama 设置不适用于 iPhone 版本。
+
+---
+
 AI-powered climbing video analysis system with real-time pose estimation, biomechanical metrics, and beta suggestions.
 
 ## Demo

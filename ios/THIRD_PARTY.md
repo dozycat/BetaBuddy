@@ -1,0 +1,7 @@
+# Third-party resources
+
+- **MediaPipe Tasks Vision / Common 1.0.0** — Google, Apache-2.0. Official distributions: https://dl.google.com/cpdc/20260727-225049/MediaPipeTasksVision-1.0.0.tar.gz and https://dl.google.com/cpdc/20260727-225047/MediaPipeTasksCommon-1.0.0.tar.gz. Checksums are pinned in `scripts/bootstrap.sh`. The graph logger factory is replaced by the upstream no-op implementation; see `LocalMediaPipe/README.md`.
+- **Pose Landmarker Full float16, version 1** — Google MediaPipe model bundle: https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task. SHA-256 `5134a3aad27a58b93da0088d431f366da362b44e3ccfbe3462b3827a839011b1`. Unmodified weights. See https://developers.google.com/edge/mediapipe/solutions/vision/pose_landmarker and the distribution's license notices.
+- **MediaPipe / Abseil / glog headers** — pinned sources in `LocalMediaPipe/README.md`, used only to compile the official no-op logger against its public interface. Licenses packaged in `BetaBuddy/Resources/Licenses`.
+- **Test fixture pose.jpg** — Google MediaPipe sample asset at https://storage.googleapis.com/mediapipe-assets/pose.jpg. Used only in the test bundle for inference smoke testing; not displayed as a user's climb or used as a climbing-accuracy benchmark.
+- **SF Symbols** — Apple system symbols used by the native app. The climbing poster layout and BetaBuddy icon are original code-drawn compositions.
