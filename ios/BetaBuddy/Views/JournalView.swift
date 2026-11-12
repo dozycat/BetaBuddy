@@ -5,6 +5,7 @@ struct JournalView: View {
     @EnvironmentObject private var membership: MembershipStore
     @State private var filter = 0
     @State private var importing = false
+    @State private var showingMembership = false
     @State private var search = ""
     private var climbs: [Climb] {
         store.climbs.filter { (filter == 0 || (filter == 1 ? $0.sent : !$0.sent)) && (search.isEmpty || $0.displayTitle.localizedCaseInsensitiveContains(search) || gradeText($0.grade).localizedCaseInsensitiveContains(search)) }
@@ -18,9 +19,20 @@ struct JournalView: View {
                 }
                 Spacer()
                 if membership.isMember {
-                    Label("终生会员",systemImage:"star.fill").font(.caption.bold())
-                        .padding(.horizontal,10).padding(.vertical,6)
-                        .background(BB.lime,in:Capsule()).accessibilityIdentifier("lifetimeBadge")
+                    HStack(spacing:5) {
+                        MemberMark().frame(width:24,height:24)
+                        Text("终生会员").font(.caption.bold())
+                    }.padding(.horizontal,9).padding(.vertical,5)
+                        .background(BB.lime,in:HoldShape()).accessibilityIdentifier("lifetimeBadge")
+                } else {
+                    Button { showingMembership = true } label: {
+                        HStack(spacing:5) {
+                            MemberMark().frame(width:24,height:24)
+                            Text("会员权益").font(.caption.bold())
+                            Image(systemName:"arrow.up.right").font(.system(size:9,weight:.bold))
+                        }.padding(.horizontal,9).padding(.vertical,5)
+                            .background(BB.lime,in:HoldShape())
+                    }.buttonStyle(.plain).accessibilityIdentifier("membershipEntry")
                 }
                 SettingsButton()
             }
@@ -60,7 +72,11 @@ struct JournalView: View {
                     NavigationLink { ReviewView(climb:climb) } label: { ClimbRow(climb:climb) }.buttonStyle(.plain)
                 }
             }
-        }.toolbar(.hidden,for:.navigationBar).sheet(isPresented:$importing) { ImportView() }
+        }.toolbar(.hidden,for:.navigationBar)
+            .sheet(isPresented:$importing) { ImportView() }
+            .sheet(isPresented:$showingMembership) {
+                NavigationStack { MembershipOfferView() }
+            }
     }
 }
 

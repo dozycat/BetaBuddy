@@ -10,6 +10,80 @@ enum BB {
     static func display(_ size: CGFloat) -> Font { .system(size: size, weight: .black, design: .rounded) }
 }
 
+/// A lightly faceted silhouette inspired by a climbing hold. Its hit area stays rectangular.
+struct HoldShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        let w = rect.width, h = rect.height
+        var path = Path()
+        path.move(to: CGPoint(x: w * 0.07, y: h * 0.04))
+        path.addQuadCurve(to: CGPoint(x: w * 0.94, y: h * 0.05), control: CGPoint(x: w * 0.49, y: 0))
+        path.addQuadCurve(to: CGPoint(x: w * 0.99, y: h * 0.22), control: CGPoint(x: w, y: h * 0.07))
+        path.addLine(to: CGPoint(x: w * 0.97, y: h * 0.83))
+        path.addQuadCurve(to: CGPoint(x: w * 0.89, y: h * 0.98), control: CGPoint(x: w * 0.96, y: h))
+        path.addQuadCurve(to: CGPoint(x: w * 0.08, y: h * 0.96), control: CGPoint(x: w * 0.50, y: h * 0.99))
+        path.addQuadCurve(to: CGPoint(x: w * 0.015, y: h * 0.79), control: CGPoint(x: 0, y: h * 0.92))
+        path.addLine(to: CGPoint(x: w * 0.025, y: h * 0.20))
+        path.addQuadCurve(to: CGPoint(x: w * 0.07, y: h * 0.04), control: CGPoint(x: 0, y: h * 0.06))
+        path.closeSubpath()
+        return path
+    }
+}
+
+/// The smaller member emblem uses a natural hold profile instead of stretching the button shape.
+struct MemberHoldShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        let w = rect.width, h = rect.height
+        var path = Path()
+        path.move(to: CGPoint(x: w * 0.13, y: h * 0.24))
+        path.addCurve(to: CGPoint(x: w * 0.44, y: h * 0.06), control1: CGPoint(x: w * 0.12, y: h * 0.09), control2: CGPoint(x: w * 0.30, y: h * 0.04))
+        path.addCurve(to: CGPoint(x: w * 0.87, y: h * 0.21), control1: CGPoint(x: w * 0.66, y: h * 0.01), control2: CGPoint(x: w * 0.84, y: h * 0.08))
+        path.addCurve(to: CGPoint(x: w * 0.92, y: h * 0.52), control1: CGPoint(x: w * 0.98, y: h * 0.32), control2: CGPoint(x: w * 0.96, y: h * 0.39))
+        path.addCurve(to: CGPoint(x: w * 0.73, y: h * 0.91), control1: CGPoint(x: w * 0.93, y: h * 0.74), control2: CGPoint(x: w * 0.88, y: h * 0.87))
+        path.addCurve(to: CGPoint(x: w * 0.32, y: h * 0.92), control1: CGPoint(x: w * 0.57, y: h * 0.98), control2: CGPoint(x: w * 0.45, y: h * 0.90))
+        path.addCurve(to: CGPoint(x: w * 0.06, y: h * 0.63), control1: CGPoint(x: w * 0.11, y: h * 0.95), control2: CGPoint(x: w * 0.03, y: h * 0.80))
+        path.addCurve(to: CGPoint(x: w * 0.13, y: h * 0.24), control1: CGPoint(x: w * 0.02, y: h * 0.47), control2: CGPoint(x: w * 0.10, y: h * 0.37))
+        path.closeSubpath()
+        return path
+    }
+}
+
+struct BoltMark: View {
+    var color: Color = BB.ink
+    var body: some View {
+        ZStack {
+            Circle().strokeBorder(color, lineWidth: 1.7)
+            Image(systemName: "hexagon.fill").font(.system(size: 8, weight: .black)).foregroundStyle(color)
+        }.frame(width: 22, height: 22).accessibilityHidden(true)
+    }
+}
+
+/// Member mark: a route hold with a star set where its bolt would sit.
+struct MemberMark: View {
+    var body: some View {
+        ZStack {
+            MemberHoldShape().fill(BB.lime)
+            MemberHoldShape().stroke(BB.ink.opacity(0.65), lineWidth: 1)
+            Image(systemName: "star.fill")
+                .resizable().scaledToFit().foregroundStyle(BB.ink)
+                .padding(8)
+        }.aspectRatio(1, contentMode: .fit).accessibilityHidden(true)
+    }
+}
+
+struct RouteButtonStyle: ButtonStyle {
+    enum Tone { case dark, lime, paper }
+    var tone: Tone = .dark
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .foregroundStyle(tone == .dark ? BB.paper : BB.ink)
+            .frame(minHeight: 48)
+            .background(HoldShape().fill(tone == .dark ? BB.ink : tone == .lime ? BB.lime : .white.opacity(0.65)))
+            .overlay(HoldShape().stroke(BB.ink.opacity(tone == .paper ? 0.16 : 0.05), lineWidth: 1))
+            .scaleEffect(configuration.isPressed ? 0.985 : 1)
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+    }
+}
+
 // Stamps and the monospaced trailing labels are brand marks in English; they are not translated.
 struct Stamp: View {
     var text: String
@@ -27,12 +101,13 @@ struct BigButton: View {
     var action: () -> Void
     var body: some View {
         Button(action: action) {
-            HStack {
+            HStack(spacing: 14) {
+                BoltMark(color: BB.lime)
                 Text(title).font(.headline).multilineTextAlignment(.leading)
                 Spacer()
                 Image(systemName: icon).font(.system(size: 19, weight: .bold))
-            }.padding(20).foregroundStyle(BB.paper).background(BB.ink, in: RoundedRectangle(cornerRadius: 20))
-        }.buttonStyle(.plain)
+            }.padding(20)
+        }.buttonStyle(RouteButtonStyle())
     }
 }
 

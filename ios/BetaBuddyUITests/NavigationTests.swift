@@ -4,6 +4,27 @@ final class NavigationTests: XCTestCase {
     func testBothEntriesInSimplifiedChinese() { walk(language:"zh-Hans", locale:"zh_CN", gym:"岩馆", logbook:"攀爬册", settings:"设置与关于", done:"完成") }
     func testBothEntriesInEnglish() { walk(language:"en", locale:"en_US", gym:"Gym", logbook:"Logbook", settings:"Settings and About", done:"Done") }
 
+    func testMembershipEntrySeparatesCurrentBenefitFromPlans() {
+        let app = launch("en", "en_US", reset:true)
+        app.buttons["tabJournal"].tap()
+        XCTAssertTrue(app.buttons["membershipEntry"].waitForExistence(timeout:10))
+        let entry = XCTAttachment(screenshot: app.screenshot())
+        entry.name = "Membership entry in Logbook"
+        entry.lifetime = .keepAlways
+        add(entry)
+        app.buttons["membershipEntry"].tap()
+        XCTAssertTrue(app.staticTexts["Lifetime member badge in Logbook"].waitForExistence(timeout:5))
+        XCTAssertTrue(app.buttons["buyLifetime"].exists)
+        XCTAssertTrue(app.staticTexts["These features are not available yet. Timing and details may change."].exists)
+        XCTAssertTrue(app.buttons["restoreLifetime"].exists)
+        let offer = XCTAttachment(screenshot: app.screenshot())
+        offer.name = "Membership offer"
+        offer.lifetime = .keepAlways
+        add(offer)
+        app.buttons["membershipDone"].tap()
+        XCTAssertTrue(app.buttons["importClimb"].exists)
+    }
+
     private func launch(_ language: String, _ locale: String, reset: Bool) -> XCUIApplication {
         let app = XCUIApplication()
         // `-resetLanguage` clears an in-app choice left by an earlier run, so the system language applies.

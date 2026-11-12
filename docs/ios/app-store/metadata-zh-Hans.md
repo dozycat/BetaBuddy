@@ -37,7 +37,7 @@ BetaBuddy 有两个入口：岩馆和攀爬册。
 
 你的数据留在手机
 • 无需账号，不上传视频，不调用云端 AI；姿态模型和岩馆数据随安装包提供，岩馆页面不联网。
-• 岩馆与攀爬册核心功能免费，无广告、无订阅。可一次性购买终生会员，立即显示专属标识；训练建议和新岩馆数据将在后续推出。
+• 岩馆与攀爬册核心功能免费，无广告、无订阅。可一次性购买终生会员，立即显示专属岩点标识；训练建议和新岩馆数据是后续计划，推出时间与内容可能调整。
 
 适合单人、全身入镜、固定机位的视频。支持 0.5–180 秒、最大 500 MB 的单段视频，建议先在相册中裁剪。
 
@@ -53,7 +53,7 @@ Gym (first tab, shown at launch): a bundled, offline, unofficial 3D layout of on
 
 Logbook (second tab): tap the import button, select a locally available single-person full-body MOV/MP4 video using the system Photos picker, then start analysis. The MediaPipe Full pose model is bundled and runs on device. Supported duration is 0.5–180 seconds, up to 500 MB. Videos without a detectable body produce an explanatory error. Review results alongside the original video. Saved climbs are listed in this tab. The button at the top right opens About, where the privacy policy is available offline.
 
-The purchase and Restore Purchases buttons are in Settings & About. There is no paywall for Gym or Logbook and no account requirement. Pose output is intended for visual review, not medical diagnosis or a claim of validated climbing biomechanics.
+The optional membership details are reachable from the Logbook header and Settings & About. The purchase and Restore Purchases buttons are on that details page. There is no paywall for Gym or Logbook and no account requirement. Pose output is intended for visual review, not medical diagnosis or a claim of validated climbing biomechanics.
 
 ## 需在账号中完成
 
