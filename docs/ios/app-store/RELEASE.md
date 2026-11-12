@@ -38,7 +38,7 @@ PATH=/usr/bin:/bin:/usr/sbin:/sbin xcodebuild -exportArchive \
 
 **导出时要用系统自带的 rsync。** 如果 `PATH` 里排在前面的是 Homebrew 的 rsync，Xcode 会报「Copy failed」。上面的命令把 `PATH` 限制在系统目录来避开它。
 
-`ExportOptions.plist` 的方式是 `app-store-connect`。导出的 IPA 用 Xcode Organizer 或 Transporter 上传；也可以在 Organizer 里对归档直接 Validate App → Distribute App → App Store Connect → Upload。上传后等 Apple 处理完成，构建才会出现在后台。
+`ExportOptions.plist` 的方式是 `app-store-connect`。把其中的 `destination` 从 `export` 改成 `upload`（另存一份临时的 plist 即可），`xcodebuild -exportArchive` 会在导出后直接上传到 App Store Connect，1.1.0 (3) 就是这样上传的；需要 Xcode 的 Settings → Accounts 里已登录账号持有人的 Apple ID。也可以保持 `export`，再用 Xcode Organizer 或 Transporter 上传导出的 IPA。上传后等 Apple 处理完成，构建才会出现在后台。
 
 `ios/build/` 被 Git 忽略。归档和 IPA 不进仓库。
 

@@ -4,9 +4,12 @@
 
 BetaBuddy 是一个 iPhone 应用：回看自己的攀岩视频，把每一趟记成手账，带一个小练习上墙，再去岩馆里看看同一条线换个身材可以怎么爬。全部在手机上完成，不需要账号，也不联网。
 
-<p>
-  <img src="docs/ios/screenshots/home.png" alt="上墙" width="240">
-  <img src="docs/ios/screenshots/training.png" alt="练习" width="240">
+<p align="center">
+  <img src="docs/ios/app-store/screenshots-6.9/01-home.png" alt="上墙" width="250">
+  &nbsp;&nbsp;
+  <img src="docs/ios/app-store/screenshots-6.9/02-training.png" alt="攀爬册" width="250">
+  &nbsp;&nbsp;
+  <img src="docs/ios/app-store/screenshots-6.9/03-practice.png" alt="练习" width="250">
 </p>
 
 ## 能做什么
