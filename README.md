@@ -1,261 +1,104 @@
 # BetaBuddy
 
-## iPhone 原生版本（当前开发主线）
+「再试一次。这次，有点不一样。」
 
-SwiftUI 攀岩回看与训练手账，优先 iOS 17+。保留原有 MediaPipe Full 33 点模型，权重随安装包内置；视频分析、训练记录全部在手机本地完成，不依赖 Python 服务或 LLM。
+BetaBuddy 是一个 iPhone 应用：回看自己的攀岩视频，把每一趟记成手账，带一个小练习上墙，再去岩馆里看看同一条线换个身材可以怎么爬。全部在手机上完成，不需要账号，也不联网。
 
-**[iOS 构建与运行](ios/README.md)** · **[产品与交互设计](docs/ios/product-design.md)** · **[验证记录](docs/ios/validation.md)**
+<p>
+  <img src="docs/ios/screenshots/home.png" alt="上墙" width="240">
+  <img src="docs/ios/screenshots/training.png" alt="练习" width="240">
+</p>
+
+## 能做什么
+
+四个入口，各管一件事。
+
+- **上墙**：导入一段攀爬视频，在手机上识别 33 个身体关键点。回看时可以切换原片和骨架、看髋部短轨迹、0.1 秒步进、0.5× 慢放，候选片段一点就到。
+- **攀爬册**：每一趟的视频、难度、是否完攀、一句下次想试的改变。按完攀状态筛选，按名字或难度搜索。
+- **练习**：三个短练习，每个只盯一个能感觉到的目标。做完记一次。
+- **岩馆**：一家岩馆的 3D 线路图。按岩壁和线路筛选，选一条线，换一个身材，看模型推演出的一种走法。
+
+## 三条原则
+
+**本地。** 姿态模型和场馆数据都在安装包里。视频、分析结果和笔记只存在这台手机上，不上传，不进云备份。岩馆页面被应用禁止访问网络。
+
+**诚实。** 不给「稳定性 93 分」这类没验证过的评分。髋部轨迹是画面里的几何位置，不叫重心；角度是二维投影角，不是关节的真实角度；高抬脚只算「候选片段」，要对着原片确认。岩馆是非官方整理，可能与现场不符；推演是模型算出来的一种可能，不是教练建议。完整说明见[产品设计](docs/ios/product-design.md)和[岩馆设计](docs/ios/gym-design.md)。
+
+**免费。** 没有广告、内购、订阅、排行榜和打卡压力。
+
+## 快速开始
+
+需要一台装了 Xcode（含 iOS SDK）的 Mac 和 [XcodeGen](https://github.com/yonaskolb/XcodeGen)。应用支持 iOS 17 及以上的 iPhone。
 
 ```sh
-./ios/scripts/bootstrap.sh
+brew install xcodegen
+./ios/scripts/bootstrap.sh     # 下载固定版本的 MediaPipe SDK 并校验，生成 Xcode 工程
 open ios/BetaBuddy.xcodeproj
 ```
 
-下面内容是保留的旧版 Web/Python 实现。其服务器、模型下载和 Ollama 设置不适用于 iPhone 版本。
+在 Xcode 里选 BetaBuddy scheme。跑模拟器直接 Run；跑真机先在 Signing & Capabilities 里选自己的开发团队。
 
----
+命令行构建和测试：
 
-AI-powered climbing video analysis system with real-time pose estimation, biomechanical metrics, and beta suggestions.
+```sh
+swift test --package-path ios                       # 几何与时序的核心测试，在 Mac 上直接跑
 
-## Demo
+xcodebuild -project ios/BetaBuddy.xcodeproj -scheme BetaBuddy \
+  -destination 'platform=iOS Simulator,name=<已安装的模拟器>' test
 
-[![BetaBuddy Introduction](https://img.youtube.com/vi/vLHmmoO2aOU/maxresdefault.jpg)](https://www.youtube.com/watch?v=vLHmmoO2aOU)
-
-**[▶️ Watch Introduction Video on YouTube](https://www.youtube.com/watch?v=vLHmmoO2aOU)**
-
-*Click the thumbnail above to see BetaBuddy in action.*
-
-## Features
-
-- **Real-Time Pose Detection**: MediaPipe 33-keypoint detection for accurate body tracking
-- **Biomechanical Analysis**: Center of mass, joint angles, velocity, and acceleration calculations
-- **Movement Detection**: Automatic identification of climbing techniques (side pull, undercling, heel hook, flag, drop knee, etc.)
-- **Video Annotation**: Generate annotated videos with skeleton overlay, metrics display, and movement labels
-- **AI Beta Suggestions**: LLM-powered climbing technique recommendations
-- **Configurable LLM**: Runtime model selection (Qwen2.5, Llama3, Mistral, etc.)
-- **WebSocket Streaming**: Real-time metrics during video analysis
-
-## Quick Start
-
-### One-Command Setup (Recommended)
-
-The easiest way to get started is using the automated startup script:
-
-```bash
-# Automatically installs dependencies and starts both backend and frontend
-./startup.sh
-
-# When done, stop all services with
-./shutdown.sh
+xcodebuild -project ios/BetaBuddy.xcodeproj -scheme BetaBuddy \
+  -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO build
 ```
 
-The startup script will:
-- Auto-install Python3, Node.js, and npm if missing (macOS/Linux)
-- Set up Python virtual environment
-- Install all dependencies (backend + frontend)
-- Create .env from .env.example if needed
-- Start backend on http://localhost:8000
-- Start frontend on http://localhost:5173
-- Display logs in `backend/backend.log` and `frontend/frontend.log`
+更多细节见 [ios/README.md](ios/README.md)。
 
-### Manual Setup
+## 场馆数据包
 
-If you prefer manual setup:
+「岩馆」里的场馆模型、线路和推演来自一个单独生成的**场馆数据包**。它不在这个仓库里，也不应该被提交进来；仓库里只有加载它的原生壳和接口约定。
 
-#### Prerequisites
+- **没有数据包**：工程照常生成、编译、测试。「岩馆」入口会说明这个构建没有内置岩馆数据，其余三个入口不受影响。
+- **有数据包**：先装进工程，再构建。
 
-- Python 3.10+
-- Node.js 18+
-- Ollama (for AI suggestions)
-
-#### Backend Setup
-
-```bash
-cd backend
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```sh
+./ios/scripts/install-gym-pack.sh /path/to/GymPack   # 核对清单和每个文件的 SHA-256，拷到 ios/GymPack/
+./ios/scripts/install-gym-pack.sh --remove           # 回到不含数据包的构建
 ```
 
-#### Frontend Setup
+`ios/GymPack/` 被 Git 忽略。数据包的目录结构、清单字段和页面与应用之间的消息，见[岩馆设计](docs/ios/gym-design.md)里的接口约定。
 
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-### Ollama Setup (Required for AI Beta Suggestions)
-
-```bash
-# Install Ollama
-curl -fsSL https://ollama.ai/install.sh | sh
-
-# Pull the default model (4.7GB download)
-ollama pull qwen2.5:7b
-
-# Start Ollama server (run in background or separate terminal)
-ollama serve
-```
-
-**Note:** Without Ollama running, the app will use fallback rule-based suggestions instead of AI-generated ones.
-
-## API Overview
-
-### Video Management
-
-```bash
-# Upload a video
-curl -X POST http://localhost:8000/api/v1/videos/upload \
-  -F "file=@climbing_video.mp4"
-
-# List all videos
-curl http://localhost:8000/api/v1/videos
-
-# Start analysis
-curl http://localhost:8000/api/v1/videos/{video_id}/analyze
-
-# Get analysis results
-curl http://localhost:8000/api/v1/videos/{video_id}/results
-
-# Generate annotated video
-curl -X POST http://localhost:8000/api/v1/videos/{video_id}/annotate
-```
-
-### Movement Detection
-
-```bash
-# Detect climbing techniques
-curl -X POST http://localhost:8000/api/v1/videos/{video_id}/detect-movements \
-  -H "Content-Type: application/json" \
-  -d '{"generate_descriptions": true}'
-
-# Get cached movement data
-curl http://localhost:8000/api/v1/videos/{video_id}/movements
-```
-
-### LLM Configuration
-
-```bash
-# List available models
-curl http://localhost:8000/api/v1/llm/models
-
-# Get current config
-curl http://localhost:8000/api/v1/llm/config
-
-# Change model
-curl -X PUT http://localhost:8000/api/v1/llm/config \
-  -H "Content-Type: application/json" \
-  -d '{"model": "llama3.1:8b"}'
-
-# Test LLM connection
-curl -X POST http://localhost:8000/api/v1/llm/test
-```
-
-### WebSocket Real-Time Metrics
-
-Connect to `ws://localhost:8000/ws/analysis/{task_id}` to receive:
-- `keypoints`: 33 body keypoints per frame
-- `metrics`: CoM, joint angles, velocity, acceleration per frame
-- `progress`: Analysis progress percentage
-- `complete`: Final summary when done
-
-## Analysis Metrics
-
-| Metric | Description |
-|--------|-------------|
-| Center of Mass | Weighted position of body's mass center |
-| Joint Angles | 8 angles: elbows, shoulders, hips, knees (degrees) |
-| Stability Score | 0-1 based on CoM within support polygon |
-| Velocity | CoM movement speed (pixels/frame) |
-| Acceleration | CoM movement acceleration (pixels/frame^2) |
-| Efficiency | Direct distance / actual path length |
-| Dyno Detection | Dynamic move detection via acceleration peaks |
-
-## Movement Detection
-
-Automatically identifies common climbing techniques from pose and angle data:
-
-| Movement | Chinese | Detection Criteria |
-|----------|---------|-------------------|
-| Side Pull | 侧拉 | Arm pulling sideways, body leaning opposite |
-| Undercling | 反提 | Hand below shoulder, elbow bent pulling upward |
-| Gaston | 推撑 | Elbow pointed outward, pushing motion |
-| Heel Hook | 跟勾 | Heel at or above hip level |
-| Toe Hook | 趾勾 | Toe elevated with foot rotated |
-| Flag | 旗杆 | Leg extended for balance |
-| Drop Knee | 埃及步 | Hip rotation with knee dropped inward |
-| Dyno | 动态跳跃 | High acceleration dynamic moves |
-
-**Features:**
-- Timestamps and duration for each detected movement
-- Confidence scores and challenging move indicators
-- LLM-generated Chinese descriptions (with fallback when Ollama unavailable)
-- Movement labels overlay on annotated videos
-- Interactive timeline in the frontend
-
-## Video Annotation
-
-The annotated video includes:
-- Colored keypoints (green=high confidence, yellow=medium, red=low)
-- Skeleton connections between joints
-- Center of mass point with trajectory trail
-- Real-time metrics overlay (velocity, acceleration)
-- Joint angles panel
-- Movement technique labels (when detected)
-
-**Frontend Features:**
-- Annotated videos are automatically generated after analysis completes
-- Toggle between original and annotated video views
-- Progress bar displays during analysis with real-time frame updates
-- Interactive movement timeline with expandable details
-- Click movements to seek video to that timestamp
-
-## Architecture
+## 仓库结构
 
 ```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   Frontend  │────▶│   Backend   │────▶│   Ollama    │
-│  (React)    │◀────│  (FastAPI)  │◀────│   (LLM)     │
-└─────────────┘     └─────────────┘     └─────────────┘
-                           │
-                    ┌──────┴──────┐
-                    ▼             ▼
-              ┌──────────┐  ┌──────────┐
-              │ MediaPipe│  │  SQLite  │
-              │  (Pose)  │  │   (DB)   │
-              └──────────┘  └──────────┘
+ios/
+  BetaBuddy/            应用源码
+    App/                入口与四个入口的导航
+    Core/               数据结构、几何、姿态推理、本地存储、数据包加载
+    Views/              设计系统与各页面
+    Resources/          图标、姿态模型、隐私清单与政策、第三方许可
+  BetaBuddyTests/       单元与集成测试（模拟器）
+  BetaBuddyUITests/     界面冒烟测试
+  CoreTests/            可在 Mac 上直接跑的核心测试
+  LocalMediaPipe/       把 SDK 的指标上报替换为空实现
+  scripts/              bootstrap、数据包安装、图标生成、导出配置
+  project.yml           XcodeGen 工程描述
+docs/ios/               设计、验证记录、发布资料
+legacy/web/             早期的网页实现，不再维护
 ```
 
-## Tech Stack
+## 文档
 
-- **Backend**: FastAPI, SQLAlchemy, MediaPipe, OpenCV, NumPy/SciPy
-- **Frontend**: React 18, TypeScript, Vite, Tailwind CSS
-- **LLM**: Ollama (local deployment)
-- **Database**: SQLite (async with aiosqlite)
+| 文档 | 内容 |
+| --- | --- |
+| [ios/README.md](ios/README.md) | 构建、测试、姿态模型与推理管线 |
+| [docs/ios/product-design.md](docs/ios/product-design.md) | 产品性格、视觉、主任务流、分析诚实性 |
+| [docs/ios/gym-design.md](docs/ios/gym-design.md) | 岩馆入口的设计与数据包接口约定 |
+| [docs/ios/validation.md](docs/ios/validation.md) | 做过哪些验证，哪些还没做 |
+| [docs/ios/app-store/](docs/ios/app-store/STATUS.md) | 发布状态、发布流程、各版本的商店资料 |
+| [docs/ios/brand/README.md](docs/ios/brand/README.md) | 品牌标志与图标生成 |
+| [legacy/web/README.md](legacy/web/README.md) | 早期的网页实现 |
 
-## Docker Deployment
+## 许可与第三方
 
-```bash
-docker-compose up --build
-```
+源码以 MIT 许可发布。
 
-Services:
-- Backend: http://localhost:8000
-- Frontend: http://localhost:3000
-- Ollama: http://localhost:11434
-
-## Environment Variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| DEBUG | true | Enable debug mode |
-| OLLAMA_BASE_URL | http://localhost:11434 | Ollama server URL |
-| OLLAMA_MODEL | qwen2.5:7b | Default LLM model |
-| DATABASE_URL | sqlite+aiosqlite:///./betabuddy.db | Database connection |
-| MAX_UPLOAD_SIZE | 524288000 | Max upload size (500MB) |
-
-## License
-
-MIT
+应用使用 Google 的 MediaPipe Tasks SDK 和 Pose Landmarker Full 模型（Apache-2.0），权重未改动。来源、版本和校验值见 [ios/THIRD_PARTY.md](ios/THIRD_PARTY.md)，许可全文随应用打包。场馆数据包不属于本仓库，不在这份许可之内。
