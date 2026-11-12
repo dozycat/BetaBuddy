@@ -15,14 +15,17 @@ struct BetaBuddyApp: App {
 }
 
 struct RootView: View {
-    @State private var tab = 0
+    // `-initialTab 3` on the launch command line opens a specific entry; nothing writes this key.
+    @State private var tab = UserDefaults.standard.integer(forKey: "initialTab")
     @State private var importing = false
+    @StateObject private var gym = GymSession()
     var body: some View {
         VStack(spacing:0) {
             Group {
                 switch tab {
                 case 1: NavigationStack { JournalView() }
                 case 2: NavigationStack { TrainingView() }
+                case 3: GymView(session: gym)
                 default: NavigationStack { HomeView(importing: $importing, tab: $tab) }
                 }
             }.frame(maxWidth:.infinity,maxHeight:.infinity)
@@ -30,6 +33,7 @@ struct RootView: View {
                 tabButton("上墙", symbol:"figure.climbing", index:0)
                 tabButton("攀爬册", symbol:"square.stack", index:1)
                 tabButton("练习", symbol:"scope", index:2)
+                tabButton("岩馆", symbol:"map", index:3)
             }.padding(.top,12).padding(.bottom,6).background(BB.paper)
                 .overlay(alignment:.top) { Rectangle().fill(BB.line).frame(height:1) }
         }.background(BB.paper).sheet(isPresented:$importing) { ImportView() }

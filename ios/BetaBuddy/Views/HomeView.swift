@@ -55,6 +55,20 @@ struct HomeView: View {
                     Spacer(minLength:0)
                 }.padding(22).background(BB.lavender,in:RoundedRectangle(cornerRadius:22))
             }.buttonStyle(.plain)
+            if let pack = GymPack.current {
+                SectionLabel(title:"这条线，别人怎么爬",trailing:"GYM / UNOFFICIAL")
+                Button { tab = 3 } label: {
+                    HStack(spacing:16) {
+                        Image(systemName:"map").font(.system(size:28)).frame(width:54,height:54).background(BB.lime,in:RoundedRectangle(cornerRadius:16))
+                        VStack(alignment:.leading,spacing:6) {
+                            Text(pack.manifest.gymName).font(.headline).lineLimit(2)
+                            Text("\(pack.manifest.routeCount) 条线路 · 换个身材看爬法").font(.caption).foregroundStyle(BB.muted)
+                        }
+                        Spacer(minLength:0)
+                        Image(systemName:"arrow.up.right").font(.subheadline)
+                    }.padding(14).background(.white.opacity(0.6),in:RoundedRectangle(cornerRadius:22))
+                }.buttonStyle(.plain).accessibilityIdentifier("homeGymCard")
+            }
             if let climb = store.climbs.first {
                 SectionLabel(title:"接着回看",trailing:"LATEST CLIMB")
                 NavigationLink { ReviewView(climb:climb) } label: { ClimbRow(climb:climb) }.buttonStyle(.plain)
@@ -75,6 +89,14 @@ struct AboutView: View {
             SectionLabel(title:"分析边界",trailing:"KEEP IT HONEST")
             Text("33 个关键点用于骨架回放与画面内几何分析。角度是二维投影角度；髋部轨迹不是物理重心。遮挡、镜头移动、多人入镜会影响结果。候选片段需要结合原片确认。")
             Text("第一版：单人、全身入镜、固定机位；单段 0.5–180 秒，最大 500 MB。建议先在相册里裁掉无关片段。").foregroundStyle(BB.muted)
+            Divider()
+            if let pack = GymPack.current {
+                GymNoticeList()
+                Text("\(pack.manifest.gymName) · \(pack.manifest.routeCount) 条线路 · 数据版本 \(pack.manifest.packVersion)（\(String(pack.manifest.generatedAt.prefix(10)))）").font(.caption).foregroundStyle(BB.muted)
+            } else {
+                SectionLabel(title:"岩馆",trailing:"NOT IN THIS BUILD")
+                Text("这个构建没有内置岩馆数据。场馆模型、线路和攀爬模拟随正式安装包提供，不在公开源码里。").foregroundStyle(BB.muted)
+            }
             Divider()
             Text("记录管理").font(.headline)
             Text("已保存 \(store.climbs.count) 段攀爬。可在每条记录中删除原片和分析；卸载应用会移除本地记录。需要保留的复盘文字可通过分享导出。").foregroundStyle(BB.muted)

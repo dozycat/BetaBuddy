@@ -6,7 +6,7 @@ let package = Package(
     platforms: [.macOS(.v13)],
     products: [.library(name:"BetaBuddyCore",targets:["BetaBuddyCore"])],
     targets: [
-        .target(name:"BetaBuddyCore",path:"BetaBuddy/Core",exclude:["VideoAnalyzer.swift","ClimbStore.swift"],sources:["Models.swift","PoseMath.swift"]),
+        .target(name:"BetaBuddyCore",path:"BetaBuddy/Core",exclude:["VideoAnalyzer.swift","ClimbStore.swift","GymPack.swift"],sources:["Models.swift","PoseMath.swift"]),
         .testTarget(name:"BetaBuddyCoreTests",dependencies:["BetaBuddyCore"],path:"CoreTests")
     ]
 )
