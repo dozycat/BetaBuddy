@@ -92,3 +92,11 @@ schemes:
         BetaBuddy: all
     test:
       targets: [BetaBuddyTests, BetaBuddyUITests]
+  BetaBuddyStoreKit:
+    build:
+      targets:
+        BetaBuddy: all
+    run:
+      storeKitConfiguration: StoreKit/Lifetime.storekit
+    test:
+      targets: [BetaBuddyTests, BetaBuddyUITests]
