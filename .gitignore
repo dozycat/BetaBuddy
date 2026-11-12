@@ -48,3 +48,20 @@ ios/.build/
 
 # Separately versioned Sites checkout
 /release-site/
+
+# Android: build output, local configuration, signing material
+android/.gradle/
+android/build/
+android/app/build/
+android/.kotlin/
+android/local.properties
+android/keystore.properties
+android/captures/
+android/.idea/
+*.jks
+*.keystore
+*.apk
+*.aab
+# Gym pack (venue model, routes, solver, web page): installed locally, never committed
+android/app/src/main/assets/gympack/
+android/.gympack.*/
