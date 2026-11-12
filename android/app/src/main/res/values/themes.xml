@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Window chrome only. Everything on screen is drawn by Compose with the BB design system;
+         system bar colours and icon contrast are set by enableEdgeToEdge() in MainActivity. -->
+    <style name="Theme.BetaBuddy" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="android:windowBackground">@color/bb_paper</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="colorPrimary">@color/bb_ink</item>
+        <item name="colorAccent">@color/bb_ink</item>
+    </style>
+</resources>

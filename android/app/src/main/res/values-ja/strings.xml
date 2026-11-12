@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Shared, gym and settings text. The logbook's text lives in strings_journal.xml.
+    Wording follows ios/BetaBuddy/Resources/Localizable.xcstrings; keep the five languages in step
+    (same placeholders, same line breaks). values/ is English, so an unsupported system language reads English.
+-->
+<resources>
+
+    <!-- Shared -->
+    <string name="app_language_code">ja</string>
+    <string name="tab_gym">ジム</string>
+    <string name="tab_journal">ログブック</string>
+    <string name="action_reload">再読み込み</string>
+    <string name="action_back">戻る</string>
+
+    <!-- Gym -->
+    <string name="gym_notice_title">入る前に</string>
+    <string name="gym_notice_1">非公式のまとめです。ジムとの提携や許諾はありません。</string>
+    <string name="gym_notice_2">ホールドの位置と課題は、愛好者が公開動画をもとにまとめたものです。現地と違っていたり、すでにホールド替えされていることがあります。現地を優先してください。</string>
+    <string name="gym_notice_3">「体格が違うとどう登るか」はモデルによる推定で、コーチの助言ではありません。ムーブが可能か、安全かは保証しません。</string>
+    <string name="gym_notice_4">グレード帯は課題タグの色帯から取ったもので、グレードの判定ではありません。</string>
+    <string name="gym_notice_5">ジムのデータはアプリに同梱され、端末内で開きます。通信もアップロードもしません。</string>
+    <string name="gym_missing_title">このビルドには\nジムのデータがありません</string>
+    <string name="gym_missing_detail">ジムのモデル、課題、登りのシミュレーションは配信版のアプリに同梱され、公開ソースには含まれません。ログブックはそのまま使えます。</string>
+    <string name="gym_invalid_title">ジムのデータが不完全です</string>
+    <string name="gym_error_manifest">データパックの一覧を読み込めません。アプリを入れ直してください。</string>
+    <string name="gym_error_schema">データパックの形式（%1$d）がこのバージョンのアプリより新しいです。アプリをアップデートしてください。</string>
+    <string name="gym_error_files">データパックのファイルが足りません。アプリを入れ直してください。</string>
+    <string name="gym_intro_headline">体格を変えて、\nこの課題を見る。</string>
+    <string name="gym_intro_body">3D のジムで課題を選び、体格を変えて、モデルが推定する登り方の違いを見てみましょう。</string>
+    <string name="gym_pack_summary">%1$d 課題 · データ版 %2$s</string>
+    <string name="gym_enter">わかりました、ジムへ</string>
+    <string name="gym_loading">ジムを開いています…</string>
+    <string name="gym_failed_title">ジムを開けませんでした</string>
+    <string name="gym_failed_page">ジムのページでエラーが発生しました。</string>
+    <string name="gym_failed_load">ジムのページを開けませんでした：%1$s</string>
+    <string name="gym_failed_renderer">ジムのページがシステムによって終了されました。メモリ不足の可能性があります。</string>
+
+    <!-- Settings and About, privacy policy -->
+    <string name="settings_title">設定とこのアプリについて</string>
+    <string name="settings_language">言語</string>
+    <string name="language_follow_system">システムに合わせる</string>
+    <string name="about_on_device">解析はすべてこのスマートフォンで</string>
+    <string name="about_free">全機能無料 · 課金なし · サブスクなし · 広告なし</string>
+    <string name="about_local">姿勢推定モデルはアプリに同梱されています。モデルのダウンロードも、アカウントも、クラウド AI もありません。読み込んだ動画と解析結果はアプリ内に保存され、システムのクラウドバックアップには含まれません。</string>
+    <string name="about_limits_title">解析の限界</string>
+    <string name="about_limits_body">33 個のキーポイントをスケルトン再生と画面内の幾何解析に使います。角度は 2 次元に投影した角度で、腰の軌跡は物理的な重心ではありません。隠れ、カメラの動き、複数人の映り込みは結果に影響します。候補シーンは元の映像で確かめてください。</string>
+    <string name="about_video_requirements">1 人の全身が映った、固定カメラの動画に向いています。1 本あたり 0.5〜180 秒、最大 500 MB。関係のない部分は先にギャラリーアプリでトリミングしてください。</string>
+    <string name="about_gym_pack_line">%1$s · %2$d 課題 · データ版 %3$s（%4$s）</string>
+    <string name="about_gym_missing">このビルドにはジムのデータがありません。ジムのモデル、課題、登りのシミュレーションは配信版のアプリに同梱され、公開ソースには含まれません。</string>
+    <string name="about_records_title">記録の管理</string>
+    <string name="about_records_body">動画と解析は記録ごとに削除できます。アプリを削除すると端末内の記録も消えます。残したいメモは共有から書き出せます。</string>
+    <string name="about_support">ヘルプとサポート</string>
+    <string name="privacy_title">プライバシーポリシー</string>
+    <string name="privacy_unreadable">プライバシーポリシーを読み込めません。アプリを入れ直してください。</string>
+</resources>

@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Shared, gym and settings text. The logbook's text lives in strings_journal.xml.
+    Wording follows ios/BetaBuddy/Resources/Localizable.xcstrings; keep the five languages in step
+    (same placeholders, same line breaks). values/ is English, so an unsupported system language reads English.
+-->
+<resources>
+
+    <!-- Shared -->
+    <string name="app_language_code">ko</string>
+    <string name="tab_gym">암장</string>
+    <string name="tab_journal">등반 일지</string>
+    <string name="action_reload">다시 불러오기</string>
+    <string name="action_back">뒤로</string>
+
+    <!-- Gym -->
+    <string name="gym_notice_title">들어가기 전에</string>
+    <string name="gym_notice_1">비공식 정리입니다. 암장과 제휴하거나 허가를 받은 것이 아닙니다.</string>
+    <string name="gym_notice_2">홀드 위치와 문제는 동호인이 공개 영상을 보고 정리한 것입니다. 현장과 다를 수 있고 이미 세팅이 바뀌었을 수도 있습니다. 현장을 기준으로 하세요.</string>
+    <string name="gym_notice_3">“체형이 다르면 어떻게 오를까”는 모델의 추정이며 코치의 조언이 아닙니다. 동작이 가능하거나 안전하다고 보장하지 않습니다.</string>
+    <string name="gym_notice_4">난이도 구간은 문제 태그의 색 띠에서 가져온 것이며 난이도 판정이 아닙니다.</string>
+    <string name="gym_notice_5">암장 데이터는 앱에 들어 있고 기기에서 열립니다. 인터넷에 연결하지 않고 업로드하지 않습니다.</string>
+    <string name="gym_missing_title">이 빌드에는\n암장 데이터가 없습니다</string>
+    <string name="gym_missing_detail">암장 모델, 문제, 등반 시뮬레이션은 정식 배포 앱에 들어 있으며 공개 소스에는 없습니다. 등반 일지는 그대로 쓸 수 있습니다.</string>
+    <string name="gym_invalid_title">암장 데이터가 불완전합니다</string>
+    <string name="gym_error_manifest">데이터 팩 목록을 읽을 수 없습니다. 앱을 다시 설치하세요.</string>
+    <string name="gym_error_schema">데이터 팩 형식(%1$d)이 이 앱 버전보다 최신입니다. 앱을 업데이트하세요.</string>
+    <string name="gym_error_files">데이터 팩에 빠진 파일이 있습니다. 앱을 다시 설치하세요.</string>
+    <string name="gym_intro_headline">체형을 바꿔\n이 문제를 보기.</string>
+    <string name="gym_intro_body">3D 암장에서 문제를 고르고 체형을 바꿔, 모델이 추정한 베타가 어떻게 달라지는지 보세요.</string>
+    <string name="gym_pack_summary">문제 %1$d개 · 데이터 버전 %2$s</string>
+    <string name="gym_enter">확인했어요, 암장 열기</string>
+    <string name="gym_loading">암장을 여는 중…</string>
+    <string name="gym_failed_title">암장을 열지 못했습니다</string>
+    <string name="gym_failed_page">암장 페이지에서 오류를 알렸습니다.</string>
+    <string name="gym_failed_load">암장 페이지를 열지 못했습니다: %1$s</string>
+    <string name="gym_failed_renderer">시스템이 암장 페이지를 종료했습니다. 메모리가 부족했을 수 있습니다.</string>
+
+    <!-- Settings and About, privacy policy -->
+    <string name="settings_title">설정 및 앱 정보</string>
+    <string name="settings_language">언어</string>
+    <string name="language_follow_system">시스템 설정 따르기</string>
+    <string name="about_on_device">분석은 모두 이 휴대폰에서</string>
+    <string name="about_free">모든 기능 무료 · 인앱 구입 없음 · 구독 없음 · 광고 없음</string>
+    <string name="about_local">자세 추정 모델은 앱에 들어 있습니다. 모델 다운로드도, 계정도, 클라우드 AI도 없습니다. 가져온 영상과 분석 기록은 앱 안에 저장되며 시스템 클라우드 백업에서 제외됩니다.</string>
+    <string name="about_limits_title">분석의 한계</string>
+    <string name="about_limits_body">33개의 키포인트로 스켈레톤 재생과 화면 안의 기하 분석을 합니다. 각도는 2차원 투영 각도이고, 골반 궤적은 실제 무게중심이 아닙니다. 가림, 카메라 움직임, 여러 사람이 찍힌 영상은 결과에 영향을 줍니다. 후보 구간은 원본 영상으로 확인하세요.</string>
+    <string name="about_video_requirements">한 명의 전신이 나오고 카메라가 고정된 영상에 맞습니다. 영상 하나당 0.5–180초, 최대 500MB입니다. 관계없는 부분은 먼저 갤러리 앱에서 잘라 주세요.</string>
+    <string name="about_gym_pack_line">%1$s · 문제 %2$d개 · 데이터 버전 %3$s (%4$s)</string>
+    <string name="about_gym_missing">이 빌드에는 암장 데이터가 없습니다. 암장 모델, 문제, 등반 시뮬레이션은 정식 배포 앱에 들어 있으며 공개 소스에는 없습니다.</string>
+    <string name="about_records_title">기록 관리</string>
+    <string name="about_records_body">기록마다 영상과 분석을 삭제할 수 있습니다. 앱을 삭제하면 기기 안의 기록도 지워집니다. 남기고 싶은 메모는 공유로 내보내세요.</string>
+    <string name="about_support">도움말 및 지원</string>
+    <string name="privacy_title">개인정보 처리방침</string>
+    <string name="privacy_unreadable">개인정보 처리방침을 읽을 수 없습니다. 앱을 다시 설치하세요.</string>
+</resources>

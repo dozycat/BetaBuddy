@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Shared, gym and settings text. The logbook's text lives in strings_journal.xml.
+    Wording follows ios/BetaBuddy/Resources/Localizable.xcstrings; keep the five languages in step
+    (same placeholders, same line breaks). values/ is English, so an unsupported system language reads English.
+-->
+<resources>
+    <string name="app_name" translatable="false">BetaBuddy</string>
+
+    <!-- Shared -->
+    <!-- The code of this resource set; AppLanguage reads it to know which language is on screen. -->
+    <string name="app_language_code">en</string>
+    <string name="tab_gym">Gym</string>
+    <string name="tab_journal">Logbook</string>
+    <string name="action_reload">Reload</string>
+    <string name="action_back">Back</string>
+
+    <!-- Gym -->
+    <string name="gym_notice_title">Before you go in</string>
+    <string name="gym_notice_1">Unofficial. Not affiliated with or authorized by the gym.</string>
+    <string name="gym_notice_2">Hold positions and problems were compiled by climbers from public videos. They may not match the wall, and the set may have changed. Trust what you see at the gym.</string>
+    <string name="gym_notice_3">“How different bodies climb it” is a model’s projection, not coaching advice. It does not promise a move is possible or safe.</string>
+    <string name="gym_notice_4">Grade bands come from the colored strip on each problem’s tag. They are not a grading verdict.</string>
+    <string name="gym_notice_5">The gym data ships inside the app and opens on your phone. Nothing goes online and nothing is uploaded.</string>
+    <string name="gym_missing_title">This build has\nno gym data</string>
+    <string name="gym_missing_detail">The gym model, problems and climbing simulation ship with the released app, not with the public source code. The logbook works as usual.</string>
+    <string name="gym_invalid_title">Gym data is incomplete</string>
+    <string name="gym_error_manifest">The gym pack manifest can’t be read. Reinstall the app.</string>
+    <string name="gym_error_schema">The gym pack format (%1$d) is newer than this version of the app. Update the app.</string>
+    <string name="gym_error_files">The gym pack is missing files. Reinstall the app.</string>
+    <string name="gym_intro_headline">Different build,\nsame problem.</string>
+    <string name="gym_intro_body">Find a problem in the 3D gym, change the climber’s build, and see how the model’s projected beta changes.</string>
+    <!-- Route count, pack version. -->
+    <string name="gym_pack_summary">%1$d problems · pack %2$s</string>
+    <string name="gym_enter">Got it, open the gym</string>
+    <string name="gym_loading">Opening the gym…</string>
+    <string name="gym_failed_title">The gym didn’t open</string>
+    <string name="gym_failed_page">The gym page reported an error.</string>
+    <string name="gym_failed_load">The gym page didn’t open: %1$s</string>
+    <string name="gym_failed_renderer">The system closed the gym page, possibly to free memory.</string>
+
+    <!-- Settings and About, privacy policy -->
+    <string name="settings_title">Settings and About</string>
+    <string name="settings_language">Language</string>
+    <string name="language_follow_system">Follow system</string>
+    <string name="about_on_device">Analyzed entirely on this phone</string>
+    <string name="about_free">Everything is free · no purchases · no subscription · no ads</string>
+    <string name="about_local">The pose model ships inside the app. No model downloads, no account, no cloud AI. Imported videos and analysis stay inside the app and are excluded from system cloud backups.</string>
+    <string name="about_limits_title">Limits of the analysis</string>
+    <string name="about_limits_body">33 keypoints drive the skeleton replay and in-frame geometry. Angles are 2D projections; the hip trail is not your physical center of mass. Occlusion, camera movement and other people in frame all affect results. Check every cue against the original video.</string>
+    <string name="about_video_requirements">Works with videos of one climber, whole body in frame, from a fixed camera: 0.5–180 seconds, up to 500 MB each. Trim anything else in your gallery app first.</string>
+    <!-- Gym name, route count, pack version, pack date. -->
+    <string name="about_gym_pack_line">%1$s · %2$d problems · pack %3$s (%4$s)</string>
+    <string name="about_gym_missing">This build has no gym data. The gym model, problems and climbing simulation ship with the released app, not with the public source code.</string>
+    <string name="about_records_title">Your records</string>
+    <string name="about_records_body">You can delete the video and analysis from each record. Uninstalling the app removes local records. Use Share to keep notes you want.</string>
+    <string name="about_support">Help and support</string>
+    <string name="privacy_title">Privacy policy</string>
+    <string name="privacy_unreadable">The privacy policy can’t be read. Reinstall the app.</string>
+</resources>

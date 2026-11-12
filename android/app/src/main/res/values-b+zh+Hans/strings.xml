@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Shared, gym and settings text. The logbook's text lives in strings_journal.xml.
+    Wording follows ios/BetaBuddy/Resources/Localizable.xcstrings; keep the five languages in step
+    (same placeholders, same line breaks). values/ is English, so an unsupported system language reads English.
+-->
+<resources>
+
+    <!-- Shared -->
+    <string name="app_language_code">zh-Hans</string>
+    <string name="tab_gym">岩馆</string>
+    <string name="tab_journal">攀爬册</string>
+    <string name="action_reload">重新加载</string>
+    <string name="action_back">返回</string>
+
+    <!-- Gym -->
+    <string name="gym_notice_title">进去之前</string>
+    <string name="gym_notice_1">非官方整理，与场馆没有合作或授权关系。</string>
+    <string name="gym_notice_2">岩点位置和线路由爱好者根据公开视频整理，可能与现场不符，也可能已经换线。以现场为准。</string>
+    <string name="gym_notice_3">“不同身材怎么爬”是模型推演，不是教练建议，不保证动作可行或安全。</string>
+    <string name="gym_notice_4">难度档来自线路牌色条，不是定级结论。</string>
+    <string name="gym_notice_5">场馆数据随安装包内置，在手机上打开；不联网，不上传。</string>
+    <string name="gym_missing_title">这个构建没有\n内置岩馆数据</string>
+    <string name="gym_missing_detail">场馆模型、线路和攀爬模拟随正式安装包提供，不在公开源码里。攀爬册不受影响。</string>
+    <string name="gym_invalid_title">岩馆数据不完整</string>
+    <string name="gym_error_manifest">数据包清单无法读取。请重新安装完整版本。</string>
+    <string name="gym_error_schema">数据包格式（%1$d）比这个版本的应用新。请更新应用。</string>
+    <string name="gym_error_files">数据包缺少文件。请重新安装完整版本。</string>
+    <string name="gym_intro_headline">换个身材，\n看这条线怎么爬。</string>
+    <string name="gym_intro_body">在 3D 岩馆里找到一条线，换一个身材，看看模型推演出的爬法有什么不同。</string>
+    <string name="gym_pack_summary">%1$d 条线路 · 数据版本 %2$s</string>
+    <string name="gym_enter">知道了，进入岩馆</string>
+    <string name="gym_loading">正在打开岩馆…</string>
+    <string name="gym_failed_title">岩馆没有打开</string>
+    <string name="gym_failed_page">岩馆页面报告了一个错误。</string>
+    <string name="gym_failed_load">岩馆页面没有打开：%1$s</string>
+    <string name="gym_failed_renderer">岩馆页面被系统回收了，可能是内存不足。</string>
+
+    <!-- Settings and About, privacy policy -->
+    <string name="settings_title">设置与关于</string>
+    <string name="settings_language">语言</string>
+    <string name="language_follow_system">跟随系统</string>
+    <string name="about_on_device">完全在这台手机上分析</string>
+    <string name="about_free">全部功能免费 · 无内购 · 无订阅 · 无广告</string>
+    <string name="about_local">姿态模型随安装包提供。没有模型下载，没有账号，也没有云端 AI。导入的视频与分析记录保存在应用内，并排除在系统云备份之外。</string>
+    <string name="about_limits_title">分析边界</string>
+    <string name="about_limits_body">33 个关键点用于骨架回放与画面内几何分析。角度是二维投影角度；髋部轨迹不是物理重心。遮挡、镜头移动、多人入镜会影响结果。候选片段需要结合原片确认。</string>
+    <string name="about_video_requirements">适合单人、全身入镜、固定机位的视频；单段 0.5–180 秒，最大 500 MB。建议先在相册里裁掉无关片段。</string>
+    <string name="about_gym_pack_line">%1$s · %2$d 条线路 · 数据版本 %3$s（%4$s）</string>
+    <string name="about_gym_missing">这个构建没有内置岩馆数据。场馆模型、线路和攀爬模拟随正式安装包提供，不在公开源码里。</string>
+    <string name="about_records_title">记录管理</string>
+    <string name="about_records_body">可在每条记录中删除原片和分析；卸载应用会移除本地记录。需要保留的复盘文字可通过分享导出。</string>
+    <string name="about_support">帮助与支持</string>
+    <string name="privacy_title">隐私政策</string>
+    <string name="privacy_unreadable">隐私政策无法读取，请重新安装完整版本。</string>
+</resources>
