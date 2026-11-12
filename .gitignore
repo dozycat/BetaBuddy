@@ -37,6 +37,9 @@ dist/
 
 # iOS generated dependencies and builds
 ios/Vendor/
+# Gym pack (venue model, routes, solver, web page): installed locally, never committed
+ios/GymPack/
+ios/.GymPack.*/
 ios/build/
 ios/.derivedData/
 *.xcuserstate

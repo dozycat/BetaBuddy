@@ -10,6 +10,17 @@
 4. 真机运行：在 Signing & Capabilities 选择自己的 Development Team，选择连接的 iPhone，Build & Run。
 5. 模拟器：需要先安装 iOS runtime。用于界面与 CPU 管线验证，不能代替真机速度、温度和耗电测量。
 
+### 岩馆数据包（可选）
+
+「岩馆」入口显示的场馆模型、线路和模拟来自一个在仓库之外生成的数据包，**不在这个仓库里，也不要提交进来**。没有它，工程照常生成、编译和测试，入口显示「这个构建没有内置岩馆数据」。
+
+```sh
+./ios/scripts/install-gym-pack.sh /path/to/GymPack   # 核对 manifest 与每个文件的 SHA-256 后拷到 ios/GymPack/
+./ios/scripts/install-gym-pack.sh --remove           # 回到不含数据包的构建
+```
+
+`ios/GymPack/` 被 Git 忽略。构建时由脚本阶段把它拷进应用包，工程文件与有没有数据包无关。接口约定见 `../docs/ios/gym-design.md`。
+
 没有 CocoaPods、Swift 包运行时依赖或后台服务。SDK 指标上报工厂被替换为上游空实现；详见 `LocalMediaPipe/README.md`。SDK 按官方 podspec 的静态 XCFramework 与 graph archive 链接方式集成；下载的 Vendor 目录不进 Git。模型资源在应用的 Copy Bundle Resources 中。
 
 ```sh
@@ -42,11 +53,13 @@ xcodebuild -project ios/BetaBuddy.xcodeproj -scheme BetaBuddy \
 ## 文件
 
 - `BetaBuddy/Core`：模型结果结构、几何、MediaPipe 推理、原子本地存储。
-- `BetaBuddy/Views`：设计系统与三页导航、导入、视频骨架回看。
+- `BetaBuddy/Core/GymPack.swift`：定位应用包内的岩馆数据包、读取清单、页面消息的解析。
+- `BetaBuddy/Views`：设计系统与四个入口的导航、导入、视频骨架回看、岩馆页面容器。
 - `CoreTests`：可在 macOS 直接运行的几何与时序边界测试。
 - `BetaBuddyTests`：iOS 本地存储和打包测试。
 - `BetaBuddyUITests`：导入与导航测试。
 - `../docs/ios/product-design.md`：产品、视觉、交互与状态设计。
+- `../docs/ios/gym-design.md`：岩馆入口的设计与数据包接口约定。
 - `../docs/ios/validation.md`：验证结果和真机验收计划。
 
-照片选择器可能由系统下载 iCloud 原片；应用自己不下载模型、不上传视频、不调用旧 Python/LLM 接口。
+照片选择器可能由系统下载 iCloud 原片；应用自己不下载模型、不上传视频、不调用旧 Python/LLM 接口；岩馆页面被禁止访问网络。

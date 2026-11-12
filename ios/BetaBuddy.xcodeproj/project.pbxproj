@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		000BAAC2430D42701BFF962E /* BetaBuddyApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CD99D493E1B4B93BA6A1EDD /* BetaBuddyApp.swift */; };
+		02D9408322D8D6334EB05696 /* GymPack.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83D8408323F334B43C989559 /* GymPack.swift */; };
 		057EFDAB6648F3C43421E1D4 /* ReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FC04FB3A97368DF160C336E /* ReviewView.swift */; };
 		1124280948F2454C8A8D2FC9 /* VideoAnalyzerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECCFE48838B717B182EE97DE /* VideoAnalyzerTests.swift */; };
 		13B74EF3559D5CD410874DF3 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97631893FD4161749566EBED /* HomeView.swift */; };
@@ -16,6 +17,7 @@
 		1E2C12C14F705C065580313A /* ImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 743A912A78FF47442185E13B /* ImportView.swift */; };
 		20F2AE144DF15E9AD0B5388A /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3E66227A41395E86ABCE5E33 /* Accelerate.framework */; };
 		29995CB310C42FBE438B30A1 /* MediaPipeTasksCommon.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8E0CFE80A3BB99A8CDB5F11B /* MediaPipeTasksCommon.xcframework */; };
+		3055DB323A34FC37D2A7A210 /* GymPackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7318870BC8802A65E6F1001 /* GymPackTests.swift */; };
 		377F22AE45858B601F695C1A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F211F0052F6188FC6F05BE84 /* Assets.xcassets */; };
 		415443B23940E5663A9BD537 /* pose_landmarker_full.task in Resources */ = {isa = PBXBuildFile; fileRef = 3347AC254AE7A2134551EEE4 /* pose_landmarker_full.task */; };
 		4A640707610D4C9E1A48C3FD /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 39EC4DD4BAA4523F3F608F9E /* QuartzCore.framework */; };
@@ -33,6 +35,7 @@
 		8AE427F7AAE12B9B763A6CAC /* ClimbStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2073A4BFD1C596095049FD6 /* ClimbStore.swift */; };
 		99F7A8890E725F89F85A2030 /* CoreImage.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A68FFDAADCD794A3E2BA9EB4 /* CoreImage.framework */; };
 		9AA3934B0C6312A0A59C93B7 /* VideoAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70CE35583F94C8C3EE53F2E /* VideoAnalyzer.swift */; };
+		A12147024A4CA862D346FE8B /* GymView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85F50739B83E9927D442985F /* GymView.swift */; };
 		A5C72DB499BCC606758BA91C /* PoseMath.swift in Sources */ = {isa = PBXBuildFile; fileRef = D223147C2D7F097ECD8149E6 /* PoseMath.swift */; };
 		A5F04A407DAACC93DBF3EB71 /* JournalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC6B978A0067117F43BF8620 /* JournalView.swift */; };
 		A96C10334BDC71914EBE9469 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C9F3BFB7EEED9BE808D1130 /* AVFoundation.framework */; };
@@ -80,6 +83,8 @@
 		743A912A78FF47442185E13B /* ImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportView.swift; sourceTree = "<group>"; };
 		77C814BB7416DC2F64D2A84D /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
 		78B9D9705EF0DB098812606B /* BetaBuddy.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = BetaBuddy.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		83D8408323F334B43C989559 /* GymPack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GymPack.swift; sourceTree = "<group>"; };
+		85F50739B83E9927D442985F /* GymView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GymView.swift; sourceTree = "<group>"; };
 		8721AC225C11AEADCCB6D063 /* Glog-LICENSE.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Glog-LICENSE.txt"; sourceTree = "<group>"; };
 		8C4FB4CECDEE3100CF22FF22 /* ClimbStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClimbStoreTests.swift; sourceTree = "<group>"; };
 		8E0CFE80A3BB99A8CDB5F11B /* MediaPipeTasksCommon.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = MediaPipeTasksCommon.xcframework; path = Vendor/MediaPipeTasksCommon/frameworks/MediaPipeTasksCommon.xcframework; sourceTree = "<group>"; };
@@ -89,6 +94,7 @@
 		A68FFDAADCD794A3E2BA9EB4 /* CoreImage.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreImage.framework; path = System/Library/Frameworks/CoreImage.framework; sourceTree = SDKROOT; };
 		A70CE35583F94C8C3EE53F2E /* VideoAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoAnalyzer.swift; sourceTree = "<group>"; };
 		A7174767CB29C136B90F62BD /* Abseil-LICENSE.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Abseil-LICENSE.txt"; sourceTree = "<group>"; };
+		A7318870BC8802A65E6F1001 /* GymPackTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GymPackTests.swift; sourceTree = "<group>"; };
 		C0D97FA407E7F0FF4D6FEB87 /* BetaBuddyTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = BetaBuddyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		C2073A4BFD1C596095049FD6 /* ClimbStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClimbStore.swift; sourceTree = "<group>"; };
 		D223147C2D7F097ECD8149E6 /* PoseMath.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoseMath.swift; sourceTree = "<group>"; };
@@ -198,6 +204,7 @@
 			isa = PBXGroup;
 			children = (
 				C2073A4BFD1C596095049FD6 /* ClimbStore.swift */,
+				83D8408323F334B43C989559 /* GymPack.swift */,
 				5952534D2D2EC74A3ACF8282 /* Models.swift */,
 				D223147C2D7F097ECD8149E6 /* PoseMath.swift */,
 				A70CE35583F94C8C3EE53F2E /* VideoAnalyzer.swift */,
@@ -218,6 +225,7 @@
 			children = (
 				42A6F303EF87EE37EFBE4353 /* BrandMark.swift */,
 				FE5D647ABE46C906A386B5E4 /* DesignSystem.swift */,
+				85F50739B83E9927D442985F /* GymView.swift */,
 				97631893FD4161749566EBED /* HomeView.swift */,
 				743A912A78FF47442185E13B /* ImportView.swift */,
 				FC6B978A0067117F43BF8620 /* JournalView.swift */,
@@ -230,6 +238,7 @@
 			isa = PBXGroup;
 			children = (
 				8C4FB4CECDEE3100CF22FF22 /* ClimbStoreTests.swift */,
+				A7318870BC8802A65E6F1001 /* GymPackTests.swift */,
 				ECCFE48838B717B182EE97DE /* VideoAnalyzerTests.swift */,
 				BBB1982700F161353C98037C /* Fixtures */,
 			);
@@ -293,6 +302,7 @@
 				82D4C7527A7E33A0284E9BBC /* Sources */,
 				F14A57E322B83A4C2174E5B8 /* Resources */,
 				7E1188E844958110D8DED0A2 /* Frameworks */,
+				2E81BC98D8CB637517333661 /* Bundle gym pack if installed */,
 			);
 			buildRules = (
 			);
@@ -394,12 +404,35 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		2E81BC98D8CB637517333661 /* Bundle gym pack if installed */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Bundle gym pack if installed";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -e\nDEST=\"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/GymPack\"\nrm -rf \"$DEST\"\nif [ -f \"$PROJECT_DIR/GymPack/manifest.json\" ]; then\n  cp -R \"$PROJECT_DIR/GymPack\" \"$DEST\"\n  find \"$DEST\" -name .DS_Store -delete\n  echo \"Bundled gym pack from $PROJECT_DIR/GymPack\"\nelse\n  echo \"note: No gym pack installed. The 岩馆 entry will show its empty state.\"\nfi\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		27EFC6FC0DEAC53C96B9E6FB /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 				F912FE304C3B66C059B51027 /* ClimbStoreTests.swift in Sources */,
+				3055DB323A34FC37D2A7A210 /* GymPackTests.swift in Sources */,
 				1124280948F2454C8A8D2FC9 /* VideoAnalyzerTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -412,6 +445,8 @@
 				182C46AC97C9E8377CBDD99B /* BrandMark.swift in Sources */,
 				8AE427F7AAE12B9B763A6CAC /* ClimbStore.swift in Sources */,
 				7B8ABEF9440F27BFDBF942D2 /* DesignSystem.swift in Sources */,
+				02D9408322D8D6334EB05696 /* GymPack.swift in Sources */,
+				A12147024A4CA862D346FE8B /* GymView.swift in Sources */,
 				13B74EF3559D5CD410874DF3 /* HomeView.swift in Sources */,
 				1E2C12C14F705C065580313A /* ImportView.swift in Sources */,
 				A5F04A407DAACC93DBF3EB71 /* JournalView.swift in Sources */,
@@ -470,7 +505,8 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_CXX_LANGUAGE_STANDARD = "c++17";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"\"Vendor/MediaPipeTasksCommon/frameworks\"",
@@ -487,7 +523,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.0;
+				MARKETING_VERSION = 1.1.0;
 				OTHER_LDFLAGS = "$(inherited) -ObjC";
 				"OTHER_LDFLAGS[sdk=iphoneos*]" = "$(inherited) -force_load $(PROJECT_DIR)/Vendor/LocalGraph/device.a";
 				"OTHER_LDFLAGS[sdk=iphonesimulator*]" = "$(inherited) -force_load $(PROJECT_DIR)/Vendor/LocalGraph/simulator.a";
@@ -645,7 +681,8 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_CXX_LANGUAGE_STANDARD = "c++17";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"\"Vendor/MediaPipeTasksCommon/frameworks\"",
@@ -662,7 +699,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.0;
+				MARKETING_VERSION = 1.1.0;
 				OTHER_LDFLAGS = "$(inherited) -ObjC";
 				"OTHER_LDFLAGS[sdk=iphoneos*]" = "$(inherited) -force_load $(PROJECT_DIR)/Vendor/LocalGraph/device.a";
 				"OTHER_LDFLAGS[sdk=iphonesimulator*]" = "$(inherited) -force_load $(PROJECT_DIR)/Vendor/LocalGraph/simulator.a";

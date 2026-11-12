@@ -20,9 +20,10 @@ targets:
       base:
         TARGETED_DEVICE_FAMILY: '1'
         PRODUCT_BUNDLE_IDENTIFIER: com.betabuddy.ios
-        MARKETING_VERSION: '1.0.0'
-        CURRENT_PROJECT_VERSION: 2
+        MARKETING_VERSION: '1.1.0'
+        CURRENT_PROJECT_VERSION: 3
         GENERATE_INFOPLIST_FILE: YES
+        ENABLE_USER_SCRIPT_SANDBOXING: NO
         INFOPLIST_KEY_CFBundleDisplayName: BetaBuddy
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
@@ -33,6 +34,23 @@ targets:
         OTHER_LDFLAGS: '$(inherited) -ObjC'
         OTHER_LDFLAGS[sdk=iphoneos*]: '$(inherited) -force_load $(PROJECT_DIR)/Vendor/LocalGraph/device.a'
         OTHER_LDFLAGS[sdk=iphonesimulator*]: '$(inherited) -force_load $(PROJECT_DIR)/Vendor/LocalGraph/simulator.a'
+    # Gym pack: built outside this repository, installed by scripts/install-gym-pack.sh, never committed.
+    # Copied by a script rather than a folder reference so the project is identical, and still
+    # builds, when ios/GymPack/ does not exist.
+    postBuildScripts:
+      - name: Bundle gym pack if installed
+        basedOnDependencyAnalysis: false
+        script: |
+          set -e
+          DEST="$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/GymPack"
+          rm -rf "$DEST"
+          if [ -f "$PROJECT_DIR/GymPack/manifest.json" ]; then
+            cp -R "$PROJECT_DIR/GymPack" "$DEST"
+            find "$DEST" -name .DS_Store -delete
+            echo "Bundled gym pack from $PROJECT_DIR/GymPack"
+          else
+            echo "note: No gym pack installed. The 岩馆 entry will show its empty state."
+          fi
     dependencies:
       - framework: Vendor/MediaPipeTasksVision/frameworks/MediaPipeTasksVision.xcframework
         embed: false
