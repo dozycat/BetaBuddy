@@ -1,6 +1,24 @@
 # BetaBuddy 发布状态
 
-2026-11-12：1.1.0 (3) 的代码已合入 main（新增「岩馆」入口，设计见 ../gym-design.md，发布资料见 release-1.1.0.md）。装入场馆数据包后的未签名 Release 归档构建通过（app 约 55 MB，其中数据包 11 MB）；开发签名版已装到账号持有人的 iPhone 17 Pro Max 上用于真机验收。**尚未上传**：这台开发机的 Xcode 里没有登录 Apple 账号，也没有 App Store 分发证书，签名归档失败（“No Accounts”）。需要账号持有人在 Xcode → Settings → Accounts 登录后才能归档上传；提审还需要 Apple 上次要求的真机全流程录屏。
+## 现在
+
+**1.1.0 (3) 已上传到 App Store Connect，尚未提审。**（2026-11-12 23:35 CST 上传成功。）
+
+这个构建新增「岩馆」入口，装入了场馆数据包，由账号团队签名归档后导出上传。设计见 [../gym-design.md](../gym-design.md)，文案与提审清单见 [release-1.1.0.md](release-1.1.0.md)，流程见 [RELEASE.md](RELEASE.md)。
+
+提审前还差：
+
+1. 在 App Store Connect 新建版本 1.1.0，填写新增内容、更新宣传文本和描述、追加审核备注。
+2. 补一张「岩馆」界面的 6.9 英寸截图。
+3. 真机全流程录屏和说明（Apple 上次按 Guideline 2.1 要求的材料）。
+4. 线上隐私政策页补上「岩馆」一节。
+5. 选择构建 3，提交审核。
+
+应用目前没有在任何地区上架。
+
+## 经过
+
+2026-11-12：1.1.0 (3) 的代码合入 main。装入场馆数据包后的 Release 归档构建通过（app 约 55 MB，其中数据包 11 MB）；开发签名版装到账号持有人的 iPhone 上用于真机验收。同日签名归档、导出并上传成功。导出时需要系统自带的 rsync，见 [RELEASE.md](RELEASE.md)。
 
 2026-09-07：1.0.0 (1) 已被 Apple 以 Guideline 2.1「Information Needed」拒绝。要求最新 iOS 真机全流程录屏及用途、操作、外部服务和地区差异说明；尚未上架。
 
@@ -31,7 +49,7 @@
 - 已保存内容版权答复及本版出口加密问卷。
 - 用户明确授权接受更新协议；个人账户确认接受 2026-08-18 版 Apple Developer Program License Agreement，接受日期 2026-09-07。
 
-## 构建与网站源
+## 1.0.0 的构建与网站源
 
 - 最终签名归档：ios/build/BetaBuddy-1.0.0-final.xcarchive
 - App Store IPA：ios/build/AppStore-final/BetaBuddy.ipa（约 24.2 MiB）
@@ -41,8 +59,8 @@
 - 交付资源检查通过：Bundle ID、版本、支持邮箱、隐私政策与 required-reason 声明。
 - 隐私清单为静态链接代码中的 stat/fstat、NSUserDefaults 声明 C617.1 与 CA92.1。
 
-## 后续
+## 地区的后续
 
-先通过 TestFlight 真机验证构建 2，补齐 Apple 要求的真机录屏及说明后重新提审；审核通过后自动在已选地区上架。中国大陆需补齐适用 App 备案信息后再增加；欧盟需先完成真实交易商身份声明，再开放供应。
+审核通过后自动在已选地区上架。中国大陆需补齐适用的 App 备案信息后再增加，准备情况见 [mainland-filing.md](mainland-filing.md)；欧盟需先完成交易商身份声明，再开放供应。
 
-本次没有连接的真实 iPhone，因此没有声称已完成真机攀岩准确性、长期稳定性及热状态验收。模拟器和集成测试范围见 ../validation.md。Apple 接受提审不代表这些测试已经完成。
+真机上的攀岩准确性、长期稳定性和热状态还没有成文的验收结论。模拟器和集成测试的范围见 [../validation.md](../validation.md)。Apple 接受提审不代表这些测试已经完成。

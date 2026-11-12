@@ -29,7 +29,7 @@ The content of this tab is rendered in an embedded web view from files bundled i
 ## 提审前清单
 
 - [ ] 用装好数据包的工程在真机上全流程验收（导入 → 分析 → 回看 → 手账 → 练习 → 岩馆：选墙、选线、播放、换身材），并按 Apple 上次 2.1 的要求录屏：最新 iOS 真机、从启动开始、覆盖全部入口。
-- [ ] 签名归档并上传构建 3（需要 Xcode 里登录账号持有人的 Apple ID；`CURRENT_PROJECT_VERSION` 已是 3，重新上传要递增）。
+- [x] 签名归档并上传构建 3（2026-11-12 完成；重新上传要递增 `CURRENT_PROJECT_VERSION`）。流程见 [RELEASE.md](RELEASE.md)。
 - [ ] App Store Connect：新建版本 1.1.0，填“此版本的新增内容”、更新宣传文本和描述、追加审核备注、附上录屏和 2.1 要求的说明（用途、操作步骤、无外部服务、无地区差异）。
 - [ ] 6.9 英寸截图补一张「岩馆」界面（1320 × 2868）。截图含场馆内容，不放进本仓库。
 - [ ] 隐私：仍为“不收集数据”；线上隐私政策页补上「岩馆」一节（文本源 `privacy-policy.txt` 已更新）。

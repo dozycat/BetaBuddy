@@ -1,49 +1,77 @@
-# BetaBuddy 1.0.0 免费发布
+# 发布流程
 
-最新状态与网站地址见 [STATUS.md](STATUS.md)。下文保留操作参考，签名与网站步骤现已由代理完成。现已提交 Apple 审核，审核通过后自动发布；尚未上架。免费是应用价格与功能策略，不代表免除 Apple 开发者会员费用。
+从一份通过测试的代码到提交 App Store 审核，每个版本都走这几步。后台现在的状态见 [STATUS.md](STATUS.md)；每个版本自己的文案和清单在 `release-<版本>.md`；各版本通用的商店资料在 [metadata-zh-Hans.md](metadata-zh-Hans.md)。
 
-## 已准备
+BetaBuddy 全部功能免费，没有内购、订阅和广告。这是应用的价格与功能策略，不免除 Apple 开发者会员费用。
 
-- iPhone 原生应用、内置 Full 姿态模型、新版攀岩扣图标。
-- 版本 1.0.0，构建号 1。
-- 全功能免费，无内购、订阅或广告；关于页明确说明。
-- 应用内离线隐私政策，支持邮箱 hi@dozycat.ai。
-- `metadata-zh-Hans.md`：商店描述、关键词、审核备注与免费价格设置。
-- `privacy-policy.txt`、`support.md`：公开网页的内容源，尚未托管。
+## 1. 准备构建
 
-## 1. 完成真机验收
+1. 在 `ios/project.yml` 里设好 `MARKETING_VERSION` 和 `CURRENT_PROJECT_VERSION`。同一版本每次重新上传都要递增构建号。改完重新生成工程并提交。
+2. 要内置岩馆的版本：`./ios/scripts/install-gym-pack.sh <数据包目录>`。脚本会核对清单和每个文件的 SHA-256。数据包不进仓库。
+3. 跑一遍 [ios/README.md](../../../ios/README.md) 里的测试和未签名的真机构建。
+4. 真机验收：用真实攀岩视频走一遍导入、分析、回看、笔记、删除、取消分析、切到后台，以及岩馆的选墙、选线、播放、换身材。模拟器和自动化测试的结果不等于真机验收，范围见 [../validation.md](../validation.md)。
 
-连接自己的 iPhone，在 Xcode 的 Signing & Capabilities 选择个人开发者 Team。先执行 Build & Run，用真实攀岩视频验证导入、骨架回放、笔记、删除、取消分析和后台切换。测试较长视频的内存、温度与速度。已有模拟器与集成测试结果不等于真机验收，详见 `../validation.md`。
+## 2. 签名归档
 
-## 2. 建立公开网页
+需要在 Xcode → Settings → Accounts 里登录有权限的 Apple 账号，否则归档会以「No Accounts」失败。
 
-将隐私政策和支持资料放到自己的公开 HTTPS 网站，可以使用已有网站或免费的静态托管。页面无需登录即可访问；支持页包含 hi@dozycat.ai。将真实的隐私网页链接加到应用关于页，并在 App Store Connect 填写 Privacy Policy URL 与 Support URL。当前离线政策已可在应用内阅读，但不能替代后台要求的网址。
+在 Xcode 里：BetaBuddy target → Signing & Capabilities，选团队，开启 Automatically manage signing；目标选 Any iOS Device (arm64)，Product → Archive。
 
-## 3. 签名归档
+或用命令行：
 
-在 Xcode 打开 `ios/BetaBuddy.xcodeproj`：
+```sh
+xcodebuild -project ios/BetaBuddy.xcodeproj -scheme BetaBuddy -configuration Release \
+  -destination 'generic/platform=iOS' -archivePath ios/build/BetaBuddy-<版本>-<构建号>.xcarchive \
+  -allowProvisioningUpdates archive
+```
 
-1. 选择 BetaBuddy target → Signing & Capabilities，选自己的 Team，开启 Automatically manage signing。
-2. 确认 Bundle ID `com.betabuddy.ios` 可被该团队注册；如不可用，修改 `ios/project.yml` 后重新生成项目，并在后台使用相同 ID。
-3. 选择 Any iOS Device (arm64)，Product → Archive。
-4. Organizer → Validate App，解决 Apple 返回的签名、隐私清单与 SDK 校验问题。
-5. Distribute App → App Store Connect → Upload。上传后的构建等待 Apple 处理。
+Bundle ID 是 `com.betabuddy.ios`。换团队时如果这个 ID 不可注册，改 `ios/project.yml` 后重新生成工程，并在后台用同一个 ID。
 
-本地 `ios/build/BetaBuddy-1.0.0-unsigned.xcarchive` 是**未签名的构建验证归档**，不是可直接上架的 IPA。不要把它当成已签名分发包。现已通过 Xcode 的个人团队完成自动签名，并使用 Cloud Managed Apple Distribution 导出；当前产物请使用 STATUS.md 中的最终路径。
+## 3. 导出与上传
 
-每次重新上传同一版本必须递增 `CURRENT_PROJECT_VERSION`，并同步保存到 `ios/project.yml`。
+```sh
+PATH=/usr/bin:/bin:/usr/sbin:/sbin xcodebuild -exportArchive \
+  -archivePath ios/build/BetaBuddy-<版本>-<构建号>.xcarchive \
+  -exportOptionsPlist ios/scripts/ExportOptions.plist \
+  -exportPath ios/build/AppStore-<版本>-<构建号> -allowProvisioningUpdates
+```
+
+**导出时要用系统自带的 rsync。** 如果 `PATH` 里排在前面的是 Homebrew 的 rsync，Xcode 会报「Copy failed」。上面的命令把 `PATH` 限制在系统目录来避开它。
+
+`ExportOptions.plist` 的方式是 `app-store-connect`。导出的 IPA 用 Xcode Organizer 或 Transporter 上传；也可以在 Organizer 里对归档直接 Validate App → Distribute App → App Store Connect → Upload。上传后等 Apple 处理完成，构建才会出现在后台。
+
+`ios/build/` 被 Git 忽略。归档和 IPA 不进仓库。
 
 ## 4. App Store Connect
 
-1. Apps → 新建 iOS App，填写名称 BetaBuddy、简体中文、正确 Bundle ID、自己的唯一 SKU。
-2. 粘贴同目录商店文案，上传符合 Apple 尺寸要求的真实应用截图。使用 screenshots-6.9/ 下新准备的三张 1320 × 2868 真实界面截图；不要用非攀岩模型验证片宣传攀岩效果。
-3. Pricing and Availability：设置 Free / 0，选择实际计划发布的地区；不创建任何内购或订阅。
-4. App Privacy：按最终实现填写。目前应用不向开发者或合作伙伴传输个人数据，拟选择“不收集数据”；提交前复核最终 SDK、隐私清单和 Apple 验证报告。
-5. 完成年龄分级、内容权利、加密出口等问卷。中国大陆如适用，需完成对应备案信息；其他地区也以后台实际要求为准。
-6. 填写开发者真实审核联系人与电话，支持邮箱使用 hi@dozycat.ai。隐私网址和支持网址填已上线地址。
-7. 选择已处理成功的构建，建议先通过 TestFlight 真机验证，然后提交审核。发布方式可选审核通过后手动发布。
+首次建立应用时：
 
-## 官方依据（2026-09-07 查阅）
+1. Apps → 新建 iOS App：名称 BetaBuddy、简体中文、Bundle ID、唯一的 SKU。
+2. Pricing and Availability：Free，选择实际要发布的地区；不创建内购或订阅。
+3. App Privacy：按最终实现填写。应用不向开发者或合作方传输个人数据，对应「不收集数据」；每次提交前对照打包的 SDK、隐私清单和 Apple 的验证报告复核。
+4. 年龄分级、内容权利、出口加密问卷。
+5. Support URL 与 Privacy Policy URL 填已上线、无需登录的 HTTPS 地址。内容源是 [support.md](support.md) 和 [privacy-policy.txt](privacy-policy.txt)；应用内的离线政策不能替代这两个网址。
+6. 审核联系人填真实的姓名和电话。
+
+每个版本：
+
+1. 新建版本，填「此版本的新增内容」，按需更新宣传文本、描述和审核备注。文案在该版本的 `release-<版本>.md`。
+2. 截图用真实界面，6.9 英寸栏目为 1320 × 2868。不要用非攀岩的模型验证样片宣传攀岩效果。含场馆内容的截图不放进仓库。
+3. 如果行为变了，同步线上的隐私政策和支持页。
+4. 选中处理完成的构建。建议先经 TestFlight 在真机上验证。
+5. 附上审核要求的材料。Apple 曾按 Guideline 2.1 要求提供最新 iOS 真机上从启动开始的全流程录屏，以及用途、操作步骤、外部服务和地区差异的说明；之后每次提审都备好。
+6. 提交审核。发布方式是审核通过后自动发布。
+
+## 5. 地区
+
+- 中国大陆：上架需要 App 备案号。准备情况见 [mainland-filing.md](mainland-filing.md)；不要填造假的编号。
+- 欧盟：需要先完成交易商身份声明。
+
+## 6. 发布之后
+
+更新 [STATUS.md](STATUS.md)：哪个构建、什么时候、到了哪一步、还差什么。只写实际发生的事。
+
+## 官方依据
 
 - 开发者会员：https://developer.apple.com/programs/
 - 免费定价：https://developer.apple.com/help/app-store-connect/manage-app-pricing/set-a-price
