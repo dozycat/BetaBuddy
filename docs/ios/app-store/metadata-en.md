@@ -2,7 +2,7 @@
 
 English store copy, matching what the app does today. Simplified Chinese: [metadata-zh-Hans.md](metadata-zh-Hans.md). What is actually filled in on App Store Connect is tracked in [STATUS.md](STATUS.md).
 
-- Name: BetaBuddy
+- Name: BetaBuddy Climbing Journal
 - Subtitle: Gym beta & climb video review (29 of 30 characters)
 - Primary category: Sports
 - Price: Free in every territory; no in-app purchases or subscriptions
@@ -14,7 +14,7 @@ English store copy, matching what the app does today. Simplified Chinese: [metad
 
 ## Promotional text
 
-Go again, a little differently. See how a different build might climb the same problem in the Gym, then import a go and replay your skeleton and movement. Free. No ads, purchases or subscriptions.
+Go again, a little differently. Explore an offline gym and see how a different build might climb a problem. Import a climb to replay skeleton and movement. Free.
 
 ## Description
 
