@@ -1,65 +1,82 @@
-# BetaBuddy for iPhone
+# BetaBuddy · iOS 工程
 
-原生 SwiftUI 攀岩视频回看与训练手账。iOS 17+，iPhone 优先。
+SwiftUI 原生应用，iOS 17+，仅 iPhone、竖屏。产品介绍见[仓库首页](../README.md)；这里讲怎么构建、怎么测，以及姿态识别这条管线是怎么搭的。
 
 ## 构建
 
 1. 安装 Xcode（含 iOS SDK）和 [XcodeGen](https://github.com/yonaskolb/XcodeGen)。
-2. 在仓库根目录运行 `./ios/scripts/bootstrap.sh`。脚本只在**开发机**下载固定版本官方 MediaPipe SDK；模型已随源码提供，并校验 SHA-256。
+2. 在仓库根目录运行 `./ios/scripts/bootstrap.sh`。它下载固定版本的官方 MediaPipe SDK 到被忽略的 `ios/Vendor/`，校验 SHA-256，准备本地 graph 库，然后生成 `BetaBuddy.xcodeproj`。姿态模型已在源码里，同样会被校验。
 3. 打开 `ios/BetaBuddy.xcodeproj`，选择 BetaBuddy scheme。
-4. 真机运行：在 Signing & Capabilities 选择自己的 Development Team，选择连接的 iPhone，Build & Run。
-5. 模拟器：需要先安装 iOS runtime。用于界面与 CPU 管线验证，不能代替真机速度、温度和耗电测量。
+4. 真机：在 Signing & Capabilities 选自己的 Development Team，选中连接的 iPhone，Build & Run。
+5. 模拟器：先安装 iOS runtime。适合看界面和验证 CPU 管线，不能代替真机上的速度、温度和耗电。
+
+没有 CocoaPods，没有 Swift 包运行时依赖，没有后台服务。SDK 按官方 podspec 的方式以静态 XCFramework 和 graph archive 链接；其中的指标上报工厂被替换成上游的空实现，见 [LocalMediaPipe/README.md](LocalMediaPipe/README.md)。
+
+增删源文件或改了 `project.yml` 之后，重新生成工程：
+
+```sh
+xcodegen generate --spec ios/project.yml --project ios
+```
 
 ### 岩馆数据包（可选）
 
-「岩馆」入口显示的场馆模型、线路和模拟来自一个在仓库之外生成的数据包，**不在这个仓库里，也不要提交进来**。没有它，工程照常生成、编译和测试，入口显示「这个构建没有内置岩馆数据」。
+「岩馆」入口显示的场馆模型、线路和推演来自一个在仓库之外生成的数据包。它**不在这个仓库里，也不要提交进来**。没有它，工程照常生成、编译和测试，入口显示「这个构建没有内置岩馆数据」。
 
 ```sh
 ./ios/scripts/install-gym-pack.sh /path/to/GymPack   # 核对 manifest 与每个文件的 SHA-256 后拷到 ios/GymPack/
 ./ios/scripts/install-gym-pack.sh --remove           # 回到不含数据包的构建
 ```
 
-`ios/GymPack/` 被 Git 忽略。构建时由脚本阶段把它拷进应用包，工程文件与有没有数据包无关。接口约定见 `../docs/ios/gym-design.md`。
+`ios/GymPack/` 被 Git 忽略。构建时由一个脚本阶段把它拷进应用包，所以工程文件与有没有数据包无关。接口约定见 [../docs/ios/gym-design.md](../docs/ios/gym-design.md)。
 
-没有 CocoaPods、Swift 包运行时依赖或后台服务。SDK 指标上报工厂被替换为上游空实现；详见 `LocalMediaPipe/README.md`。SDK 按官方 podspec 的静态 XCFramework 与 graph archive 链接方式集成；下载的 Vendor 目录不进 Git。模型资源在应用的 Copy Bundle Resources 中。
+## 测试
 
 ```sh
+# 几何与时序的核心测试，在 Mac 上直接跑
 swift test --package-path ios
+
+# 单元、集成与界面测试；把设备名换成已安装的模拟器
+xcodebuild -project ios/BetaBuddy.xcodeproj -scheme BetaBuddy \
+  -destination 'platform=iOS Simulator,name=<模拟器>' -derivedDataPath ios/.derivedData test
+
+# 未签名的真机构建
 xcodebuild -project ios/BetaBuddy.xcodeproj -scheme BetaBuddy \
   -destination 'generic/platform=iOS' -derivedDataPath ios/.derivedData \
   CODE_SIGNING_ALLOWED=NO build
-# 将设备名换成已安装的模拟器
-xcodebuild -project ios/BetaBuddy.xcodeproj -scheme BetaBuddy \
-  -destination 'platform=iOS Simulator,name=BetaBuddy iPhone' test
 ```
 
-## 模型与手机调优
+第三方 SDK 可能输出反馈张量或投影相关的诊断提示，模拟器也会输出系统框架提示；这些不等于测试失败。做过和没做过的验证记在 [../docs/ios/validation.md](../docs/ios/validation.md)。
 
-保留后端原有 **pose_landmarker_full / float16**，33 点；固定为官方版本 `1`，未替换成 Lite，也没有切换为 Apple Vision。权重 SHA-256：
+## 姿态模型与推理管线
+
+模型是 MediaPipe **Pose Landmarker Full / float16**，33 点，固定为官方版本 `1`，权重未改动。SHA-256：
 
 `5134a3aad27a58b93da0088d431f366da362b44e3ccfbe3462b3827a839011b1`
 
-- 单实例串行 `.video` 模式，使用模型自带时间追踪。
-- AVAssetReader 顺序解码，跳帧发生在图像变换和推理之前；不将全片转换成 UIImage 数组。
-- 原片的方向/镜像变换先烘焙进输入；宽高比与播放画面一致。
-- 10fps/720px 或 15fps/960px 最大采样规格；原片保留，不改模型输入张量与权重。
-- 推理在独立 actor 上，UI 仅接收低频进度。每帧 autoreleasepool，Core Image 不缓存中间图。
-- CPU 为当前可复现基线，避免 GPU 线程亲和与模拟器支持差异。**未宣称这是最快的 delegate**；GPU 对照和实际能耗需要真机基准后再决定。
-- critical 热状态终止；用户取消在帧间检查，退出前台停止。第一版不后台长时间占用计算。
-- 低置信度/出界点不进入角度和骨架；不跨缺失片段计算位移或绘制轨迹。
+- 单实例串行 `.video` 模式，使用模型自带的时间追踪。
+- `AVAssetReader` 顺序解码，跳帧发生在图像变换和推理之前；不会把整段视频转成图片数组。
+- 视频的方向和镜像变换先烘焙进输入，宽高比与播放画面一致。
+- 两档采样：日常最高 10fps / 720px 长边，细看最高 15fps / 960px 长边。两档用同一份权重，区别只在采样和预处理。
+- 推理在独立 actor 上，界面只收低频进度。每帧一个 autoreleasepool，Core Image 不缓存中间图。
+- 用 CPU 推理，作为可复现的基线，避开 GPU 线程亲和与模拟器支持的差异。这不代表它是最快的 delegate；GPU 对照和实际能耗要等真机基准。
+- 设备进入 critical 热状态时终止；取消在帧间检查；应用退到后台即停止，不在后台长时间占用计算。
+- 置信度不足或出界的关键点不进入角度和骨架；不跨检测空白计算位移或画轨迹。
 
-这属于工程管线调优，**不是针对攀岩数据重新训练**，也不代表已经证明准确率或性能提升。
+这些是工程上的管线选择。模型没有针对攀岩重新训练，也没有证据表明准确率或性能因此提升。
 
-## 文件
+## 目录
 
-- `BetaBuddy/Core`：模型结果结构、几何、MediaPipe 推理、原子本地存储。
-- `BetaBuddy/Core/GymPack.swift`：定位应用包内的岩馆数据包、读取清单、页面消息的解析。
-- `BetaBuddy/Views`：设计系统与四个入口的导航、导入、视频骨架回看、岩馆页面容器。
+- `BetaBuddy/App`：应用入口与四个入口的导航。
+- `BetaBuddy/Core`：数据结构、几何、MediaPipe 推理、原子写入的本地存储，以及岩馆数据包的定位、清单读取和页面消息解析。
+- `BetaBuddy/Views`：设计系统、上墙、导入、回看、攀爬册、练习、岩馆页面容器。
+- `BetaBuddy/Resources`：图标、姿态模型、隐私清单、离线隐私政策、第三方许可。
 - `CoreTests`：可在 macOS 直接运行的几何与时序边界测试。
-- `BetaBuddyTests`：iOS 本地存储和打包测试。
-- `BetaBuddyUITests`：导入与导航测试。
-- `../docs/ios/product-design.md`：产品、视觉、交互与状态设计。
-- `../docs/ios/gym-design.md`：岩馆入口的设计与数据包接口约定。
-- `../docs/ios/validation.md`：验证结果和真机验收计划。
+- `BetaBuddyTests`：本地存储、模型打包、视频推理、数据包加载的测试。
+- `BetaBuddyUITests`：导入、导航和岩馆入口的冒烟测试。
+- `LocalMediaPipe`：SDK 指标上报工厂的本地空实现及其头文件依赖。
+- `scripts`：`bootstrap.sh`、`install-gym-pack.sh`、`prepare-local-graph.sh`、`generate-icon.swift`、`ExportOptions.plist`。
+- [THIRD_PARTY.md](THIRD_PARTY.md)：第三方 SDK、模型与素材的来源和校验值。
 
-照片选择器可能由系统下载 iCloud 原片；应用自己不下载模型、不上传视频、不调用旧 Python/LLM 接口；岩馆页面被禁止访问网络。
+## 网络
+
+应用自己不下载模型，不上传视频，不调用任何云端服务。岩馆页面被禁止访问网络。两种情况由系统发起：用户选了只存在 iCloud 的视频时，照片选择器可能先下载原片；「关于」页里的支持与隐私链接会在浏览器里打开。
