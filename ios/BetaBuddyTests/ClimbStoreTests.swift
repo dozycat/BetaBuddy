@@ -37,13 +37,34 @@ final class ClimbStoreTests: XCTestCase {
         try original.write(to:file)
         let store = ClimbStore(root:root)
         XCTAssertNotNil(store.error)
-        XCTAssertThrowsError(try store.complete(Drill.all[0]))
+        let staged = root.appendingPathComponent("fixture.mov")
+        try Data([0,1,2]).write(to:staged)
+        let analysis = PoseAnalysis(frames:[],sampledFrames:0,duration:1,aspectRatio:1,processingSeconds:0,moments:[])
+        XCTAssertThrowsError(try store.save(title:"",grade:ungradedValue,sent:false,note:"",stagedVideo:staged,thumbnail:Data(),analysis:analysis))
         XCTAssertEqual(try Data(contentsOf:file),original)
+        XCTAssertTrue(FileManager.default.fileExists(atPath:staged.path))
     }
-    func testDrillCompletionIsIdempotent() throws {
+    // Archives written by builds that had practice logs carry a `training` array; it is ignored, not an error.
+    func testArchiveWithRetiredFieldsStillLoads() throws {
+        try FileManager.default.createDirectory(at:root,withIntermediateDirectories:true)
+        let legacy = #"""
+        {"version":1,"training":[{"id":"6F9619FF-8B86-D011-B42D-00C04FC964FF","date":774000000,"drillID":"quiet-feet"}],
+         "climbs":[{"id":"7F9619FF-8B86-D011-B42D-00C04FC964FF","date":774000000,"title":"旧记录","grade":"未标级","sent":true,"note":"n",
+           "videoName":"v.mov","thumbnailName":"t.jpg",
+           "analysis":{"frames":[],"sampledFrames":4,"duration":2,"aspectRatio":0.5,"processingSeconds":1,
+             "moments":[{"id":"8F9619FF-8B86-D011-B42D-00C04FC964FF","time":1,"title":"高抬脚 · 候选片段","detail":"d"}]}}]}
+        """#
+        try Data(legacy.utf8).write(to:root.appendingPathComponent("archive.json"))
         let store = ClimbStore(root:root)
-        try store.complete(Drill.all[0]); try store.complete(Drill.all[0])
-        XCTAssertEqual(ClimbStore(root:root).archive.training.count,1)
+        XCTAssertNil(store.error)
+        let climb = try XCTUnwrap(store.climbs.first)
+        XCTAssertEqual(climb.title,"旧记录")
+        XCTAssertNil(climb.analysis.moments[0].kind)
+        XCTAssertNotEqual(climb.analysis.moments[0].displayDetail,"d")   // recognised by its stored title
+        try store.update(climb,note:"改过",sent:false)
+        let rewritten = try String(contentsOf:root.appendingPathComponent("archive.json"),encoding:.utf8)
+        XCTAssertFalse(rewritten.contains("training"))
+        XCTAssertEqual(ClimbStore(root:root).climbs.first?.note,"改过")
     }
     func testBundledFullModelIsPresent() throws {
         let url = try XCTUnwrap(Bundle.main.url(forResource:"pose_landmarker_full",withExtension:"task"))

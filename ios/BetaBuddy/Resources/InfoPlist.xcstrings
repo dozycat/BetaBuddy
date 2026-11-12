@@ -1,0 +1,41 @@
+{
+  "sourceLanguage": "zh-Hans",
+  "strings": {
+    "NSPhotoLibraryUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose a climbing video to analyze on this iPhone."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "クライミング動画を選び、この iPhone で動きを解析します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "등반 영상을 선택해 이 iPhone에서 동작을 분석합니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择攀爬视频，在这台 iPhone 上分析动作。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選擇攀爬影片，在這支 iPhone 上分析動作。"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

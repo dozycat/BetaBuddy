@@ -27,6 +27,11 @@ struct Moment: Codable, Identifiable, Sendable {
     var time: Double
     var title: String
     var detail: String
+    /// What triggered the cue. The app shows localized text for known kinds and falls back to
+    /// the stored `title` / `detail`, which stay in the source language.
+    var kind: String? = nil
+    static let raisedHeel = "raisedHeel"
+    static let fastMove = "fastMove"
 }
 
 struct PoseAnalysis: Codable, Sendable {
@@ -67,31 +72,10 @@ struct Climb: Codable, Identifiable, Sendable {
     var analysis: PoseAnalysis
 }
 
-struct TrainingLog: Codable, Identifiable {
-    var id = UUID()
-    var date = Date()
-    var drillID: String
-}
-
 struct Archive: Codable {
     var version = 1
     var climbs: [Climb] = []
-    var training: [TrainingLog] = []
-}
-
-struct Drill: Identifiable {
-    var id: String
-    var number: String
-    var title: String
-    var subtitle: String
-    var minutes: Int
-    var symbol: String
-    var steps: [String]
-    static let all: [Drill] = [
-        Drill(id: "quiet-feet", number: "01", title: "让脚步安静下来", subtitle: "精准落脚 · 基础技术", minutes: 8, symbol: "shoeprints.fill", steps: ["选一条明显低于你极限的线路，先观察每个脚点。", "每次移动脚之前，先看准落点；轻放，尽量不二次调整。", "完成两趟，记下最容易踩不准的一个位置。"]),
-        Drill(id: "straight-arms", number: "02", title: "给手臂放个假", subtitle: "身体站位 · 发力感受", minutes: 10, symbol: "figure.climbing", steps: ["选择熟悉、轻松的线路，保持自然呼吸。", "在舒适停留点尝试放松手臂，用脚支撑身体；不要强行锁死关节。", "比较不同站位的用力感，记录一个更省力的位置。"]),
-        Drill(id: "read-route", number: "03", title: "先在脑海里完攀", subtitle: "线路阅读 · 攀爬节奏", minutes: 6, symbol: "point.topleft.down.to.point.bottomright.curvepath", steps: ["上墙前，依次想象手点、脚点和身体朝向。", "轻松攀爬一趟，留意实际动作与计划的差异。", "用一句话记下需要调整的动作，再尝试一次。"])
-    ]
+    // Archives written by earlier builds may carry other keys; decoding ignores them.
 }
 
 func clockText(_ time: Double) -> String {

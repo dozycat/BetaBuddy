@@ -50,7 +50,7 @@ final class ImportModel: ObservableObject {
                 selectedURL = nil
                 try? FileManager.default.removeItem(at:url)
             } catch is CancellationError {
-                error = "分析已停止。视频仍已选中，可以重新开始。"
+                error = String(localized: "分析已停止。视频仍已选中，可以重新开始。")
             } catch { self.error = error.localizedDescription }
         }
     }
@@ -71,7 +71,7 @@ struct ImportView: View {
     @State private var photo: PhotosPickerItem?
     @State private var files = false
     @State private var title = ""
-    @State private var grade = "未标级"
+    @State private var grade = ungradedValue
     @State private var sent = false
     @State private var note = ""
     @State private var quality = AnalysisQuality.balanced
@@ -86,17 +86,17 @@ struct ImportView: View {
                         if model.busy { processing }
                         else { selection }
                         if let error = model.error {
-                            Label(error,systemImage:"exclamationmark.circle").font(.subheadline).foregroundStyle(.red)
+                            Label { Text(verbatim:error) } icon: { Image(systemName:"exclamationmark.circle") }.font(.subheadline).foregroundStyle(.red)
                                 .accessibilityIdentifier("importError")
                         }
                     }
                 }
             }
-            .navigationTitle(model.saved == nil ? "记录攀爬" : "这一趟已保存")
+            .navigationTitle(model.saved == nil ? Text("记录攀爬") : Text("这一趟已保存"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement:.topBarTrailing) {
-                    Button("完成") { dismiss() }.disabled(model.busy || model.importing)
+                    Button("完成") { dismiss() }.disabled(model.busy || model.importing).accessibilityIdentifier("importDone")
                 }
             }
         }.interactiveDismissDisabled(model.busy || model.importing)
@@ -110,8 +110,8 @@ struct ImportView: View {
                     if let movie = try await photo.loadTransferable(type:ImportedMovie.self) {
                         if Task.isCancelled { try? FileManager.default.removeItem(at:movie.url) }
                         else { model.replace(movie.url) }
-                    } else { model.error = "未能取得视频。若原片在 iCloud，请先在相册中下载。" }
-                } catch { model.error = "导入失败：\(error.localizedDescription)" }
+                    } else { model.error = String(localized: "未能取得视频。若原片在 iCloud，请先在相册中下载。") }
+                } catch { model.error = String(localized: "导入失败：\(error.localizedDescription)") }
             }
             .fileImporter(isPresented:$files,allowedContentTypes:[.movie],allowsMultipleSelection:false) { result in
                 switch result {
@@ -157,8 +157,8 @@ struct ImportView: View {
                     Text("线路难度").font(.subheadline)
                     Spacer()
                     Picker("线路难度",selection:$grade) {
-                        Text("未标级").tag("未标级")
-                        ForEach(0..<13) { Text("V\($0)").tag("V\($0)") }
+                        Text("未标级").tag(ungradedValue)
+                        ForEach(0..<13) { Text(verbatim:"V\($0)").tag("V\($0)") }
                     }.tint(BB.ink)
                 }
                 Toggle("这趟完攀了",isOn:$sent).tint(BB.ink)
@@ -170,8 +170,8 @@ struct ImportView: View {
                     Button { quality = option } label: {
                         HStack {
                             VStack(alignment:.leading,spacing:4) {
-                                Text(option.title).font(.subheadline.bold())
-                                Text(option.subtitle).font(.caption).foregroundStyle(BB.muted)
+                                Text(verbatim:option.title).font(.subheadline.bold())
+                                Text(verbatim:option.subtitle).font(.caption).foregroundStyle(BB.muted)
                             }
                             Spacer()
                             Image(systemName:quality == option ? "checkmark.circle.fill" : "circle")
@@ -189,9 +189,9 @@ struct ImportView: View {
         VStack(alignment:.leading,spacing:24) {
             ClimbingArt().frame(height:220).padding(24).background(BB.lime,in:RoundedRectangle(cornerRadius:24))
             HStack(alignment:.firstTextBaseline) {
-                Text("\(Int(model.progress*100))%").font(BB.display(54)).monospacedDigit()
+                Text(verbatim:percentText(model.progress)).font(BB.display(54)).monospacedDigit()
                 Spacer()
-                Text("ON YOUR IPHONE").font(.system(size:10,weight:.bold,design:.monospaced))
+                Text(verbatim:"ON YOUR IPHONE").font(.system(size:10,weight:.bold,design:.monospaced))
             }
             ProgressView(value:model.progress).tint(BB.ink)
             Text("逐帧读取 → 33 点姿态 → 整理回看片段\n无需上传。分析完成后自动保存。").font(.subheadline).lineSpacing(5).foregroundStyle(BB.muted)

@@ -23,7 +23,7 @@ final class ClimbStore: ObservableObject {
             }
         } catch {
             canWrite = false // Never overwrite an unreadable archive with an empty one.
-            self.error = "本地记录无法读取，已保留原文件。请检查存储空间或重新启动。"
+            self.error = String(localized: "本地记录无法读取，已保留原文件。请检查存储空间或重新启动。")
         }
     }
 
@@ -41,7 +41,7 @@ final class ClimbStore: ObservableObject {
         let id = UUID()
         let videoName = "\(id).\(stagedVideo.pathExtension.isEmpty ? "mov" : stagedVideo.pathExtension)"
         let thumbnailName = "\(id).jpg"
-        let climb = Climb(id: id, date: Date(), title: title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "今天的攀爬" : String(title.prefix(60)), grade: grade, sent: sent, note: String(note.prefix(1000)), videoName: videoName, thumbnailName: thumbnailName, analysis: analysis)
+        let climb = Climb(id: id, date: Date(), title: title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? String(localized: "今天的攀爬") : String(title.prefix(60)), grade: grade, sent: sent, note: String(note.prefix(1000)), videoName: videoName, thumbnailName: thumbnailName, analysis: analysis)
         do {
             try FileManager.default.moveItem(at: stagedVideo, to: file(videoName))
             try FileManager.default.setAttributes([.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication], ofItemAtPath: file(videoName).path)
@@ -79,16 +79,6 @@ final class ClimbStore: ObservableObject {
         var next = archive
         guard let index = next.climbs.firstIndex(where: { $0.id == climb.id }) else { return }
         next.climbs[index].analysis = analysis
-        try persist(next)
-    }
-
-    func completedToday(_ drill: Drill) -> Bool {
-        archive.training.contains { $0.drillID == drill.id && Calendar.current.isDateInToday($0.date) }
-    }
-    func complete(_ drill: Drill) throws {
-        guard !completedToday(drill) else { return }
-        var next = archive
-        next.training.append(TrainingLog(drillID: drill.id))
         try persist(next)
     }
 }

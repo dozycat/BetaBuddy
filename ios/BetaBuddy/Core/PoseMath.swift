@@ -21,7 +21,7 @@ enum PoseMath {
             // A high heel alone cannot establish contact with a hold: explicitly a candidate.
             let heels = [frame.joints[29], frame.joints[30]].filter(\.valid)
             if heels.contains(where: { $0.y < hip.y - 0.04 }), frame.time - lastRaised >= 3 {
-                result.append(Moment(time: frame.time, title: "高抬脚 · 候选片段", detail: "画面中脚跟高于髋部。回看是否为跟勾或高踩；模型无法确认岩点接触。"))
+                result.append(Moment(time: frame.time, title: "高抬脚 · 候选片段", detail: "画面中脚跟高于髋部。回看是否为跟勾或高踩；模型无法确认岩点接触。", kind: Moment.raisedHeel))
                 lastRaised = frame.time
             }
             if index > 0, let previous = frames[index-1].hip {
@@ -29,7 +29,7 @@ enum PoseMath {
                 if dt > 0, dt <= 0.3 {
                     let speed = hypot((hip.x-previous.x)*aspect, hip.y-previous.y)/dt
                     if speed > 0.45, frame.time-lastFast >= 3 {
-                        result.append(Moment(time: frame.time, title: "快速移动 · 回看一下", detail: "髋部在画面中的移动较快。可能是动态动作、下落或镜头移动，请结合原片判断。"))
+                        result.append(Moment(time: frame.time, title: "快速移动 · 回看一下", detail: "髋部在画面中的移动较快。可能是动态动作、下落或镜头移动，请结合原片判断。", kind: Moment.fastMove))
                         lastFast = frame.time
                     }
                 }

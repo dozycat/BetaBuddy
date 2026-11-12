@@ -7,12 +7,12 @@ enum AnalysisError: LocalizedError {
     case missingModel, invalidVideo, tooLong, tooLarge, noPose, overheated
     var errorDescription: String? {
         switch self {
-        case .missingModel: return "安装包缺少姿态模型，请重新安装完整版本。"
-        case .invalidVideo: return "无法读取这个视频，请选择未损坏的 MOV 或 MP4 文件。"
-        case .tooLong: return "第一版支持 3 分钟以内的单趟攀爬。请先在相册中裁剪。"
-        case .tooLarge: return "视频超过 500 MB，请先在相册中裁剪或导出较小版本。"
-        case .noPose: return "未识别到足够清晰的人体。请使用全身入镜、光线充足、单人攀爬的视频。"
-        case .overheated: return "手机温度较高，已停止分析。稍后可重新开始。"
+        case .missingModel: return String(localized: "安装包缺少姿态模型，请重新安装完整版本。")
+        case .invalidVideo: return String(localized: "无法读取这个视频，请选择未损坏的 MOV 或 MP4 文件。")
+        case .tooLong: return String(localized: "视频超过 3 分钟。请先在相册中裁剪成单趟攀爬。")
+        case .tooLarge: return String(localized: "视频超过 500 MB，请先在相册中裁剪或导出较小版本。")
+        case .noPose: return String(localized: "未识别到足够清晰的人体。请使用全身入镜、光线充足、单人攀爬的视频。")
+        case .overheated: return String(localized: "手机温度较高，已停止分析。稍后可重新开始。")
         }
     }
 }
@@ -20,8 +20,8 @@ enum AnalysisError: LocalizedError {
 enum AnalysisQuality: String, CaseIterable, Identifiable {
     case balanced, detailed
     var id: String { rawValue }
-    var title: String { self == .balanced ? "日常回看" : "动作细看" }
-    var subtitle: String { self == .balanced ? "最高 10 帧/秒 · 较少计算" : "最高 15 帧/秒 · 保留更多细节" }
+    var title: String { self == .balanced ? String(localized: "日常回看") : String(localized: "动作细看") }
+    var subtitle: String { self == .balanced ? String(localized: "最高 10 帧/秒 · 较少计算") : String(localized: "最高 15 帧/秒 · 保留更多细节") }
     var fps: Double { self == .balanced ? 10 : 15 }
     var maxDimension: CGFloat { self == .balanced ? 720 : 960 }
 }
@@ -46,11 +46,10 @@ actor VideoAnalyzer {
         let options = PoseLandmarkerOptions()
         options.baseOptions.modelAssetPath = model
         // Fixed CPU delegate: safe on simulator and deterministic baseline for thermal profiling.
-        // Model weights are the identical Full float16 bundle used by the Python backend.
-        options.baseOptions.delegate = .CPU
+                options.baseOptions.delegate = .CPU
         options.runningMode = .video
         options.numPoses = 1
-        // Match the original backend thresholds: raising these can miss the climber
+        // MediaPipe defaults: raising these can miss the climber
         // and initialize video tracking on a high-contrast background false positive.
         options.minPoseDetectionConfidence = 0.5
         options.minPosePresenceConfidence = 0.5

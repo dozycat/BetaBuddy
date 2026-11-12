@@ -1,0 +1,24 @@
+BetaBuddy Privacy Policy
+Updated: November 12, 2026
+
+Your climbing stays on your device.
+
+BetaBuddy is a climbing video review logbook and gym route viewer that runs locally on your iPhone. Every feature is free. There are no in-app purchases, subscriptions or ads, and no account.
+
+1. What the app handles
+Videos you choose are copied into the app for on-device pose estimation. The app stores the video copy, a thumbnail, pose keypoints, analysis results, the grade and notes you enter, and whether you marked the climb as sent. None of this is sent to the developer or to any third-party server, and the app contains no advertising or analytics SDK that collects usage.
+
+2. Model and network
+The pose model ships inside the app and runs on the device. The app does not download models and does not call any cloud AI or large language model. If you pick a video that exists only in iCloud, the system may download the original first; that is part of Apple's Photos service. App Store downloads, system diagnostics and system services follow Apple's settings and policies.
+
+3. Gym
+The gym model, routes and climbing simulation in the Gym tab ship inside the app and open on the device. That page cannot reach the network. The app does not record or send which routes you look at or which body parameters you choose. The gym content is an unofficial compilation and may not match the gym as it is today; the simulation is a model's projection, not coaching advice.
+
+4. Photos and sharing
+You decide which video to import through the system photo picker; the app does not scan your photo library. When you use the system share sheet, the text you choose is sent to the app or recipient you pick and is then covered by their privacy policy.
+
+5. Storage and deletion
+Records are stored in the app's local directory, which is excluded from system backups. You can delete the video copy and analysis of any single record. Deleting the app removes its local data. Original videos in your photo library are not affected. Copies you exported must be deleted wherever you saved them. The app has no cloud restore.
+
+6. Changes and contact
+If the way data is handled changes, this policy will be updated with the app. Privacy and support questions: hi@dozycat.ai.

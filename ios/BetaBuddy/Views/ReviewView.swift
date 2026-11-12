@@ -12,11 +12,11 @@ final class Playback: ObservableObject {
     var rate: Float = 1
     func load(_ url: URL) {
         guard player.currentItem == nil else { return }
-        guard FileManager.default.fileExists(atPath:url.path) else { failure = "原片文件不存在，仍可查看分析与笔记。"; return }
+        guard FileManager.default.fileExists(atPath:url.path) else { failure = String(localized: "原片文件不存在，仍可查看分析与笔记。"); return }
         let item = AVPlayerItem(url:url)
         player.replaceCurrentItem(with:item)
         statusObserver = item.observe(\.status,options:[.new]) { [weak self] item, _ in
-            if item.status == .failed { Task { @MainActor in self?.failure = "原片无法播放，请检查视频文件。" } }
+            if item.status == .failed { Task { @MainActor in self?.failure = String(localized: "原片无法播放，请检查视频文件。") } }
         }
         observer = player.addPeriodicTimeObserver(forInterval:CMTime(seconds:0.05,preferredTimescale:600),queue:.main) { [weak self] value in
             MainActor.assumeIsolated {
@@ -110,8 +110,8 @@ final class Reanalysis: ObservableObject {
                 }
                 try Task.checkCancellation()
                 try store.replaceAnalysis(climb, analysis: result)
-                message = "骨架分析已更新。"
-            } catch is CancellationError { message = "已停止，原分析和笔记已保留。" }
+                message = String(localized: "骨架分析已更新。")
+            } catch is CancellationError { message = String(localized: "已停止，原分析和笔记已保留。") }
             catch { message = error.localizedDescription }
         }
     }
@@ -134,29 +134,32 @@ struct ReviewView: View {
     var climb: Climb
     private var current: Climb { store.climbs.first { $0.id == climb.id } ?? climb }
     private var report: String {
-        "BetaBuddy · \(current.title)\n\(current.grade) · \(current.sent ? "已完攀" : "还在尝试") · \(clockText(current.analysis.duration))\n可用髋部检测：\(Int(current.analysis.coverage*100))% 的采样帧\n\(current.note)\n\n二维姿态辅助回看；候选动作未经人工确认。"
+        let status = current.sent ? String(localized: "已完攀") : String(localized: "还在尝试")
+        let coverage = String(localized: "可用髋部检测：\(percentText(current.analysis.coverage)) 的采样帧")
+        let caveat = String(localized: "二维姿态辅助回看；候选动作未经人工确认。")
+        return "BetaBuddy · \(current.title)\n\(gradeText(current.grade)) · \(status) · \(clockText(current.analysis.duration))\n\(coverage)\n\(current.note)\n\n\(caveat)"
     }
     var body: some View {
         PaperPage {
-            HStack { Stamp(text:"THE REPLAY"); Spacer(); Text(climb.grade).font(BB.display(28)) }
+            HStack { Stamp(text:"THE REPLAY"); Spacer(); Text(verbatim:gradeText(climb.grade)).font(BB.display(28)).lineLimit(1).minimumScaleFactor(0.6) }
             VStack(alignment:.leading,spacing:8) {
-                Text(climb.title).font(.title.bold())
+                Text(verbatim:climb.title).font(.title.bold())
                 Text(climb.date,format:.dateTime.year().month().day()).font(.caption).foregroundStyle(BB.muted)
             }
             VStack(spacing:0) {
                 ZStack(alignment:.topLeading) {
                     PlayerSurface(player:playback.player)
                     if skeleton { SkeletonOverlay(analysis:current.analysis,time:playback.time) }
-                    Text(!skeleton ? "ORIGINAL" : current.analysis.nearestFrame(to: playback.time) == nil ? "暂未可靠识别" : "33 POINTS / LOCAL").font(.system(size:10,weight:.bold,design:.monospaced)).tracking(1)
+                    Text(verbatim:!skeleton ? "ORIGINAL" : current.analysis.nearestFrame(to: playback.time) == nil ? String(localized: "暂未可靠识别") : "33 POINTS / LOCAL").font(.system(size:10,weight:.bold,design:.monospaced)).tracking(1)
                         .padding(9).background(BB.lime,in:Capsule()).padding(12)
                 }.frame(height:340).clipShape(RoundedRectangle(cornerRadius:20))
                 VStack(spacing:12) {
                     Slider(value:Binding(get:{ playback.time },set:{ playback.pause(); playback.seek($0) }),in:0...max(0.1,current.analysis.duration)).tint(BB.ink).accessibilityLabel("视频进度")
                     HStack {
-                        Text(clockText(playback.time)+" / "+clockText(current.analysis.duration)).font(.system(size:11,weight:.medium,design:.monospaced)).monospacedDigit()
+                        Text(verbatim:clockText(playback.time)+" / "+clockText(current.analysis.duration)).font(.system(size:11,weight:.medium,design:.monospaced)).monospacedDigit()
                         Spacer()
                         Button { playback.pause(); playback.seek(max(0,playback.time-0.1)) } label: { Image(systemName:"backward.end").frame(width:36,height:44) }.accessibilityLabel("后退零点一秒")
-                        Button { playback.toggle(duration:current.analysis.duration) } label: { Image(systemName:playback.playing ? "pause.fill" : "play.fill").frame(width:44,height:44).background(BB.lime,in:Circle()) }.accessibilityLabel(playback.playing ? "暂停" : "播放")
+                        Button { playback.toggle(duration:current.analysis.duration) } label: { Image(systemName:playback.playing ? "pause.fill" : "play.fill").frame(width:44,height:44).background(BB.lime,in:Circle()) }.accessibilityLabel(playback.playing ? Text("暂停") : Text("播放"))
                         Button { playback.pause(); playback.seek(min(current.analysis.duration,playback.time+0.1)) } label: { Image(systemName:"forward.end").frame(width:36,height:44) }.accessibilityLabel("前进零点一秒")
                     }
                     HStack {
@@ -169,7 +172,7 @@ struct ReviewView: View {
                     }
                 }.padding(.top,12)
             }
-            if let failure = playback.failure { Text(failure).font(.caption).foregroundStyle(.red) }
+            if let failure = playback.failure { Text(verbatim:failure).font(.caption).foregroundStyle(.red) }
             VStack(alignment: .leading, spacing: 10) {
                 if reanalysis.busy {
                     ProgressView(value: reanalysis.progress)
@@ -180,10 +183,10 @@ struct ReviewView: View {
                         reanalysis.run(climb: current, store: store)
                     }.buttonStyle(.bordered)
                 }
-                if let message = reanalysis.message { Text(message).font(.caption).foregroundStyle(BB.muted) }
+                if let message = reanalysis.message { Text(verbatim:message).font(.caption).foregroundStyle(BB.muted) }
             }
             HStack(alignment:.top) {
-                Stat(value:"\(Int(current.analysis.coverage*100))%",label:"可用髋部检测")
+                Stat(value:percentText(current.analysis.coverage),label:"可用髋部检测")
                 Stat(value:current.analysis.averageElbowAngle.map { "\(Int($0))°" } ?? "—",label:"平均二维肘角")
             }
             Text("检测比例反映采样帧中髋部是否清晰，不是动作评分。角度为画面投影，不能直接比较不同拍摄角度。").font(.caption).foregroundStyle(BB.muted)
@@ -194,10 +197,10 @@ struct ReviewView: View {
             ForEach(current.analysis.moments) { moment in
                 Button { playback.pause(); playback.seek(moment.time) } label: {
                     HStack(alignment:.top,spacing:14) {
-                        Text(clockText(moment.time)).font(.system(size:12,weight:.bold,design:.monospaced)).padding(8).background(BB.lime,in:RoundedRectangle(cornerRadius:8))
+                        Text(verbatim:clockText(moment.time)).font(.system(size:12,weight:.bold,design:.monospaced)).padding(8).background(BB.lime,in:RoundedRectangle(cornerRadius:8))
                         VStack(alignment:.leading,spacing:7) {
-                            Text(moment.title).font(.subheadline.bold())
-                            Text(moment.detail).font(.caption).lineSpacing(4).foregroundStyle(BB.muted)
+                            Text(verbatim:moment.displayTitle).font(.subheadline.bold())
+                            Text(verbatim:moment.displayDetail).font(.caption).lineSpacing(4).foregroundStyle(BB.muted)
                         }
                     }.padding(16).frame(maxWidth:.infinity,alignment:.leading).background(.white.opacity(0.6),in:RoundedRectangle(cornerRadius:18))
                 }.buttonStyle(.plain)
@@ -208,7 +211,7 @@ struct ReviewView: View {
                 Toggle("这趟完攀了",isOn:$sent).tint(BB.ink)
                 Button(savedNotice ? "已保存 ✓" : "保存复盘") {
                     do { try store.update(climb,note:note,sent:sent); savedNotice = true }
-                    catch { store.error = "笔记未能保存：\(error.localizedDescription)" }
+                    catch { store.error = String(localized: "笔记未能保存：\(error.localizedDescription)") }
                 }.buttonStyle(.borderedProminent).foregroundStyle(BB.paper)
             }.padding(20).background(BB.lavender,in:RoundedRectangle(cornerRadius:22))
             ShareLink(item:report) { Label("分享复盘文字",systemImage:"square.and.arrow.up").frame(maxWidth:.infinity,minHeight:44) }.buttonStyle(.bordered)
@@ -223,7 +226,7 @@ struct ReviewView: View {
             .confirmationDialog("删除原片、分析和笔记？此操作无法撤销。",isPresented:$confirmDelete,titleVisibility:.visible) {
                 Button("删除这一趟",role:.destructive) {
                     do { playback.unload(); try store.delete(climb); dismiss() }
-                    catch { store.error = "未能删除：\(error.localizedDescription)" }
+                    catch { store.error = String(localized: "未能删除：\(error.localizedDescription)") }
                 }
             }
     }

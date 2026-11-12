@@ -10,24 +10,25 @@ enum BB {
     static func display(_ size: CGFloat) -> Font { .system(size: size, weight: .black, design: .rounded) }
 }
 
+// Stamps and the monospaced trailing labels are brand marks in English; they are not translated.
 struct Stamp: View {
     var text: String
     var color: Color = BB.ink
     var body: some View {
-        Text(text).font(.system(size: 10, weight: .bold, design: .monospaced)).tracking(1.3).lineLimit(1).minimumScaleFactor(0.7)
+        Text(verbatim: text).font(.system(size: 10, weight: .bold, design: .monospaced)).tracking(1.3).lineLimit(1).minimumScaleFactor(0.7)
             .padding(.horizontal, 9).padding(.vertical, 6)
             .foregroundStyle(color).overlay(Capsule().stroke(color.opacity(0.5), lineWidth: 1))
     }
 }
 
 struct BigButton: View {
-    var title: String
+    var title: LocalizedStringKey
     var icon: String = "arrow.up.right"
     var action: () -> Void
     var body: some View {
         Button(action: action) {
             HStack {
-                Text(title).font(.headline)
+                Text(title).font(.headline).multilineTextAlignment(.leading)
                 Spacer()
                 Image(systemName: icon).font(.system(size: 19, weight: .bold))
             }.padding(20).foregroundStyle(BB.paper).background(BB.ink, in: RoundedRectangle(cornerRadius: 20))
@@ -36,23 +37,23 @@ struct BigButton: View {
 }
 
 struct SectionLabel: View {
-    var title: String
+    var title: LocalizedStringKey
     var trailing: String
     var body: some View {
         HStack(alignment: .firstTextBaseline) {
             Text(title).font(.title3.bold())
             Spacer()
-            Text(trailing).font(.system(size: 10, weight: .medium, design: .monospaced)).tracking(1).foregroundStyle(BB.muted)
+            Text(verbatim: trailing).font(.system(size: 10, weight: .medium, design: .monospaced)).tracking(1).foregroundStyle(BB.muted).lineLimit(1)
         }
     }
 }
 
 struct Stat: View {
     var value: String
-    var label: String
+    var label: LocalizedStringKey
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
-            Text(value).font(BB.display(30)).monospacedDigit()
+            Text(verbatim: value).font(BB.display(30)).monospacedDigit()
             Text(label).font(.caption).foregroundStyle(BB.muted)
         }.frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -83,8 +84,8 @@ struct ClimbingArt: View {
                 Image(systemName: "figure.climbing").resizable().scaledToFit()
                     .foregroundStyle(BB.ink).frame(width:w*0.62,height:h*0.73)
                     .rotationEffect(.degrees(-12)).position(x:w*0.54,y:h*0.54)
-                Text("↑").font(.system(size: 40,weight:.light)).rotationEffect(.degrees(20)).position(x:w*0.16,y:h*0.16)
-                Text("GO AGAIN.").font(.system(size:10,weight:.black,design:.monospaced)).tracking(2)
+                Text(verbatim: "↑").font(.system(size: 40,weight:.light)).rotationEffect(.degrees(20)).position(x:w*0.16,y:h*0.16)
+                Text(verbatim: "GO AGAIN.").font(.system(size:10,weight:.black,design:.monospaced)).tracking(2)
                     .rotationEffect(.degrees(-90)).position(x:w*0.96,y:h*0.50)
             }
         }.accessibilityHidden(true)

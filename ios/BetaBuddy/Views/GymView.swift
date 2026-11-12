@@ -4,7 +4,7 @@ import os
 
 /// What the gym feature is honest about. Shown before first entry and kept in 关于.
 enum GymNotice {
-    static let items = [
+    static let items: [LocalizedStringKey] = [
         "非官方整理，与场馆没有合作或授权关系。",
         "岩点位置和线路由爱好者根据公开视频整理，可能与现场不符，也可能已经换线。以现场为准。",
         "“不同身材怎么爬”是模型推演，不是教练建议，不保证动作可行或安全。",
@@ -76,7 +76,7 @@ final class GymSession: NSObject, ObservableObject, WKNavigationDelegate, WKScri
         // `-gymQuery "sheet=half&tab=steps"` on the launch command line puts the page in a given state for screenshots.
         query = UserDefaults.standard.string(forKey: "gymQuery")
         #endif
-        return URLRequest(url: pack.entryURL(hintSeen: UserDefaults.standard.bool(forKey: Self.hintSeenKey), extraQuery: query))
+        return URLRequest(url: pack.entryURL(hintSeen: UserDefaults.standard.bool(forKey: Self.hintSeenKey), language: AppLanguage.current, extraQuery: query))
     }
 
     func start() {
@@ -86,7 +86,7 @@ final class GymSession: NSObject, ObservableObject, WKNavigationDelegate, WKScri
             // Fail closed: without the network block the page is not shown at all.
             guard let rules = try? await WKContentRuleListStore.default()
                 .compileContentRuleList(forIdentifier: "gym-offline", encodedContentRuleList: Self.blockRules) else {
-                phase = .failed("无法启用离线保护，岩馆页面没有打开。")
+                phase = .failed(String(localized: "无法启用离线保护，岩馆页面没有打开。"))
                 return
             }
             let configuration = WKWebViewConfiguration()
@@ -145,12 +145,12 @@ final class GymSession: NSObject, ObservableObject, WKNavigationDelegate, WKScri
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) { fail(error) }
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) { fail(error) }
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
-        phase = .failed("岩馆页面被系统回收了，可能是内存不足。")
+        phase = .failed(String(localized: "岩馆页面被系统回收了，可能是内存不足。"))
     }
     private func fail(_ error: Error) {
         guard (error as NSError).code != NSURLErrorCancelled else { return }
         log.error("load failed: \(error.localizedDescription, privacy: .public)")
-        phase = .failed("岩馆页面没有打开：\(error.localizedDescription)")
+        phase = .failed(String(localized: "岩馆页面没有打开：\(error.localizedDescription)"))
     }
 
     func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
@@ -169,7 +169,7 @@ final class GymSession: NSObject, ObservableObject, WKNavigationDelegate, WKScri
         case .routeSelected(let route): selectedRoute = route
         case .error(let text):
             log.error("page error (\(self.pageReady ? "after" : "before", privacy: .public) ready): \(text, privacy: .public)")
-            if !pageReady { phase = .failed(text.isEmpty ? "岩馆页面报告了一个错误。" : text) }
+            if !pageReady { phase = .failed(text.isEmpty ? String(localized: "岩馆页面报告了一个错误。") : text) }
         }
     }
 }
@@ -187,21 +187,21 @@ struct GymView: View {
         switch session.status {
         case .missing:
             unavailable(title:"这个构建没有\n内置岩馆数据",
-                        detail:"场馆模型、线路和攀爬模拟随正式安装包提供，不在公开源码里。回看、攀爬册和练习不受影响。")
+                        detail:String(localized: "场馆模型、线路和攀爬模拟随正式安装包提供，不在公开源码里。攀爬册不受影响。"))
         case .invalid(let error):
-            unavailable(title:"岩馆数据不完整", detail:"\(Self.describe(error))请重新安装完整版本。")
+            unavailable(title:"岩馆数据不完整", detail:Self.describe(error))
         case .ready(let pack):
             if noticeSeen { stage } else { intro(pack) }
         }
     }
 
-    private func unavailable(title: String, detail: String) -> some View {
+    private func unavailable(title: LocalizedStringKey, detail: String) -> some View {
         PaperPage {
             Stamp(text:"GYM / NOT IN THIS BUILD")
             VStack(alignment:.leading,spacing:18) {
                 Image(systemName:"map").font(.system(size:44,weight:.light))
                 Text(title).font(.title.bold()).accessibilityIdentifier("gymUnavailable")
-                Text(detail).foregroundStyle(BB.muted)
+                Text(verbatim:detail).foregroundStyle(BB.muted)
             }.padding(24).frame(maxWidth:.infinity,alignment:.leading).background(BB.lavender,in:RoundedRectangle(cornerRadius:24))
         }
     }
@@ -209,7 +209,7 @@ struct GymView: View {
     private func intro(_ pack: GymPack) -> some View {
         PaperPage {
             Stamp(text:"GYM / UNOFFICIAL")
-            Text(pack.manifest.gymName).font(.system(size:34,weight:.heavy)).accessibilityIdentifier("gymName")
+            Text(verbatim:pack.manifest.gymName).font(.system(size:34,weight:.heavy)).accessibilityIdentifier("gymName")
             Text("\(pack.manifest.routeCount) 条线路 · 数据版本 \(pack.manifest.packVersion)")
                 .font(.system(size:12,weight:.bold,design:.monospaced))
             VStack(alignment:.leading,spacing:10) {
@@ -233,13 +233,13 @@ struct GymView: View {
                 VStack(spacing:18) {
                     ProgressView().tint(BB.ink)
                     Text("正在打开岩馆…").font(.headline)
-                    Text("ON YOUR IPHONE").font(.system(size:10,weight:.bold,design:.monospaced)).foregroundStyle(BB.muted)
+                    Text(verbatim:"ON YOUR IPHONE").font(.system(size:10,weight:.bold,design:.monospaced)).foregroundStyle(BB.muted)
                 }.foregroundStyle(BB.ink)
             case .failed(let message):
                 VStack(alignment:.leading,spacing:18) {
                     Image(systemName:"exclamationmark.circle").font(.system(size:44,weight:.light))
                     Text("岩馆没有打开").font(.title.bold())
-                    Text(message).foregroundStyle(BB.muted).accessibilityIdentifier("gymError")
+                    Text(verbatim:message).foregroundStyle(BB.muted).accessibilityIdentifier("gymError")
                     BigButton(title:"重新加载",icon:"arrow.clockwise") { session.reload() }
                 }.padding(24).frame(maxWidth:.infinity,alignment:.leading)
                     .background(BB.lavender,in:RoundedRectangle(cornerRadius:24)).padding(24).foregroundStyle(BB.ink)
@@ -250,9 +250,9 @@ struct GymView: View {
 
     static func describe(_ error: GymPackError) -> String {
         switch error {
-        case .unreadableManifest: "数据包清单无法读取。"
-        case .unsupportedSchema(let schema): "数据包格式（\(schema)）比这个版本的应用新。"
-        case .unsafePath, .missingFile: "数据包缺少文件。"
+        case .unreadableManifest: String(localized: "数据包清单无法读取。请重新安装完整版本。")
+        case .unsupportedSchema(let schema): String(localized: "数据包格式（\(schema)）比这个版本的应用新。请更新应用。")
+        case .unsafePath, .missingFile: String(localized: "数据包缺少文件。请重新安装完整版本。")
         }
     }
 }
@@ -263,7 +263,7 @@ struct GymNoticeList: View {
             SectionLabel(title:"进去之前",trailing:"KEEP IT HONEST")
             ForEach(Array(GymNotice.items.enumerated()),id:\.offset) { index, item in
                 HStack(alignment:.top,spacing:14) {
-                    Text(String(format:"%02d",index+1)).font(.system(size:15,weight:.black,design:.rounded)).foregroundStyle(BB.muted)
+                    Text(verbatim:String(format:"%02d",index+1)).font(.system(size:15,weight:.black,design:.rounded)).foregroundStyle(BB.muted)
                     Text(item).font(.subheadline).lineSpacing(4).frame(maxWidth:.infinity,alignment:.leading)
                 }
             }

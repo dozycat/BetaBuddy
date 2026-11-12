@@ -6,31 +6,52 @@ struct JournalView: View {
     @State private var importing = false
     @State private var search = ""
     private var climbs: [Climb] {
-        store.climbs.filter { (filter == 0 || (filter == 1 ? $0.sent : !$0.sent)) && (search.isEmpty || $0.title.localizedCaseInsensitiveContains(search) || $0.grade.localizedCaseInsensitiveContains(search)) }
+        store.climbs.filter { (filter == 0 || (filter == 1 ? $0.sent : !$0.sent)) && (search.isEmpty || $0.title.localizedCaseInsensitiveContains(search) || gradeText($0.grade).localizedCaseInsensitiveContains(search)) }
     }
     var body: some View {
         PaperPage {
-            HStack {
-                Text("攀爬册").font(.system(size:34,weight:.heavy))
+            HStack(alignment:.center) {
+                HStack(spacing:6) {
+                    BrandMark().fill(BB.ink).frame(width:30,height:30).accessibilityHidden(true)
+                    Text(verbatim:"betabuddy").font(.system(size:23,weight:.black,design:.rounded)).tracking(-1)
+                }
                 Spacer()
-                Button { importing = true } label: { Image(systemName:"plus").font(.title3.bold()).frame(width:44,height:44).background(BB.lime,in:Circle()) }.accessibilityLabel("新增攀爬")
+                NavigationLink { AboutView() } label: {
+                    Image(systemName:"slider.horizontal.3").frame(width:44,height:44).overlay(Circle().stroke(BB.line))
+                }.accessibilityLabel("关于与本地存储").accessibilityIdentifier("about")
             }
-            Text("没有白爬的一趟。").foregroundStyle(BB.muted)
-            Picker("记录筛选",selection:$filter) {
-                Text("全部").tag(0); Text("已完攀").tag(1); Text("还在尝试").tag(2)
-            }.pickerStyle(.segmented)
-            HStack {
-                Image(systemName:"magnifyingglass").foregroundStyle(BB.muted)
-                TextField("找线路或难度",text:$search)
-            }.padding(14).background(.white.opacity(0.6),in:RoundedRectangle(cornerRadius:14))
-            if climbs.isEmpty {
+            VStack(alignment:.leading,spacing:9) {
+                Text("攀爬册").font(.system(size:34,weight:.heavy))
+                Text("没有白爬的一趟。").foregroundStyle(BB.muted)
+            }
+            if store.climbs.isEmpty {
                 VStack(alignment:.leading,spacing:18) {
                     Image(systemName:"square.stack.3d.up").font(.system(size:44,weight:.light))
-                    Text(store.climbs.isEmpty ? "第一趟，\n从这里开始。" : "这里还没有匹配的记录。").font(.title.bold())
-                    Text(store.climbs.isEmpty ? "选一段攀爬视频，把动作、感受和下一次想试的 beta 留下来。" : "试试其他筛选条件或搜索词。").foregroundStyle(BB.muted)
-                    if store.climbs.isEmpty { BigButton(title:"记录第一趟",icon:"plus") { importing = true } }
+                    Text("第一趟，\n从这里开始。").font(.title.bold())
+                    Text("选一段攀爬视频，在手机上回看骨架和动作细节，把感受和下一次想试的 beta 留下来。").foregroundStyle(BB.muted)
+                    BigButton(title:"记录第一趟",icon:"plus") { importing = true }.accessibilityIdentifier("importClimb")
                 }.padding(24).frame(maxWidth:.infinity,alignment:.leading).background(BB.lavender,in:RoundedRectangle(cornerRadius:24))
+                Label("视频留在手机里 · 无需账号",systemImage:"lock.fill")
+                    .font(.system(size:11,weight:.medium)).foregroundStyle(BB.muted)
             } else {
+                VStack(spacing:12) {
+                    BigButton(title:"导入这一趟",icon:"plus") { importing = true }.accessibilityIdentifier("importClimb")
+                    Label("视频留在手机里 · 无需账号",systemImage:"lock.fill")
+                        .font(.system(size:11,weight:.medium)).foregroundStyle(BB.muted)
+                }
+                Picker("记录筛选",selection:$filter) {
+                    Text("全部").tag(0); Text("已完攀").tag(1); Text("还在尝试").tag(2)
+                }.pickerStyle(.segmented)
+                HStack {
+                    Image(systemName:"magnifyingglass").foregroundStyle(BB.muted)
+                    TextField("找线路或难度",text:$search).accessibilityIdentifier("journalSearch")
+                }.padding(14).background(.white.opacity(0.6),in:RoundedRectangle(cornerRadius:14))
+                if climbs.isEmpty {
+                    VStack(alignment:.leading,spacing:12) {
+                        Text("这里还没有匹配的记录。").font(.title3.bold())
+                        Text("试试其他筛选条件或搜索词。").foregroundStyle(BB.muted)
+                    }.padding(24).frame(maxWidth:.infinity,alignment:.leading).background(BB.lavender,in:RoundedRectangle(cornerRadius:24))
+                }
                 ForEach(climbs) { climb in
                     NavigationLink { ReviewView(climb:climb) } label: { ClimbRow(climb:climb) }.buttonStyle(.plain)
                 }
@@ -49,66 +70,13 @@ struct ClimbRow: View {
                 else { BB.lavender.overlay(Image(systemName:"figure.climbing").font(.title)) }
             }.frame(width:84,height:106).clipped().clipShape(RoundedRectangle(cornerRadius:14))
             VStack(alignment:.leading,spacing:9) {
-                Text(climb.title).font(.headline).lineLimit(2)
-                Text("\(climb.grade)  /  \(clockText(climb.analysis.duration))").font(.system(size:12,weight:.bold,design:.monospaced))
+                Text(verbatim:climb.title).font(.headline).lineLimit(2)
+                Text(verbatim:"\(gradeText(climb.grade))  /  \(clockText(climb.analysis.duration))").font(.system(size:12,weight:.bold,design:.monospaced))
                 Text(climb.date,format:.dateTime.month().day()).font(.caption).foregroundStyle(BB.muted)
                 Text(climb.sent ? "✓ 已完攀" : "↗ 还在尝试").font(.caption.bold())
             }
             Spacer(minLength:0)
             Image(systemName:"arrow.up.right").font(.subheadline)
         }.padding(14).background(.white.opacity(0.6),in:RoundedRectangle(cornerRadius:22))
-    }
-}
-
-struct TrainingView: View {
-    @EnvironmentObject private var store: ClimbStore
-    var body: some View {
-        PaperPage {
-            Stamp(text:"LESS RUSH. MORE FEEL.")
-            Text("今天，\n只进步一点点。").font(.system(size:34,weight:.heavy)).lineSpacing(4)
-            Text("选一个小目标。带上墙，试试看。\n这些练习独立于模型分析，由你决定节奏。").font(.subheadline).lineSpacing(5).foregroundStyle(BB.muted)
-            ForEach(Drill.all) { drill in
-                NavigationLink { DrillView(drill:drill) } label: {
-                    VStack(alignment:.leading,spacing:22) {
-                        HStack {
-                            Text(drill.number).font(BB.display(46)).foregroundStyle(BB.ink.opacity(0.4))
-                            Spacer()
-                            Image(systemName:drill.symbol).font(.system(size:30))
-                        }
-                        VStack(alignment:.leading,spacing:8) {
-                            Text(drill.title).font(.title2.bold())
-                            Text(drill.subtitle).font(.subheadline).foregroundStyle(BB.muted)
-                        }
-                        HStack {
-                            Text(store.completedToday(drill) ? "✓ 今天已练习" : "约 \(drill.minutes) 分钟").font(.caption.bold())
-                            Spacer()
-                            Image(systemName:"arrow.up.right")
-                        }
-                    }.padding(24).background(drill.id == "quiet-feet" ? BB.lime : drill.id == "straight-arms" ? BB.lavender : .white.opacity(0.6),in:RoundedRectangle(cornerRadius:24))
-                }.buttonStyle(.plain)
-            }
-        }.toolbar(.hidden,for:.navigationBar)
-    }
-}
-
-struct DrillView: View {
-    @EnvironmentObject private var store: ClimbStore
-    var drill: Drill
-    var body: some View {
-        PaperPage {
-            Stamp(text:"PRACTICE / \(drill.number)")
-            Text(drill.title).font(.system(size:34,weight:.heavy))
-            Text(drill.subtitle).foregroundStyle(BB.muted)
-            Image(systemName:drill.symbol).font(.system(size:80)).frame(maxWidth:.infinity).padding(.vertical,44).background(BB.lime,in:RoundedRectangle(cornerRadius:26))
-            ForEach(Array(drill.steps.enumerated()),id:\.offset) { index, step in
-                HStack(alignment:.top,spacing:18) {
-                    Text(String(format:"%02d",index+1)).font(.system(size:22,weight:.black,design:.rounded)).foregroundStyle(BB.muted)
-                    Text(step).lineSpacing(6).frame(maxWidth:.infinity,alignment:.leading)
-                }
-            }
-            BigButton(title:store.completedToday(drill) ? "今天已练习 ✓" : "我练完了",icon:"checkmark") {
-                do { try store.complete(drill) } catch { store.error = "练习记录未能保存：\(error.localizedDescription)" }
-            }.disabled(store.completedToday(drill))
-        }.navigationTitle("一个小练习").navigationBarTitleDisplayMode(.inline)
     }
 }

@@ -161,6 +161,9 @@ final class GymPackTests: XCTestCase {
                        "gympack://local/index.html?hint=0&sheet=half&tab=steps&route=xxx&step=5")
         XCTAssertEqual(pack.entryURL(hintSeen:false,extraQuery:"?wall=a").absoluteString,"gympack://local/index.html?wall=a")
         XCTAssertEqual(pack.entryURL(hintSeen:true,extraQuery:"").absoluteString,"gympack://local/index.html?hint=0")
+        XCTAssertEqual(pack.entryURL(hintSeen:false,language:"ja").absoluteString,"gympack://local/index.html?lang=ja")
+        XCTAssertEqual(pack.entryURL(hintSeen:true,language:"zh-Hant",extraQuery:"sheet=half").absoluteString,
+                       "gympack://local/index.html?hint=0&lang=zh-Hant&sheet=half")
         for query in ["route=x#frag","a=1&b=%E7%BA%BF"] {
             let url = pack.entryURL(hintSeen:true,extraQuery:query)
             XCTAssertTrue(pack.allows(url))

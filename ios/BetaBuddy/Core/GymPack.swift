@@ -91,11 +91,12 @@ struct GymPack: Equatable, Sendable {
         parts.scheme = Self.scheme; parts.host = Self.host; parts.path = "/" + manifest.entry
         return parts.url!
     }
-    /// Entry URL for a load. `hint=0` tells the page its first-run gesture hint has already been seen.
-    /// `extraQuery` is appended as given (Debug builds only pass one); if it does not form a URL it is dropped.
-    func entryURL(hintSeen: Bool, extraQuery: String? = nil) -> URL {
+    /// Entry URL for a load. `hint=0` tells the page its first-run gesture hint has already been seen;
+    /// `lang` is the app's interface language. `extraQuery` is appended as given (Debug builds only
+    /// pass one); if it does not form a URL it is dropped.
+    func entryURL(hintSeen: Bool, language: String? = nil, extraQuery: String? = nil) -> URL {
         let extra = (extraQuery ?? "").trimmingCharacters(in: CharacterSet(charactersIn: "?&"))
-        let known = hintSeen ? ["hint=0"] : []
+        let known = (hintSeen ? ["hint=0"] : []) + (language.map { ["lang=\($0)"] } ?? [])
         func url(_ items: [String]) -> URL? {
             items.isEmpty ? entryURL : URL(string: entryURL.absoluteString + "?" + items.joined(separator: "&")).flatMap { allows($0) ? $0 : nil }
         }
