@@ -47,10 +47,7 @@
 
 截图：
 
-- `screenshots/home.png`：实际原生首页。
 - `screenshots/import.png`：实际导入表单。
-- `screenshots/training.png`：iPhone SE 尺寸的实际练习列表。
-- `screenshots/home-small.png`：iPhone SE 尺寸的首页，导入按钮仍在首屏内。
 - `screenshots/review-smoke.png`：上述非攀岩验证样片的真实推理结果。
 
 视觉 QA 发现并修正了深色相册按钮的文字对比度和过长的海报标记。另外检查了 iPhone SE（第三代）模拟器尺寸，首页主行动可见，练习页没有横向溢出。主流程保持本地空状态，不添加虚构成绩。模拟器中保留一条明确标记的验证记录，源码中没有默认示例记录。
