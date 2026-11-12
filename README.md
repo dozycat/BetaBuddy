@@ -4,7 +4,11 @@
 
 BetaBuddy 是一个 iPhone 应用：在岩馆里看一条线换个身材可以怎么爬，再回看自己的攀岩视频，把每一趟记成手账。全部在手机上完成，不需要账号，也不联网。界面支持简体中文、繁体中文、英语、日语和韩语。
 
-<!-- 界面截图待补：岩馆、攀爬册、回看 -->
+<p align="center">
+  <img src="docs/ios/screenshots/gym.png" alt="岩馆" width="260">
+  &nbsp;&nbsp;&nbsp;
+  <img src="docs/ios/screenshots/journal.png" alt="攀爬册" width="260">
+</p>
 
 ## 能做什么
 
