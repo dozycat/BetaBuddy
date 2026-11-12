@@ -21,12 +21,11 @@ as `APPLE_PRIVATE_KEY`. Never commit the private key. The deployed Worker uses
 the `nodejs_compat` flag. For future code updates, run `bun run check` and
 `bun run deploy`; `wrangler.jsonc` routes the Worker to `pay.dozycat.ai`.
 
-On 2026-11-13, the Mac could reach the custom domain when pointed at a
-reachable Cloudflare edge (`curl --resolve pay.dozycat.ai:443:104.21.93.17
-https://pay.dozycat.ai/health`), but connections to the two A addresses
-returned by public DNS failed from this network. Verify normal DNS access from
-another network and correct the DNS/edge routing before using this endpoint in
-the app.
+On 2026-11-13, normal DNS access to `https://pay.dozycat.ai/health` returned
+HTTP 200, and a fake signed transaction was denied with `{"active":false}`.
+The earlier connection failure from this Mac cleared without changing DNS.
+Real purchase verification still needs the Apple secrets and a sandbox
+transaction test.
 
 The app ID, bundle ID, and product ID are fixed in `src/index.ts`. Apple's
 public root certificates in `src/apple-roots.ts` came from
