@@ -4,7 +4,6 @@
 <resources>
     <string name="journal_title">Logbook</string>
     <string name="journal_tagline">No go is wasted.</string>
-    <string name="journal_about_cd">About and local storage</string>
     <string name="journal_empty_title">Your first climb\nstarts here.</string>
     <string name="journal_empty_body">Pick a climbing video, replay the skeleton and the details on your phone, and note how it felt and the beta you want to try next.</string>
     <string name="journal_empty_action">Log your first climb</string>
@@ -25,7 +24,6 @@
     <string name="journal_back">Back</string>
     <string name="journal_cancel">Cancel</string>
     <string name="journal_import_nav_title">Log a climb</string>
-    <string name="journal_import_saved_title">Climb saved</string>
     <string name="journal_import_done">Done</string>
     <string name="journal_import_headline">Turn this go\ninto the next idea.</string>
     <string name="journal_import_headline_busy">Reading\nyour climb.</string>

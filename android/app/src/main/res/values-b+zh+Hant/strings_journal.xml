@@ -4,7 +4,6 @@
 <resources>
     <string name="journal_title">攀爬冊</string>
     <string name="journal_tagline">沒有白爬的一趟。</string>
-    <string name="journal_about_cd">關於與本機儲存</string>
     <string name="journal_empty_title">第一趟，\n從這裡開始。</string>
     <string name="journal_empty_body">選一段攀爬影片，在手機上回看骨架和動作細節，把感受和下一次想試的 beta 留下來。</string>
     <string name="journal_empty_action">記錄第一趟</string>
@@ -25,7 +24,6 @@
     <string name="journal_back">返回</string>
     <string name="journal_cancel">取消</string>
     <string name="journal_import_nav_title">記錄攀爬</string>
-    <string name="journal_import_saved_title">這一趟已儲存</string>
     <string name="journal_import_done">完成</string>
     <string name="journal_import_headline">把這一趟，\n變成下一次的靈感。</string>
     <string name="journal_import_headline_busy">正在讀懂\n你的這一趟。</string>

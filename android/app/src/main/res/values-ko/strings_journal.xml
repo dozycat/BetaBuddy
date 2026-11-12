@@ -4,7 +4,6 @@
 <resources>
     <string name="journal_title">등반 일지</string>
     <string name="journal_tagline">헛된 시도는 없다.</string>
-    <string name="journal_about_cd">앱 정보와 기기 내 저장</string>
     <string name="journal_empty_title">첫 등반은\n여기서부터.</string>
     <string name="journal_empty_body">등반 영상을 골라 기기에서 스켈레톤과 동작을 다시 보고, 느낀 점과 다음에 시도할 베타를 남겨 두세요.</string>
     <string name="journal_empty_action">첫 등반 기록하기</string>
@@ -25,7 +24,6 @@
     <string name="journal_back">뒤로</string>
     <string name="journal_cancel">취소</string>
     <string name="journal_import_nav_title">등반 기록</string>
-    <string name="journal_import_saved_title">등반 저장됨</string>
     <string name="journal_import_done">완료</string>
     <string name="journal_import_headline">이번 시도를\n다음 아이디어로.</string>
     <string name="journal_import_headline_busy">이번 등반을\n읽는 중.</string>

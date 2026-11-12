@@ -118,7 +118,7 @@ private fun JournalList(
             Icon(BBIcons.BrandMark, contentDescription = null, tint = BB.Ink, modifier = Modifier.size(30.dp))
             Spacer(Modifier.width(6.dp))
             Text("betabuddy", style = BB.display(23.sp), modifier = Modifier.weight(1f)) // brand mark, not translated
-            CircleIconButton(BBIcons.Sliders, stringResource(R.string.journal_about_cd), onOpenSettings, Modifier.testTag("about"))
+            CircleIconButton(BBIcons.Sliders, stringResource(R.string.settings_title), onOpenSettings, Modifier.testTag("about"))
         }
         Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
             Text(stringResource(R.string.journal_title), style = BB.display(34.sp))

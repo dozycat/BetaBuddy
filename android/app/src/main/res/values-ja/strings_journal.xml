@@ -4,7 +4,6 @@
 <resources>
     <string name="journal_title">ログブック</string>
     <string name="journal_tagline">無駄なトライはない。</string>
-    <string name="journal_about_cd">このアプリと端末内の保存について</string>
     <string name="journal_empty_title">最初のトライは、\nここから。</string>
     <string name="journal_empty_body">クライミングの動画を選んで、端末上でスケルトンと動きを見直し、感じたことと次に試したいムーブを残しましょう。</string>
     <string name="journal_empty_action">最初のトライを記録</string>
@@ -25,7 +24,6 @@
     <string name="journal_back">戻る</string>
     <string name="journal_cancel">キャンセル</string>
     <string name="journal_import_nav_title">トライを記録</string>
-    <string name="journal_import_saved_title">保存しました</string>
     <string name="journal_import_done">完了</string>
     <string name="journal_import_headline">このトライを、\n次のヒントに。</string>
     <string name="journal_import_headline_busy">このトライを\n読み取っています。</string>
