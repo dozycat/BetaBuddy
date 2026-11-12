@@ -1,8 +1,10 @@
 # BetaBuddy 发布状态
 
-2026-11-13：1.2.0 (7) 终生会员版本已签名归档并成功上传 App Store Connect，二进制文件状态“已验证”；尚未提审。App Store Connect 已创建非消耗型内购 `com.betabuddy.ios.lifetime`，美国价格 $10，状态“准备提交”，仍需补审核截图并随新版 App 一同提交。Apple 要求当前 1.1.0 状态先成为“可供分发”，才能建立 1.2.0 商店版本；首个非消耗型内购必须随新版一起送审，不能单独提交。本地实现使用 StoreKit 2 的已验证权益决定会员标识，购买和恢复入口在“设置与关于”；训练建议和新岩馆数据仍属后续计划。线上支持与隐私站点已更新发布。付费 App 协议已接受，当前状态为“正在处理”；收款银行资料也“正在处理”。美国税表 U.S. Certificate of Foreign Status of Beneficial Owner 和 W-8BEN 均于 11 月 13 日提交，状态“使用中”；中国大陆国务院令第 810 号合规资料已显示“有效”。域名 `dozycat.ai` 已切到 Cloudflare 权威服务器；支付核验 Worker 代码与 `pay.dozycat.ai` 自定义域名已部署，健康检查及无效签名拒绝测试通过。Apple 内购 API 的 Issuer ID、Key ID 和私钥已保存为 `betabuddy-pay` Production Secret；真实交易核验仍待沙盒交易验证，当前 App 不调用此服务。下文 1.1.0 的“无内购”描述指该已提交构建。
+2026-11-13：1.2.0 (7) 终生会员版本已签名归档并成功上传 App Store Connect，二进制文件状态“已验证”；尚未提审。App Store Connect 已创建非消耗型内购 `com.betabuddy.ios.lifetime`，美国价格 $10，状态“准备提交”；内购审核截图已上传，仍需随新版 App 一同提交。Apple 要求当前 1.1.0 状态先成为“可供分发”，才能建立 1.2.0 商店版本；首个非消耗型内购必须随新版一起送审，不能单独提交。本地实现使用 StoreKit 2 的已验证权益决定会员标识，购买和恢复入口在“设置与关于”；训练建议和新岩馆数据仍属后续计划。线上支持与隐私站点已更新发布。付费 App 协议已接受，当前状态为“正在处理”；收款银行资料也“正在处理”。美国税表 U.S. Certificate of Foreign Status of Beneficial Owner 和 W-8BEN 均于 11 月 13 日提交，状态“使用中”；中国大陆国务院令第 810 号合规资料已显示“有效”。域名 `dozycat.ai` 已切到 Cloudflare 权威服务器；支付核验 Worker 代码与 `pay.dozycat.ai` 自定义域名已部署，健康检查及无效签名拒绝测试通过。Apple 内购 API 的 Issuer ID、Key ID 和私钥已保存为 `betabuddy-pay` Production Secret；真实交易核验仍待沙盒交易验证，当前 App 不调用此服务。下文 1.1.0 的“无内购”描述指该已提交构建。
 
 2026-11-13：`pay.dozycat.ai` 的普通 DNS 访问已恢复，`GET /health` 返回 200，伪造交易请求返回 `active:false`；先前本机连接失败未改 DNS 即自行消除。已加入独立的 `BetaBuddyStoreKit` 本地模拟商品 scheme；Xcode 27.2 命令行测试在 iOS 26.5 和 27.0 模拟器均未加载商品，待图形界面或真机沙盒测试。
+
+2026-11-13：Xcode 27.2 图形界面用 `BetaBuddyStoreKit` scheme 在 iOS 27.0 的 iPhone 18 Pro 模拟器显示本地商品 $10.00；模拟购买后“终生会员已解锁”与攀爬册徽章立即出现，停止并重启 App 后徽章仍在。购买页的 1206 × 2622 截图已上传 App Store Connect 的内购审核信息，副本保存在本机忽略目录 `ios/build/lifetime-iap-review-1.2.0.png`；徽章截图副本为 `ios/build/lifetime-member-badge-1.2.0.png`。这验证的是 Xcode 本地 StoreKit 配置，尚需在付费协议生效后做真机沙盒购买、恢复和 Worker 交易核验。
 
 应用内语言设置（底部齿轮 → 设置与关于 → 语言，选了立即生效）、系统语言不在五种之内时回落英语、未命名记录按当前语言显示，这些改动已包含在 1.2.0 (7) 构建中。
 
