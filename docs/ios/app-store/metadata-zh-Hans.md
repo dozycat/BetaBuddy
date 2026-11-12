@@ -1,34 +1,42 @@
 # App Store 中文资料
 
-各版本通用的商店文案源，与应用现在的功能一致。每个版本的「新增内容」和提审清单在 `release-<版本>.md`；后台实际填了什么、到了哪一步，见 [STATUS.md](STATUS.md)。
+简体中文的商店文案源，与应用现在的功能一致。英文见 [metadata-en.md](metadata-en.md)。每个版本的「新增内容」和提审清单在 `release-<版本>.md`；后台实际填了什么、到了哪一步，见 [STATUS.md](STATUS.md)。
 
 - 名称：BetaBuddy
-- 副标题：攀岩视频复盘与训练手账
+- 副标题：岩馆线路推演与攀岩视频复盘
 - 主要类别：体育
 - 价格：免费（0），所有上架地区保持免费，不创建内购或订阅
-- 关键词：攀岩,抱石,复盘,动作分析,姿态,训练,运动,视频,手账,岩馆,线路
+- 关键词：攀岩,抱石,岩馆,线路,beta,复盘,动作分析,姿态,视频,手账
 - 支持邮箱：hi@dozycat.ai
 - Support URL：https://betabuddy-support.dozycfs.chatgpt.site
 - Privacy Policy URL：https://betabuddy-support.dozycfs.chatgpt.site/privacy
 - 隐私标签：根据当前实现，选择“不收集数据”；提交前复核最终打包 SDK 和实际行为
 - 登录：无需账号
+- 应用内语言：简体中文、繁体中文、英语、日语、韩语
 
 ## 宣传文本
 
-再试一次，这次有点不一样。导入一趟攀爬回看骨架与动作细节；在「岩馆」里看看同一条线换个身材可以怎么爬。全部功能免费，无广告、内购或订阅。
+再试一次，这次有点不一样。在「岩馆」里看一条线换个身材可以怎么爬；导入一趟攀爬，回看骨架与动作细节。全部功能免费，无广告、内购或订阅。
 
 ## 描述
 
 每一趟，都有新发现。
 
-BetaBuddy 是你的攀岩复盘与训练手账。导入自己的攀爬视频，结合原片回看身体姿态，记录难度、完攀与心得，再带着一个具体的小目标回到岩壁。
+BetaBuddy 有两个入口：岩馆和攀爬册。
 
-• 本地动作回看：内置姿态模型，提供 33 个关键点的骨架回放与画面内几何分析。
+岩馆
+• 内置一座岩馆的非官方 3D 线路图，可按岩壁、难度档和岩点颜色筛选线路，查看起步点和结束点。
+• 换个身材看这条线：选择不同身材，查看模型推演出的一种走法，并逐步回放。
+• 位置和线路为爱好者根据公开资料整理，可能与现场不符；推演不是教练建议，请以现场和自身判断为准。
+
+攀爬册
+• 导入自己的攀爬视频，在手机上识别 33 个身体关键点，对照原片回看骨架。
 • 两种分析模式：按需要选择日常回看或动作细看。
-• 攀爬手账：保存视频、笔记和自己标记的完攀记录。
-• 小练习：围绕脚步与动作意识完成练习，留下训练记录。
-• 岩馆：内置一座岩馆的非官方 3D 线路图，可按岩壁、难度档和颜色筛选线路；选择不同身材，查看模型推演出的一种走法并逐步回放。位置和线路为爱好者根据公开资料整理，可能与现场不符；推演不是教练建议。
-• 你的数据留在手机：无需账号，不上传视频，不调用云端 AI；模型和岩馆数据随安装包提供。
+• 0.1 秒步进、0.5× 慢放，候选片段一点就到。
+• 记下难度、是否完攀和一句下次想试的改变；可按完攀状态筛选、按名字或难度搜索。
+
+你的数据留在手机
+• 无需账号，不上传视频，不调用云端 AI；姿态模型和岩馆数据随安装包提供，岩馆页面不联网。
 • 全部功能免费：无广告、无内购、无订阅。
 
 适合单人、全身入镜、固定机位的视频。支持 0.5–180 秒、最大 500 MB 的单段视频，建议先在相册中裁剪。
@@ -39,16 +47,18 @@ BetaBuddy 是你的攀岩复盘与训练手账。导入自己的攀爬视频，�
 
 ## 审核备注（英文）
 
-BetaBuddy is an iPhone climbing video review and training journal app. It has no login, in-app purchases, subscriptions, advertising, or developer-operated backend. All features are free. The MediaPipe Full pose model is bundled and runs on device.
+BetaBuddy is an iPhone app with two tabs: “岩馆” (Gym) and “攀爬册” (Logbook). It has no login, in-app purchases, subscriptions, advertising, or developer-operated backend. All features are free. The interface is available in Simplified Chinese, Traditional Chinese, English, Japanese and Korean and follows the system language.
 
-To test: tap “导入这一趟” on the home screen, select a locally available single-person full-body MOV/MP4 video using the system Photos picker, then start analysis. Supported duration is 0.5–180 seconds, up to 500 MB. Videos without a detectable body produce an explanatory error. Review results alongside the original video. The “攀爬册” tab stores reviews; “练习” opens training activities; “岩馆” (Gym) shows a bundled, offline, unofficial 3D layout of one climbing gym and a model-based what-if simulation, described in the notes for version 1.1.0. Settings are available through the top-right button; the privacy policy is accessible there offline.
+Gym (first tab, shown at launch): a bundled, offline, unofficial 3D layout of one climbing gym with its boulder problems, and a model-based what-if simulation of how climbers of different body sizes might climb a selected problem. To test: read the one-time notice and tap the button at the bottom to enter, pick a wall and a problem from the bottom sheet, then press play to step through the simulated sequence; the climber tab in the sheet changes the body parameters. This tab is rendered in an embedded web view from files bundled inside the app. It makes no network requests: all http/https/ws navigation and subresource loads are blocked, and the files are served from a custom local scheme. The layout is a hobbyist reconstruction, labelled as unofficial in the app, and is not affiliated with or endorsed by the gym. The simulation is an illustration, not coaching or safety advice.
+
+Logbook (second tab): tap the import button, select a locally available single-person full-body MOV/MP4 video using the system Photos picker, then start analysis. The MediaPipe Full pose model is bundled and runs on device. Supported duration is 0.5–180 seconds, up to 500 MB. Videos without a detectable body produce an explanatory error. Review results alongside the original video. Saved climbs are listed in this tab. The button at the top right opens About, where the privacy policy is available offline.
 
 There is no hidden paywall or account requirement. Pose output is intended for visual review, not medical diagnosis or a claim of validated climbing biomechanics.
 
 ## 需在账号中完成
 
 - 填写个人开发者真实版权信息和审核联系姓名、电话；不要用应用名冒充法律主体。
-- 支持页与隐私政策使用以上两个 URL；行为变化后同步线上内容。
+- 支持页与隐私政策使用以上两个 URL；行为变化后同步线上内容（文本源：[privacy-policy.txt](privacy-policy.txt)、[privacy-policy-en.txt](privacy-policy-en.txt)、[support.md](support.md)）。
 - 完成年龄分级问卷、内容权利、加密出口问卷及适用地区信息。
 - 发布地区由开发者选择。中国大陆如适用，需提供 Apple 要求的备案资料；不要填造假的编号。
 - App 名称和 Bundle ID 的可用性以开发者后台为准。

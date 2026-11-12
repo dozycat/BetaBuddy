@@ -14,10 +14,10 @@ iPhone 应用：本地攀岩视频回看、训练手账、岩馆线路与「换�
 ## 目录
 
 ```
-ios/BetaBuddy/App/        BetaBuddyApp.swift：入口、四个入口的导航
-ios/BetaBuddy/Core/       Models、PoseMath、VideoAnalyzer、ClimbStore、GymPack
-ios/BetaBuddy/Views/      DesignSystem、BrandMark、Home、Import、Review、Journal、Gym
-ios/BetaBuddy/Resources/  图标、pose_landmarker_full.task、PrivacyInfo、PrivacyPolicy、Licenses
+ios/BetaBuddy/App/        BetaBuddyApp.swift：入口、两个入口的导航（0 岩馆，1 攀爬册）
+ios/BetaBuddy/Core/       Models、PoseMath、VideoAnalyzer、ClimbStore、GymPack、AppLanguage
+ios/BetaBuddy/Views/      DesignSystem、BrandMark、Journal、Import、Review、About、Gym、Localization
+ios/BetaBuddy/Resources/  图标、pose_landmarker_full.task、Localizable.xcstrings、InfoPlist.xcstrings、PrivacyInfo、PrivacyPolicy.<语言>.txt、Licenses
 ios/BetaBuddyTests/       模拟器上的单元与集成测试
 ios/BetaBuddyUITests/     界面冒烟测试
 ios/CoreTests/            Mac 上可跑的核心测试（Package.swift 只含 Models 与 PoseMath）
@@ -48,7 +48,9 @@ xcodebuild -project ios/BetaBuddy.xcodeproj -scheme BetaBuddy \
 
 **分析诚实性。** 不展示没验证过的评分或诊断。髋部中点不叫重心，二维角度不叫关节角度，候选片段不下结论，骨架不跨检测空白延续。岩馆内容标明非官方，推演不说成建议。新增文案和指标先对照 `docs/ios/product-design.md` 和 `docs/ios/gym-design.md`。验证记录只写实际做过的事，没做的列在「尚未验证」里。
 
-**代码风格。** 跟随现有文件：视图用 `DesignSystem.swift` 里的 `BB` 颜色与组件，界面文字为中文，错误信息要告诉用户能做什么。不为假设的需求加抽象。
+**多语言。** 开发语言是简体中文，另有繁体中文、英语、日语、韩语。面向用户的文字一律走 `Localizable.xcstrings`：视图里用字符串字面量（键就是简体中文原文），非视图代码用 `String(localized:)`；不翻译的品牌标记和数据用 `Text(verbatim:)`。新增或改动文字时，五种语言一起补齐，占位符个数和换行数保持一致，`LocalizationTests` 会检查。用攀岩的人实际说的话，不加原文没有的承诺。不要把界面语言写进存档：存类型或原值，显示时再取文字。
+
+**代码风格。** 跟随现有文件：视图用 `DesignSystem.swift` 里的 `BB` 颜色与组件，错误信息要告诉用户能做什么。不为假设的需求加抽象。
 
 **不要写进仓库的东西。** 本机绝对路径、新的个人信息、签名产物、`ios/Vendor/`、`ios/build/`、`ios/.derivedData/`。
 

@@ -2,24 +2,16 @@
 
 「再试一次。这次，有点不一样。」
 
-BetaBuddy 是一个 iPhone 应用：回看自己的攀岩视频，把每一趟记成手账，带一个小练习上墙，再去岩馆里看看同一条线换个身材可以怎么爬。全部在手机上完成，不需要账号，也不联网。
+BetaBuddy 是一个 iPhone 应用：在岩馆里看一条线换个身材可以怎么爬，再回看自己的攀岩视频，把每一趟记成手账。全部在手机上完成，不需要账号，也不联网。界面支持简体中文、繁体中文、英语、日语和韩语。
 
-<p align="center">
-  <img src="docs/ios/app-store/screenshots-6.9/01-home.png" alt="上墙" width="250">
-  &nbsp;&nbsp;
-  <img src="docs/ios/app-store/screenshots-6.9/02-training.png" alt="攀爬册" width="250">
-  &nbsp;&nbsp;
-  <img src="docs/ios/app-store/screenshots-6.9/03-practice.png" alt="练习" width="250">
-</p>
+<!-- 界面截图待补：岩馆、攀爬册、回看 -->
 
 ## 能做什么
 
-四个入口，各管一件事。
+两个入口，各管一件事。
 
-- **上墙**：导入一段攀爬视频，在手机上识别 33 个身体关键点。回看时可以切换原片和骨架、看髋部短轨迹、0.1 秒步进、0.5× 慢放，候选片段一点就到。
-- **攀爬册**：每一趟的视频、难度、是否完攀、一句下次想试的改变。按完攀状态筛选，按名字或难度搜索。
-- **练习**：三个短练习，每个只盯一个能感觉到的目标。做完记一次。
-- **岩馆**：一家岩馆的 3D 线路图。按岩壁和线路筛选，选一条线，换一个身材，看模型推演出的一种走法。
+- **岩馆**：打开就在这里。一家岩馆的 3D 线路图，按岩壁和线路筛选，选一条线，换一个身材，看模型推演出的一种走法。
+- **攀爬册**：自己的每一趟。导入一段攀爬视频，在手机上识别 33 个身体关键点；回看时可以切换原片和骨架、看髋部短轨迹、0.1 秒步进、0.5× 慢放，候选片段一点就到。每一趟留下难度、是否完攀、一句下次想试的改变，可以按完攀状态筛选，按名字或难度搜索。
 
 ## 三条原则
 
@@ -59,7 +51,7 @@ xcodebuild -project ios/BetaBuddy.xcodeproj -scheme BetaBuddy \
 
 「岩馆」里的场馆模型、线路和推演来自一个单独生成的**场馆数据包**。它不在这个仓库里，也不应该被提交进来；仓库里只有加载它的原生壳和接口约定。
 
-- **没有数据包**：工程照常生成、编译、测试。「岩馆」入口会说明这个构建没有内置岩馆数据，其余三个入口不受影响。
+- **没有数据包**：工程照常生成、编译、测试。「岩馆」入口会说明这个构建没有内置岩馆数据，攀爬册不受影响。
 - **有数据包**：先装进工程，再构建。
 
 ```sh
@@ -74,10 +66,10 @@ xcodebuild -project ios/BetaBuddy.xcodeproj -scheme BetaBuddy \
 ```
 ios/
   BetaBuddy/            应用源码
-    App/                入口与四个入口的导航
+    App/                应用入口与两个入口的导航
     Core/               数据结构、几何、姿态推理、本地存储、数据包加载
     Views/              设计系统与各页面
-    Resources/          图标、姿态模型、隐私清单与政策、第三方许可
+    Resources/          图标、姿态模型、五种语言的 String Catalog、隐私清单与政策、第三方许可
   BetaBuddyTests/       单元与集成测试（模拟器）
   BetaBuddyUITests/     界面冒烟测试
   CoreTests/            可在 Mac 上直接跑的核心测试
@@ -93,7 +85,7 @@ legacy/web/             早期的网页实现，不再维护
 | 文档 | 内容 |
 | --- | --- |
 | [ios/README.md](ios/README.md) | 构建、测试、姿态模型与推理管线 |
-| [docs/ios/product-design.md](docs/ios/product-design.md) | 产品性格、视觉、主任务流、分析诚实性 |
+| [docs/ios/product-design.md](docs/ios/product-design.md) | 产品性格、视觉、主任务流、分析诚实性、语言 |
 | [docs/ios/gym-design.md](docs/ios/gym-design.md) | 岩馆入口的设计与数据包接口约定 |
 | [docs/ios/validation.md](docs/ios/validation.md) | 做过哪些验证，哪些还没做 |
 | [docs/ios/app-store/](docs/ios/app-store/STATUS.md) | 发布状态、发布流程、各版本的商店资料 |

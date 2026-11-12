@@ -47,6 +47,20 @@ xcodebuild -project ios/BetaBuddy.xcodeproj -scheme BetaBuddy \
 
 第三方 SDK 可能输出反馈张量或投影相关的诊断提示，模拟器也会输出系统框架提示；这些不等于测试失败。做过和没做过的验证记在 [../docs/ios/validation.md](../docs/ios/validation.md)。
 
+## 语言
+
+开发语言是简体中文（`project.yml` 的 `developmentLanguage: zh-Hans`），另有繁体中文、英语、日语、韩语。全部文字在 `BetaBuddy/Resources/Localizable.xcstrings`，相册权限说明在 `InfoPlist.xcstrings`；键是简体中文原文。XcodeGen 没有 `knownRegions` 选项，工程文件里只列出开发语言，其余语言由 String Catalog 在构建时生成对应的 `.lproj`，测试会确认五种语言都进了应用包。
+
+用某种语言启动：
+
+```sh
+xcrun simctl launch booted com.betabuddy.ios -AppleLanguages "(ja)"
+```
+
+调试用的启动参数：`-initialTab 0`（岩馆，默认）或 `-initialTab 1`（攀爬册）；Debug 构建另有 `-gymQuery`、`-gymOpenWall`、`-gymOpenRoute`，见 [../docs/ios/gym-design.md](../docs/ios/gym-design.md)。
+
+核对源码里的文字是否都在目录里：`xcodebuild -exportLocalizations -project ios/BetaBuddy.xcodeproj -localizationPath <输出目录> -exportLanguage en` 会按编译器看到的键导出，和 `Localizable.xcstrings` 的键比对即可。
+
 ## 姿态模型与推理管线
 
 模型是 MediaPipe **Pose Landmarker Full / float16**，33 点，固定为官方版本 `1`，权重未改动。SHA-256：
@@ -66,13 +80,13 @@ xcodebuild -project ios/BetaBuddy.xcodeproj -scheme BetaBuddy \
 
 ## 目录
 
-- `BetaBuddy/App`：应用入口与四个入口的导航。
+- `BetaBuddy/App`：应用入口与两个入口（岩馆、攀爬册）的导航。
 - `BetaBuddy/Core`：数据结构、几何、MediaPipe 推理、原子写入的本地存储，以及岩馆数据包的定位、清单读取和页面消息解析。
-- `BetaBuddy/Views`：设计系统、上墙、导入、回看、攀爬册、练习、岩馆页面容器。
-- `BetaBuddy/Resources`：图标、姿态模型、隐私清单、离线隐私政策、第三方许可。
+- `BetaBuddy/Views`：设计系统、攀爬册、导入、回看、关于、岩馆页面容器，以及存储值到界面文字的转换。
+- `BetaBuddy/Resources`：图标、姿态模型、`Localizable.xcstrings` 与 `InfoPlist.xcstrings`、隐私清单、三种语言的离线隐私政策、第三方许可。
 - `CoreTests`：可在 macOS 直接运行的几何与时序边界测试。
-- `BetaBuddyTests`：本地存储、模型打包、视频推理、数据包加载的测试。
-- `BetaBuddyUITests`：导入、导航和岩馆入口的冒烟测试。
+- `BetaBuddyTests`：本地存储、模型打包、视频推理、数据包加载、本地化完整性的测试。
+- `BetaBuddyUITests`：在简体中文和英语下各走一遍两个入口的冒烟测试。
 - `LocalMediaPipe`：SDK 指标上报工厂的本地空实现及其头文件依赖。
 - `scripts`：`bootstrap.sh`、`install-gym-pack.sh`、`prepare-local-graph.sh`、`generate-icon.swift`、`ExportOptions.plist`。
 - [THIRD_PARTY.md](THIRD_PARTY.md)：第三方 SDK、模型与素材的来源和校验值。
