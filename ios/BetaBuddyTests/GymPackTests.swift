@@ -153,8 +153,23 @@ final class GymPackTests: XCTestCase {
         XCTAssertEqual(GymPack.status(in:root),.invalid(.unsafePath("../scene.bin")))
     }
 
+    func testEntryURLAssembly() throws {
+        let pack = try GymPack(directory:try writePack(manifest:manifest))
+        XCTAssertEqual(pack.entryURL(hintSeen:false).absoluteString,"gympack://local/index.html")
+        XCTAssertEqual(pack.entryURL(hintSeen:true).absoluteString,"gympack://local/index.html?hint=0")
+        XCTAssertEqual(pack.entryURL(hintSeen:true,extraQuery:"sheet=half&tab=steps&route=xxx&step=5").absoluteString,
+                       "gympack://local/index.html?hint=0&sheet=half&tab=steps&route=xxx&step=5")
+        XCTAssertEqual(pack.entryURL(hintSeen:false,extraQuery:"?wall=a").absoluteString,"gympack://local/index.html?wall=a")
+        XCTAssertEqual(pack.entryURL(hintSeen:true,extraQuery:"").absoluteString,"gympack://local/index.html?hint=0")
+        for query in ["route=x#frag","a=1&b=%E7%BA%BF"] {
+            let url = pack.entryURL(hintSeen:true,extraQuery:query)
+            XCTAssertTrue(pack.allows(url))
+            XCTAssertEqual(pack.file(for:url)?.lastPathComponent,"index.html")
+        }
+    }
     func testPageMessages() {
         XCTAssertEqual(GymMessage(body:["type":"ready"]),.ready)
+        XCTAssertEqual(GymMessage(body:["type":"hintSeen"]),.hintSeen)
         XCTAssertEqual(GymMessage(body:["type":"routeSelected","id":"r-1","name":"紫色 3"]),.routeSelected(GymRoute(id:"r-1",name:"紫色 3")))
         XCTAssertEqual(GymMessage(body:["type":"routeSelected"]),.routeSelected(nil))
         XCTAssertEqual(GymMessage(body:["type":"error","message":"boom"]),.error("boom"))

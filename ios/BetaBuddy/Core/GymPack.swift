@@ -91,6 +91,16 @@ struct GymPack: Equatable, Sendable {
         parts.scheme = Self.scheme; parts.host = Self.host; parts.path = "/" + manifest.entry
         return parts.url!
     }
+    /// Entry URL for a load. `hint=0` tells the page its first-run gesture hint has already been seen.
+    /// `extraQuery` is appended as given (Debug builds only pass one); if it does not form a URL it is dropped.
+    func entryURL(hintSeen: Bool, extraQuery: String? = nil) -> URL {
+        let extra = (extraQuery ?? "").trimmingCharacters(in: CharacterSet(charactersIn: "?&"))
+        let known = hintSeen ? ["hint=0"] : []
+        func url(_ items: [String]) -> URL? {
+            items.isEmpty ? entryURL : URL(string: entryURL.absoluteString + "?" + items.joined(separator: "&")).flatMap { allows($0) ? $0 : nil }
+        }
+        return (extra.isEmpty ? nil : url(known + [extra])) ?? url(known) ?? entryURL
+    }
 
     static let status: Status = status(in: Bundle.main.resourceURL)
     /// `nil` when this build has no usable pack.
@@ -171,6 +181,7 @@ struct GymRoute: Codable, Equatable, Sendable {
 /// Page → app messages on the `gym` script message handler.
 enum GymMessage: Equatable, Sendable {
     case ready
+    case hintSeen
     case routeSelected(GymRoute?)
     case error(String)
 
@@ -178,6 +189,7 @@ enum GymMessage: Equatable, Sendable {
         guard let body = body as? [String: Any], let type = body["type"] as? String else { return nil }
         switch type {
         case "ready": self = .ready
+        case "hintSeen": self = .hintSeen
         case "routeSelected":
             if let id = body["id"] as? String, !id.isEmpty {
                 self = .routeSelected(GymRoute(id: String(id.prefix(120)), name: String((body["name"] as? String ?? id).prefix(120))))

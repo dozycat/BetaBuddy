@@ -47,6 +47,7 @@ final class GymSchemeHandler: NSObject, WKURLSchemeHandler {
 final class GymSession: NSObject, ObservableObject, WKNavigationDelegate, WKScriptMessageHandler {
     enum Phase: Equatable { case idle, loading, ready, failed(String) }
     static let handlerName = "gym"
+    static let hintSeenKey = "gymHintSeen"
     // Navigation is limited to the pack's own scheme by the delegate; these rules also stop subresource and fetch/XHR/WebSocket loads.
     static let blockRules = #"""
     [{"trigger":{"url-filter":"^https?://"},"action":{"type":"block"}},
@@ -68,6 +69,15 @@ final class GymSession: NSObject, ObservableObject, WKNavigationDelegate, WKScri
     private var pack: GymPack? { if case .ready(let pack) = status { pack } else { nil } }
 
     init(status: GymPack.Status = GymPack.status) { self.status = status }
+
+    private func entryRequest(_ pack: GymPack) -> URLRequest {
+        var query: String?
+        #if DEBUG
+        // `-gymQuery "sheet=half&tab=steps"` on the launch command line puts the page in a given state for screenshots.
+        query = UserDefaults.standard.string(forKey: "gymQuery")
+        #endif
+        return URLRequest(url: pack.entryURL(hintSeen: UserDefaults.standard.bool(forKey: Self.hintSeenKey), extraQuery: query))
+    }
 
     func start() {
         guard phase == .idle, let pack else { return }
@@ -107,7 +117,7 @@ final class GymSession: NSObject, ObservableObject, WKNavigationDelegate, WKScri
             #endif
             webView = view
             loadStarted = Date()
-            view.load(URLRequest(url: pack.entryURL))
+            view.load(entryRequest(pack))
         }
     }
 
@@ -116,7 +126,7 @@ final class GymSession: NSObject, ObservableObject, WKNavigationDelegate, WKScri
         phase = .loading
         pageReady = false
         loadStarted = Date()
-        webView.load(URLRequest(url: pack.entryURL))
+        webView.load(entryRequest(pack))
     }
 
     func send(_ command: GymCommand) {
@@ -155,6 +165,7 @@ final class GymSession: NSObject, ObservableObject, WKNavigationDelegate, WKScri
             if let wall = UserDefaults.standard.string(forKey: "gymOpenWall") { send(.openWall(wall)) }
             if let route = UserDefaults.standard.string(forKey: "gymOpenRoute") { send(.openRoute(route)) }
             #endif
+        case .hintSeen: UserDefaults.standard.set(true, forKey: Self.hintSeenKey)
         case .routeSelected(let route): selectedRoute = route
         case .error(let text):
             log.error("page error (\(self.pageReady ? "after" : "before", privacy: .public) ready): \(text, privacy: .public)")
