@@ -30,11 +30,10 @@
 
 ## 后台与版本
 
-- App Store Connect：https://appstoreconnect.apple.com/apps/6809249574/distribution/reviewsubmissions
-- Apple ID：6809249574
+- App Store Connect 的应用链接和 Apple ID：见账户持有人的私有记录。
 - Bundle ID：com.betabuddy.ios
 - SKU：betabuddy-ios-001
-- 个人团队：du zeyu / PR5A8VMY8S
+- 个人团队：团队 ID 不写在仓库里，构建时用 `DEVELOPMENT_TEAM=<团队 ID>` 传入。
 - 发布方式：审核通过后自动发布。
 - App Store 初始价格：所有货币均为 0；无内购、订阅和广告。
 - 首发 147 个国家／地区：排除中国大陆与欧盟 27 国；未启用将来新增地区自动供应。用户已确认先发布，之后补齐资料再扩展。
@@ -65,6 +64,6 @@
 
 ## 地区的后续
 
-审核通过后自动在已选地区上架。中国大陆需补齐适用的 App 备案信息后再增加，准备情况见 [mainland-filing.md](mainland-filing.md)；欧盟需先完成交易商身份声明，再开放供应。
+审核通过后自动在已选地区上架。中国大陆需补齐适用的 App 备案信息后再增加，备案资料含个人信息，不放在这个仓库里；欧盟需先完成交易商身份声明，再开放供应。
 
 真机上的攀岩准确性、长期稳定性和热状态还没有成文的验收结论。模拟器和集成测试的范围见 [../validation.md](../validation.md)。Apple 接受提审不代表这些测试已经完成。

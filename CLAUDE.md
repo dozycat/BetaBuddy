@@ -60,3 +60,4 @@ xcodebuild -project ios/BetaBuddy.xcodeproj -scheme BetaBuddy \
 2. `swift test --package-path ios` 通过；动了应用代码就跑模拟器测试和未签名的真机构建。
 3. 改了行为就同步 `docs/ios/` 里对应的设计和验证记录；改了隐私相关行为就同步 `PrivacyPolicy.txt`、`docs/ios/app-store/privacy-policy.txt` 和 `PrivacyInfo.xcprivacy`。
 4. 除非被明确要求，不 push、不上传构建、不改签名团队。
+- 开发者账户信息（团队 ID、App 的 Apple ID、证书、描述文件、备案资料、个人姓名和邮箱）不进仓库；签名用 `DEVELOPMENT_TEAM=<团队 ID>` 在命令行传入。

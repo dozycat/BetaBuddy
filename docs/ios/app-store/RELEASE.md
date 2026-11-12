@@ -42,6 +42,8 @@ PATH=/usr/bin:/bin:/usr/sbin:/sbin xcodebuild -exportArchive \
 
 `ios/build/` 被 Git 忽略。归档和 IPA 不进仓库。
 
+**团队 ID 不写在仓库里。** 归档时在命令行加 `DEVELOPMENT_TEAM=<团队 ID>`（或在 Xcode 的 Signing & Capabilities 里选自己的团队，但不要把改动后的工程提交上来）；导出用的 plist 需要时自行加 `teamID`。证书、描述文件、Apple ID、App Store Connect 密钥同样不进仓库。
+
 ## 4. App Store Connect
 
 首次建立应用时：
@@ -64,7 +66,7 @@ PATH=/usr/bin:/bin:/usr/sbin:/sbin xcodebuild -exportArchive \
 
 ## 5. 地区
 
-- 中国大陆：上架需要 App 备案号。准备情况见 [mainland-filing.md](mainland-filing.md)；不要填造假的编号。
+- 中国大陆：上架需要 App 备案号。备案资料含个人信息，不放在这个仓库里；不要填造假的编号。
 - 欧盟：需要先完成交易商身份声明。
 
 ## 6. 发布之后
