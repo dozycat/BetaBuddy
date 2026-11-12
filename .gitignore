@@ -1,4 +1,4 @@
-# Python
+# legacy/web: Python
 __pycache__/
 *.py[cod]
 *$py.class
@@ -7,15 +7,15 @@ __pycache__/
 venv/
 .env
 
-# Models (auto-downloaded)
-backend/models/*.task
+# legacy/web: models (auto-downloaded)
+legacy/web/backend/models/*.task
 
-# Database
+# legacy/web: database
 *.db
 
-# Uploads
-backend/uploads/*
-!backend/uploads/.gitkeep
+# legacy/web: uploads
+legacy/web/backend/uploads/*
+!legacy/web/backend/uploads/.gitkeep
 
 # IDE
 .idea/
@@ -27,7 +27,7 @@ backend/uploads/*
 .DS_Store
 Thumbs.db
 
-# Node
+# legacy/web: Node
 node_modules/
 dist/
 .cache/
@@ -35,7 +35,7 @@ dist/
 # Logs
 *.log
 
-# iOS generated dependencies and builds
+# iOS: downloaded SDKs and build output
 ios/Vendor/
 # Gym pack (venue model, routes, solver, web page): installed locally, never committed
 ios/GymPack/
