@@ -16,7 +16,7 @@ struct AboutView: View {
             Divider()
             if let pack = GymPack.current {
                 GymNoticeList()
-                Text("\(pack.manifest.gymName) · \(pack.manifest.routeCount) 条线路 · 数据版本 \(pack.manifest.packVersion)（\(String(pack.manifest.generatedAt.prefix(10)))）").font(.caption).foregroundStyle(BB.muted)
+                Text("\(pack.manifest.displayName()) · \(pack.manifest.routeCount) 条线路 · 数据版本 \(pack.manifest.packVersion)（\(String(pack.manifest.generatedAt.prefix(10)))）").font(.caption).foregroundStyle(BB.muted)
             } else {
                 SectionLabel(title:"岩馆",trailing:"NOT IN THIS BUILD")
                 Text("这个构建没有内置岩馆数据。场馆模型、线路和攀爬模拟随正式安装包提供，不在公开源码里。").foregroundStyle(BB.muted)

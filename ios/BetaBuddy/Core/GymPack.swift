@@ -13,6 +13,8 @@ struct GymManifest: Decodable, Equatable, Sendable {
     var packVersion: String
     var generatedAt: String
     var gymName: String
+    /// Optional per-language names, keyed by the app's language codes.
+    var gymNameLocalized: [String: String] = [:]
     var routeCount: Int
     var entry: String
     var files: [File]
@@ -49,6 +51,7 @@ struct GymManifest: Decodable, Equatable, Sendable {
             name = try gym.decodeIfPresent(String.self, forKey: Key("name"))
         }
         gymName = try required(name, "gymName")
+        gymNameLocalized = (try? box.decodeIfPresent([String: String].self, forKey: Key("gymNameLocalized"))) ?? [:]
         routeCount = try required(first(Int.self, "routeCount", "route_count"), "routeCount")
         entry = try first(String.self, "entry") ?? "index.html"
         // Either [{path, sha256}] or {path: sha256} / {path: {sha256}}.
@@ -214,5 +217,13 @@ enum GymCommand: Equatable, Sendable {
         // JSON string encoding keeps ids from breaking out of the call.
         let argument = (try? JSONEncoder().encode(id)).flatMap { String(data: $0, encoding: .utf8) } ?? "\"\""
         return "window.BetaBuddyGym && typeof window.BetaBuddyGym.\(function) === 'function' ? (window.BetaBuddyGym.\(function)(\(argument)), true) : false"
+    }
+}
+
+extension GymManifest {
+    /// The gym's name in the interface language when the pack provides one; the pack's own name otherwise.
+    func displayName(language: String = AppLanguage.current) -> String {
+        if let name = gymNameLocalized[language], !name.isEmpty { return name }
+        return gymName
     }
 }

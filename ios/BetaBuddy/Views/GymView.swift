@@ -209,7 +209,7 @@ struct GymView: View {
     private func intro(_ pack: GymPack) -> some View {
         PaperPage {
             Stamp(text:"GYM / UNOFFICIAL")
-            Text(verbatim:pack.manifest.gymName).font(.system(size:34,weight:.heavy)).accessibilityIdentifier("gymName")
+            Text(verbatim:pack.manifest.displayName()).font(.system(size:26,weight:.heavy)).fixedSize(horizontal:false,vertical:true).accessibilityIdentifier("gymName")
             Text("\(pack.manifest.routeCount) 条线路 · 数据版本 \(pack.manifest.packVersion)")
                 .font(.system(size:12,weight:.bold,design:.monospaced))
             VStack(alignment:.leading,spacing:10) {
