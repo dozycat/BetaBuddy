@@ -1,15 +1,15 @@
 BetaBuddy Privacy Policy
-Updated: November 12, 2026
+Updated: November 13, 2026
 
 Your climbing stays on your device.
 
-BetaBuddy is a climbing video review logbook and gym route viewer that runs locally on your iPhone. Every feature is free. There are no in-app purchases, subscriptions or ads, and no account.
+BetaBuddy is a climbing video review logbook and gym route viewer that runs locally on your iPhone. Core video review and gym features are free. An optional one-time in-app purchase unlocks a lifetime member badge and future member benefits when released. There are no subscriptions, ads, or accounts.
 
 1. What the app handles
 Videos you choose are copied into the app for on-device pose estimation. The app stores the video copy, a thumbnail, pose keypoints, analysis results, the grade and notes you enter, and whether you marked the climb as sent. None of this is sent to the developer or to any third-party server, and the app contains no advertising or analytics SDK that collects usage.
 
 2. Model and network
-The pose model ships inside the app and runs on the device. The app does not download models and does not call any cloud AI or large language model. If you pick a video that exists only in iCloud, the system may download the original first; that is part of Apple's Photos service. App Store downloads, system diagnostics and system services follow Apple's settings and policies.
+The pose model ships inside the app and runs on the device. The app does not download models and does not call any cloud AI or large language model. If you pick a video that exists only in iCloud, the system may download the original first; that is part of Apple's Photos service. App Store downloads, purchases, restore transactions, system diagnostics and system services follow Apple's settings and policies. Apple handles payment details; BetaBuddy checks the purchase entitlement with StoreKit on the device.
 
 3. Gym
 The gym model, routes and climbing simulation in the Gym tab ship inside the app and open on the device. That page cannot reach the network. The app does not record or send which routes you look at or which body parameters you choose. The gym content is an unofficial compilation and may not match the gym as it is today; the simulation is a model's projection, not coaching advice.

@@ -35,15 +35,21 @@ extension EnvironmentValues {
 
 @main
 struct BetaBuddyApp: App {
+    @Environment(\.scenePhase) private var scenePhase
     @StateObject private var store = ClimbStore()
     @StateObject private var language = LanguageSettings()
+    @StateObject private var membership = MembershipStore()
     var body: some Scene {
         WindowGroup {
-            RootView().environmentObject(store).environmentObject(language).tint(BB.ink).preferredColorScheme(.light)
+            RootView().environmentObject(store).environmentObject(language).environmentObject(membership).tint(BB.ink).preferredColorScheme(.light)
                 .alert("暂时无法完成", isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) {
                     Button("知道了", role: .cancel) { store.error = nil }
                 } message: { Text(verbatim: store.error ?? "") }
                 .environment(\.locale, language.locale)
+                .task { await membership.refreshEntitlement() }
+                .onChange(of: scenePhase) { _, phase in
+                    if phase == .active { Task { await membership.load() } }
+                }
         }
     }
 }

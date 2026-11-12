@@ -2,6 +2,7 @@ import SwiftUI
 
 struct JournalView: View {
     @EnvironmentObject private var store: ClimbStore
+    @EnvironmentObject private var membership: MembershipStore
     @State private var filter = 0
     @State private var importing = false
     @State private var search = ""
@@ -16,6 +17,11 @@ struct JournalView: View {
                     Text(verbatim:"betabuddy").font(.system(size:23,weight:.black,design:.rounded)).tracking(-1)
                 }
                 Spacer()
+                if membership.isMember {
+                    Label("终生会员",systemImage:"star.fill").font(.caption.bold())
+                        .padding(.horizontal,10).padding(.vertical,6)
+                        .background(BB.lime,in:Capsule()).accessibilityIdentifier("lifetimeBadge")
+                }
                 SettingsButton()
             }
             VStack(alignment:.leading,spacing:9) {

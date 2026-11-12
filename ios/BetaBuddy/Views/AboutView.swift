@@ -3,6 +3,7 @@ import SwiftUI
 struct AboutView: View {
     @EnvironmentObject private var store: ClimbStore
     @EnvironmentObject private var language: LanguageSettings
+    @EnvironmentObject private var membership: MembershipStore
     @Environment(\.dismiss) private var dismiss
     private var version: String { Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "" }
     var body: some View {
@@ -15,9 +16,39 @@ struct AboutView: View {
                 }.background(.white.opacity(0.6),in:RoundedRectangle(cornerRadius:18))
             }
             Divider()
+            VStack(alignment:.leading,spacing:12) {
+                Label("终生会员",systemImage:"star.circle.fill").font(.title3.bold())
+                if membership.isMember {
+                    Text("终生会员已解锁").font(.headline).accessibilityIdentifier("membershipActive")
+                } else {
+                    Text("一次购买，永久拥有尊贵终生会员标识。后续训练建议和新岩馆数据推出后，也将向终生会员开放。")
+                        .foregroundStyle(BB.muted)
+                    if let product = membership.product {
+                        Button { Task { await membership.purchase() } } label: {
+                            HStack(spacing:4) {
+                                Text("解锁终生会员 ·")
+                                Text(verbatim:product.displayPrice)
+                            }.font(.headline).frame(maxWidth:.infinity).padding(14)
+                        }.buttonStyle(.plain).background(BB.lime,in:RoundedRectangle(cornerRadius:14))
+                            .disabled(membership.isBusy).accessibilityIdentifier("buyLifetime")
+                    } else {
+                        Text("暂时无法连接 App Store。请稍后重试。").foregroundStyle(BB.muted)
+                    }
+                    Button("恢复购买") { Task { await membership.restore() } }
+                        .disabled(membership.isBusy).accessibilityIdentifier("restoreLifetime")
+                    Text("一次性购买，无订阅。购买由 Apple 处理，可在同一 Apple 账户的设备上恢复。")
+                        .font(.caption).foregroundStyle(BB.muted)
+                }
+                if membership.isBusy { ProgressView() }
+            }.padding(18).frame(maxWidth:.infinity,alignment:.leading)
+                .background(BB.lavender,in:RoundedRectangle(cornerRadius:20))
+                .alert("暂时无法完成", isPresented: Binding(get: { membership.errorMessage != nil }, set: { if !$0 { membership.errorMessage = nil } })) {
+                    Button("知道了", role:.cancel) { membership.errorMessage = nil }
+                } message: { Text(verbatim:membership.errorMessage ?? "") }
+            Divider()
             Text(verbatim:"YOUR BETA.\nYOUR DEVICE.").font(BB.display(37))
             Label("完全在这台 iPhone 上分析",systemImage:"lock.shield").font(.title3.bold())
-            Text("全部功能免费 · 无内购 · 无订阅 · 无广告").font(.subheadline.bold())
+            Text("核心功能免费 · 终生会员为一次性内购 · 无订阅 · 无广告").font(.subheadline.bold())
             Text("姿态模型随安装包提供。没有模型下载，没有账号，也没有云端 AI。导入的视频与分析记录保存在应用内，并排除在系统云备份之外。").foregroundStyle(BB.muted)
             Divider()
             SectionLabel(title:"分析边界",trailing:"KEEP IT HONEST")

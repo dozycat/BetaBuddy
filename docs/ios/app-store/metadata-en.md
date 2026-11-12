@@ -5,7 +5,7 @@ English store copy, matching what the app does today. Simplified Chinese: [metad
 - Name: BetaBuddy Climbing Journal
 - Subtitle: Gym beta & climb video review (29 of 30 characters)
 - Primary category: Sports
-- Price: Free in every territory; no in-app purchases or subscriptions
+- App price: Free; optional one-time lifetime membership, US price $10; no subscription
 - Keywords: climbing,bouldering,beta,gym,problem,send,video,review,pose,skeleton,logbook
 - Support URL: https://betabuddy-support.dozycfs.chatgpt.site
 - Privacy Policy URL: https://betabuddy-support.dozycfs.chatgpt.site/privacy
@@ -14,7 +14,7 @@ English store copy, matching what the app does today. Simplified Chinese: [metad
 
 ## Promotional text
 
-Go again, a little differently. Explore an offline gym and see how a different build might climb a problem. Import a climb to replay skeleton and movement. Free.
+Go again, a little differently. Explore an offline gym and see how a different build might climb a problem. Import a climb to replay skeleton and movement. Core features are free, with an optional one-time lifetime membership.
 
 ## Description
 
@@ -35,7 +35,7 @@ LOGBOOK
 
 YOUR DATA STAYS ON YOUR PHONE
 • No account. No video upload. No cloud AI. The pose model and the gym data ship inside the app, and the gym page cannot go online.
-• Everything is free: no ads, no purchases, no subscriptions.
+• Gym and Logbook core features are free, with no ads or subscriptions. An optional one-time lifetime membership immediately adds a badge; training recommendations and new gym data are planned for later.
 
 Works with videos of one climber, whole body in frame, from a fixed camera: 0.5–180 seconds, up to 500 MB. Trim in Photos first.
 

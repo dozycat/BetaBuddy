@@ -5,7 +5,7 @@
 - 名称：BetaBuddy
 - 副标题：岩馆线路推演与攀岩视频复盘
 - 主要类别：体育
-- 价格：免费（0），所有上架地区保持免费，不创建内购或订阅
+- App 价格：免费；可选的一次性终生会员内购，美国售价 $10；无订阅
 - 关键词：攀岩,抱石,岩馆,线路,beta,复盘,动作分析,姿态,视频,手账
 - 支持邮箱：hi@dozycat.ai
 - Support URL：https://betabuddy-support.dozycfs.chatgpt.site
@@ -16,7 +16,7 @@
 
 ## 宣传文本
 
-再试一次，这次有点不一样。在「岩馆」里看一条线换个身材可以怎么爬；导入一趟攀爬，回看骨架与动作细节。全部功能免费，无广告、内购或订阅。
+再试一次，这次有点不一样。在「岩馆」里看一条线换个身材可以怎么爬；导入一趟攀爬，回看骨架与动作细节。核心功能免费，可选一次性终生会员，无广告或订阅。
 
 ## 描述
 
@@ -37,7 +37,7 @@ BetaBuddy 有两个入口：岩馆和攀爬册。
 
 你的数据留在手机
 • 无需账号，不上传视频，不调用云端 AI；姿态模型和岩馆数据随安装包提供，岩馆页面不联网。
-• 全部功能免费：无广告、无内购、无订阅。
+• 岩馆与攀爬册核心功能免费，无广告、无订阅。可一次性购买终生会员，立即显示专属标识；训练建议和新岩馆数据将在后续推出。
 
 适合单人、全身入镜、固定机位的视频。支持 0.5–180 秒、最大 500 MB 的单段视频，建议先在相册中裁剪。
 
@@ -47,13 +47,13 @@ BetaBuddy 有两个入口：岩馆和攀爬册。
 
 ## 审核备注（英文）
 
-BetaBuddy is an iPhone app with two tabs: “岩馆” (Gym) and “攀爬册” (Logbook). It has no login, in-app purchases, subscriptions, advertising, or developer-operated backend. All features are free. The interface is available in Simplified Chinese, Traditional Chinese, English, Japanese and Korean and follows the system language.
+BetaBuddy is an iPhone app with two tabs: “岩馆” (Gym) and “攀爬册” (Logbook). The core features are free, with no login, subscriptions or advertising. Version 1.2 offers an optional one-time lifetime membership through Apple's In-App Purchase; it immediately shows a badge in the Logbook. Training recommendations and new gym data are planned for later and are not in this build. The interface is available in Simplified Chinese, Traditional Chinese, English, Japanese and Korean and follows the system language or the user's in-app selection.
 
 Gym (first tab, shown at launch): a bundled, offline, unofficial 3D layout of one climbing gym with its boulder problems, and a model-based what-if simulation of how climbers of different body sizes might climb a selected problem. To test: read the one-time notice and tap the button at the bottom to enter, pick a wall and a problem from the bottom sheet, then press play to step through the simulated sequence; the climber tab in the sheet changes the body parameters. This tab is rendered in an embedded web view from files bundled inside the app. It makes no network requests: all http/https/ws navigation and subresource loads are blocked, and the files are served from a custom local scheme. The layout is a hobbyist reconstruction, labelled as unofficial in the app, and is not affiliated with or endorsed by the gym. The simulation is an illustration, not coaching or safety advice.
 
 Logbook (second tab): tap the import button, select a locally available single-person full-body MOV/MP4 video using the system Photos picker, then start analysis. The MediaPipe Full pose model is bundled and runs on device. Supported duration is 0.5–180 seconds, up to 500 MB. Videos without a detectable body produce an explanatory error. Review results alongside the original video. Saved climbs are listed in this tab. The button at the top right opens About, where the privacy policy is available offline.
 
-There is no hidden paywall or account requirement. Pose output is intended for visual review, not medical diagnosis or a claim of validated climbing biomechanics.
+The purchase and Restore Purchases buttons are in Settings & About. There is no paywall for Gym or Logbook and no account requirement. Pose output is intended for visual review, not medical diagnosis or a claim of validated climbing biomechanics.
 
 ## 需在账号中完成
 
