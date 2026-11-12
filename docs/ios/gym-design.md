@@ -95,11 +95,11 @@ GymPack/
 
 | `type` | 其他字段 | 含义 |
 | --- | --- | --- |
-| `ready` | 无 | 页面可以交互了。应用收起加载状态 |
+| `ready` | 可带 `packVersion`、`routeCount` | 模型和界面就绪，发一次。应用收起加载状态 |
 | `routeSelected` | `id`、`name`（字符串）；取消选择时省略 `id` | 用户选中了一条线。应用只保留 id 和名称 |
-| `error` | `message`（给用户看的一句话） | 页面无法继续。应用盖上失败状态和「重新加载」。能自己恢复的问题由页面自己提示，不要发这条 |
+| `error` | `message`（给用户看的一句话） | 页面出错。在 `ready` 之前收到，说明场景没起来，应用盖上失败状态和「重新加载」；`ready` 之后收到的（例如要打开的线路 id 不存在）不遮挡页面，由页面自己提示 |
 
-只接受主框架发来的消息；不认识的 `type` 忽略。页面不发 `ready` 也能用：页面加载完成同样会收起加载状态。
+只接受主框架发来的消息；不认识的 `type` 和多出来的字段（如 `wall`、`grade`）忽略。页面不发 `ready` 也能用：页面加载完成同样会收起加载状态。
 
 ### 原生 → 页面
 
@@ -114,13 +114,16 @@ id 是页面自己在 `routeSelected` 里给出的字符串，应用不解释它
 
 ### 运行环境
 
-- 用 `file://` 从应用包内打开，只能读数据包目录。页面在任何情况下都拿不到网络：非包内的跳转被拒绝，`http(s)`、`ws(s)`、`ftp` 的子资源和请求被内容规则拦截。规则编译失败时页面不会打开。
-- `file://` 页面不能用 `fetch` / `XMLHttpRequest` 读包内文件（已在模拟器上确认会失败），ES module 的跨文件 `import` 同样受限。数据和脚本请用普通 `<script src>`、`<img>`、`<link>` 加载，或内联进页面。
-- 不保留网站数据。页面不要依赖 `localStorage`、Cookie 或 IndexedDB 跨启动保存东西。
+- **加载方式**：页面不走 `file://`，而是由应用用自定义协议提供：入口是 `gympack://local/<entry>`，同目录资源照常用相对路径。这是一个普通的同源环境，`fetch`、`XMLHttpRequest`、ES module、three.js 的各类加载器、Blob URL 启动的 Worker（以及 Worker 里再 `fetch` 包内文件）都可用。
+- 应用只回应数据包目录内真实存在的文件：路径在消去 `..` 并解析符号链接之后必须仍在包目录里，其他一律 404。主机名只有 `local`。
+- 内容类型按扩展名给出：`html`、`js` / `mjs`、`json`、`css`、`glb`（`model/gltf-binary`）、`gltf`、`wasm`、`png`、`jpg`、`webp`、`svg`、`ktx2`、`txt`、`md`；`bin` 和其他扩展名为 `application/octet-stream`。文件以内存映射方式读取，大模型不会在应用进程里被整块复制。不支持 Range 分段请求。
+- 每个响应带 `Cache-Control: no-store` 和内容安全策略：`default-src 'self' gympack: 'unsafe-inline' 'wasm-unsafe-eval' blob: data:; object-src 'none'; base-uri 'self'; form-action 'none'`。内联脚本与样式、Blob、`data:`、WebAssembly 可用；任何远程源、`eval` / `new Function` 不可用。
+- 页面在任何情况下都拿不到网络：导航只允许 `gympack://local`，`http(s)`、`ws(s)`、`ftp` 的子资源和请求另由内容规则拦截。规则编译失败时页面不会打开。
+- 不保留网站数据。`localStorage` 等在一次运行内可用，但不要依赖它们跨启动保存东西。
 - 原生侧关闭了回弹、双指缩放、前进后退手势和链接预览，手势全部交给页面。
 - 允许内联媒体播放。
 - 状态栏文字是深色，页面顶部宜用浅色背景。只有竖屏。
-- Debug 构建可以用 Safari 网页检查器连接。
+- Debug 构建可以用 Safari 网页检查器连接；启动参数 `-gymOpenWall <id>` / `-gymOpenRoute <id>` 会在页面就绪后调用对应接口，用于截图和联调。加载耗时与页面报告的错误写入本机系统日志（类别 `gym`），不离开设备。
 
 ## 隐私
 

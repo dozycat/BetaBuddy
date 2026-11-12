@@ -82,7 +82,15 @@ struct GymPack: Equatable, Sendable {
     static let directoryName = "GymPack"
     var directory: URL
     var manifest: GymManifest
-    var entryURL: URL { directory.appendingPathComponent(manifest.entry) }
+    /// The page is served to the web view as `gympack://local/<path>` rather than `file://`,
+    /// so `fetch`, loaders and workers inside the pack behave as on a normal origin.
+    static let scheme = "gympack"
+    static let host = "local"
+    var entryURL: URL {
+        var parts = URLComponents()
+        parts.scheme = Self.scheme; parts.host = Self.host; parts.path = "/" + manifest.entry
+        return parts.url!
+    }
 
     static let status: Status = status(in: Bundle.main.resourceURL)
     /// `nil` when this build has no usable pack.
@@ -116,12 +124,41 @@ struct GymPack: Equatable, Sendable {
             && !path.split(separator: "/", omittingEmptySubsequences: false).contains { $0.isEmpty || $0 == "." || $0 == ".." }
     }
 
-    /// Only files inside the pack may be navigated to. Everything else, including any network URL, is refused.
+    /// Only the pack's own origin may be navigated to. Everything else, including any network URL, is refused.
     func allows(_ url: URL?) -> Bool {
-        guard let url, url.isFileURL else { return false }
+        url?.scheme?.lowercased() == Self.scheme && url?.host?.lowercased() == Self.host
+    }
+
+    /// The file a pack URL stands for, or `nil` when it is not an existing regular file that is
+    /// still inside the pack directory after `..` and symlinks are resolved.
+    func file(for url: URL?) -> URL? {
+        guard allows(url), let path = url?.path, path.count > 1, !path.contains("\0") else { return nil }
         let root = directory.resolvingSymlinksInPath().path
-        let target = url.resolvingSymlinksInPath().path
-        return target.hasPrefix(root + "/")
+        let target = URL(fileURLWithPath: root + path).standardizedFileURL.resolvingSymlinksInPath()
+        var isDirectory: ObjCBool = false
+        guard target.path.hasPrefix(root + "/"),
+              FileManager.default.fileExists(atPath: target.path, isDirectory: &isDirectory), !isDirectory.boolValue else { return nil }
+        return target
+    }
+
+    static func mimeType(forExtension pathExtension: String) -> String {
+        switch pathExtension.lowercased() {
+        case "html", "htm": "text/html; charset=utf-8"
+        case "js", "mjs": "text/javascript; charset=utf-8"
+        case "json", "map": "application/json; charset=utf-8"
+        case "css": "text/css; charset=utf-8"
+        case "glb": "model/gltf-binary"
+        case "gltf": "model/gltf+json"
+        case "wasm": "application/wasm"
+        case "png": "image/png"
+        case "jpg", "jpeg": "image/jpeg"
+        case "webp": "image/webp"
+        case "svg": "image/svg+xml"
+        case "ktx2": "image/ktx2"
+        case "txt": "text/plain; charset=utf-8"
+        case "md": "text/markdown; charset=utf-8"
+        default: "application/octet-stream"   // .bin and anything unknown
+        }
     }
 }
 

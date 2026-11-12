@@ -1,5 +1,18 @@
 import XCTest
+import WebKit
 @testable import BetaBuddy
+
+private final class SchemeTask: NSObject, WKURLSchemeTask {
+    let request: URLRequest
+    var response: HTTPURLResponse?
+    var body = Data()
+    var finished = false
+    init(_ url: String) { request = URLRequest(url:URL(string:url)!) }
+    func didReceive(_ response: URLResponse) { self.response = response as? HTTPURLResponse }
+    func didReceive(_ data: Data) { body.append(data) }
+    func didFinish() { finished = true }
+    func didFailWithError(_ error: Error) { finished = true }
+}
 
 // Fixtures here are synthetic. Real venue data never enters this repository.
 @MainActor
@@ -68,13 +81,65 @@ final class GymPackTests: XCTestCase {
         let directory = try writePack(manifest:manifest)
         guard case .ready(let pack) = GymPack.status(in:root) else { return XCTFail("pack should load") }
         XCTAssertEqual(pack.manifest.gymName,"测试岩馆")
-        XCTAssertEqual(pack.entryURL.lastPathComponent,"index.html")
-        XCTAssertTrue(pack.allows(directory.appendingPathComponent("data/scene.bin")))
-        XCTAssertTrue(pack.allows(URL(string:pack.entryURL.absoluteString + "#route")))
-        XCTAssertFalse(pack.allows(root.appendingPathComponent("outside.html")))
-        XCTAssertFalse(pack.allows(directory.appendingPathComponent("../outside.html")))
+        XCTAssertEqual(pack.entryURL.absoluteString,"gympack://local/index.html")
+        XCTAssertTrue(pack.allows(URL(string:"gympack://local/index.html#route")))
+        XCTAssertFalse(pack.allows(URL(string:"gympack://elsewhere/index.html")))
+        XCTAssertFalse(pack.allows(directory.appendingPathComponent("index.html")))
         XCTAssertFalse(pack.allows(URL(string:"https://example.com/")))
         XCTAssertFalse(pack.allows(nil))
+    }
+    func testPackURLsResolveOnlyInsideThePack() throws {
+        let directory = try writePack(manifest:manifest)
+        try Data("secret".utf8).write(to:root.appendingPathComponent("outside.html"))
+        try FileManager.default.createSymbolicLink(at:directory.appendingPathComponent("link.html"),withDestinationURL:root.appendingPathComponent("outside.html"))
+        let pack = try GymPack(directory:directory)
+        func file(_ string: String) -> String? { pack.file(for:URL(string:string))?.lastPathComponent }
+        XCTAssertEqual(file("gympack://local/index.html"),"index.html")
+        XCTAssertEqual(file("gympack://local/data/scene.bin?v=1#x"),"scene.bin")
+        XCTAssertEqual(file("gympack://local/data/../index.html"),"index.html")
+        XCTAssertNil(file("gympack://local/../outside.html"))
+        XCTAssertNil(file("gympack://local/data/../../outside.html"))
+        XCTAssertNil(file("gympack://local/%2e%2e/outside.html"))
+        XCTAssertNil(file("gympack://local/..%2Foutside.html"))
+        XCTAssertNil(file("gympack://local/link.html"))
+        XCTAssertNil(file("gympack://local/missing.js"))
+        XCTAssertNil(file("gympack://local/data"))
+        XCTAssertNil(file("gympack://local/"))
+        XCTAssertNil(file("gympack://other/index.html"))
+        XCTAssertNil(file("file://" + directory.appendingPathComponent("index.html").path))
+        XCTAssertNil(file("https://local/index.html"))
+    }
+    func testMimeTypes() {
+        let expected = ["html":"text/html; charset=utf-8","js":"text/javascript; charset=utf-8","mjs":"text/javascript; charset=utf-8",
+                        "json":"application/json; charset=utf-8","css":"text/css; charset=utf-8","glb":"model/gltf-binary",
+                        "bin":"application/octet-stream","wasm":"application/wasm","png":"image/png","jpg":"image/jpeg",
+                        "svg":"image/svg+xml","txt":"text/plain; charset=utf-8","md":"text/markdown; charset=utf-8",
+                        "GLB":"model/gltf-binary","unknown":"application/octet-stream"]
+        for (pathExtension, type) in expected { XCTAssertEqual(GymPack.mimeType(forExtension:pathExtension),type,pathExtension) }
+    }
+    func testSchemeHandlerServesPackFilesAndRefusesTheRest() throws {
+        let directory = try writePack(manifest:manifest)
+        try Data("secret".utf8).write(to:root.appendingPathComponent("outside.html"))
+        let handler = GymSchemeHandler(pack:try GymPack(directory:directory))
+        let view = WKWebView()
+        let served = SchemeTask("gympack://local/data/scene.bin")
+        handler.webView(view,start:served)
+        XCTAssertEqual(served.response?.statusCode,200)
+        XCTAssertEqual(served.response?.value(forHTTPHeaderField:"Content-Type"),"application/octet-stream")
+        XCTAssertEqual(served.response?.value(forHTTPHeaderField:"Cache-Control"),"no-store")
+        XCTAssertEqual(served.response?.value(forHTTPHeaderField:"Content-Length"),"7")
+        let policy = try XCTUnwrap(served.response?.value(forHTTPHeaderField:"Content-Security-Policy"))
+        XCTAssertFalse(policy.contains("http"))
+        XCTAssertFalse(policy.contains("*"))
+        XCTAssertEqual(served.body,Data("fixture".utf8))
+        XCTAssertTrue(served.finished)
+        for refused in ["gympack://local/../outside.html","gympack://local/missing.js","gympack://other/index.html"] {
+            let task = SchemeTask(refused)
+            handler.webView(view,start:task)
+            XCTAssertEqual(task.response?.statusCode,404,refused)
+            XCTAssertNotEqual(task.body,Data("secret".utf8))
+            XCTAssertTrue(task.finished)
+        }
     }
     func testBrokenPacksAreInvalidNotMissing() throws {
         _ = try writePack(manifest:"not json")

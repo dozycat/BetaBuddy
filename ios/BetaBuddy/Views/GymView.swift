@@ -1,5 +1,6 @@
 import SwiftUI
 import WebKit
+import os
 
 /// What the gym feature is honest about. Shown before first entry and kept in 关于.
 enum GymNotice {
@@ -12,12 +13,41 @@ enum GymNotice {
     ]
 }
 
+/// Serves `gympack://local/…` from the installed pack directory and nothing else.
+final class GymSchemeHandler: NSObject, WKURLSchemeHandler {
+    // No remote source of any kind. The pack uses inline scripts, Blob workers and data: URLs.
+    static let contentSecurityPolicy = "default-src 'self' gympack: 'unsafe-inline' 'wasm-unsafe-eval' blob: data:; object-src 'none'; base-uri 'self'; form-action 'none'"
+    let pack: GymPack
+    init(pack: GymPack) { self.pack = pack }
+
+    func webView(_ webView: WKWebView, start task: WKURLSchemeTask) {
+        guard let url = task.request.url else { return task.didFailWithError(URLError(.badURL)) }
+        // Memory-mapped: a large model is paged in by the kernel instead of being copied onto the heap.
+        guard let file = pack.file(for: url), let data = try? Data(contentsOf: file, options: .mappedIfSafe) else {
+            return respond(task, url: url, status: 404, type: "text/plain; charset=utf-8", data: Data("Not found".utf8))
+        }
+        respond(task, url: url, status: 200, type: GymPack.mimeType(forExtension: file.pathExtension), data: data)
+    }
+    func webView(_ webView: WKWebView, stop task: WKURLSchemeTask) {}   // Responses complete synchronously.
+
+    private func respond(_ task: WKURLSchemeTask, url: URL, status: Int, type: String, data: Data) {
+        let headers = ["Content-Type": type, "Content-Length": String(data.count), "Cache-Control": "no-store",
+                       "Content-Security-Policy": Self.contentSecurityPolicy, "X-Content-Type-Options": "nosniff"]
+        guard let response = HTTPURLResponse(url: url, statusCode: status, httpVersion: "HTTP/1.1", headerFields: headers) else {
+            return task.didFailWithError(URLError(.badServerResponse))
+        }
+        task.didReceive(response)
+        if task.request.httpMethod != "HEAD" { task.didReceive(data) }
+        task.didFinish()
+    }
+}
+
 /// Owns the one web view for the app's lifetime, so switching tabs keeps the scene and selection.
 @MainActor
 final class GymSession: NSObject, ObservableObject, WKNavigationDelegate, WKScriptMessageHandler {
     enum Phase: Equatable { case idle, loading, ready, failed(String) }
     static let handlerName = "gym"
-    // Navigation is filtered by the delegate; these rules also stop subresource and fetch/XHR/WebSocket loads.
+    // Navigation is limited to the pack's own scheme by the delegate; these rules also stop subresource and fetch/XHR/WebSocket loads.
     static let blockRules = #"""
     [{"trigger":{"url-filter":"^https?://"},"action":{"type":"block"}},
      {"trigger":{"url-filter":"^wss?://"},"action":{"type":"block"}},
@@ -29,6 +59,12 @@ final class GymSession: NSObject, ObservableObject, WKNavigationDelegate, WKScri
     @Published private(set) var webView: WKWebView?
     /// Last route picked in the page. Kept for linking a recorded climb to a route (id and name only).
     @Published private(set) var selectedRoute: GymRoute?
+    /// Set by the page's `ready`. Before it, a page error means the scene never came up; after it,
+    /// errors (an unknown route id, say) are the page's own to show and must not cover it.
+    private var pageReady = false
+    private var loadStarted = Date()
+    // Local system log only: load timings and the text of page-reported errors.
+    private let log = Logger(subsystem: "com.betabuddy.ios", category: "gym")
     private var pack: GymPack? { if case .ready(let pack) = status { pack } else { nil } }
 
     init(status: GymPack.Status = GymPack.status) { self.status = status }
@@ -46,6 +82,7 @@ final class GymSession: NSObject, ObservableObject, WKNavigationDelegate, WKScri
             let configuration = WKWebViewConfiguration()
             configuration.websiteDataStore = .nonPersistent()
             configuration.allowsInlineMediaPlayback = true
+            configuration.setURLSchemeHandler(GymSchemeHandler(pack: pack), forURLScheme: GymPack.scheme)
             configuration.userContentController.add(rules)
             configuration.userContentController.add(self, name: Self.handlerName)
             let view = WKWebView(frame: .zero, configuration: configuration)
@@ -69,14 +106,17 @@ final class GymSession: NSObject, ObservableObject, WKNavigationDelegate, WKScri
             view.isInspectable = true
             #endif
             webView = view
-            view.loadFileURL(pack.entryURL, allowingReadAccessTo: pack.directory)
+            loadStarted = Date()
+            view.load(URLRequest(url: pack.entryURL))
         }
     }
 
     func reload() {
         guard let pack, let webView else { phase = .idle; start(); return }
         phase = .loading
-        webView.loadFileURL(pack.entryURL, allowingReadAccessTo: pack.directory)
+        pageReady = false
+        loadStarted = Date()
+        webView.load(URLRequest(url: pack.entryURL))
     }
 
     func send(_ command: GymCommand) {
@@ -89,6 +129,7 @@ final class GymSession: NSObject, ObservableObject, WKNavigationDelegate, WKScri
         return action.targetFrame != nil && (pack?.allows(action.request.url) == true || blankSubframe) ? .allow : .cancel
     }
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        log.info("document loaded in \(Date().timeIntervalSince(self.loadStarted), format: .fixed(precision: 2)) s")
         if phase == .loading { phase = .ready }
     }
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) { fail(error) }
@@ -98,15 +139,26 @@ final class GymSession: NSObject, ObservableObject, WKNavigationDelegate, WKScri
     }
     private func fail(_ error: Error) {
         guard (error as NSError).code != NSURLErrorCancelled else { return }
+        log.error("load failed: \(error.localizedDescription, privacy: .public)")
         phase = .failed("岩馆页面没有打开：\(error.localizedDescription)")
     }
 
     func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
         guard message.frameInfo.isMainFrame, let parsed = GymMessage(body: message.body) else { return }
         switch parsed {
-        case .ready: if phase == .loading { phase = .ready }
+        case .ready:
+            pageReady = true
+            log.info("page ready in \(Date().timeIntervalSince(self.loadStarted), format: .fixed(precision: 2)) s")
+            if phase == .loading { phase = .ready }
+            #if DEBUG
+            // `-gymOpenWall <id>` / `-gymOpenRoute <id>` on the launch command line, for screenshots and bridge checks.
+            if let wall = UserDefaults.standard.string(forKey: "gymOpenWall") { send(.openWall(wall)) }
+            if let route = UserDefaults.standard.string(forKey: "gymOpenRoute") { send(.openRoute(route)) }
+            #endif
         case .routeSelected(let route): selectedRoute = route
-        case .error(let text): phase = .failed(text.isEmpty ? "岩馆页面报告了一个错误。" : text)
+        case .error(let text):
+            log.error("page error (\(self.pageReady ? "after" : "before", privacy: .public) ready): \(text, privacy: .public)")
+            if !pageReady { phase = .failed(text.isEmpty ? "岩馆页面报告了一个错误。" : text) }
         }
     }
 }
