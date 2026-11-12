@@ -506,7 +506,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "儲存複盤"
+            "value": "儲存筆記"
           }
         }
       }
@@ -681,74 +681,6 @@
         }
       }
     },
-    "关于 BetaBuddy": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "About BetaBuddy"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "BetaBuddy について"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "BetaBuddy 정보"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "关于 BetaBuddy"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "關於 BetaBuddy"
-          }
-        }
-      }
-    },
-    "关于与本地存储": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "About and local storage"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "このアプリと端末内の保存について"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "앱 정보와 기기 내 저장"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "关于与本地存储"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "關於與本機儲存"
-          }
-        }
-      }
-    },
     "分享复盘文字": {
       "localizations": {
         "en": {
@@ -778,7 +710,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "分享複盤文字"
+            "value": "分享筆記文字"
           }
         }
       }
@@ -930,7 +862,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "このトライを削除"
+            "value": "この記録を削除"
           }
         },
         "ko": {
@@ -1644,7 +1576,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "トライを読み込む"
+            "value": "動画を読み込む"
           }
         },
         "ko": {
@@ -1916,7 +1848,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "保存したトライ：%lld。動画と解析は記録ごとに削除できます。アプリを削除すると端末内の記録も消えます。残したいメモは共有から書き出せます。"
+            "value": "保存した記録：%lld。動画と解析は記録ごとに削除できます。アプリを削除すると端末内の記録も消えます。残したいメモは共有から書き出せます。"
           }
         },
         "ko": {
@@ -1934,7 +1866,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "已儲存的攀爬：%lld。可在每筆記錄中刪除原片和分析；移除 App 會刪除本機記錄。需要保留的複盤文字可透過分享匯出。"
+            "value": "已儲存的攀爬：%lld。可在每筆記錄中刪除原片和分析；移除 App 會刪除本機記錄。需要保留的筆記文字可透過分享匯出。"
           }
         }
       }
@@ -3673,6 +3605,40 @@
         }
       }
     },
+    "设置与关于": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settings and About"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定とこのアプリについて"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "설정 및 앱 정보"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "设置与关于"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定與關於"
+          }
+        }
+      }
+    },
     "试试其他筛选条件或搜索词。": {
       "localizations": {
         "en": {
@@ -3703,6 +3669,74 @@
           "stringUnit": {
             "state": "translated",
             "value": "試試其他篩選條件或搜尋字詞。"
+          }
+        }
+      }
+    },
+    "语言": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Language"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "言語"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "언어"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "语言"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "語言"
+          }
+        }
+      }
+    },
+    "跟随系统": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Follow system"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "システムに合わせる"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시스템 설정 따르기"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "跟随系统"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "跟隨系統"
           }
         }
       }

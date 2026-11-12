@@ -50,7 +50,7 @@ final class ImportModel: ObservableObject {
                 selectedURL = nil
                 try? FileManager.default.removeItem(at:url)
             } catch is CancellationError {
-                error = String(localized: "分析已停止。视频仍已选中，可以重新开始。")
+                error = String(localized: "分析已停止。视频仍已选中，可以重新开始。", bundle: AppLanguage.bundle)
             } catch { self.error = error.localizedDescription }
         }
     }
@@ -101,6 +101,13 @@ struct ImportView: View {
             }
         }.interactiveDismissDisabled(model.busy || model.importing)
             .onDisappear { model.clean() }
+            #if DEBUG
+            // `-debugImportVideo <path>` on the launch command line selects a video without the system picker, for tests.
+            .onAppear {
+                if model.selectedURL == nil, let path = UserDefaults.standard.string(forKey: "debugImportVideo"),
+                   let staged = try? stageVideo(URL(fileURLWithPath: path)) { model.replace(staged) }
+            }
+            #endif
             .onChange(of:phase) { _, state in if state == .background && model.busy { model.cancel() } }
             .task(id:photo) {
                 guard let photo else { return }
@@ -110,8 +117,8 @@ struct ImportView: View {
                     if let movie = try await photo.loadTransferable(type:ImportedMovie.self) {
                         if Task.isCancelled { try? FileManager.default.removeItem(at:movie.url) }
                         else { model.replace(movie.url) }
-                    } else { model.error = String(localized: "未能取得视频。若原片在 iCloud，请先在相册中下载。") }
-                } catch { model.error = String(localized: "导入失败：\(error.localizedDescription)") }
+                    } else { model.error = String(localized: "未能取得视频。若原片在 iCloud，请先在相册中下载。", bundle: AppLanguage.bundle) }
+                } catch { model.error = String(localized: "导入失败：\(error.localizedDescription)", bundle: AppLanguage.bundle) }
             }
             .fileImporter(isPresented:$files,allowedContentTypes:[.movie],allowsMultipleSelection:false) { result in
                 switch result {

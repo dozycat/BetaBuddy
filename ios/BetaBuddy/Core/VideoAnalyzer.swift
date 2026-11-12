@@ -7,12 +7,12 @@ enum AnalysisError: LocalizedError {
     case missingModel, invalidVideo, tooLong, tooLarge, noPose, overheated
     var errorDescription: String? {
         switch self {
-        case .missingModel: return String(localized: "安装包缺少姿态模型，请重新安装完整版本。")
-        case .invalidVideo: return String(localized: "无法读取这个视频，请选择未损坏的 MOV 或 MP4 文件。")
-        case .tooLong: return String(localized: "视频超过 3 分钟。请先在相册中裁剪成单趟攀爬。")
-        case .tooLarge: return String(localized: "视频超过 500 MB，请先在相册中裁剪或导出较小版本。")
-        case .noPose: return String(localized: "未识别到足够清晰的人体。请使用全身入镜、光线充足、单人攀爬的视频。")
-        case .overheated: return String(localized: "手机温度较高，已停止分析。稍后可重新开始。")
+        case .missingModel: return String(localized: "安装包缺少姿态模型，请重新安装完整版本。", bundle: AppLanguage.bundle)
+        case .invalidVideo: return String(localized: "无法读取这个视频，请选择未损坏的 MOV 或 MP4 文件。", bundle: AppLanguage.bundle)
+        case .tooLong: return String(localized: "视频超过 3 分钟。请先在相册中裁剪成单趟攀爬。", bundle: AppLanguage.bundle)
+        case .tooLarge: return String(localized: "视频超过 500 MB，请先在相册中裁剪或导出较小版本。", bundle: AppLanguage.bundle)
+        case .noPose: return String(localized: "未识别到足够清晰的人体。请使用全身入镜、光线充足、单人攀爬的视频。", bundle: AppLanguage.bundle)
+        case .overheated: return String(localized: "手机温度较高，已停止分析。稍后可重新开始。", bundle: AppLanguage.bundle)
         }
     }
 }
@@ -20,8 +20,8 @@ enum AnalysisError: LocalizedError {
 enum AnalysisQuality: String, CaseIterable, Identifiable {
     case balanced, detailed
     var id: String { rawValue }
-    var title: String { self == .balanced ? String(localized: "日常回看") : String(localized: "动作细看") }
-    var subtitle: String { self == .balanced ? String(localized: "最高 10 帧/秒 · 较少计算") : String(localized: "最高 15 帧/秒 · 保留更多细节") }
+    var title: String { self == .balanced ? String(localized: "日常回看", bundle: AppLanguage.bundle) : String(localized: "动作细看", bundle: AppLanguage.bundle) }
+    var subtitle: String { self == .balanced ? String(localized: "最高 10 帧/秒 · 较少计算", bundle: AppLanguage.bundle) : String(localized: "最高 15 帧/秒 · 保留更多细节", bundle: AppLanguage.bundle) }
     var fps: Double { self == .balanced ? 10 : 15 }
     var maxDimension: CGFloat { self == .balanced ? 720 : 960 }
 }

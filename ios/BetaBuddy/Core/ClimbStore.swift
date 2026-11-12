@@ -23,7 +23,7 @@ final class ClimbStore: ObservableObject {
             }
         } catch {
             canWrite = false // Never overwrite an unreadable archive with an empty one.
-            self.error = String(localized: "本地记录无法读取，已保留原文件。请检查存储空间或重新启动。")
+            self.error = String(localized: "本地记录无法读取，已保留原文件。请检查存储空间或重新启动。", bundle: AppLanguage.bundle)
         }
     }
 
@@ -41,7 +41,7 @@ final class ClimbStore: ObservableObject {
         let id = UUID()
         let videoName = "\(id).\(stagedVideo.pathExtension.isEmpty ? "mov" : stagedVideo.pathExtension)"
         let thumbnailName = "\(id).jpg"
-        let climb = Climb(id: id, date: Date(), title: title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? String(localized: "今天的攀爬") : String(title.prefix(60)), grade: grade, sent: sent, note: String(note.prefix(1000)), videoName: videoName, thumbnailName: thumbnailName, analysis: analysis)
+        let climb = Climb(id: id, date: Date(), title: String(title.trimmingCharacters(in: .whitespacesAndNewlines).prefix(60)), grade: grade, sent: sent, note: String(note.prefix(1000)), videoName: videoName, thumbnailName: thumbnailName, analysis: analysis)
         do {
             try FileManager.default.moveItem(at: stagedVideo, to: file(videoName))
             try FileManager.default.setAttributes([.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication], ofItemAtPath: file(videoName).path)

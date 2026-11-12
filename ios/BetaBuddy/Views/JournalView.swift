@@ -6,7 +6,7 @@ struct JournalView: View {
     @State private var importing = false
     @State private var search = ""
     private var climbs: [Climb] {
-        store.climbs.filter { (filter == 0 || (filter == 1 ? $0.sent : !$0.sent)) && (search.isEmpty || $0.title.localizedCaseInsensitiveContains(search) || gradeText($0.grade).localizedCaseInsensitiveContains(search)) }
+        store.climbs.filter { (filter == 0 || (filter == 1 ? $0.sent : !$0.sent)) && (search.isEmpty || $0.displayTitle.localizedCaseInsensitiveContains(search) || gradeText($0.grade).localizedCaseInsensitiveContains(search)) }
     }
     var body: some View {
         PaperPage {
@@ -16,9 +16,7 @@ struct JournalView: View {
                     Text(verbatim:"betabuddy").font(.system(size:23,weight:.black,design:.rounded)).tracking(-1)
                 }
                 Spacer()
-                NavigationLink { AboutView() } label: {
-                    Image(systemName:"slider.horizontal.3").frame(width:44,height:44).overlay(Circle().stroke(BB.line))
-                }.accessibilityLabel("关于与本地存储").accessibilityIdentifier("about")
+                SettingsButton()
             }
             VStack(alignment:.leading,spacing:9) {
                 Text("攀爬册").font(.system(size:34,weight:.heavy))
@@ -70,7 +68,7 @@ struct ClimbRow: View {
                 else { BB.lavender.overlay(Image(systemName:"figure.climbing").font(.title)) }
             }.frame(width:84,height:106).clipped().clipShape(RoundedRectangle(cornerRadius:14))
             VStack(alignment:.leading,spacing:9) {
-                Text(verbatim:climb.title).font(.headline).lineLimit(2)
+                Text(verbatim:climb.displayTitle).font(.headline).lineLimit(2)
                 Text(verbatim:"\(gradeText(climb.grade))  /  \(clockText(climb.analysis.duration))").font(.system(size:12,weight:.bold,design:.monospaced))
                 Text(climb.date,format:.dateTime.month().day()).font(.caption).foregroundStyle(BB.muted)
                 Text(climb.sent ? "✓ 已完攀" : "↗ 还在尝试").font(.caption.bold())

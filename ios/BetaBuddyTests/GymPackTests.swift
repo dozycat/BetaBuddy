@@ -162,6 +162,8 @@ final class GymPackTests: XCTestCase {
         XCTAssertEqual(pack.entryURL(hintSeen:false,extraQuery:"?wall=a").absoluteString,"gympack://local/index.html?wall=a")
         XCTAssertEqual(pack.entryURL(hintSeen:true,extraQuery:"").absoluteString,"gympack://local/index.html?hint=0")
         XCTAssertEqual(pack.entryURL(hintSeen:false,language:"ja").absoluteString,"gympack://local/index.html?lang=ja")
+        XCTAssertEqual(pack.entryURL(hintSeen:false,language:AppLanguage.resolve(selection:"ko",system:["en-US"])).absoluteString,
+                       "gympack://local/index.html?lang=ko")
         XCTAssertEqual(pack.entryURL(hintSeen:true,language:"zh-Hant",extraQuery:"sheet=half").absoluteString,
                        "gympack://local/index.html?hint=0&lang=zh-Hant&sheet=half")
         for query in ["route=x#frag","a=1&b=%E7%BA%BF"] {
@@ -172,6 +174,7 @@ final class GymPackTests: XCTestCase {
     }
     func testPageMessages() {
         XCTAssertEqual(GymMessage(body:["type":"ready"]),.ready)
+        XCTAssertEqual(GymMessage(body:["type":"openSettings"]),.openSettings)
         XCTAssertEqual(GymMessage(body:["type":"hintSeen"]),.hintSeen)
         XCTAssertEqual(GymMessage(body:["type":"routeSelected","id":"r-1","name":"紫色 3"]),.routeSelected(GymRoute(id:"r-1",name:"紫色 3")))
         XCTAssertEqual(GymMessage(body:["type":"routeSelected"]),.routeSelected(nil))

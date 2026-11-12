@@ -56,18 +56,88 @@ final class LocalizationTests: XCTestCase {
         XCTAssertEqual(english?.localizedString(forKey: "岩馆", value: nil, table: nil), "Gym")
         XCTAssertEqual(english?.localizedString(forKey: "导入失败：%@", value: nil, table: nil), "Import failed: %@")
     }
-    func testLanguageResolutionAndPolicyFallback() {
-        XCTAssertEqual(AppLanguage.resolve(["ja", "en"]), "ja")
-        XCTAssertEqual(AppLanguage.resolve(["zh-Hant"]), "zh-Hant")
-        XCTAssertEqual(AppLanguage.resolve(["fr"]), "en")
-        XCTAssertEqual(AppLanguage.resolve([]), "en")
+    func testSystemPreferencesMapToSupportedLanguagesAndFallBackToEnglish() {
+        XCTAssertEqual(AppLanguage.match(["ja-JP", "en-US"]), "ja")
+        XCTAssertEqual(AppLanguage.match(["zh-Hans-CN"]), "zh-Hans")
+        XCTAssertEqual(AppLanguage.match(["zh-CN"]), "zh-Hans")
+        XCTAssertEqual(AppLanguage.match(["zh-TW"]), "zh-Hant")
+        XCTAssertEqual(AppLanguage.match(["zh-Hant-HK"]), "zh-Hant")
+        XCTAssertEqual(AppLanguage.match(["en-GB"]), "en")
+        XCTAssertEqual(AppLanguage.match(["ko-KR"]), "ko")
+        XCTAssertEqual(AppLanguage.match(["fr-FR", "ko-KR"]), "ko")
+        XCTAssertEqual(AppLanguage.match(["fr-FR", "de-DE"]), "en")   // not Simplified Chinese
+        XCTAssertEqual(AppLanguage.match([]), "en")
+    }
+    func testInAppChoiceWinsOverSystemAndPersists() throws {
+        XCTAssertEqual(AppLanguage.resolve(selection: "ko", system: ["ja-JP"]), "ko")
+        XCTAssertEqual(AppLanguage.resolve(selection: nil, system: ["ja-JP"]), "ja")
+        XCTAssertEqual(AppLanguage.resolve(selection: "tlh", system: ["ja-JP"]), "ja")
+        let suite = "language-tests-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        XCTAssertNil(AppLanguage.selection(in: defaults))
+        AppLanguage.select("ja", in: defaults)
+        XCTAssertEqual(AppLanguage.selection(in: defaults), "ja")
+        XCTAssertEqual(UserDefaults(suiteName: suite)?.string(forKey: AppLanguage.selectionKey), "ja")
+        AppLanguage.select("tlh", in: defaults)       // unknown codes clear the choice
+        XCTAssertNil(AppLanguage.selection(in: defaults))
+        AppLanguage.select("en", in: defaults)
+        AppLanguage.select(nil, in: defaults)
+        XCTAssertNil(AppLanguage.selection(in: defaults))
+    }
+    @MainActor func testLanguageSettingsPublishesTheChoiceAndRestoresIt() throws {
+        let suite = "language-tests-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let settings = LanguageSettings(defaults: defaults)
+        XCTAssertNil(settings.selection)
+        XCTAssertEqual(settings.language, AppLanguage.match(Locale.preferredLanguages))
+        settings.select("ko")
+        XCTAssertEqual(settings.selection, "ko")
+        XCTAssertEqual(settings.language, "ko")
+        XCTAssertEqual(settings.locale.language.languageCode?.identifier, "ko")
+        let relaunched = LanguageSettings(defaults: defaults)
+        XCTAssertEqual(relaunched.language, "ko")
+        relaunched.select(nil)
+        XCTAssertNil(LanguageSettings(defaults: defaults).selection)
+    }
+    func testTextAndGymLanguageFollowTheChosenLanguage() throws {
+        XCTAssertEqual(String(localized: "岩馆", bundle: AppLanguage.bundle(for: "en")), "Gym")
+        XCTAssertEqual(String(localized: "岩馆", bundle: AppLanguage.bundle(for: "ja")), "ジム")
+        let reason = "x"
+        XCTAssertEqual(String(localized: "导入失败：\(reason)", bundle: AppLanguage.bundle(for: "ko")), "가져오기 실패: x")
+        XCTAssertEqual(AppLanguage.locale(for: "zh-Hant").language.script?.identifier, "Hant")
+        let chosen = AppLanguage.resolve(selection: "ja", system: ["en-US"])
+        let entry = "gympack://local/index.html?lang=\(chosen)"
+        XCTAssertEqual(entry, "gympack://local/index.html?lang=ja")
         XCTAssertTrue(AppLanguage.supported.contains(AppLanguage.current))
+        XCTAssertEqual(Set(AppLanguage.nativeNames.keys), Set(AppLanguage.supported))
+    }
+    func testPolicyFallback() {
         XCTAssertEqual(PrivacyPolicyView.resourceName(for: "zh-Hans"), "PrivacyPolicy.zh-Hans")
         XCTAssertEqual(PrivacyPolicyView.resourceName(for: "zh-Hant"), "PrivacyPolicy.zh-Hant")
         for language in ["en", "ja", "ko"] { XCTAssertEqual(PrivacyPolicyView.resourceName(for: language), "PrivacyPolicy.en") }
         for language in languages {
             XCTAssertNotNil(Bundle.main.url(forResource: PrivacyPolicyView.resourceName(for: language), withExtension: "txt"), language)
         }
+    }
+    @MainActor func testUnnamedClimbsFollowTheInterfaceLanguage() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = ClimbStore(root: root)
+        let staged = root.appendingPathComponent("fixture.mov")
+        try Data([0]).write(to: staged)
+        let analysis = PoseAnalysis(frames: [], sampledFrames: 0, duration: 1, aspectRatio: 1, processingSeconds: 0, moments: [])
+        var climb = try store.save(title: "  ", grade: ungradedValue, sent: false, note: "", stagedVideo: staged, thumbnail: Data(), analysis: analysis)
+        XCTAssertEqual(climb.title, "")                       // no language is written into the archive
+        XCTAssertFalse(climb.displayTitle.isEmpty)
+        let shown = climb.displayTitle
+        for stored in ["今天的攀爬", "Today’s climb", "今日のクライミング", "오늘의 등반"] {   // defaults saved by earlier builds
+            climb.title = stored
+            XCTAssertEqual(climb.displayTitle, shown, stored)
+        }
+        climb.title = "周日的紫色线路"
+        XCTAssertEqual(climb.displayTitle, "周日的紫色线路")
     }
     func testStoredValuesHaveDisplayText() {
         XCTAssertFalse(gradeText(ungradedValue).isEmpty)

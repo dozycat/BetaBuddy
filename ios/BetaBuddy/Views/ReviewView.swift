@@ -12,11 +12,11 @@ final class Playback: ObservableObject {
     var rate: Float = 1
     func load(_ url: URL) {
         guard player.currentItem == nil else { return }
-        guard FileManager.default.fileExists(atPath:url.path) else { failure = String(localized: "原片文件不存在，仍可查看分析与笔记。"); return }
+        guard FileManager.default.fileExists(atPath:url.path) else { failure = String(localized: "原片文件不存在，仍可查看分析与笔记。", bundle: AppLanguage.bundle); return }
         let item = AVPlayerItem(url:url)
         player.replaceCurrentItem(with:item)
         statusObserver = item.observe(\.status,options:[.new]) { [weak self] item, _ in
-            if item.status == .failed { Task { @MainActor in self?.failure = String(localized: "原片无法播放，请检查视频文件。") } }
+            if item.status == .failed { Task { @MainActor in self?.failure = String(localized: "原片无法播放，请检查视频文件。", bundle: AppLanguage.bundle) } }
         }
         observer = player.addPeriodicTimeObserver(forInterval:CMTime(seconds:0.05,preferredTimescale:600),queue:.main) { [weak self] value in
             MainActor.assumeIsolated {
@@ -110,8 +110,8 @@ final class Reanalysis: ObservableObject {
                 }
                 try Task.checkCancellation()
                 try store.replaceAnalysis(climb, analysis: result)
-                message = String(localized: "骨架分析已更新。")
-            } catch is CancellationError { message = String(localized: "已停止，原分析和笔记已保留。") }
+                message = String(localized: "骨架分析已更新。", bundle: AppLanguage.bundle)
+            } catch is CancellationError { message = String(localized: "已停止，原分析和笔记已保留。", bundle: AppLanguage.bundle) }
             catch { message = error.localizedDescription }
         }
     }
@@ -134,23 +134,23 @@ struct ReviewView: View {
     var climb: Climb
     private var current: Climb { store.climbs.first { $0.id == climb.id } ?? climb }
     private var report: String {
-        let status = current.sent ? String(localized: "已完攀") : String(localized: "还在尝试")
-        let coverage = String(localized: "可用髋部检测：\(percentText(current.analysis.coverage)) 的采样帧")
-        let caveat = String(localized: "二维姿态辅助回看；候选动作未经人工确认。")
-        return "BetaBuddy · \(current.title)\n\(gradeText(current.grade)) · \(status) · \(clockText(current.analysis.duration))\n\(coverage)\n\(current.note)\n\n\(caveat)"
+        let status = current.sent ? String(localized: "已完攀", bundle: AppLanguage.bundle) : String(localized: "还在尝试", bundle: AppLanguage.bundle)
+        let coverage = String(localized: "可用髋部检测：\(percentText(current.analysis.coverage)) 的采样帧", bundle: AppLanguage.bundle)
+        let caveat = String(localized: "二维姿态辅助回看；候选动作未经人工确认。", bundle: AppLanguage.bundle)
+        return "BetaBuddy · \(current.displayTitle)\n\(gradeText(current.grade)) · \(status) · \(clockText(current.analysis.duration))\n\(coverage)\n\(current.note)\n\n\(caveat)"
     }
     var body: some View {
         PaperPage {
             HStack { Stamp(text:"THE REPLAY"); Spacer(); Text(verbatim:gradeText(climb.grade)).font(BB.display(28)).lineLimit(1).minimumScaleFactor(0.6) }
             VStack(alignment:.leading,spacing:8) {
-                Text(verbatim:climb.title).font(.title.bold())
+                Text(verbatim:current.displayTitle).font(.title.bold())
                 Text(climb.date,format:.dateTime.year().month().day()).font(.caption).foregroundStyle(BB.muted)
             }
             VStack(spacing:0) {
                 ZStack(alignment:.topLeading) {
                     PlayerSurface(player:playback.player)
                     if skeleton { SkeletonOverlay(analysis:current.analysis,time:playback.time) }
-                    Text(verbatim:!skeleton ? "ORIGINAL" : current.analysis.nearestFrame(to: playback.time) == nil ? String(localized: "暂未可靠识别") : "33 POINTS / LOCAL").font(.system(size:10,weight:.bold,design:.monospaced)).tracking(1)
+                    Text(verbatim:!skeleton ? "ORIGINAL" : current.analysis.nearestFrame(to: playback.time) == nil ? String(localized: "暂未可靠识别", bundle: AppLanguage.bundle) : "33 POINTS / LOCAL").font(.system(size:10,weight:.bold,design:.monospaced)).tracking(1)
                         .padding(9).background(BB.lime,in:Capsule()).padding(12)
                 }.frame(height:340).clipShape(RoundedRectangle(cornerRadius:20))
                 VStack(spacing:12) {
@@ -211,11 +211,11 @@ struct ReviewView: View {
                 Toggle("这趟完攀了",isOn:$sent).tint(BB.ink)
                 Button(savedNotice ? "已保存 ✓" : "保存复盘") {
                     do { try store.update(climb,note:note,sent:sent); savedNotice = true }
-                    catch { store.error = String(localized: "笔记未能保存：\(error.localizedDescription)") }
+                    catch { store.error = String(localized: "笔记未能保存：\(error.localizedDescription)", bundle: AppLanguage.bundle) }
                 }.buttonStyle(.borderedProminent).foregroundStyle(BB.paper)
             }.padding(20).background(BB.lavender,in:RoundedRectangle(cornerRadius:22))
             ShareLink(item:report) { Label("分享复盘文字",systemImage:"square.and.arrow.up").frame(maxWidth:.infinity,minHeight:44) }.buttonStyle(.bordered)
-            Button("删除这一趟",role:.destructive) { confirmDelete = true }.font(.caption).frame(maxWidth:.infinity,minHeight:44)
+            Button("删除这一趟",role:.destructive) { confirmDelete = true }.font(.caption).frame(maxWidth:.infinity,minHeight:44).accessibilityIdentifier("deleteClimb")
             Text("FULL / FLOAT16 · \(current.analysis.sampledFrames) 采样帧 · 分析用时 \(Int(current.analysis.processingSeconds)) 秒").font(.system(size:9,design:.monospaced)).foregroundStyle(BB.muted)
         }.navigationTitle("动作回看").navigationBarTitleDisplayMode(.inline)
             .onAppear { note = current.note; sent = current.sent; playback.load(store.file(climb.videoName)) }
@@ -226,7 +226,7 @@ struct ReviewView: View {
             .confirmationDialog("删除原片、分析和笔记？此操作无法撤销。",isPresented:$confirmDelete,titleVisibility:.visible) {
                 Button("删除这一趟",role:.destructive) {
                     do { playback.unload(); try store.delete(climb); dismiss() }
-                    catch { store.error = String(localized: "未能删除：\(error.localizedDescription)") }
+                    catch { store.error = String(localized: "未能删除：\(error.localizedDescription)", bundle: AppLanguage.bundle) }
                 }
             }
     }

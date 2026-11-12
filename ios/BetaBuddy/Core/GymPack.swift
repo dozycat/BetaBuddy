@@ -186,6 +186,7 @@ struct GymRoute: Codable, Equatable, Sendable {
 enum GymMessage: Equatable, Sendable {
     case ready
     case hintSeen
+    case openSettings
     case routeSelected(GymRoute?)
     case error(String)
 
@@ -194,6 +195,7 @@ enum GymMessage: Equatable, Sendable {
         switch type {
         case "ready": self = .ready
         case "hintSeen": self = .hintSeen
+        case "openSettings": self = .openSettings
         case "routeSelected":
             if let id = body["id"] as? String, !id.isEmpty {
                 self = .routeSelected(GymRoute(id: String(id.prefix(120)), name: String((body["name"] as? String ?? id).prefix(120))))

@@ -1,14 +1,20 @@
 import XCTest
 
 final class NavigationTests: XCTestCase {
-    func testBothEntriesInSimplifiedChinese() { walk(language:"zh-Hans", locale:"zh_CN", gym:"岩馆", logbook:"攀爬册", about:"关于 BetaBuddy", done:"完成") }
-    func testBothEntriesInEnglish() { walk(language:"en", locale:"en_US", gym:"Gym", logbook:"Logbook", about:"About BetaBuddy", done:"Done") }
+    func testBothEntriesInSimplifiedChinese() { walk(language:"zh-Hans", locale:"zh_CN", gym:"岩馆", logbook:"攀爬册", settings:"设置与关于", done:"完成") }
+    func testBothEntriesInEnglish() { walk(language:"en", locale:"en_US", gym:"Gym", logbook:"Logbook", settings:"Settings and About", done:"Done") }
+
+    private func launch(_ language: String, _ locale: String, reset: Bool) -> XCUIApplication {
+        let app = XCUIApplication()
+        // `-resetLanguage` clears an in-app choice left by an earlier run, so the system language applies.
+        app.launchArguments = ["-AppleLanguages","(\(language))","-AppleLocale",locale] + (reset ? ["-resetLanguage","YES"] : [])
+        app.launch()
+        return app
+    }
 
     // Works with or without a gym pack: without one the first entry explains itself; with one it opens the page.
-    private func walk(language: String, locale: String, gym: String, logbook: String, about: String, done: String) {
-        let app = XCUIApplication()
-        app.launchArguments = ["-AppleLanguages","(\(language))","-AppleLocale",locale]
-        app.launch()
+    private func walk(language: String, locale: String, gym: String, logbook: String, settings: String, done: String) {
+        let app = launch(language, locale, reset:true)
         // The app opens on the gym.
         XCTAssertTrue(app.buttons["tabGym"].waitForExistence(timeout:10))
         XCTAssertEqual(app.buttons["tabGym"].label,gym)
@@ -31,11 +37,51 @@ final class NavigationTests: XCTestCase {
         XCTAssertFalse(app.buttons["startAnalysis"].isEnabled)
         XCTAssertEqual(app.buttons["importDone"].label,done)
         app.buttons["importDone"].tap()
+        // Settings from the logbook's top-right button.
         XCTAssertTrue(app.buttons["about"].waitForExistence(timeout:5))
         app.buttons["about"].tap()
-        XCTAssertTrue(app.staticTexts[about].waitForExistence(timeout:5))
-        app.navigationBars.buttons.firstMatch.tap()
+        XCTAssertTrue(app.staticTexts[settings].waitForExistence(timeout:5))
+        XCTAssertTrue(app.buttons["language-system"].isSelected)
+        app.buttons["settingsDone"].tap()
         app.buttons["tabGym"].tap()
         XCTAssertTrue(app.buttons["tabGym"].isSelected)
+    }
+
+    func testChangingLanguageInTheAppAppliesAtOnceAndSurvivesRelaunch() {
+        var app = launch("zh-Hans", "zh_CN", reset:true)
+        XCTAssertTrue(app.buttons["tabGym"].waitForExistence(timeout:10))
+        XCTAssertEqual(app.buttons["tabGym"].label,"岩馆")
+        XCTAssertEqual(app.buttons["tabJournal"].label,"攀爬册")
+        // Settings from the bar, reachable from the gym as well.
+        app.buttons["settings"].tap()
+        XCTAssertTrue(app.buttons["language-en"].waitForExistence(timeout:5))
+        app.buttons["language-en"].tap()
+        XCTAssertTrue(app.staticTexts["Settings and About"].waitForExistence(timeout:5))
+        XCTAssertTrue(app.buttons["language-en"].isSelected)
+        app.buttons["settingsDone"].tap()
+        XCTAssertEqual(app.buttons["tabGym"].label,"Gym")
+        XCTAssertEqual(app.buttons["tabJournal"].label,"Logbook")
+        app.buttons["tabJournal"].tap()
+        XCTAssertTrue(app.staticTexts["Logbook"].waitForExistence(timeout:5))
+        // Japanese, from the logbook's top-right button this time.
+        app.buttons["about"].tap()
+        app.buttons["language-ja"].tap()
+        XCTAssertTrue(app.staticTexts["設定とこのアプリについて"].waitForExistence(timeout:5))
+        app.buttons["settingsDone"].tap()
+        XCTAssertEqual(app.buttons["tabGym"].label,"ジム")
+        XCTAssertEqual(app.buttons["tabJournal"].label,"ログブック")
+        XCTAssertTrue(app.staticTexts["ログブック"].exists)
+        // The choice outlives the process, whatever the system language is.
+        app.terminate()
+        app = launch("zh-Hans", "zh_CN", reset:false)
+        XCTAssertTrue(app.buttons["tabGym"].waitForExistence(timeout:10))
+        XCTAssertEqual(app.buttons["tabGym"].label,"ジム")
+        XCTAssertEqual(app.buttons["tabJournal"].label,"ログブック")
+        // Back to following the system.
+        app.buttons["settings"].tap()
+        XCTAssertTrue(app.buttons["language-ja"].isSelected)
+        app.buttons["language-system"].tap()
+        app.buttons["settingsDone"].tap()
+        XCTAssertEqual(app.buttons["tabGym"].label,"岩馆")
     }
 }

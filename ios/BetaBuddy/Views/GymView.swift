@@ -60,6 +60,9 @@ final class GymSession: NSObject, ObservableObject, WKNavigationDelegate, WKScri
     @Published private(set) var webView: WKWebView?
     /// Last route picked in the page. Kept for linking a recorded climb to a route (id and name only).
     @Published private(set) var selectedRoute: GymRoute?
+    /// Bumped when the page asks for the app's settings (`openSettings`).
+    @Published private(set) var settingsRequests = 0
+    private var routeToRestore: String?
     /// Set by the page's `ready`. Before it, a page error means the scene never came up; after it,
     /// errors (an unknown route id, say) are the page's own to show and must not cover it.
     private var pageReady = false
@@ -86,7 +89,7 @@ final class GymSession: NSObject, ObservableObject, WKNavigationDelegate, WKScri
             // Fail closed: without the network block the page is not shown at all.
             guard let rules = try? await WKContentRuleListStore.default()
                 .compileContentRuleList(forIdentifier: "gym-offline", encodedContentRuleList: Self.blockRules) else {
-                phase = .failed(String(localized: "无法启用离线保护，岩馆页面没有打开。"))
+                phase = .failed(String(localized: "无法启用离线保护，岩馆页面没有打开。", bundle: AppLanguage.bundle))
                 return
             }
             let configuration = WKWebViewConfiguration()
@@ -129,6 +132,14 @@ final class GymSession: NSObject, ObservableObject, WKNavigationDelegate, WKScri
         webView.load(entryRequest(pack))
     }
 
+    /// The page takes its language from the entry URL, so a change means loading it again.
+    /// The route that was open is opened again once the page is ready.
+    func languageChanged() {
+        guard webView != nil else { if case .failed = phase { phase = .idle }; return }
+        routeToRestore = selectedRoute?.id
+        reload()
+    }
+
     func send(_ command: GymCommand) {
         guard phase == .ready else { return }
         webView?.evaluateJavaScript(command.script)
@@ -145,12 +156,12 @@ final class GymSession: NSObject, ObservableObject, WKNavigationDelegate, WKScri
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) { fail(error) }
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) { fail(error) }
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
-        phase = .failed(String(localized: "岩馆页面被系统回收了，可能是内存不足。"))
+        phase = .failed(String(localized: "岩馆页面被系统回收了，可能是内存不足。", bundle: AppLanguage.bundle))
     }
     private func fail(_ error: Error) {
         guard (error as NSError).code != NSURLErrorCancelled else { return }
         log.error("load failed: \(error.localizedDescription, privacy: .public)")
-        phase = .failed(String(localized: "岩馆页面没有打开：\(error.localizedDescription)"))
+        phase = .failed(String(localized: "岩馆页面没有打开：\(error.localizedDescription)", bundle: AppLanguage.bundle))
     }
 
     func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
@@ -160,16 +171,18 @@ final class GymSession: NSObject, ObservableObject, WKNavigationDelegate, WKScri
             pageReady = true
             log.info("page ready in \(Date().timeIntervalSince(self.loadStarted), format: .fixed(precision: 2)) s")
             if phase == .loading { phase = .ready }
+            if let route = routeToRestore { routeToRestore = nil; send(.openRoute(route)) }
             #if DEBUG
             // `-gymOpenWall <id>` / `-gymOpenRoute <id>` on the launch command line, for screenshots and bridge checks.
             if let wall = UserDefaults.standard.string(forKey: "gymOpenWall") { send(.openWall(wall)) }
             if let route = UserDefaults.standard.string(forKey: "gymOpenRoute") { send(.openRoute(route)) }
             #endif
+        case .openSettings: settingsRequests += 1
         case .hintSeen: UserDefaults.standard.set(true, forKey: Self.hintSeenKey)
         case .routeSelected(let route): selectedRoute = route
         case .error(let text):
             log.error("page error (\(self.pageReady ? "after" : "before", privacy: .public) ready): \(text, privacy: .public)")
-            if !pageReady { phase = .failed(text.isEmpty ? String(localized: "岩馆页面报告了一个错误。") : text) }
+            if !pageReady { phase = .failed(text.isEmpty ? String(localized: "岩馆页面报告了一个错误。", bundle: AppLanguage.bundle) : text) }
         }
     }
 }
@@ -187,7 +200,7 @@ struct GymView: View {
         switch session.status {
         case .missing:
             unavailable(title:"这个构建没有\n内置岩馆数据",
-                        detail:String(localized: "场馆模型、线路和攀爬模拟随正式安装包提供，不在公开源码里。攀爬册不受影响。"))
+                        detail:String(localized: "场馆模型、线路和攀爬模拟随正式安装包提供，不在公开源码里。攀爬册不受影响。", bundle: AppLanguage.bundle))
         case .invalid(let error):
             unavailable(title:"岩馆数据不完整", detail:Self.describe(error))
         case .ready(let pack):
@@ -197,7 +210,7 @@ struct GymView: View {
 
     private func unavailable(title: LocalizedStringKey, detail: String) -> some View {
         PaperPage {
-            Stamp(text:"GYM / NOT IN THIS BUILD")
+            HStack { Stamp(text:"GYM / NOT IN THIS BUILD"); Spacer(); SettingsButton() }
             VStack(alignment:.leading,spacing:18) {
                 Image(systemName:"map").font(.system(size:44,weight:.light))
                 Text(title).font(.title.bold()).accessibilityIdentifier("gymUnavailable")
@@ -208,7 +221,7 @@ struct GymView: View {
 
     private func intro(_ pack: GymPack) -> some View {
         PaperPage {
-            Stamp(text:"GYM / UNOFFICIAL")
+            HStack { Stamp(text:"GYM / UNOFFICIAL"); Spacer(); SettingsButton() }
             Text(verbatim:pack.manifest.displayName()).font(.system(size:26,weight:.heavy)).fixedSize(horizontal:false,vertical:true).accessibilityIdentifier("gymName")
             Text("\(pack.manifest.routeCount) 条线路 · 数据版本 \(pack.manifest.packVersion)")
                 .font(.system(size:12,weight:.bold,design:.monospaced))
@@ -250,9 +263,9 @@ struct GymView: View {
 
     static func describe(_ error: GymPackError) -> String {
         switch error {
-        case .unreadableManifest: String(localized: "数据包清单无法读取。请重新安装完整版本。")
-        case .unsupportedSchema(let schema): String(localized: "数据包格式（\(schema)）比这个版本的应用新。请更新应用。")
-        case .unsafePath, .missingFile: String(localized: "数据包缺少文件。请重新安装完整版本。")
+        case .unreadableManifest: String(localized: "数据包清单无法读取。请重新安装完整版本。", bundle: AppLanguage.bundle)
+        case .unsupportedSchema(let schema): String(localized: "数据包格式（\(schema)）比这个版本的应用新。请更新应用。", bundle: AppLanguage.bundle)
+        case .unsafePath, .missingFile: String(localized: "数据包缺少文件。请重新安装完整版本。", bundle: AppLanguage.bundle)
         }
     }
 }
