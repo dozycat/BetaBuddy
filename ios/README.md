@@ -51,15 +51,17 @@ xcodebuild -project ios/BetaBuddy.xcodeproj -scheme BetaBuddy \
 
 开发语言是简体中文（`project.yml` 的 `developmentLanguage: zh-Hans`），另有繁体中文、英语、日语、韩语。全部文字在 `BetaBuddy/Resources/Localizable.xcstrings`，相册权限说明在 `InfoPlist.xcstrings`；键是简体中文原文。XcodeGen 没有 `knownRegions` 选项，工程文件里只列出开发语言，其余语言由 String Catalog 在构建时生成对应的 `.lproj`，测试会确认五种语言都进了应用包。
 
+界面语言由 `AppLanguage.current` 决定：应用内的选择（`UserDefaults` 的 `appLanguage`）优先，否则按系统的首选语言匹配，都不匹配用英语。文字不依赖进程启动时的语言：SwiftUI 的文字跟随根视图注入的 `\.locale`，非视图代码一律写 `String(localized: "…", bundle: AppLanguage.bundle)`，格式化用 `AppLanguage.locale`。这样在应用内切换语言不用重启。
+
 用某种语言启动：
 
 ```sh
 xcrun simctl launch booted com.betabuddy.ios -AppleLanguages "(ja)"
 ```
 
-调试用的启动参数：`-initialTab 0`（岩馆，默认）或 `-initialTab 1`（攀爬册）；Debug 构建另有 `-gymQuery`、`-gymOpenWall`、`-gymOpenRoute`，见 [../docs/ios/gym-design.md](../docs/ios/gym-design.md)。
+系统语言用 `-AppleLanguages` 指定时，之前在应用内选过的语言仍然优先。调试用的启动参数：`-initialTab 0`（岩馆，默认）或 `-initialTab 1`（攀爬册）；Debug 构建里 `-resetLanguage YES` 清掉应用内的语言选择，`-debugImportVideo <路径>` 在导入表单里直接选中一段视频（不经过系统选择器）；Debug 构建另有 `-gymQuery`、`-gymOpenWall`、`-gymOpenRoute`，见 [../docs/ios/gym-design.md](../docs/ios/gym-design.md)。
 
-核对源码里的文字是否都在目录里：`xcodebuild -exportLocalizations -project ios/BetaBuddy.xcodeproj -localizationPath <输出目录> -exportLanguage en` 会按编译器看到的键导出，和 `Localizable.xcstrings` 的键比对即可。
+核对源码里的文字是否都在目录里：`xcodebuild -exportLocalizations -project ios/BetaBuddy.xcodeproj -localizationPath <输出目录> -exportLanguage en` 会按编译器看到的键导出，和 `Localizable.xcstrings` 的键比对即可。注意这条命令会顺手改写仓库里的两个 `.xcstrings` 文件（重排格式，并往 `InfoPlist.xcstrings` 里加未翻译的条目），比对完用 `git checkout` 还原。
 
 ## 姿态模型与推理管线
 

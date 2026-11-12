@@ -12,7 +12,7 @@
 - Privacy Policy URL：https://betabuddy-support.dozycfs.chatgpt.site/privacy
 - 隐私标签：根据当前实现，选择“不收集数据”；提交前复核最终打包 SDK 和实际行为
 - 登录：无需账号
-- 应用内语言：简体中文、繁体中文、英语、日语、韩语
+- 应用内语言：简体中文、繁体中文、英语、日语、韩语；默认跟随系统，可在应用内切换
 
 ## 宣传文本
 

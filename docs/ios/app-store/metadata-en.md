@@ -43,7 +43,7 @@ Pose results are an aid for review. Occlusion, other people in frame and camera 
 
 Requires iOS 17 or later. If a video exists only in iCloud, the system may need to download the original first. Local records are not restored from system backups; share out any notes you want to keep.
 
-The app’s interface is available in English, Simplified Chinese, Traditional Chinese, Japanese and Korean.
+The app’s interface is available in English, Simplified Chinese, Traditional Chinese, Japanese and Korean. It follows your system language, and you can switch it in the app at any time.
 
 ## What’s New (1.1.0)
 
