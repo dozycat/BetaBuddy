@@ -1,10 +1,10 @@
 # BetaBuddy 发布状态
 
-2026-11-13：1.1.0 (5) 已签名归档并上传，关联到 App Store Connect 的 1.1.0 版本，出口合规已完成。构建包含场馆数据包 1.2.1、72 条线路和五种界面语言；在 iPhone 17 Pro Max 上确认英语岩馆与线路显示正常。中英商店文案、截图、审核备注、支持与隐私页面已更新。待附上 Apple 上次要求的真机全流程录屏后提交审核。
+2026-11-13：1.1.0 (5) 已签名归档并上传，关联到 App Store Connect 的 1.1.0 版本，出口合规已完成。构建包含场馆数据包 1.2.1、72 条线路和五种界面语言；在 iPhone 17 Pro Max 上验证岩馆、线路、视频导入、分析与回看。中英商店文案、截图、审核备注、支持与隐私页面已更新。真机操作录屏已作为审核附件上传；版本已正式提交 Apple 审核。
 
 ## 现在
 
-**1.1.0 (5) 已上传并选为提审构建；版本仍为“准备提交”。**
+**1.1.0 (5) 已提交 Apple，App Store Connect 状态为“等待审核”。** 提交 ID：`5e045882-a264-43ba-9819-269ad676f6b0`；[审核记录](https://appstoreconnect.apple.com/apps/6809249574/distribution/reviewsubmissions/details/5e045882-a264-43ba-9819-269ad676f6b0)。审核通过后按后台设置自动发布。
 
 - 构建 3（2026-11-12 23:35 CST 上传成功）：四个入口的界面，只有简体中文。
 - 构建 4：两个入口——岩馆在前，攀爬册在后，导入并入攀爬册；支持简体中文、繁体中文、英语、日语、韩语。已上传，不提审。
@@ -12,7 +12,7 @@
 
 设计见 [../product-design.md](../product-design.md) 和 [../gym-design.md](../gym-design.md)，文案与提审清单见 [release-1.1.0.md](release-1.1.0.md)，流程见 [RELEASE.md](RELEASE.md)。
 
-提审前还差：真机全流程录屏和说明（Apple 上次按 Guideline 2.1 要求的材料），上传为审核附件，再将版本提交审核。
+审核附件为 44 秒 iPhone 17 Pro Max 实机操作录屏，覆盖岩馆选墙、选线、播放和身材切换，以及攀爬册视频导入、机上分析、回看和保存记录。审核备注说明了操作路径、离线功能、地区供应及示例视频中攀爬者较小造成的识别局限。
 
 应用目前没有在任何地区上架。
 
@@ -40,10 +40,10 @@
 - 中文名称、副标题、描述、关键词和推广文本；主要类别为体育。
 - 审核联系人已按用户提供的信息填写，支持邮箱 hi@dozycat.ai。
 - 支持网站：https://betabuddy-support.dozycfs.chatgpt.site
-- 隐私政策：https://betabuddy-support.dozycfs.chatgpt.site/privacy
+- 隐私政策：https://betabuddy-support.dozycfs.chatgpt.site/privacy；英文版：https://betabuddy-support.dozycfs.chatgpt.site/privacy/en
 - 两个公开网址无需登录，HTTP 200，应用内已链接；同时提供离线政策。
 - 隐私标签“不收集数据”已在后台发布。
-- 3 张真实截图已上传至 6.9 英寸栏目，1320 × 2868，小尺寸自动使用这些文件。
+- 1.1.0 中英文各 4 张截图已上传至 6.9 英寸（1320 × 2868）和必需的中尺寸（1206 × 2622）栏目。
 - 年龄分级问卷主要地区结果为 9+；低于 iOS 26 的系统为 4+，区域例外以 Apple 为准。
 - 已保存内容版权答复及本版出口加密问卷。
 - 用户明确授权接受更新协议；个人账户确认接受 2026-08-18 版 Apple Developer Program License Agreement，接受日期 2026-09-07。
