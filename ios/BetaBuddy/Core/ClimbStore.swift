@@ -27,7 +27,7 @@ final class ClimbStore: ObservableObject {
         }
     }
 
-    var climbs: [Climb] { archive.climbs.sorted { $0.date > $1.date } }
+    var climbs: [Climb] { archive.climbs.sorted { $0.climbingDate > $1.climbingDate } }
     func file(_ name: String) -> URL { root.appendingPathComponent(name) }
 
     private func persist(_ next: Archive) throws {
@@ -37,11 +37,11 @@ final class ClimbStore: ObservableObject {
         archive = next
     }
 
-    func save(title: String, grade: String, sent: Bool, note: String, stagedVideo: URL, thumbnail: Data, analysis: PoseAnalysis) throws -> Climb {
+    func save(title: String, grade: String, sent: Bool, note: String, stagedVideo: URL, thumbnail: Data, analysis: PoseAnalysis, gymId: String? = nil, gymName: String? = nil, climbedAt: Date? = nil, folderId: UUID? = nil) throws -> Climb {
         let id = UUID()
         let videoName = "\(id).\(stagedVideo.pathExtension.isEmpty ? "mov" : stagedVideo.pathExtension)"
         let thumbnailName = "\(id).jpg"
-        let climb = Climb(id: id, date: Date(), title: String(title.trimmingCharacters(in: .whitespacesAndNewlines).prefix(60)), grade: grade, sent: sent, note: String(note.prefix(1000)), videoName: videoName, thumbnailName: thumbnailName, analysis: analysis)
+        let climb = Climb(id: id, date: Date(), title: String(title.trimmingCharacters(in: .whitespacesAndNewlines).prefix(60)), grade: grade, sent: sent, note: String(note.prefix(1000)), videoName: videoName, thumbnailName: thumbnailName, analysis: analysis, gymId: gymId, gymName: cleanGymName(gymName), climbedAt: climbedAt, folderId: validFolder(folderId))
         do {
             try FileManager.default.moveItem(at: stagedVideo, to: file(videoName))
             try FileManager.default.setAttributes([.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication], ofItemAtPath: file(videoName).path)
@@ -75,10 +75,60 @@ final class ClimbStore: ObservableObject {
         try persist(next)
     }
 
+    var folders: [ClimbFolder] { archive.folders }
+
+    private func validFolder(_ id: UUID?) -> UUID? { folders.contains { $0.id == id } ? id : nil }
+    private func cleanGymName(_ name: String?) -> String? {
+        let clean = String((name ?? "").trimmingCharacters(in: .whitespacesAndNewlines).prefix(120))
+        return clean.isEmpty ? nil : clean
+    }
+
+    func saveFolder(name: String, id: UUID? = nil) throws {
+        let name = String(name.trimmingCharacters(in: .whitespacesAndNewlines).prefix(40))
+        guard !name.isEmpty else { throw AlbumError.emptyFolder }
+        guard !folders.contains(where: { $0.id != id && $0.name.compare(name, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame }) else { throw AlbumError.duplicateFolder }
+        var next = archive
+        if let id {
+            guard let index = next.folders.firstIndex(where: { $0.id == id }) else { return }
+            next.folders[index].name = name
+        } else { next.folders.append(ClimbFolder(id: UUID(), name: name)) }
+        try persist(next)
+    }
+
+    func deleteFolder(_ folder: ClimbFolder) throws {
+        var next = archive
+        next.folders.removeAll { $0.id == folder.id }
+        for index in next.climbs.indices where next.climbs[index].folderId == folder.id { next.climbs[index].folderId = nil }
+        try persist(next)
+    }
+
+    func organize(_ climb: Climb, title: String, grade: String, gymId: String?, gymName: String?, climbedAt: Date, folderId: UUID?) throws {
+        var next = archive
+        guard let index = next.climbs.firstIndex(where: { $0.id == climb.id }) else { return }
+        next.climbs[index].title = String(title.trimmingCharacters(in: .whitespacesAndNewlines).prefix(60))
+        next.climbs[index].grade = grade
+        next.climbs[index].gymId = gymId
+        next.climbs[index].gymName = cleanGymName(gymName)
+        next.climbs[index].climbedAt = climbedAt
+        next.climbs[index].folderId = validFolder(folderId)
+        try persist(next)
+    }
+
     func replaceAnalysis(_ climb: Climb, analysis: PoseAnalysis) throws {
         var next = archive
         guard let index = next.climbs.firstIndex(where: { $0.id == climb.id }) else { return }
         next.climbs[index].analysis = analysis
         try persist(next)
+    }
+}
+
+
+enum AlbumError: LocalizedError {
+    case emptyFolder, duplicateFolder
+    var errorDescription: String? {
+        switch self {
+        case .emptyFolder: return String(localized: "给文件夹起个名字吧。", bundle: AppLanguage.bundle)
+        case .duplicateFolder: return String(localized: "已有同名文件夹，换个名字试试。", bundle: AppLanguage.bundle)
+        }
     }
 }

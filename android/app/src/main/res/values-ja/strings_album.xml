@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="album_folders">フォルダ</string>
+    <string name="album_manage">管理</string>
+    <string name="album_unfiled">未整理</string>
+    <string name="album_rename">名前を変更</string>
+    <string name="album_delete">フォルダを削除</string>
+    <string name="album_new_folder">新しいフォルダ</string>
+    <string name="album_folder_error">保存できませんでした。別の名前でもう一度お試しください。</string>
+    <string name="album_save">保存</string>
+    <string name="album_cancel">キャンセル</string>
+    <string name="album_done">完了</string>
+    <string name="album_delete_detail">動画はログブックに残り、「未分類」に移ります。</string>
+    <string name="album_gym">ジム</string>
+    <string name="album_choose_gym">ジムを選ぶ</string>
+    <string name="album_climbed_on">登った日</string>
+    <string name="album_folder">フォルダ</string>
+    <string name="album_gym_search">都市・ジムを検索</string>
+    <string name="album_directory_note">公開情報をもとに作成しています。未掲載や変更の場合があります。</string>
+    <string name="album_use_typed">「%1$s」を使う</string>
+    <string name="album_no_gym">ジム未設定</string>
+    <string name="album_organize">このトライを整理</string>
+    <string name="album_save_error">保存できませんでした。もう一度お試しください。</string>
+    <string name="album_any">指定なし</string>
+    <string name="album_filter">ジム · グレード · 日付</string>
+    <string name="album_last_week">過去7日間</string>
+    <string name="album_last_month">過去30日間</string>
+    <string name="album_from">開始日</string>
+    <string name="album_through">終了日</string>
+    <string name="album_date_error">終了日は開始日以降にしてください。</string>
+    <string name="album_apply">トライを表示</string>
+    <string name="album_optional_tags">このトライを整理（任意）</string>
+    <string name="album_clear">絞り込みを解除</string>
+    <string name="album_count">%1$d トライ</string>
+</resources>

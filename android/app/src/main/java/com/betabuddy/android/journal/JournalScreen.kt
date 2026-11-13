@@ -22,11 +22,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -112,6 +114,21 @@ private fun JournalList(
     var filter by rememberSaveable { mutableStateOf(JournalFilter.ALL) }
     var search by rememberSaveable { mutableStateOf("") }
     val ungraded = stringResource(R.string.journal_ungraded)
+    val folders by model.folders.collectAsState()
+    var folderId by rememberSaveable { mutableStateOf<String?>(null) }
+    var gymKey by rememberSaveable { mutableStateOf<String?>(null) }
+    var grade by rememberSaveable { mutableStateOf<String?>(null) }
+    var from by rememberSaveable { mutableStateOf<String?>(null) }
+    var through by rememberSaveable { mutableStateOf<String?>(null) }
+    val album = AlbumFilters(folderId, gymKey, grade, from?.let(java.time.LocalDate::parse), through?.let(java.time.LocalDate::parse))
+    var manage by remember { mutableStateOf(false) }
+    var filtering by remember { mutableStateOf(false) }
+    LaunchedEffect(folders, climbs) { if (climbs != null && !folderId.isNullOrEmpty() && folders.none { it.id == folderId }) folderId = null }
+    fun clearFilters() { folderId = null; gymKey = null; grade = null; from = null; through = null; filter = JournalFilter.ALL; search = "" }
+    if (manage) FolderManager(model) { manage = false }
+    if (filtering) AlbumFilterDialog(climbs.orEmpty(), album, { next ->
+        gymKey = next.gymKey; grade = next.grade; from = next.from?.toString(); through = next.through?.toString(); filtering = false
+    }) { filtering = false }
 
     PaperPage {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -127,6 +144,7 @@ private fun JournalList(
         if (unreadable) {
             Text(stringResource(R.string.journal_store_unreadable), style = BB.Subheadline, color = DangerColor)
         }
+        if (climbs != null && !unreadable) FolderStrip(folders, folderId, { folderId = it }, { manage = true })
         when {
             climbs == null -> Unit // index still loading: show neither the empty state nor a list
             climbs.isEmpty() -> {
@@ -145,11 +163,24 @@ private fun JournalList(
                 }
                 FilterBar(filter) { filter = it }
                 SearchField(search) { search = it }
-                val visible = filterClimbs(climbs, filter, search) { if (it == UNGRADED_VALUE) ungraded else it }
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    OutlineButton(stringResource(R.string.album_filter), onClick = { filtering = true })
+                    Spacer(Modifier.weight(1f))
+                    if (album.active || search.isNotBlank() || filter != JournalFilter.ALL) TextButton(onClick = { clearFilters() }) { Text(stringResource(R.string.album_clear)) }
+                }
+                val summary = listOfNotNull(
+                    gymKey?.let { key -> climbs.firstOrNull { it.gymKey == key }?.gymName?.takeIf(String::isNotBlank) ?: stringResource(R.string.album_no_gym) },
+                    grade?.let { if (it == UNGRADED_VALUE) ungraded else it },
+                    if (from != null || through != null) "${from ?: "…"} – ${through ?: "…"}" else null,
+                ).joinToString(" · ")
+                if (summary.isNotEmpty()) Text(summary, style = BB.Caption, color = BB.Muted)
+                val visible = filterClimbs(climbs, filter, search) { if (it == UNGRADED_VALUE) ungraded else it }.filter { album.matches(it) }
+                Text(stringResource(R.string.album_count, visible.size), style = BB.Caption, color = BB.Muted)
                 if (visible.isEmpty()) {
                     ColorCard(BB.Lavender, spacing = 12.dp) {
                         Text(stringResource(R.string.journal_no_match_title), style = BB.Title3)
                         Text(stringResource(R.string.journal_no_match_body), style = BB.Body, color = BB.Muted)
+                        TextButton(onClick = { clearFilters() }) { Text(stringResource(R.string.album_clear)) }
                     }
                 }
                 for (climb in visible) {
@@ -233,7 +264,8 @@ private fun ClimbRow(climb: Climb, thumbnail: File, onClick: () -> Unit) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(9.dp)) {
             Text(climb.title, style = BB.Headline, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text("${gradeText(climb.grade)}  /  ${clockText(climb.analysis.duration)}", style = BB.mono(12.sp, FontWeight.Bold, 0.sp))
-            Text(dateText(climb.dateMillis, withYear = false), style = BB.Caption, color = BB.Muted)
+            Text(dateText(climb.climbedAtMillis, withYear = false), style = BB.Caption, color = BB.Muted)
+            if (!climb.gymName.isNullOrBlank()) Text(climb.gymName, style = BB.Caption, color = BB.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
             // The status is words plus a mark, never colour alone.
             Text(
                 stringResource(if (climb.sent) R.string.journal_row_sent else R.string.journal_row_projecting),

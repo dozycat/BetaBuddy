@@ -69,6 +69,7 @@ import com.betabuddy.android.journal.ProgressBar
 import com.betabuddy.android.journal.SwitchRow
 import com.betabuddy.android.journal.UiMessage
 import com.betabuddy.android.journal.appLocale
+import com.betabuddy.android.journal.OrganizeDialog
 import com.betabuddy.android.journal.dateText
 import com.betabuddy.android.journal.displayDetail
 import com.betabuddy.android.journal.displayTitle
@@ -104,6 +105,8 @@ internal fun ReviewScreen(climb: Climb, model: JournalViewModel, onBack: () -> U
     var note by rememberSaveable(climb.id) { mutableStateOf(climb.note) }
     var sent by rememberSaveable(climb.id) { mutableStateOf(climb.sent) }
     var savedNotice by remember(climb.id) { mutableStateOf(false) }
+    var organize by remember(climb.id) { mutableStateOf(false) }
+    if (organize) OrganizeDialog(climb, model) { organize = false }
     var confirmDelete by remember(climb.id) { mutableStateOf(false) }
     var failure by remember(climb.id) { mutableStateOf<UiMessage?>(null) }
 
@@ -143,7 +146,9 @@ internal fun ReviewScreen(climb: Climb, model: JournalViewModel, onBack: () -> U
         }
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(climb.title, style = BB.Title)
-            Text(dateText(climb.dateMillis, withYear = true), style = BB.Caption, color = BB.Muted)
+            Text(dateText(climb.climbedAtMillis, withYear = true), style = BB.Caption, color = BB.Muted)
+            if (!climb.gymName.isNullOrBlank()) Text(climb.gymName, style = BB.Caption, color = BB.Muted)
+            OutlineButton(stringResource(R.string.album_organize), onClick = { organize = true })
         }
 
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {

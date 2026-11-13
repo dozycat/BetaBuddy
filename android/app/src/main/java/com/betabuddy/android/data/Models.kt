@@ -99,7 +99,12 @@ data class Climb(
     val videoName: String,
     val thumbnailName: String,
     val analysis: PoseAnalysis,
+    val gymId: String? = null,
+    val gymName: String? = null,
+    val climbedAt: Double? = null,
+    val folderId: String? = null,
 ) {
+    val climbedAtMillis: Long get() = (((climbedAt ?: date) + REFERENCE_DATE_OFFSET_SECONDS) * 1000).toLong()
     val dateMillis: Long get() = ((date + REFERENCE_DATE_OFFSET_SECONDS) * 1000).toLong()
 
     companion object {
@@ -109,9 +114,13 @@ data class Climb(
 }
 
 @Serializable
+data class ClimbFolder(val id: String = newId(), val name: String)
+
+@Serializable
 data class Archive(
     val version: Int = 1,
     val climbs: List<Climb> = emptyList(),
+    val folders: List<ClimbFolder> = emptyList(),
     // Archives written by other builds may carry other keys; decoding ignores them.
 )
 

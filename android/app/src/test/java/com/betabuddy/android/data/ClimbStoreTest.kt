@@ -48,6 +48,49 @@ class ClimbStoreTest {
         assertFalse(store.file(climb.thumbnailName).exists())
     }
 
+    @Test fun foldersSurviveReloadAndDeletingFolderKeepsAllMedia() {
+        val store = ClimbStore(root)
+        val climb = store.saveFixture()
+        store.saveFolder(" Projects ")
+        val folder = store.archive.value.folders.single()
+        assertEquals("Projects", folder.name)
+        store.organize(climb, "V5", "synthetic-gym", "Synthetic gym", 1_000_000, folder.id)
+        store.update(climb, "Keep this note", true) // stale snapshot must not reset metadata
+        store.saveFolder("Weekend", folder.id)
+        val reopened = ClimbStore(root)
+        assertEquals("Weekend", reopened.archive.value.folders.single().name)
+        val edited = reopened.climbs.single()
+        assertEquals("V5", edited.grade)
+        assertEquals(climb.date, edited.date, 0.0)
+        assertEquals(1_000_000L, edited.climbedAtMillis)
+        assertEquals(folder.id, edited.folderId)
+        assertEquals("Keep this note", edited.note)
+        reopened.deleteFolder(folder.id)
+        val unfiled = ClimbStore(root).climbs.single()
+        assertNull(unfiled.folderId)
+        assertEquals("synthetic-gym", unfiled.gymId)
+        assertArrayEquals(byteArrayOf(0, 1, 2), store.file(climb.videoName).readBytes())
+        assertTrue(store.file(climb.thumbnailName).isFile)
+    }
+
+    @Test fun invalidFolderAndFailedWritesCannotPartiallyModifyMetadata() {
+        val store = ClimbStore(root)
+        val climb = store.saveFixture()
+        store.saveFolder("Projects")
+        try { store.saveFolder(" projects "); fail() } catch (expected: IllegalArgumentException) { }
+        try { store.saveFolder("   "); fail() } catch (expected: IllegalArgumentException) { }
+        try { store.organize(climb, "V5", null, "", 0, "missing"); fail() } catch (expected: IllegalArgumentException) { }
+        val folder = store.archive.value.folders.single()
+        store.organize(climb, "V5", null, "", 0, folder.id)
+        val before = File(root, "archive.json").readBytes()
+        File(root, "archive.json.tmp").mkdir()
+        File(root, "archive.json.tmp/blocker").writeText("x")
+        try { store.deleteFolder(folder.id); fail() } catch (expected: IOException) { }
+        assertEquals(folder.id, store.climbs.single().folderId)
+        assertEquals(1, store.archive.value.folders.size)
+        assertArrayEquals(before, File(root, "archive.json").readBytes())
+    }
+
     @Test fun corruptArchiveIsNeverOverwritten() {
         root.mkdirs()
         val file = File(root, "archive.json")
@@ -90,6 +133,10 @@ class ClimbStoreTest {
         assertFalse(store.loadFailed)
         val climb = store.climbs.first()
         assertEquals("旧记录", climb.title)
+        assertEquals(climb.dateMillis, climb.climbedAtMillis)
+        assertNull(climb.folderId)
+        assertNull(climb.gymId)
+        assertTrue(store.archive.value.folders.isEmpty())
         assertEquals(UNGRADED_VALUE, climb.grade)
         assertNull(climb.analysis.moments[0].kind)
         assertEquals(0.25, climb.analysis.frames[0].joints[0].y, 0.0)

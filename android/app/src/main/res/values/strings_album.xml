@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="album_folders">Folders</string>
+    <string name="album_manage">Manage</string>
+    <string name="album_unfiled">Unfiled</string>
+    <string name="album_rename">Rename</string>
+    <string name="album_delete">Delete folder</string>
+    <string name="album_new_folder">New folder</string>
+    <string name="album_folder_error">Could not save. Use a different name and try again.</string>
+    <string name="album_save">Save</string>
+    <string name="album_cancel">Cancel</string>
+    <string name="album_done">Done</string>
+    <string name="album_delete_detail">Clips stay in your logbook and move to Unfiled.</string>
+    <string name="album_gym">Gym</string>
+    <string name="album_choose_gym">Choose a gym</string>
+    <string name="album_climbed_on">Climbed on</string>
+    <string name="album_folder">Folder</string>
+    <string name="album_gym_search">Search city or gym</string>
+    <string name="album_directory_note">Compiled from public sources; listings may be missing or out of date.</string>
+    <string name="album_use_typed">Use “%1$s”</string>
+    <string name="album_no_gym">No gym set</string>
+    <string name="album_organize">Organize this climb</string>
+    <string name="album_save_error">Could not save. Please try again.</string>
+    <string name="album_any">Any</string>
+    <string name="album_filter">Gym · Grade · Date</string>
+    <string name="album_last_week">Last 7 days</string>
+    <string name="album_last_month">Last 30 days</string>
+    <string name="album_from">From</string>
+    <string name="album_through">To</string>
+    <string name="album_date_error">End date must be on or after start date.</string>
+    <string name="album_apply">Show climbs</string>
+    <string name="album_optional_tags">Organize this climb (optional)</string>
+    <string name="album_clear">Clear filters</string>
+    <string name="album_count">Climbs: %1$d</string>
+</resources>

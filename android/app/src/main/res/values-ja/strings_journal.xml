@@ -13,7 +13,7 @@
     <string name="journal_filter_all">すべて</string>
     <string name="journal_filter_sent">完登</string>
     <string name="journal_filter_projecting">トライ中</string>
-    <string name="journal_search_hint">名前やグレードで検索</string>
+    <string name="journal_search_hint">課題・グレード・ジムを探す</string>
     <string name="journal_no_match_title">一致する記録はまだありません。</string>
     <string name="journal_no_match_body">別の絞り込みや検索語を試してください。</string>
     <string name="journal_row_sent">✓ 完登</string>

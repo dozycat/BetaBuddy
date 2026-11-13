@@ -77,6 +77,7 @@ class ClimbStore(val root: File) {
         title: String, defaultTitle: String, grade: String, sent: Boolean, note: String,
         stagedVideo: File, thumbnail: ByteArray, analysis: PoseAnalysis,
         nowMillis: Long = System.currentTimeMillis(),
+        gymId: String? = null, gymName: String? = null, climbedAtMillis: Long? = null, folderId: String? = null,
     ): Climb {
         if (!canWrite) throw IOException("The archive could not be read and is kept as it is")
         val id = newId()
@@ -88,6 +89,8 @@ class ClimbStore(val root: File) {
             title = if (title.isBlank()) defaultTitle else title.prefix(60),
             grade = grade, sent = sent, note = note.prefix(1000),
             videoName = videoName, thumbnailName = thumbnailName, analysis = analysis,
+            gymId = gymId, gymName = gymName?.trim()?.prefix(120)?.takeIf { it.isNotEmpty() },
+            climbedAt = climbedAtMillis?.let(Climb::dateFromMillis), folderId = validFolder(folderId),
         )
         var moved = false
         try {
@@ -120,6 +123,44 @@ class ClimbStore(val root: File) {
         }))
     }
 
+    private fun validFolder(id: String?): String? {
+        require(id == null || state.value.folders.any { it.id == id }) { "Unknown folder" }
+        return id
+    }
+
+    @Synchronized
+    fun saveFolder(name: String, id: String? = null) {
+        val cleaned = name.trim().prefix(40)
+        require(cleaned.isNotEmpty()) { "Empty folder name" }
+        require(state.value.folders.none { it.id != id && it.name.equals(cleaned, ignoreCase = true) }) { "Duplicate folder" }
+        val next = if (id == null) state.value.folders + ClimbFolder(name = cleaned) else {
+            require(state.value.folders.any { it.id == id }) { "Unknown folder" }
+            state.value.folders.map { if (it.id == id) it.copy(name = cleaned) else it }
+        }
+        persist(state.value.copy(folders = next))
+    }
+
+    /** Removing a folder only unfiles its climbs; clips and analysis stay on disk. */
+    @Synchronized
+    fun deleteFolder(id: String) {
+        persist(state.value.copy(
+            folders = state.value.folders.filterNot { it.id == id },
+            climbs = state.value.climbs.map { if (it.folderId == id) it.copy(folderId = null) else it },
+        ))
+    }
+
+    @Synchronized
+    fun organize(climb: Climb, grade: String, gymId: String?, gymName: String?, climbedAtMillis: Long, folderId: String?) {
+        validFolder(folderId)
+        val current = state.value
+        require(current.climbs.any { it.id == climb.id }) { "Unknown climb" }
+        persist(current.copy(climbs = current.climbs.map {
+            if (it.id == climb.id) it.copy(grade = grade, gymId = gymId,
+                gymName = gymName?.trim()?.prefix(120)?.takeIf(String::isNotEmpty),
+                climbedAt = Climb.dateFromMillis(climbedAtMillis), folderId = folderId) else it
+        }))
+    }
+
     /** Replaces only the analysis; id, date, notes, send status and the clip stay as they are. */
     @Synchronized
     fun replaceAnalysis(climb: Climb, analysis: PoseAnalysis) {
@@ -148,7 +189,7 @@ class ClimbStore(val root: File) {
         /** Missing optional fields read as null, unknown fields are ignored, defaults are written. */
         val json = Json { ignoreUnknownKeys = true; explicitNulls = false; encodeDefaults = true }
 
-        fun sorted(archive: Archive): List<Climb> = archive.climbs.sortedByDescending { it.date }
+        fun sorted(archive: Archive): List<Climb> = archive.climbs.sortedByDescending { it.climbedAt ?: it.date }
 
         /** At most [count] characters, never cutting a surrogate pair in half. */
         internal fun String.prefix(count: Int): String {

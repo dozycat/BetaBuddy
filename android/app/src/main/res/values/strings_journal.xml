@@ -13,7 +13,7 @@
     <string name="journal_filter_all">All</string>
     <string name="journal_filter_sent">Sent</string>
     <string name="journal_filter_projecting">Projecting</string>
-    <string name="journal_search_hint">Search by name or grade</string>
+    <string name="journal_search_hint">Find a climb, grade or gym</string>
     <string name="journal_no_match_title">Nothing matches yet.</string>
     <string name="journal_no_match_body">Try another filter or search term.</string>
     <string name="journal_row_sent">✓ Sent</string>

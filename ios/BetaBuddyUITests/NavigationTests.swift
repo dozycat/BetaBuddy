@@ -4,7 +4,7 @@ final class NavigationTests: XCTestCase {
     func testBothEntriesInSimplifiedChinese() { walk(language:"zh-Hans", locale:"zh_CN", gym:"岩馆", logbook:"攀爬册", settings:"设置与关于", done:"完成") }
     func testBothEntriesInEnglish() { walk(language:"en", locale:"en_US", gym:"Gym", logbook:"Logbook", settings:"Settings and About", done:"Done") }
 
-    func testMembershipEntrySeparatesCurrentBenefitFromPlans() {
+    func testMembershipOfferKeepsCoreFeaturesFree() {
         let app = launch("en", "en_US", reset:true)
         app.buttons["tabJournal"].tap()
         XCTAssertTrue(app.buttons["membershipEntry"].waitForExistence(timeout:10))
@@ -15,7 +15,7 @@ final class NavigationTests: XCTestCase {
         app.buttons["membershipEntry"].tap()
         XCTAssertTrue(app.staticTexts["Lifetime member badge in Logbook"].waitForExistence(timeout:5))
         XCTAssertTrue(app.buttons["buyLifetime"].exists)
-        XCTAssertTrue(app.staticTexts["These features are not available yet. Timing and details may change."].exists)
+        XCTAssertTrue(app.staticTexts["Gym and Logbook remain free to use; membership is optional."].exists)
         XCTAssertTrue(app.buttons["restoreLifetime"].exists)
         let offer = XCTAttachment(screenshot: app.screenshot())
         offer.name = "Membership offer"

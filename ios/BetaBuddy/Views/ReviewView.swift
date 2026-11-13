@@ -131,6 +131,7 @@ struct ReviewView: View {
     @State private var sent = false
     @State private var confirmDelete = false
     @State private var savedNotice = false
+    @State private var organizing = false
     var climb: Climb
     private var current: Climb { store.climbs.first { $0.id == climb.id } ?? climb }
     private var report: String {
@@ -141,11 +142,15 @@ struct ReviewView: View {
     }
     var body: some View {
         PaperPage {
-            HStack { Stamp(text:"THE REPLAY"); Spacer(); Text(verbatim:gradeText(climb.grade)).font(BB.display(28)).lineLimit(1).minimumScaleFactor(0.6) }
+            HStack { Stamp(text:"THE REPLAY"); Spacer(); Text(verbatim:gradeText(current.grade)).font(BB.display(28)).lineLimit(1).minimumScaleFactor(0.6) }
             VStack(alignment:.leading,spacing:8) {
                 Text(verbatim:current.displayTitle).font(.title.bold())
-                Text(climb.date,format:.dateTime.year().month().day()).font(.caption).foregroundStyle(BB.muted)
+                Text(current.climbingDate,format:.dateTime.year().month().day()).font(.caption).foregroundStyle(BB.muted)
             }
+            Button { playback.pause(); organizing = true } label: {
+                Label("整理这一趟", systemImage: "folder").font(.subheadline.bold()).frame(minHeight: 44)
+            }.buttonStyle(.plain).accessibilityIdentifier("organizeClimb")
+            if !current.displayGymName.isEmpty { Text(verbatim: current.displayGymName).font(.caption).foregroundStyle(BB.muted) }
             VStack(spacing:0) {
                 ZStack(alignment:.topLeading) {
                     PlayerSurface(player:playback.player)
@@ -222,6 +227,7 @@ struct ReviewView: View {
             Button("删除这一趟",role:.destructive) { confirmDelete = true }.font(.caption).frame(maxWidth:.infinity,minHeight:44).accessibilityIdentifier("deleteClimb")
             Text("FULL / FLOAT16 · \(current.analysis.sampledFrames) 采样帧 · 分析用时 \(Int(current.analysis.processingSeconds)) 秒").font(.system(size:9,design:.monospaced)).foregroundStyle(BB.muted)
         }.navigationTitle("动作回看").navigationBarTitleDisplayMode(.inline)
+            .sheet(isPresented: $organizing) { OrganizeClimbView(climb: current) }
             .onAppear { note = current.note; sent = current.sent; playback.load(store.file(climb.videoName)) }
             .onDisappear { playback.unload(); reanalysis.cancel() }
             .onChange(of: phase) { _, value in if value == .background { reanalysis.cancel() } }

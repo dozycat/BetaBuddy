@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="album_folders">文件夹</string>
+    <string name="album_manage">管理</string>
+    <string name="album_unfiled">未归档</string>
+    <string name="album_rename">重命名</string>
+    <string name="album_delete">删除文件夹</string>
+    <string name="album_new_folder">新建文件夹</string>
+    <string name="album_folder_error">没存好，换个文件夹名再试试。</string>
+    <string name="album_save">保存</string>
+    <string name="album_cancel">取消</string>
+    <string name="album_done">完成</string>
+    <string name="album_delete_detail">视频会留在攀爬册里，回到「未归档」。</string>
+    <string name="album_gym">岩馆</string>
+    <string name="album_choose_gym">选择岩馆</string>
+    <string name="album_climbed_on">攀爬日期</string>
+    <string name="album_folder">放进文件夹</string>
+    <string name="album_gym_search">搜城市或岩馆</string>
+    <string name="album_directory_note">公开资料整理，可能有遗漏或变动。</string>
+    <string name="album_use_typed">就用「%1$s」</string>
+    <string name="album_no_gym">未标岩馆</string>
+    <string name="album_organize">整理这一趟</string>
+    <string name="album_save_error">没存好，再试一次。</string>
+    <string name="album_any">不限</string>
+    <string name="album_filter">岩馆 · 难度 · 时间</string>
+    <string name="album_last_week">近 7 天</string>
+    <string name="album_last_month">近 30 天</string>
+    <string name="album_from">开始日期</string>
+    <string name="album_through">结束日期</string>
+    <string name="album_date_error">结束日期不能早于开始日期。</string>
+    <string name="album_apply">看这些攀爬</string>
+    <string name="album_optional_tags">收好这一趟（可选）</string>
+    <string name="album_clear">清除筛选</string>
+    <string name="album_count">%1$d 趟攀爬</string>
+</resources>

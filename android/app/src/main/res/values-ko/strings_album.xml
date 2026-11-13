@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="album_folders">폴더</string>
+    <string name="album_manage">관리</string>
+    <string name="album_unfiled">미분류</string>
+    <string name="album_rename">이름 바꾸기</string>
+    <string name="album_delete">폴더 삭제</string>
+    <string name="album_new_folder">새 폴더</string>
+    <string name="album_folder_error">저장하지 못했어요. 다른 이름으로 다시 시도해 주세요.</string>
+    <string name="album_save">저장</string>
+    <string name="album_cancel">취소</string>
+    <string name="album_done">완료</string>
+    <string name="album_delete_detail">영상은 기록에 남고 미분류로 이동해요.</string>
+    <string name="album_gym">암장</string>
+    <string name="album_choose_gym">암장 선택</string>
+    <string name="album_climbed_on">등반 날짜</string>
+    <string name="album_folder">폴더</string>
+    <string name="album_gym_search">도시 또는 암장 검색</string>
+    <string name="album_directory_note">공개 자료를 모았어요. 누락되거나 변경된 정보가 있을 수 있어요.</string>
+    <string name="album_use_typed">“%1$s” 사용</string>
+    <string name="album_no_gym">암장 미지정</string>
+    <string name="album_organize">이번 등반 정리</string>
+    <string name="album_save_error">저장하지 못했어요. 다시 시도해 주세요.</string>
+    <string name="album_any">전체</string>
+    <string name="album_filter">암장 · 난이도 · 날짜</string>
+    <string name="album_last_week">최근 7일</string>
+    <string name="album_last_month">최근 30일</string>
+    <string name="album_from">시작일</string>
+    <string name="album_through">종료일</string>
+    <string name="album_date_error">종료일은 시작일 이후여야 해요.</string>
+    <string name="album_apply">등반 보기</string>
+    <string name="album_optional_tags">이번 등반 정리 (선택)</string>
+    <string name="album_clear">필터 초기화</string>
+    <string name="album_count">등반 %1$d개</string>
+</resources>

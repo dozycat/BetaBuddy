@@ -28,6 +28,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -77,6 +78,11 @@ internal fun ImportScreen(model: JournalViewModel, onClose: () -> Unit, onSaved:
     var grade by rememberSaveable { mutableStateOf(UNGRADED_VALUE) }
     var sent by rememberSaveable { mutableStateOf(false) }
     var note by rememberSaveable { mutableStateOf("") }
+    var gymId by rememberSaveable { mutableStateOf<String?>(null) }
+    var gymName by rememberSaveable { mutableStateOf("") }
+    var climbedOn by rememberSaveable { mutableStateOf(System.currentTimeMillis()) }
+    var folderId by rememberSaveable { mutableStateOf<String?>(null) }
+    var organizing by rememberSaveable { mutableStateOf(false) }
     var quality by rememberSaveable { mutableStateOf(AnalysisQuality.BALANCED) }
     val defaultTitle = stringResource(R.string.journal_default_title) // in the language shown at save time
 
@@ -135,6 +141,9 @@ internal fun ImportScreen(model: JournalViewModel, onClose: () -> Unit, onSaved:
                         modifier = Modifier.fillMaxWidth().testTag("climbTitle"),
                     )
                     GradePicker(grade) { grade = it }
+                    TextButton(onClick = { organizing = !organizing }) { Text(stringResource(R.string.album_optional_tags)) }
+                    if (organizing) MetadataFields(model, gymId, gymName, climbedOn, folderId,
+                        { id, name -> gymId = id; gymName = name }, { climbedOn = it }, { folderId = it })
                     SwitchRow(stringResource(R.string.journal_sent_toggle), sent) { sent = it }
                     OutlinedTextField(
                         value = note, onValueChange = { note = it.take(1000) }, minLines = 2, maxLines = 4,
@@ -149,7 +158,7 @@ internal fun ImportScreen(model: JournalViewModel, onClose: () -> Unit, onSaved:
                 }
                 BigButton(
                     stringResource(R.string.journal_import_start),
-                    { model.startAnalysis(title, grade, sent, note, quality, defaultTitle) },
+                    { model.startAnalysis(title, grade, sent, note, quality, defaultTitle, gymId, gymName, climbedOn, folderId) },
                     Modifier.testTag("startAnalysis"),
                     enabled = state.staged != null && !state.importing,
                 )
@@ -183,7 +192,7 @@ private fun Processing(progress: Double, onStop: () -> Unit) {
 }
 
 @Composable
-private fun GradePicker(grade: String, onSelect: (String) -> Unit) {
+internal fun GradePicker(grade: String, onSelect: (String) -> Unit) {
     var open by remember { mutableStateOf(false) }
     Row(
         Modifier.fillMaxWidth().defaultMinSize(minHeight = 48.dp).clickable(role = Role.DropdownList) { open = true },

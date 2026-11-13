@@ -80,6 +80,8 @@ Android 的版本号在 `android/app/build.gradle.kts`（`versionName`、`versio
 
 **场馆数据包不进仓库。** 模型、线路、求解器、网页都在仓库之外生成，用 `ios/scripts/install-gym-pack.sh <目录>` 装到被忽略的 `ios/GymPack/`，Android 用 `android/scripts/install-gym-pack.sh <目录>` 装到被忽略的 `android/app/src/main/assets/gympack/`。仓库里的任何文件，包括代码、测试夹具、文档、截图和提交信息，都不写场馆名、墙名、线路名、岩点坐标或算法细节。测试用合成数据。工程必须在没有数据包时照常生成、编译、通过测试。
 
+**全国岩馆目录例外。** 用户要求为攀爬册离线筛选整理全国岩馆信息：公开来源的馆名、行政区、地址与来源链接可以进入独立的 `gyms-cn.json` 目录，保留来源与覆盖说明，使用可复跑脚本更新。这不授权把上述 3D GymPack、墙名、线路或求解器内容提交进来。目录测试仍使用合成数据；不得把目录快照描述为实时或完整名录。
+
 **不引入联网依赖。** 不加会访问网络的 SDK、遥测、远程配置或远程资源。岩馆页面只能读数据包目录，`http(s)` / `ws(s)` / `ftp` 被内容规则拦截。新增第三方代码要固定版本和校验值，并更新 `ios/THIRD_PARTY.md`。Android 不声明任何权限：新增依赖先看它的 Manifest 会合并进来什么，权限和上报组件在应用的 Manifest 里用 `tools:node="remove"` 去掉，并更新 `android/THIRD_PARTY.md`。
 
 **分析诚实性。** 不展示没验证过的评分或诊断。髋部中点不叫重心，二维角度不叫关节角度，候选片段不下结论，骨架不跨检测空白延续。岩馆内容标明非官方，推演不说成建议。新增文案和指标先对照 `docs/ios/product-design.md` 和 `docs/ios/gym-design.md`。验证记录只写实际做过的事，没做的列在「尚未验证」里。

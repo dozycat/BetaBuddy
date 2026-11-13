@@ -13,7 +13,7 @@
     <string name="journal_filter_all">전체</string>
     <string name="journal_filter_sent">완등</string>
     <string name="journal_filter_projecting">시도 중</string>
-    <string name="journal_search_hint">이름이나 난이도로 검색</string>
+    <string name="journal_search_hint">루트, 난이도, 암장 찾기</string>
     <string name="journal_no_match_title">일치하는 기록이 아직 없습니다.</string>
     <string name="journal_no_match_body">다른 필터나 검색어를 써 보세요.</string>
     <string name="journal_row_sent">✓ 완등</string>

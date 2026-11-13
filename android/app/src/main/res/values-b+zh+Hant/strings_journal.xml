@@ -13,7 +13,7 @@
     <string name="journal_filter_all">全部</string>
     <string name="journal_filter_sent">已完攀</string>
     <string name="journal_filter_projecting">還在嘗試</string>
-    <string name="journal_search_hint">找路線或難度</string>
+    <string name="journal_search_hint">找路線、難度或岩館</string>
     <string name="journal_no_match_title">這裡還沒有符合的記錄。</string>
     <string name="journal_no_match_body">試試其他篩選條件或搜尋字詞。</string>
     <string name="journal_row_sent">✓ 已完攀</string>

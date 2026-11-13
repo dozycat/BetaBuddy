@@ -8,6 +8,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.betabuddy.android.R
 import com.betabuddy.android.data.Climb
+import com.betabuddy.android.data.ClimbFolder
 import com.betabuddy.android.data.ClimbStore
 import com.betabuddy.android.pose.AnalysisError
 import com.betabuddy.android.pose.AnalysisException
@@ -85,6 +86,9 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
     /** Newest first; null until the index has been read. */
     val climbs: StateFlow<List<Climb>?> = climbsState.asStateFlow()
 
+    private val foldersState = MutableStateFlow<List<ClimbFolder>>(emptyList())
+    val folders: StateFlow<List<ClimbFolder>> = foldersState.asStateFlow()
+
     private val unreadableState = MutableStateFlow(false)
     /** The index exists but could not be read. It is kept as it is and nothing is written. */
     val storeUnreadable: StateFlow<Boolean> = unreadableState.asStateFlow()
@@ -103,7 +107,7 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             val store = store()
             unreadableState.value = store.loadFailed
-            store.archive.collect { climbsState.value = ClimbStore.sorted(it) }
+            store.archive.collect { climbsState.value = ClimbStore.sorted(it); foldersState.value = it.folders }
         }
     }
 
@@ -143,7 +147,7 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun startAnalysis(title: String, grade: String, sent: Boolean, note: String, quality: AnalysisQuality, defaultTitle: String) {
+    fun startAnalysis(title: String, grade: String, sent: Boolean, note: String, quality: AnalysisQuality, defaultTitle: String, gymId: String? = null, gymName: String? = null, climbedAtMillis: Long? = null, folderId: String? = null) {
         val state = importState.value
         val video = state.staged ?: return
         if (state.busy || state.importing) return
@@ -155,7 +159,7 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
                 ensureActive()
                 // Only a finished result is written to the record.
                 val climb = withContext(Dispatchers.IO) {
-                    store().save(title, defaultTitle, grade, sent, note, video, thumbnail, analysis)
+                    store().save(title, defaultTitle, grade, sent, note, video, thumbnail, analysis, gymId = gymId, gymName = gymName, climbedAtMillis = climbedAtMillis, folderId = folderId)
                 }
                 importState.update { it.copy(staged = null, savedId = climb.id) }
             } catch (error: CancellationException) {
@@ -183,6 +187,16 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
             analysisJob?.join() // the decoder has let go of the file by now
             staged.delete()
         }
+    }
+
+    suspend fun saveFolder(name: String, id: String? = null): Result<Unit> = withContext(Dispatchers.IO) {
+        runCatching { store().saveFolder(name, id) }
+    }
+    suspend fun deleteFolder(id: String): Result<Unit> = withContext(Dispatchers.IO) {
+        runCatching { store().deleteFolder(id) }
+    }
+    suspend fun organize(climb: Climb, grade: String, gymId: String?, gymName: String?, climbedAtMillis: Long, folderId: String?): Result<Unit> = withContext(Dispatchers.IO) {
+        runCatching { store().organize(climb, grade, gymId, gymName, climbedAtMillis, folderId) }
     }
 
     // Review

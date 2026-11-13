@@ -35,7 +35,7 @@ final class ImportModel: ObservableObject {
         selectedURL = url
         error = nil
     }
-    func run(store:ClimbStore,title:String,grade:String,sent:Bool,note:String,quality:AnalysisQuality) {
+    func run(store:ClimbStore,title:String,grade:String,sent:Bool,note:String,quality:AnalysisQuality,gymId:String?,gymName:String,climbedAt:Date,folderId:UUID?) {
         guard !busy, let url = selectedURL else { return }
         busy = true; progress = 0; error = nil
         work = Task {
@@ -46,7 +46,7 @@ final class ImportModel: ObservableObject {
                 }
                 let thumbnail = try await analyzer.thumbnail(url:url)
                 try Task.checkCancellation()
-                saved = try store.save(title:title,grade:grade,sent:sent,note:note,stagedVideo:url,thumbnail:thumbnail,analysis:analysis)
+                saved = try store.save(title:title,grade:grade,sent:sent,note:note,stagedVideo:url,thumbnail:thumbnail,analysis:analysis,gymId:gymId,gymName:gymName,climbedAt:climbedAt,folderId:folderId)
                 selectedURL = nil
                 try? FileManager.default.removeItem(at:url)
             } catch is CancellationError {
@@ -74,6 +74,10 @@ struct ImportView: View {
     @State private var grade = ungradedValue
     @State private var sent = false
     @State private var note = ""
+    @State private var gymId: String?
+    @State private var gymName = ""
+    @State private var climbedAt = Date()
+    @State private var folderId: UUID?
     @State private var quality = AnalysisQuality.balanced
     var body: some View {
         NavigationStack {
@@ -172,6 +176,11 @@ struct ImportView: View {
                 Toggle("这趟完攀了",isOn:$sent).tint(BB.ink)
                 TextField("记住一个感受（可选）",text:$note,axis:.vertical).textFieldStyle(.roundedBorder).lineLimit(2...4)
             }
+            DisclosureGroup("收好这一趟（可选）") {
+                VStack(spacing: 14) {
+                    AlbumMetadataFields(gymId: $gymId, gymName: $gymName, climbedAt: $climbedAt, folderId: $folderId)
+                }.padding(.top, 12)
+            }.tint(BB.ink)
             VStack(alignment:.leading,spacing:12) {
                 SectionLabel(title:"回看精度",trailing:"SAME FULL MODEL")
                 ForEach(AnalysisQuality.allCases) { option in
@@ -187,7 +196,7 @@ struct ImportView: View {
                     }.buttonStyle(.plain)
                 }
             }
-            BigButton(title:"开始本地分析",icon:"sparkle") { model.run(store:store,title:title,grade:grade,sent:sent,note:note,quality:quality) }
+            BigButton(title:"开始本地分析",icon:"sparkle") { model.run(store:store,title:title,grade:grade,sent:sent,note:note,quality:quality,gymId:gymId,gymName:gymName,climbedAt:climbedAt,folderId:folderId) }
                 .disabled(model.selectedURL == nil || model.importing).opacity(model.selectedURL == nil ? 0.4 : 1)
                 .accessibilityIdentifier("startAnalysis")
             Text("分析时请保持应用在前台。视频和模型都在手机上处理；iCloud 原片可能需由系统先下载。").font(.caption).foregroundStyle(BB.muted)

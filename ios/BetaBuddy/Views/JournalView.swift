@@ -7,8 +7,13 @@ struct JournalView: View {
     @State private var importing = false
     @State private var showingMembership = false
     @State private var search = ""
+    @State private var albumFilter = JournalFilter()
+    @State private var period = 0
+    @State private var showingFilters = false
+    @State private var showingFolders = false
+    private var hasFilters: Bool { filter != 0 || !search.isEmpty || albumFilter.folderId != nil || albumFilter.unfiled || albumFilter.gymKey != nil || albumFilter.grade != nil || period != 0 }
     private var climbs: [Climb] {
-        store.climbs.filter { (filter == 0 || (filter == 1 ? $0.sent : !$0.sent)) && (search.isEmpty || $0.displayTitle.localizedCaseInsensitiveContains(search) || gradeText($0.grade).localizedCaseInsensitiveContains(search)) }
+        store.climbs.filter { albumFilter.matches($0) && (filter == 0 || (filter == 1 ? $0.sent : !$0.sent)) && (search.isEmpty || $0.displayTitle.localizedCaseInsensitiveContains(search) || gradeText($0.grade).localizedCaseInsensitiveContains(search) || ($0.gymName ?? "").localizedCaseInsensitiveContains(search)) }
     }
     var body: some View {
         PaperPage {
@@ -40,6 +45,7 @@ struct JournalView: View {
                 Text("攀爬册").font(.system(size:34,weight:.heavy))
                 Text("没有白爬的一趟。").foregroundStyle(BB.muted)
             }
+            folderBar
             if store.climbs.isEmpty {
                 VStack(alignment:.leading,spacing:18) {
                     Image(systemName:"square.stack.3d.up").font(.system(size:44,weight:.light))
@@ -60,12 +66,34 @@ struct JournalView: View {
                 }.pickerStyle(.segmented)
                 HStack {
                     Image(systemName:"magnifyingglass").foregroundStyle(BB.muted)
-                    TextField("找线路或难度",text:$search).accessibilityIdentifier("journalSearch")
+                    TextField("找线路、难度或岩馆",text:$search).accessibilityIdentifier("journalSearch")
                 }.padding(14).background(.white.opacity(0.6),in:RoundedRectangle(cornerRadius:14))
+                HStack {
+                    Button { showingFilters = true } label: {
+                        Label("岩馆 · 难度 · 时间", systemImage: "line.3.horizontal.decrease")
+                            .font(.subheadline.bold()).padding(.horizontal, 12).frame(minHeight: 44)
+                            .background(albumFilter.gymKey != nil || albumFilter.grade != nil || period != 0 ? BB.lime : .white.opacity(0.6), in: Capsule())
+                    }.buttonStyle(.plain).accessibilityIdentifier("albumFilters")
+                    Spacer()
+                    if hasFilters { Button("清除筛选") { clearFilters() }.font(.caption).frame(minHeight: 44) }
+                }
+                if albumFilter.gymKey != nil || albumFilter.grade != nil || period != 0 {
+                    VStack(alignment: .leading, spacing: 5) {
+                        if let gym = albumFilter.gymKey {
+                            if gym.isEmpty { Text("未标岩馆") }
+                            else { Text(verbatim: store.climbs.first { $0.gymKey == gym }?.displayGymName ?? gym) }
+                        }
+                        if let grade = albumFilter.grade { Text(verbatim: gradeText(grade)) }
+                        if let start = albumFilter.startDate, let end = albumFilter.endDate {
+                            Text(verbatim: start.formatted(.dateTime.year().month().day().locale(AppLanguage.locale)) + " – " + end.formatted(.dateTime.year().month().day().locale(AppLanguage.locale)))
+                        }
+                    }.font(.caption).foregroundStyle(BB.muted).accessibilityIdentifier("activeAlbumFilters")
+                }
                 if climbs.isEmpty {
                     VStack(alignment:.leading,spacing:12) {
                         Text("这里还没有匹配的记录。").font(.title3.bold())
                         Text("试试其他筛选条件或搜索词。").foregroundStyle(BB.muted)
+                        Button("查看全部记录") { clearFilters() }.buttonStyle(RouteButtonStyle(tone: .paper))
                     }.padding(24).frame(maxWidth:.infinity,alignment:.leading).background(BB.lavender,in:RoundedRectangle(cornerRadius:24))
                 }
                 ForEach(climbs) { climb in
@@ -73,10 +101,47 @@ struct JournalView: View {
                 }
             }
         }.toolbar(.hidden,for:.navigationBar)
+            .sheet(isPresented:$showingFolders) { FolderManagerView() }
+            .sheet(isPresented:$showingFilters) { AlbumFilterView(filter: $albumFilter, period: $period) }
+            .onChange(of: store.folders) { _, folders in
+                if let selected = albumFilter.folderId, !folders.contains(where: { $0.id == selected }) { albumFilter.folderId = nil }
+            }
             .sheet(isPresented:$importing) { ImportView() }
             .sheet(isPresented:$showingMembership) {
                 NavigationStack { MembershipOfferView() }
             }
+    }
+    private func clearFilters() { filter = 0; search = ""; albumFilter = JournalFilter(); period = 0 }
+    private var folderBar: some View {
+        HStack(spacing: 6) {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    folderChip(title: String(localized: "全部", bundle: AppLanguage.bundle), selected: albumFilter.folderId == nil && !albumFilter.unfiled) {
+                        albumFilter.folderId = nil; albumFilter.unfiled = false
+                    }
+                    folderChip(title: String(localized: "未归档", bundle: AppLanguage.bundle), selected: albumFilter.unfiled) {
+                        albumFilter.folderId = nil; albumFilter.unfiled = true
+                    }
+                    ForEach(store.folders) { folder in
+                        folderChip(title: folder.name, selected: albumFilter.folderId == folder.id) {
+                            albumFilter.folderId = folder.id; albumFilter.unfiled = false
+                        }
+                    }
+                }
+            }
+            Button { showingFolders = true } label: {
+                Image(systemName: "folder.badge.plus").frame(width: 44, height: 44)
+            }.buttonStyle(.plain).accessibilityLabel(Text("管理文件夹")).accessibilityIdentifier("manageFolders")
+        }
+    }
+    private func folderChip(title: String, selected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 5) {
+                if selected { Image(systemName: "checkmark").font(.caption2.bold()) }
+                Text(verbatim: title).font(.subheadline.bold()).lineLimit(1)
+            }.padding(.horizontal, 13).frame(minHeight: 44)
+                .background(selected ? BB.lime : .white.opacity(0.6), in: Capsule())
+        }.buttonStyle(.plain).accessibilityAddTraits(selected ? [.isSelected] : [])
     }
 }
 
@@ -92,7 +157,8 @@ struct ClimbRow: View {
             VStack(alignment:.leading,spacing:9) {
                 Text(verbatim:climb.displayTitle).font(.headline).lineLimit(2)
                 Text(verbatim:"\(gradeText(climb.grade))  /  \(clockText(climb.analysis.duration))").font(.system(size:12,weight:.bold,design:.monospaced))
-                Text(climb.date,format:.dateTime.month().day()).font(.caption).foregroundStyle(BB.muted)
+                Text(climb.climbingDate,format:.dateTime.month().day()).font(.caption).foregroundStyle(BB.muted)
+                if !climb.displayGymName.isEmpty { Text(verbatim: climb.displayGymName).font(.caption).foregroundStyle(BB.muted).lineLimit(1) }
                 Text(climb.sent ? "✓ 已完攀" : "↗ 还在尝试").font(.caption.bold())
             }
             Spacer(minLength:0)

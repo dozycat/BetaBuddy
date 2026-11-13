@@ -70,12 +70,58 @@ struct Climb: Codable, Identifiable, Sendable {
     var videoName: String
     var thumbnailName: String
     var analysis: PoseAnalysis
+    var gymId: String? = nil
+    var gymName: String? = nil
+    var climbedAt: Date? = nil
+    var folderId: UUID? = nil
+    var climbingDate: Date { climbedAt ?? date }
+    var gymKey: String {
+        if let id = gymId, !id.isEmpty { return "id:" + id }
+        let name = gymName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return name.isEmpty ? "" : "name:" + name
+    }
+}
+
+struct ClimbFolder: Codable, Identifiable, Equatable, Sendable {
+    var id: UUID
+    var name: String
+}
+
+/// Calendar-day comparisons include the entire end date, including daylight-saving changes.
+struct JournalFilter {
+    var folderId: UUID?
+    var unfiled = false
+    var gymKey: String?
+    var grade: String?
+    var startDate: Date?
+    var endDate: Date?
+
+    func matches(_ climb: Climb, calendar: Calendar = .current) -> Bool {
+        if unfiled && climb.folderId != nil { return false }
+        if let folderId, climb.folderId != folderId { return false }
+        if let gymKey, climb.gymKey != gymKey { return false }
+        if let grade, climb.grade != grade { return false }
+        if let startDate, climb.climbingDate < calendar.startOfDay(for: startDate) { return false }
+        if let endDate, let exclusiveEnd = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: endDate)), climb.climbingDate >= exclusiveEnd { return false }
+        return true
+    }
 }
 
 struct Archive: Codable {
     var version = 1
     var climbs: [Climb] = []
-    // Archives written by earlier builds may carry other keys; decoding ignores them.
+    var folders: [ClimbFolder] = []
+    // Keep version 1: these additive fields preserve existing video and analysis records.
+    private enum CodingKeys: String, CodingKey { case version, climbs, folders }
+    init(version: Int = 1, climbs: [Climb] = [], folders: [ClimbFolder] = []) {
+        self.version = version; self.climbs = climbs; self.folders = folders
+    }
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        version = try values.decode(Int.self, forKey: .version)
+        climbs = try values.decode([Climb].self, forKey: .climbs)
+        folders = try values.decodeIfPresent([ClimbFolder].self, forKey: .folders) ?? []
+    }
 }
 
 func clockText(_ time: Double) -> String {

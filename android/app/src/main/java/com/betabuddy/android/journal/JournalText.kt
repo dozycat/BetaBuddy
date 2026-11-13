@@ -21,7 +21,8 @@ fun filterClimbs(climbs: List<Climb>, filter: JournalFilter, search: String, gra
             JournalFilter.PROJECTING -> !climb.sent
         }
         statusMatches && (query.isEmpty() || climb.title.contains(query, ignoreCase = true) ||
-            gradeText(climb.grade).contains(query, ignoreCase = true))
+            gradeText(climb.grade).contains(query, ignoreCase = true) ||
+            climb.gymName.orEmpty().contains(query, ignoreCase = true))
     }
 }
 
