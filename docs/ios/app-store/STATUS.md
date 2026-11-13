@@ -1,5 +1,9 @@
 # BetaBuddy 发布状态
 
+2026-11-14 00:50（中国时间）：攀爬册文件夹、组合筛选和离线岩馆目录已合入远端 main（功能提交 `9907175`，发布提交 `7034d9b`）。iOS **1.3.0 (12)** 已签名归档，于 00:38 上传成功（Xcode `EXPORT SUCCEEDED`）并完成 Apple 处理。现有「BetaBuddy 内部测试」群组已自动分发，状态 **Testing**，可安装；「BetaBuddy 邀请测试」已加入构建 12 并提交 Beta App Review，状态 **Waiting for Review**，已勾选审核通过后自动通知测试者。公开邀请链接继续使用 [TestFlight](https://testflight.apple.com/join/WZPw69Vx)，新版本需待外测审核通过后才对外可用。英文 What to Test 已保存，内容见 [release-1.3.0.md](release-1.3.0.md)。本次没有提交 App Store 正式版本审核。
+
+归档内版本、非豁免加密声明、342 条岩馆目录以及本机已安装的 GymPack 均已核对。构建 ID：`69e51629-9e4d-4ee1-90e8-c955ca803cd1`；[TestFlight 构建](https://appstoreconnect.apple.com/teams/5ed1fb00-fca4-4901-b156-1f383d335b4e/apps/6809249574/testflight/ios/69e51629-9e4d-4ee1-90e8-c955ca803cd1)。外测状态截图保存在本机忽略目录 `ios/build/testflight-1.3.0-12-review.png`。
+
 2026-11-13 13:37（中国时间）：1.2.0 (10) 与首个非消耗型内购 `com.betabuddy.ios.lifetime` 已在同一份新提交中正式送审，App Store Connect 显示两项均“等待审核”。提交 ID：`d559c99f-190c-43e0-99f0-c77d22159051`；[审核记录](https://appstoreconnect.apple.com/apps/6809249574/distribution/reviewsubmissions/details/d559c99f-190c-43e0-99f0-c77d22159051)。构建 10 已成功上传、完成出口合规并关联到 1.2.0；英文商店文案、截图、内购本地化与审核截图均已保存。Cloudflare 技术支持站点 `https://betabuddy.dozycat.ai` 正常返回 200。旧的构建 9 提交已撤回；当前可分发正式版仍为 1.0.0，1.2.0 尚待 Apple 审核。
 
 2026-11-13 下午早些时候：Apple 以 Guideline 2.2（Beta Testing）拒绝了 1.2.0 (9)，认为 App 看起来像功能有限的预发布版本；截图是“设置与关于”页。已在审核消息中说明攀岩术语 beta 的含义，并询问具体未完成的功能。修正版 1.2.0 (10) 将歧义标题 `YOUR BETA` 改为 `YOUR CLIMB`，移除会员页的未来计划，并使 App 内离线隐私文案只陈述当前权益。App Store Connect 的简体中文及英语（美国）描述、更新说明、审核备注与副标题已改为英文并保存；内购的五种地区本地化名称和描述已统一为英文，明确一次性购买立即获得永久徽章。新的 1206 × 2622 英文内购审核截图已上传。Cloudflare 支持页已部署新版。Xcode 账户重新登录后，构建 10 上传成功；最新提交状态见上方。
@@ -18,9 +22,9 @@
 
 2026-11-13：1.1.0 (5) 已签名归档并上传，关联到 App Store Connect 的 1.1.0 版本，出口合规已完成。构建包含场馆数据包 1.2.1、72 条线路和五种界面语言；在 iPhone 17 Pro Max 上验证岩馆、线路、视频导入、分析与回看。中英商店文案、截图、审核备注、支持与隐私页面已更新。真机操作录屏已作为审核附件上传；版本已正式提交 Apple 审核。
 
-## 现在
+## 商店送审历史（2026-11-13 13:37）
 
-**当前正式版为 1.0.0；1.2.0 (10) 与终生会员内购已联合提交，均等待 Apple 审核。** 当前提交 ID：`d559c99f-190c-43e0-99f0-c77d22159051`；[审核记录](https://appstoreconnect.apple.com/apps/6809249574/distribution/reviewsubmissions/details/d559c99f-190c-43e0-99f0-c77d22159051)。构建 9 曾被拒绝，其[旧提交](https://appstoreconnect.apple.com/apps/6809249574/distribution/reviewsubmissions/details/f851acda-7e1b-4c10-aaca-b5de4e7caeba)已撤回。下方构建 3–5 为 1.1.0 历史记录，该版本的审核已取消。
+**当时正式版为 1.0.0；1.2.0 (10) 与终生会员内购已联合提交，均等待 Apple 审核。** 当前提交 ID：`d559c99f-190c-43e0-99f0-c77d22159051`；[审核记录](https://appstoreconnect.apple.com/apps/6809249574/distribution/reviewsubmissions/details/d559c99f-190c-43e0-99f0-c77d22159051)。构建 9 曾被拒绝，其[旧提交](https://appstoreconnect.apple.com/apps/6809249574/distribution/reviewsubmissions/details/f851acda-7e1b-4c10-aaca-b5de4e7caeba)已撤回。下方构建 3–5 为 1.1.0 历史记录，该版本的审核已取消。
 
 - 构建 3（2026-11-12 23:35 CST 上传成功）：四个入口的界面，只有简体中文。
 - 构建 4：两个入口——岩馆在前，攀爬册在后，导入并入攀爬册；支持简体中文、繁体中文、英语、日语、韩语。已上传，不提审。
