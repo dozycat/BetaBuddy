@@ -96,7 +96,7 @@ android/
       ui/common/                       PaperPage、Stamp、BigButton、SectionLabel、ColorCard、BBIcons…
       ui/nav/                          AppShell：两个入口、底部导航与齿轮、设置页的导航
       gym/                             数据包、WebView 容器、消息桥、岩馆界面
-      settings/                        设置与关于、隐私政策
+      settings/                        设置与关于、隐私政策、开源许可
       i18n/                            AppLanguage：当前界面语言与应用内语言选择
       journal/                         攀爬册：列表、导入、文字
       pose/                            解码、姿态识别、几何
@@ -110,6 +110,7 @@ android/
       xml/data_extraction_rules.xml    不进云备份，也不随换机迁移
     src/main/assets/
       pose_landmarker_full.task        姿态模型
+      licenses/                        第三方许可全文（设置里可以查看）
       gympack/                         场馆数据包（被忽略，由脚本装入）
     src/test/                          JVM 单元测试（纯 Kotlin，不依赖 Android 类）
     src/androidTest/                   设备测试（解码与推理）
@@ -141,7 +142,7 @@ android/
 - **攀爬册只有一个入口** `JournalScreen(onOpenSettings)`。它内部的页面用 `rememberSaveable` 的路由加 `BackHandler` 切换，不往 NavHost 里加路由。导入和回看时底部导航仍然可见；分析中切到岩馆不会停止分析，应用退到后台才会停。
 - **存储**都在应用私有目录：攀爬册在 `filesDir/BetaBuddy/`（`archive.json`、原片、缩略图、`staging/`），岩馆只有 `SharedPreferences` 里的两个布尔值。不写外部存储。
 - **文字**：导航、岩馆、设置的在 `strings.xml`，攀爬册的在 `strings_journal.xml` 且名字以 `journal_` 开头，两个文件不重名。
-- **不加权限，不加联网依赖。** 新增依赖先看它的 Manifest 会合并进来什么权限和组件，该移除的在应用的 Manifest 里移除，并在 `THIRD_PARTY.md` 补一行。
+- **不加权限，不加联网依赖。** 新增依赖先看它的 Manifest 会合并进来什么权限和组件，该移除的在应用的 Manifest 里移除，并在 `THIRD_PARTY.md` 补一行；依赖有增减时同步 `assets/licenses/components.txt` 里的清单。
 - **单元测试是纯 JVM 测试**，读 `src/main/res` 和 `src/main/assets` 用相对模块目录的路径（Gradle 运行测试时的工作目录）。测试夹具用合成数据。
 
 ## 语言
@@ -175,68 +176,93 @@ adb exec-out screencap -p > shot.png
 
 做过的和没做过的分开记，没做的不写成做了。
 
-**已经实际跑过**（在一台没有 Android SDK 的 Mac 上）
+### 2026-11-13，模拟器
 
-- Gradle wrapper 启动，下载并校验 Gradle 9.7.1；`./gradlew help` 通过，说明三个插件（AGP 9.3.3、Compose 与序列化编译器插件 2.4.21）能解析、构建脚本能配置。
-- `./gradlew :app:dependencies --configuration debugRuntimeClasspath` 通过：版本目录里的每个依赖连同传递依赖都能解析，没有版本冲突告警。
-- 全部 Kotlin 源码（应用、单元测试、设备测试）用 Kotlin 2.4.21 的编译器加 Compose 与序列化插件做过类型检查，零错误零警告。依赖用的是 Gradle 解析出来的同一批 jar；Android 框架用的是 AOSP 的 API 37 框架 jar（Robolectric 发布在 Maven Central 的 `android-all`），`R` 和 `BuildConfig` 是按资源文件生成的桩。这验证的是每个 API 的包名、签名和可见性，**不是** Android 工程的构建。
-- 单元测试 72 个全部通过（`GymPackTest`、`LanguageTagsTest`、`ShellStringsTest`、`ClimbStoreTest`、`PoseMathTest`、`AnalysisTypesTest`、`PoseModelTest`、`OverlayGeometryTest`、`JournalTextTest`、`JournalStringsTest`），用上面编出来的类在 JDK 17 上直接跑，运行时类路径里没有 Android 框架。
-- `scripts/check-resources.py` 通过：资源 XML 格式、五种语言 134 条文字的键 / 占位符 / 换行一致、两个文字文件不重名、代码引用的资源都存在且没有没用到的文字、`locales_config.xml` 与资源目录一致、Manifest 不声明权限、备份规则两节都排除全部数据域。
-- `install-gym-pack.sh`：用真实数据包安装、`--remove` 卸载；安装后的目录被 Git 忽略；多出未列文件、文件被改动、用了 APK 不收的文件名三种情况都被拒绝。安装后的清单用 `GymManifest` / `GymPack` 读过一遍，状态为就绪。
-- 81 个依赖的 Manifest 用 Gradle 导出后逐个看过：会合并进来的系统权限是 datatransport 的 `INTERNET`、`ACCESS_NETWORK_STATE` 和 Media3 的 `ACCESS_NETWORK_STATE`、`WAKE_LOCK`，都已移除。看过字节码：移除后端发现服务之后 datatransport 的事件在入库和排程前被丢弃；Media3 读网络状态时对没有权限的情况有保护。
+环境：Apple 芯片的 Mac，JDK 17，Android SDK 平台 37、Build-Tools 36.0.0。两台模拟器（Pixel 7 外形，1080×2400，主机 GPU）：Android 15（API 35，google_apis arm64，系统 WebView 124）和 Android 12（API 31，google_apis arm64，系统 WebView 91）。场馆数据包用的是真实的一份，装在本机、不进仓库。
 
-**尚未验证（要等 Android SDK 和设备）**
+**构建**
 
-- 应用本身的构建：资源编译（aapt2）、Manifest 合并、Compose 编译产物、dex、lint 都没有实际跑过。
-- Release 构建：R8 的 keep 规则是否足够（MediaPipe 与 protobuf 经 JNI 和反射访问），资源压缩有没有误删。
-- 任何设备或模拟器上的运行。岩馆：页面加载、WebGL、Blob Worker、消息桥、`openSettings`、离线拦截（没有联网权限加 `blockNetworkLoads` 时本地域名仍由应用应答）、切入口不重载、切语言重载并回到原线路、渲染进程被回收后的恢复、安全区。攀爬册：照片选择器、解码与颜色转换、推理、回看时骨架与画面重合、分享。整体：边到边、预测性返回、应用内语言切换（尤其 Android 12 及以下创建 `WebView` 之后界面语言不被改回系统语言）、设备测试 `VideoAnalyzerInstrumentedTest`。
-- 合并后的 Manifest 里确实没有系统权限；去掉 datatransport 的组件之后姿态识别照常工作，没有 `ACCESS_NETWORK_STATE` 时回看照常播放，logcat 里没有异常。
-- 应用还没有把第三方许可全文打进安装包（iOS 版有）。发布前要补。
+| 命令 | 结果 |
+| --- | --- |
+| `./gradlew :app:assembleDebug` | 通过，没有版本兼容告警 |
+| `./gradlew :app:testDebugUnitTest` | 73 个测试全部通过 |
+| `./gradlew :app:lintDebug` | 0 error。留下的 warning：有更新的 AGP / Gradle / MediaPipe 版本（版本是有意固定的）；两处「数字 + 名词」建议改成复数资源（线路数为 1 时英语会读成 “1 problems”）；`mipmap-anydpi-v26` 的限定符多余；四处建议改用 KTX 写法 |
+| `./gradlew :app:assembleRelease` | R8 与资源压缩通过，没有缺类报错；未配置 keystore，用 debug 密钥签名 |
+| `aapt2 dump permissions`（debug 与 release） | 只有 `com.betabuddy.android.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`；没有 `INTERNET`、`ACCESS_NETWORK_STATE`、`WAKE_LOCK`；合并后的 Manifest 里没有 datatransport 的组件，也没有 EmojiCompat 的启动项 |
+| `./gradlew :app:connectedDebugAndroidTest` | `VideoAnalyzerInstrumentedTest` 7 个测试在 API 35 和 API 31 上都通过 |
+| `python3 android/scripts/check-resources.py` | 通过 |
 
-### SDK 就绪后的验证步骤
+**岩馆（API 35，debug 包）**
 
-按顺序做，每一步写着预期结果；哪一步不符就先停在那里。
+- 没有数据包的构建：岩馆显示「这个构建没有内置岩馆数据」，攀爬册和「设置与关于」正常。
+- 有数据包的构建：说明页只出现一次 → 进入后 3D 场景出现（WebGL 可用，后台线程启动），页面的 `ready` 在开始加载后约 0.3–0.4 秒到达（API 31 上约 0.6 秒）。
+- 点选岩壁后页面选中一条线路并摆出人物；播放、底部抽屉的四个页签都能用；跳过手势提示后 `hintSeen` 记在本机，之后的入口 URL 带 `hint=0`。
+- 页面「更多」里的「语言与设置」发出 `openSettings`，原生的「设置与关于」打开；返回后页面没有重载。切到攀爬册再切回也没有重载（页面内的计时连续，已选线路还在）。
+- 调试参数 `gymOpenRoute`、`gymQuery` 生效：能直接摆出某条线路的某一步。给一个不存在的线路 id 时页面在 `ready` 之后报错，原生不盖失败页。
+- **网络审计**（经 WebView 调试端口用 DevTools 协议抓整次重新加载）：11 个请求，9 个是数据包里的文件，2 个是 `blob:`（后台线程），没有任何其他地址，没有失败的请求。在页面里主动发起 `fetch`（https / http / `file:`）、加载远程图片、打开 WebSocket，全部被拦下；请求数据包目录之外的本地路径和清单里没有的文件得到 403。控制台除了模拟器 GL 的一条 `GL_INVALID_ENUM` 警告之外没有报错。
+
+**语言**
+
+- 在「设置与关于」里选语言：界面立即切换，仍停在设置页；返回岩馆时页面带新的 `lang` 重新加载并回到原来选中的线路。API 35 上系统的「应用语言」是同一个值。
+- 五种语言各看了岩馆页面、攀爬册、设置页，没有发现漏翻和截断。
+- 「跟随系统」：系统语言是五种之一时用它；系统语言设成法语时界面是英语。`zh-TW`、`zh-HK` 得到繁体，`zh-CN` 得到简体。
+- 系统语言列表里第一位不受支持、后面有受支持语言时由 Android 自己决定用哪一种；试过的一次（法语在前、韩语在后）得到的是英语，不是韩语。
+- API 31（没有系统级的应用语言）：应用内选的语言在创建 `WebView` 之后仍然有效，杀掉应用重开也还在。
+
+**攀爬册（API 35，debug 包）**
+
+- 照片选择器不需要任何权限就能打开，只列视频。
+- 一段没有人的视频：分析结束后给出「没有清楚地找到攀爬者」的提示，不崩溃，不留记录。
+- 一段有人的竖屏视频（用 MediaPipe 示例图合成，人在画面里移动）：导入 → 填名称、标记完攀 → 分析 → 回看。骨架与人重合，步进后骨架跟着人走，髋部短轨迹出现；慢放、原片 / 骨架切换可用；写笔记并保存、经系统分享面板分享文字、回到列表、删除记录（文件一并删掉）都走通。
+- 一段带 90° 旋转信息的横向编码视频：分析和回看里画面都是正的，骨架重合。
+- logcat 里 datatransport 报「没有注册的上报后端」，事件被丢弃，姿态识别不受影响；没有 `ACCESS_NETWORK_STATE` 时回看照常播放。
+
+**Release 包（API 35）**
+
+装上 R8 之后的包重新走了一遍：岩馆加载、`ready` 到达、页面发起的 `openSettings`、换语言后重载；攀爬册导入、分析、回看。全部正常。
+
+**这一轮测出来并修掉的问题**
+
+- Release 包上第一次分析就崩溃：MediaPipe 用的 Flogger 靠类名在调用栈里找调用者，被 R8 改名后抛出异常。`proguard-rules.pro` 里保留了 `com.google.common.flogger.**`。
+- 从列表打开一条记录时回看画面是黑的，要步进或播放一次才出现：播放器在画面的 `TextureView` 有 surface 之前就解码了第一帧。改为拿到 surface 之后再开始解码。
+- 「精细」档实际采样超过每秒 15 帧（3 秒的 30 帧视频采了 75 帧）：解码器的时间戳是整微秒，采样器的容差太小。修正并补了单元测试。
+- lint 的两个 error：Manifest 里引用的启动项类来自只在运行时出现的依赖；一处在可组合函数里读了进程级的默认语言。
+
+### 在 Apple 芯片的 Mac 上跑模拟器
+
+较新的 Apple 芯片支持 SME 指令集，模拟器里的 Android 15 内核会把它报给应用，但实际执行会触发非法指令：MediaPipe 的原生库在第一次推理时以 `SIGILL` 崩溃（崩在读取 SME 向量长度的指令上）。这是模拟器环境的问题。启动模拟器时让内核屏蔽 SME 即可，上面攀爬册的结果都是这样测的；Android 12 的镜像内核不认识 SME，不需要这个参数。
+
+```sh
+emulator -avd <名称> -qemu -append "arm64.nosme"
+```
+
+### 尚未验证
+
+- **任何真机。** 分析速度、发热与过热中止、内存；不同厂商的硬件解码器和颜色格式；HDR 视频；真实的攀岩视频（上面用的是合成视频，只说明流程和坐标对齐，不说明识别效果）。
+- 支持 SME 的真机上 MediaPipe 是否正常（模拟器上的崩溃是环境问题，但没有真机可以对照）。
+- Android 8–11、Android 13–14 和 Android 16 以上；折叠屏和平板；手势导航之外的预测性返回动画。
+- 渲染进程被系统回收后的恢复、数据包不完整时的提示、视频文件丢失时的回看提示：代码路径在，没有实际触发过。
+- 备份与换机迁移确实不带走数据（规则写了，没有做过真实的备份或迁移）。
+- 最大字号、TalkBack。
+- 安装包体积没有处理：现在带四种 CPU 架构的原生库，Release 包约 61 MB（含数据包）。
+
+### 重新验证的步骤
 
 ```sh
 cd android
-./gradlew :app:assembleDebug
-```
-预期：`BUILD SUCCESSFUL`，没有 Kotlin 或 AGP 的版本兼容告警。
-
-```sh
-./gradlew :app:testDebugUnitTest
-```
-预期：72 个测试通过。
-
-```sh
-./gradlew :app:lintDebug
-```
-预期：没有 error。重点看 `MissingTranslation`、`ExtraTranslation`、`NewApi`、权限相关的条目。
-
-```sh
-"$ANDROID_HOME/build-tools/36.0.0/aapt2" dump permissions app/build/outputs/apk/debug/app-debug.apk
-"$ANDROID_HOME/build-tools/36.0.0/aapt2" dump xmltree --file AndroidManifest.xml app/build/outputs/apk/debug/app-debug.apk | grep -iE "permission|datatransport"
-```
-预期：只有构建自动加的 `com.betabuddy.android.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`（签名级、应用自用），没有 `INTERNET`、`ACCESS_NETWORK_STATE`、`WAKE_LOCK`；没有 datatransport 的 service 和 receiver。
-
-```sh
+./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
 ./gradlew :app:assembleRelease
-```
-预期：R8 通过，没有 `Missing class` 报错。如果报缺类，把报出的类按提示加进 `proguard-rules.pro` 的 `-dontwarn`，不要整体关掉压缩。
-
-```sh
-adb install -r app/build/outputs/apk/release/app-release.apk     # 没配 keystore 时是 debug 密钥签的
+"$ANDROID_HOME/build-tools/36.0.0/aapt2" dump permissions app/build/outputs/apk/release/app-release.apk
+./gradlew :app:connectedDebugAndroidTest          # 需要连着设备或开着模拟器
+adb install -r app/build/outputs/apk/release/app-release.apk
 adb logcat -s gym AndroidRuntime
 ```
-在设备上（至少一台 Android 13 以上、一台 Android 8–12）用 Release 包走一遍：
 
-1. 不装数据包的构建：落在岩馆，显示「这个构建没有内置岩馆数据」；底部齿轮、右上角按钮都能进「设置与关于」。
-2. 装了数据包的构建：说明页只出现一次 → 进入后场景出现、能转动缩放、选线 → 切到攀爬册再回来不重载 → 在页面菜单里点「语言与设置」打开原生设置 → 换一种语言，返回后页面是新语言并回到刚才的线路 → 打开飞行模式与否表现一致。
-3. 语言：五种语言加「跟随系统」逐个选；杀掉应用重开仍是所选语言；Android 13+ 的系统设置「应用语言」里显示同一个值；系统语言设成五种之外的语言时界面是英语。
-4. 攀爬册：导入一段竖拍视频和一段横拍视频 → 分析完成 → 回看时骨架与人重合、0.1 秒步进、0.5× 慢放 → 写笔记、标记完攀、分享文字 → 删除。Release 包上分析能跑完就说明 R8 没有裁掉 MediaPipe。
-5. `adb shell bmgr backupnow com.betabuddy.android` 预期被拒绝或不含数据；换机迁移不带走记录。
+预期：单元测试 73 个、设备测试 7 个通过；lint 没有 error；权限里没有 `INTERNET`、`ACCESS_NETWORK_STATE`、`WAKE_LOCK`。然后用 Release 包在设备上走一遍：
 
-```sh
-./gradlew :app:connectedDebugAndroidTest
-```
-预期：`VideoAnalyzerInstrumentedTest` 通过。这份测试是没有 SDK 时写的，失败先怀疑测试代码。
+1. 不装数据包的构建：落在岩馆，显示「这个构建没有内置岩馆数据」；底部齿轮、右上角按钮都能进「设置与关于」，里面的隐私政策和开源许可能打开。
+2. 装了数据包的构建：说明页只出现一次 → 场景出现、能转动缩放、选线 → 切到攀爬册再回来不重载 → 在页面菜单里点「语言与设置」打开原生设置 → 换一种语言，返回后页面是新语言并回到刚才的线路 → 开不开飞行模式表现一致。
+3. 语言：五种语言加「跟随系统」逐个选；杀掉应用重开仍是所选语言；系统语言设成五种之外的语言时界面是英语。
+4. 攀爬册：导入一段竖拍视频和一段横拍视频 → 分析完成 → 回看时一打开就有画面、骨架与人重合、0.1 秒步进、0.5× 慢放 → 写笔记、标记完攀、分享文字 → 删除。Release 包上分析能跑完，说明 R8 没有裁坏 MediaPipe。
+
+岩馆页面的网络审计只能在 Debug 包上做（只有它打开了 WebView 调试）：`adb forward tcp:9222 localabstract:webview_devtools_remote_<应用的 pid>`，再用 Chrome 的 `chrome://inspect` 或 DevTools 协议看 Network。

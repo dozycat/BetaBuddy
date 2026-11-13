@@ -9,12 +9,13 @@ Android 版和 iOS 版是同一个产品：同样的两个入口、同样的五�
 ```
 home ─┬─ 岩馆（标签 0，启动落点）
       ├─ 攀爬册（标签 1，JournalScreen 内部自己切 列表 → 导入 → 回看）
-      └─ 齿轮 ──▶ settings（设置与关于）── settings/privacy（隐私政策）
+      └─ 齿轮 ──▶ settings（设置与关于）─┬─ settings/privacy（隐私政策）
+                                        └─ settings/licenses（开源许可）
 ```
 
 - **底部两个入口**在 `home` 这一页里，不是 NavHost 的路由。岩馆始终留在界面树里，攀爬册盖在它上面；这样切到攀爬册再回来，岩馆页面不重载。攀爬册的界面状态用 `SaveableStateProvider` 保存，它的 ViewModel 挂在 `home` 这一层，切标签不会丢。
 - **底部导航**和 iOS 一样：两个入口等宽，最右边是一个齿轮，打开「设置与关于」。齿轮在两个入口下都在，包括岩馆的 3D 页面铺满的时候（页面顶部归数据包，原生不在上面叠按钮）。
-- **设置与关于**是一页，结构与 iOS 的 `AboutView` 相同：第一项是语言（「跟随系统」加五种语言，各用自己的文字写），然后是本地说明、分析边界、岩馆说明、记录管理、隐私政策、帮助与支持、版本。进入它的地方有四处：底部的齿轮；攀爬册首页右上角的圆形按钮（`JournalScreen(onOpenSettings)`）；岩馆说明页和无数据包页右上角的同一个按钮；数据包页面自己发来的 `openSettings` 消息。
+- **设置与关于**是一页，结构与 iOS 的 `AboutView` 相同：第一项是语言（「跟随系统」加五种语言，各用自己的文字写），然后是本地说明、分析边界、岩馆说明、记录管理、隐私政策、开源许可、帮助与支持、版本。进入它的地方有四处：底部的齿轮；攀爬册首页右上角的圆形按钮（`JournalScreen(onOpenSettings)`）；岩馆说明页和无数据包页右上角的同一个按钮；数据包页面自己发来的 `openSettings` 消息。
 - **返回**：系统返回手势先退设置页，再让攀爬册内部回到列表，再从攀爬册回到岩馆，最后离开应用。Manifest 开了 `enableOnBackInvokedCallback`，页面之间有预测性返回动画。
 - **边到边**：`enableEdgeToEdge()`，状态栏和导航栏透明、深色图标，底下是纸白。原生页面用 `PaperPage` 避开状态栏和刘海；底部标签栏自己垫上导航栏/手势条的高度。标签栏以上的内容区已经扣掉了标签栏占掉的底部 inset，里面的页面再用 `imePadding()` 时不会多垫一截。
 - **方向**：Manifest 写了竖屏。大屏设备上系统会忽略这个限制，布局按可用宽度排，不依赖固定方向。
@@ -123,7 +124,7 @@ Debug 构建还可以用 Chrome 的 `chrome://inspect` 连上页面。加载耗�
 
 - **选视频**用系统照片选择器（`PickVisualMedia`，只选视频），不需要任何存储权限；选中的那一段被复制到应用私有目录的 `staging/`，超过 500 MB 在复制途中就停下。
 - **分析**：`MediaExtractor` + `MediaCodec` 顺序解码，不采样的帧在颜色转换之前丢弃；采样帧按旋转信息摆正、缩放后交给 MediaPipe Pose Landmarker Full（视频模式，CPU，33 点），与 iOS 是同一个模型文件，加载前核对 SHA-256。同一时间只跑一个分析，在专用线程上；取消和设备过热在帧与帧之间检查。分析期间保持亮屏，应用退到后台就停止，不留半份结果。
-- **回看**：Media3 ExoPlayer 画到 `TextureView`，骨架用 Compose `Canvas` 画在与画面完全重合的矩形上；0.1 秒步进按精确定位，0.5× 慢放。
+- **回看**：Media3 ExoPlayer 画到 `TextureView`，骨架用 Compose `Canvas` 画在与画面完全重合的矩形上；0.1 秒步进按精确定位，0.5× 慢放。播放器等 `TextureView` 有了 surface 才开始解码，这样暂停状态下打开也能看到第一帧。
 - **诚实性**与 iOS 同一套规则：髋部轨迹不叫重心，角度是二维投影角，高抬脚只算候选片段，骨架不跨检测空白延续；`JournalStringsTest` 检查文字里没有这些词。
 - 存档里不写界面语言：候选片段按类型保存，显示时取当前语言的文字。
 
@@ -132,6 +133,7 @@ Debug 构建还可以用 Chrome 的 `chrome://inspect` 连上页面。加载耗�
 - **不向用户申请任何权限。** Manifest 自己不声明，并移除依赖库会合并进来的 `INTERNET`、`ACCESS_NETWORK_STATE` 和 `WAKE_LOCK`。合并后只剩 AndroidX Core 自动加的一条应用自用的签名级权限。AppCompat 带来的 EmojiCompat 启动项也已移除（它会向系统字体服务要新的表情字体）。
 - 岩馆只在本机记两个布尔值（是否读过说明、手势提示是否看过），存在应用私有的 `SharedPreferences` 里。攀爬册的数据全部在 `filesDir/BetaBuddy/`，不写外部存储。
 - **不进备份，也不随换机迁移。** `allowBackup="false"`、`fullBackupContent="false"`；`data_extraction_rules.xml` 把 `<cloud-backup>` 和 `<device-transfer>` 两节的全部数据域都排除（Android 12 起两者分开，`allowBackup` 管不到设备间直传）。
+- **第三方许可全文**随应用打包在 `assets/licenses/`（组件清单、Apache License 2.0、MediaPipe 原生库的全部声明），在「设置与关于」→「开源许可」里离线查看；许可保持英文原文。
 - 「设置与关于」里的「帮助与支持」和邮箱会交给系统的浏览器 / 邮件应用打开；分享复盘文字走系统分享面板，只有文字。应用自己不联网。
 
 ## 与 iOS 的差异
@@ -145,7 +147,7 @@ Debug 构建还可以用 Chrome 的 `chrome://inspect` 连上页面。加载耗�
 | 消息桥 | `WKScriptMessageHandler` | `addJavascriptInterface` + 文档开始时注入的垫片 |
 | 安全区 | 页面用 `env()` 自己留白 | 原生侧留白，页面拿到的 inset 为 0 |
 | 语言 | 跟随系统，或在应用内选，不重启 | 同左，Activity 以新语言重建；Android 13+ 与系统的「应用语言」同步 |
-| 设置与关于 | 从底部弹出的一页；显示已保存的攀爬数量、在线隐私政策链接 | 导航栈里的一页，系统返回退出；不显示数量，隐私政策只有内置的一份 |
+| 设置与关于 | 从底部弹出的一页；显示已保存的攀爬数量、在线隐私政策链接 | 导航栈里的一页，系统返回退出；不显示数量，隐私政策只有内置的一份；多一项「开源许可」 |
 | 备份 | 排除云备份 | 排除云备份和设备间迁移 |
 | 视频来源 | 相册或文件 | 系统照片选择器 |
 | 调试参数 | 启动参数 `-gymQuery` 等 | intent extra，另有 `gymNoticeSeen` |
