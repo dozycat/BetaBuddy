@@ -40,7 +40,7 @@ struct AboutView: View {
             }.padding(18).frame(maxWidth:.infinity,alignment:.leading)
                 .background(BB.lavender,in:RoundedRectangle(cornerRadius:20))
             Divider()
-            Text(verbatim:"YOUR BETA.\nYOUR DEVICE.").font(BB.display(37))
+            Text(verbatim:"YOUR CLIMB.\nYOUR DEVICE.").font(BB.display(37))
             Label("完全在这台 iPhone 上分析",systemImage:"lock.shield").font(.title3.bold())
             Text("核心功能免费 · 终生会员为一次性内购 · 无订阅 · 无广告").font(.subheadline.bold())
             Text("姿态模型随安装包提供。没有模型下载，没有账号，也没有云端 AI。导入的视频与分析记录保存在应用内，并排除在系统云备份之外。").foregroundStyle(BB.muted)
@@ -141,15 +141,6 @@ struct MembershipOfferView: View {
                     if membership.isBusy { ProgressView() }
                 }
             }
-            VStack(alignment:.leading,spacing:12) {
-                SectionLabel(title:"未来计划",trailing:"PLANNED")
-                    .accessibilityIdentifier("membershipBenefitsLater")
-                Label("训练建议",systemImage:"figure.climbing")
-                Label("新岩馆数据",systemImage:"map")
-                Text("这些功能尚未上线，推出时间与具体内容可能调整。")
-                    .font(.subheadline).foregroundStyle(BB.muted)
-            }.padding(20).frame(maxWidth:.infinity,alignment:.leading)
-                .background(.white.opacity(0.6),in:RoundedRectangle(cornerRadius:22))
         }.navigationTitle("终生会员").navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement:.topBarTrailing) { Button("完成") { dismiss() }.accessibilityIdentifier("membershipDone") }
