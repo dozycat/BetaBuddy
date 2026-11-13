@@ -38,6 +38,7 @@ internal class Playback(context: Context) {
 
     private var rate = 1f
     private var loaded = false
+    private var prepared = false
 
     private val listener = object : Player.Listener {
         override fun onEvents(player: Player, events: Player.Events) {
@@ -45,6 +46,15 @@ internal class Playback(context: Context) {
         }
         override fun onPlayerError(error: PlaybackException) {
             failure = R.string.journal_review_video_unplayable
+        }
+        override fun onSurfaceSizeChanged(width: Int, height: Int) {
+            // Decoding starts only once the picture's TextureView has a surface to draw on. Prepared
+            // earlier, the paused player shows its first frame to a surface that is not there yet, and
+            // the stage stays black until the first step or play.
+            if (loaded && !prepared && width > 0 && height > 0) {
+                prepared = true
+                player.prepare()
+            }
         }
         override fun onVideoSizeChanged(videoSize: VideoSize) {
             if (videoSize.width > 0 && videoSize.height > 0) {
@@ -61,7 +71,6 @@ internal class Playback(context: Context) {
         player.addListener(listener)
         player.setSeekParameters(SeekParameters.EXACT) // 0.1 s steps must land on the requested frame
         player.setMediaItem(MediaItem.fromUri(Uri.fromFile(file)))
-        player.prepare()
     }
 
     fun attach(view: TextureView) { player.setVideoTextureView(view) }
