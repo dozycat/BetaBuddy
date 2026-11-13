@@ -28,7 +28,7 @@ const support = `<div class="eyebrow">Help for your next attempt</div><h1>BetaBu
 <section class="card"><h2>Video won’t import</h2><p>Check that the original plays in Photos. If it is stored only in iCloud, let Photos download it first. Trim the clip in Photos and try again.</p></section>
 <section class="card"><h2>iPhone feels hot</h2><p>Pause repeated analyses and try again later, or use Everyday review. Analysis stops if the device reaches a serious thermal state.</p></section>
 <section class="card"><h2>Delete a climb</h2><p>Open the record and choose Delete to remove the app’s video copy and analysis. Your original in Photos is unaffected. Deleting the app removes local records; there is no cloud restore.</p></section>
-<section class="card"><h2>Lifetime membership</h2><p>Open Settings &amp; About to buy or restore. A successful purchase adds the lifetime badge to Logbook. On another device, restore using the same Apple Account. Training suggestions and new gym data are plans for future releases.</p></section>
+<section class="card"><h2>Lifetime membership</h2><p>Open Settings &amp; About to buy or restore. A successful purchase adds the permanent lifetime badge to Logbook. On another device, restore using the same Apple Account.</p></section>
 <section class="card"><h2>Your privacy</h2><p>The pose model is bundled. Your videos and analyses stay on your device. Read the full <a href="/privacy">privacy policy</a>.</p></section>
 </div>`;
 

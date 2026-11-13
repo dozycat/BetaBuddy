@@ -3,7 +3,7 @@ Updated: November 13, 2026
 
 Your climbing stays on your device.
 
-BetaBuddy is a climbing video review logbook and gym route viewer that runs locally on your iPhone. Core video review and gym features are free. An optional one-time in-app purchase unlocks a lifetime member badge and future member benefits when released. There are no subscriptions, ads, or accounts.
+BetaBuddy is a climbing video review logbook and gym route viewer that runs locally on your iPhone. Core video review and gym features are free. An optional one-time in-app purchase unlocks a permanent lifetime member badge. There are no subscriptions, ads, or accounts.
 
 1. What the app handles
 Videos you choose are copied into the app for on-device pose estimation. The app stores the video copy, a thumbnail, pose keypoints, analysis results, the grade and notes you enter, and whether you marked the climb as sent. None of this is sent to the developer or to any third-party server, and the app contains no advertising or analytics SDK that collects usage.
