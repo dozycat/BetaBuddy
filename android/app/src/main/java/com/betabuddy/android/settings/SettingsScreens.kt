@@ -61,7 +61,7 @@ import com.betabuddy.android.ui.theme.BB
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-private const val SUPPORT_URL = "https://betabuddy-support.dozycfs.chatgpt.site"
+private const val SUPPORT_URL = "https://betabuddy.dozycat.ai"
 private const val SUPPORT_MAIL = "hi@dozycat.ai"
 
 /** A settings page: back button and title on top, then the content. Fills the whole window. */
