@@ -1,0 +1,8 @@
+{
+  "name": "betabuddy-pay",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-12",
+  "compatibility_flags": ["nodejs_compat"],
+  "routes": [{ "pattern": "pay.dozycat.ai", "custom_domain": true }],
+  "observability": { "enabled": true }
+}

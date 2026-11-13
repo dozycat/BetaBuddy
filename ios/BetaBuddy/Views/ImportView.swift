@@ -152,8 +152,9 @@ struct ImportView: View {
                 }
                 HStack {
                     PhotosPicker(selection:$photo,matching:.videos) { Label("从相册选择",systemImage:"photo").foregroundStyle(BB.paper) }
-                        .buttonStyle(.borderedProminent)
-                    Button { files = true } label: { Label("文件",systemImage:"folder") }.buttonStyle(.bordered)
+                        .buttonStyle(RouteButtonStyle())
+                    Button { files = true } label: { Label("文件",systemImage:"folder") }
+                        .buttonStyle(RouteButtonStyle(tone:.paper))
                 }.disabled(model.importing)
                 if model.importing { ProgressView() }
             }.padding(20).frame(maxWidth:.infinity,alignment:.leading).background(BB.lime,in:RoundedRectangle(cornerRadius:22))
@@ -202,7 +203,8 @@ struct ImportView: View {
             }
             ProgressView(value:model.progress).tint(BB.ink)
             Text("逐帧读取 → 33 点姿态 → 整理回看片段\n无需上传。分析完成后自动保存。").font(.subheadline).lineSpacing(5).foregroundStyle(BB.muted)
-            Button("停止分析",role:.cancel) { model.cancel() }.buttonStyle(.bordered).frame(maxWidth:.infinity)
+            Button("停止分析",role:.cancel) { model.cancel() }
+                .buttonStyle(RouteButtonStyle(tone:.paper)).frame(maxWidth:.infinity)
         }
     }
 }

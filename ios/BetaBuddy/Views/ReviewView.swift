@@ -159,7 +159,10 @@ struct ReviewView: View {
                         Text(verbatim:clockText(playback.time)+" / "+clockText(current.analysis.duration)).font(.system(size:11,weight:.medium,design:.monospaced)).monospacedDigit()
                         Spacer()
                         Button { playback.pause(); playback.seek(max(0,playback.time-0.1)) } label: { Image(systemName:"backward.end").frame(width:36,height:44) }.accessibilityLabel("后退零点一秒")
-                        Button { playback.toggle(duration:current.analysis.duration) } label: { Image(systemName:playback.playing ? "pause.fill" : "play.fill").frame(width:44,height:44).background(BB.lime,in:Circle()) }.accessibilityLabel(playback.playing ? Text("暂停") : Text("播放"))
+                        Button { playback.toggle(duration:current.analysis.duration) } label: {
+                            Image(systemName:playback.playing ? "pause.fill" : "play.fill")
+                                .frame(width:44,height:44).background(BB.lime,in:HoldShape())
+                        }.accessibilityLabel(playback.playing ? Text("暂停") : Text("播放"))
                         Button { playback.pause(); playback.seek(min(current.analysis.duration,playback.time+0.1)) } label: { Image(systemName:"forward.end").frame(width:36,height:44) }.accessibilityLabel("前进零点一秒")
                     }
                     HStack {
@@ -168,7 +171,7 @@ struct ReviewView: View {
                         Button {
                             slow.toggle(); playback.rate = slow ? 0.5 : 1
                             if playback.playing { playback.player.rate = playback.rate }
-                        } label: { Text(slow ? "0.5× 慢放" : "1× 原速").font(.caption.bold()).padding(10).background(BB.lavender,in:Capsule()) }
+                        } label: { Text(slow ? "0.5× 慢放" : "1× 原速").font(.caption.bold()).padding(10).background(BB.lavender,in:HoldShape()) }
                     }
                 }.padding(.top,12)
             }
@@ -181,7 +184,7 @@ struct ReviewView: View {
                     Button("重新分析骨架") {
                         playback.pause()
                         reanalysis.run(climb: current, store: store)
-                    }.buttonStyle(.bordered)
+                    }.buttonStyle(RouteButtonStyle(tone:.paper))
                 }
                 if let message = reanalysis.message { Text(verbatim:message).font(.caption).foregroundStyle(BB.muted) }
             }
@@ -197,7 +200,7 @@ struct ReviewView: View {
             ForEach(current.analysis.moments) { moment in
                 Button { playback.pause(); playback.seek(moment.time) } label: {
                     HStack(alignment:.top,spacing:14) {
-                        Text(verbatim:clockText(moment.time)).font(.system(size:12,weight:.bold,design:.monospaced)).padding(8).background(BB.lime,in:RoundedRectangle(cornerRadius:8))
+                        Text(verbatim:clockText(moment.time)).font(.system(size:12,weight:.bold,design:.monospaced)).padding(8).background(BB.lime,in:HoldShape())
                         VStack(alignment:.leading,spacing:7) {
                             Text(verbatim:moment.displayTitle).font(.subheadline.bold())
                             Text(verbatim:moment.displayDetail).font(.caption).lineSpacing(4).foregroundStyle(BB.muted)
@@ -212,9 +215,10 @@ struct ReviewView: View {
                 Button(savedNotice ? "已保存 ✓" : "保存复盘") {
                     do { try store.update(climb,note:note,sent:sent); savedNotice = true }
                     catch { store.error = String(localized: "笔记未能保存：\(error.localizedDescription)", bundle: AppLanguage.bundle) }
-                }.buttonStyle(.borderedProminent).foregroundStyle(BB.paper)
+                }.buttonStyle(RouteButtonStyle())
             }.padding(20).background(BB.lavender,in:RoundedRectangle(cornerRadius:22))
-            ShareLink(item:report) { Label("分享复盘文字",systemImage:"square.and.arrow.up").frame(maxWidth:.infinity,minHeight:44) }.buttonStyle(.bordered)
+            ShareLink(item:report) { Label("分享复盘文字",systemImage:"square.and.arrow.up").frame(maxWidth:.infinity,minHeight:44) }
+                .buttonStyle(RouteButtonStyle(tone:.paper))
             Button("删除这一趟",role:.destructive) { confirmDelete = true }.font(.caption).frame(maxWidth:.infinity,minHeight:44).accessibilityIdentifier("deleteClimb")
             Text("FULL / FLOAT16 · \(current.analysis.sampledFrames) 采样帧 · 分析用时 \(Int(current.analysis.processingSeconds)) 秒").font(.system(size:9,design:.monospaced)).foregroundStyle(BB.muted)
         }.navigationTitle("动作回看").navigationBarTitleDisplayMode(.inline)

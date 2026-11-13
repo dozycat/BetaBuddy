@@ -43,6 +43,7 @@
 		A96C10334BDC71914EBE9469 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C9F3BFB7EEED9BE808D1130 /* AVFoundation.framework */; };
 		ADB7801DC2438A7B6D4E7884 /* CoreMedia.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 95F7B89B57416C9C6E6F5B54 /* CoreMedia.framework */; };
 		BFF41156BA3A9A81EE253DAF /* MediaPipeTasksVision.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2EF79A2082843E4FAA12EB15 /* MediaPipeTasksVision.xcframework */; };
+		C34B0F291B88E53C70AB0D81 /* MembershipStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F1A0F0CEA9DD60D3F574A78 /* MembershipStore.swift */; };
 		CA64D940DD5A8D4DD526465A /* Localization.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BC315278D0CDD9A78988A5F /* Localization.swift */; };
 		CBAA79287C0D67B41BA8CC0F /* Glog-LICENSE.txt in Resources */ = {isa = PBXBuildFile; fileRef = 8721AC225C11AEADCCB6D063 /* Glog-LICENSE.txt */; };
 		D741B5C787CA1E4CF6180C19 /* AppLanguage.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF9896D69073A417BB9B0B2F /* AppLanguage.swift */; };
@@ -75,6 +76,7 @@
 		03348833A75068E88ECDAE98 /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
 		04252B4DF93CA2D2C02CB050 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		1CD99D493E1B4B93BA6A1EDD /* BetaBuddyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BetaBuddyApp.swift; sourceTree = "<group>"; };
+		1F1A0F0CEA9DD60D3F574A78 /* MembershipStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MembershipStore.swift; sourceTree = "<group>"; };
 		21C2F1FA66DC3AF9400169EF /* InfoPlist.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = InfoPlist.xcstrings; sourceTree = "<group>"; };
 		2EF79A2082843E4FAA12EB15 /* MediaPipeTasksVision.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = MediaPipeTasksVision.xcframework; path = Vendor/MediaPipeTasksVision/frameworks/MediaPipeTasksVision.xcframework; sourceTree = "<group>"; };
 		3347AC254AE7A2134551EEE4 /* pose_landmarker_full.task */ = {isa = PBXFileReference; path = pose_landmarker_full.task; sourceTree = "<group>"; };
@@ -148,6 +150,7 @@
 			isa = PBXGroup;
 			children = (
 				1CD99D493E1B4B93BA6A1EDD /* BetaBuddyApp.swift */,
+				1F1A0F0CEA9DD60D3F574A78 /* MembershipStore.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -480,6 +483,7 @@
 				A5F04A407DAACC93DBF3EB71 /* JournalView.swift in Sources */,
 				85453C6DD1EF245AAD250759 /* LocalTasksLogger.cc in Sources */,
 				CA64D940DD5A8D4DD526465A /* Localization.swift in Sources */,
+				C34B0F291B88E53C70AB0D81 /* MembershipStore.swift in Sources */,
 				64B4F869EFA81EEF760E823D /* Models.swift in Sources */,
 				A5C72DB499BCC606758BA91C /* PoseMath.swift in Sources */,
 				057EFDAB6648F3C43421E1D4 /* ReviewView.swift in Sources */,
@@ -534,7 +538,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_CXX_LANGUAGE_STANDARD = "c++17";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 9;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
@@ -553,7 +557,7 @@
 					"@executable_path/Frameworks",
 				);
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MARKETING_VERSION = 1.1.0;
+				MARKETING_VERSION = 1.2.0;
 				OTHER_LDFLAGS = "$(inherited) -ObjC";
 				"OTHER_LDFLAGS[sdk=iphoneos*]" = "$(inherited) -force_load $(PROJECT_DIR)/Vendor/LocalGraph/device.a";
 				"OTHER_LDFLAGS[sdk=iphonesimulator*]" = "$(inherited) -force_load $(PROJECT_DIR)/Vendor/LocalGraph/simulator.a";
@@ -710,7 +714,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_CXX_LANGUAGE_STANDARD = "c++17";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 9;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
@@ -729,7 +733,7 @@
 					"@executable_path/Frameworks",
 				);
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MARKETING_VERSION = 1.1.0;
+				MARKETING_VERSION = 1.2.0;
 				OTHER_LDFLAGS = "$(inherited) -ObjC";
 				"OTHER_LDFLAGS[sdk=iphoneos*]" = "$(inherited) -force_load $(PROJECT_DIR)/Vendor/LocalGraph/device.a";
 				"OTHER_LDFLAGS[sdk=iphonesimulator*]" = "$(inherited) -force_load $(PROJECT_DIR)/Vendor/LocalGraph/simulator.a";

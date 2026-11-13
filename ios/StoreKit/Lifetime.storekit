@@ -1,0 +1,37 @@
+{
+  "identifier" : "F4C97B11",
+  "nonRenewingSubscriptions" : [],
+  "products" : [
+    {
+      "displayPrice" : "10.00",
+      "familyShareable" : false,
+      "internalID" : "A77B4E91",
+      "localizations" : [
+        {
+          "description" : "A lifetime member badge now, with future member benefits when released.",
+          "displayName" : "Lifetime Membership",
+          "locale" : "en_US"
+        },
+        {
+          "description" : "立即获得终生会员标识；后续会员权益推出后开放。",
+          "displayName" : "终生会员",
+          "locale" : "zh_Hans"
+        }
+      ],
+      "productID" : "com.betabuddy.ios.lifetime",
+      "referenceName" : "BetaBuddy Lifetime Membership",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+    "_billingGracePeriodEnabled" : false,
+    "_renewalBillingIssuesEnabled" : false,
+    "_storefront" : "USA",
+    "_timeRate" : 0
+  },
+  "subscriptionGroups" : [],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}

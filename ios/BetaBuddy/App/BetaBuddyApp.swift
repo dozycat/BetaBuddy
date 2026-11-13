@@ -35,15 +35,21 @@ extension EnvironmentValues {
 
 @main
 struct BetaBuddyApp: App {
+    @Environment(\.scenePhase) private var scenePhase
     @StateObject private var store = ClimbStore()
     @StateObject private var language = LanguageSettings()
+    @StateObject private var membership = MembershipStore()
     var body: some Scene {
         WindowGroup {
-            RootView().environmentObject(store).environmentObject(language).tint(BB.ink).preferredColorScheme(.light)
+            RootView().environmentObject(store).environmentObject(language).environmentObject(membership).tint(BB.ink).preferredColorScheme(.light)
                 .alert("暂时无法完成", isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) {
                     Button("知道了", role: .cancel) { store.error = nil }
                 } message: { Text(verbatim: store.error ?? "") }
                 .environment(\.locale, language.locale)
+                .task { await membership.refreshEntitlement() }
+                .onChange(of: scenePhase) { _, phase in
+                    if phase == .active { Task { await membership.load() } }
+                }
         }
     }
 }
@@ -84,7 +90,7 @@ struct RootView: View {
         Button { tab = index } label: {
             VStack(spacing:5) {
                 Image(systemName:symbol).font(.system(size:20,weight:.semibold)).frame(width:54,height:30)
-                    .background(tab == index ? BB.lime : .clear,in:Capsule())
+                    .background(tab == index ? BB.lime : .clear,in:HoldShape())
                 Text(title).font(.system(size:11,weight:tab == index ? .bold : .medium)).lineLimit(1).minimumScaleFactor(0.8)
             }.foregroundStyle(tab == index ? BB.ink : BB.muted).frame(maxWidth:.infinity).contentShape(Rectangle())
         }.buttonStyle(.plain).accessibilityAddTraits(tab == index ? .isSelected : []).accessibilityIdentifier(id)
@@ -96,7 +102,8 @@ struct SettingsButton: View {
     @Environment(\.openSettings) private var openSettings
     var body: some View {
         Button(action: openSettings) {
-            Image(systemName:"slider.horizontal.3").frame(width:44,height:44).overlay(Circle().stroke(BB.line))
+            Image(systemName:"slider.horizontal.3").frame(width:44,height:44)
+                .overlay(HoldShape().stroke(BB.line,lineWidth:1.5))
         }.buttonStyle(.plain).accessibilityLabel("设置与关于").accessibilityIdentifier("about")
     }
 }

@@ -307,6 +307,108 @@
         }
       }
     },
+    "一次性购买，无订阅。购买由 Apple 处理，可在同一 Apple 账户的设备上恢复。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "One-time purchase, no subscription. Apple handles payment; restore it on devices using the same Apple Account."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "買い切りで、サブスクリプションはありません。支払いはAppleが処理し、同じApple Accountの端末で復元できます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "일회성 구매이며 구독이 아닙니다. 결제는 Apple이 처리하고 같은 Apple 계정의 기기에서 복원할 수 있습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一次性购买，无订阅。购买由 Apple 处理，可在同一 Apple 账户的设备上恢复。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一次性購買，無訂閱。購買由 Apple 處理，可在使用同一 Apple 帳號的裝置上回復。"
+          }
+        }
+      }
+    },
+    "一次购买，支持 BetaBuddy 继续迭代。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "One purchase supports the continued development of BetaBuddy."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一度の購入で BetaBuddy の継続的な開発を応援できます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "한 번의 구매로 BetaBuddy의 지속적인 개발을 응원할 수 있습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一次购买，支持 BetaBuddy 继续迭代。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一次購買，支持 BetaBuddy 持續改進。"
+          }
+        }
+      }
+    },
+    "一次购买，永久拥有尊贵终生会员标识。后续训练建议和新岩馆数据推出后，也将向终生会员开放。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buy once to unlock a lifetime member badge. Future training suggestions and new gym data will also be available to lifetime members when released."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一度の購入で終身会員バッジを利用できます。今後公開されるトレーニング提案と新しいジムデータも終身会員向けに提供予定です。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "한 번 구매하면 평생 회원 배지를 사용할 수 있습니다. 향후 출시될 훈련 추천과 새 암장 데이터도 평생 회원에게 제공될 예정입니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一次购买，永久拥有尊贵终生会员标识。后续训练建议和新岩馆数据推出后，也将向终生会员开放。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "購買一次，永久擁有尊貴終生會員標識。後續推出的訓練建議和新岩館資料也將開放給終生會員。"
+          }
+        }
+      }
+    },
     "下一次，我想…": {
       "localizations": {
         "en": {
@@ -439,6 +541,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "從照片選擇"
+          }
+        }
+      }
+    },
+    "会员权益": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Member perks"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "会員特典"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "회원 혜택"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "会员权益"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "會員權益"
           }
         }
       }
@@ -643,40 +779,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "全部"
-          }
-        }
-      }
-    },
-    "全部功能免费 · 无内购 · 无订阅 · 无广告": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Everything is free · no purchases · no subscription · no ads"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "全機能無料 · 課金なし · サブスクなし · 広告なし"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "모든 기능 무료 · 인앱 구입 없음 · 구독 없음 · 광고 없음"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "全部功能免费 · 无内购 · 无订阅 · 无广告"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "全部功能免費 · 無 App 內購買 · 無訂閱 · 無廣告"
           }
         }
       }
@@ -1667,6 +1769,40 @@
         }
       }
     },
+    "岩馆与攀爬册仍可免费使用；会员购买是可选的。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gym and Logbook remain free to use; membership is optional."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ジムとログブックは引き続き無料で利用でき、会員購入は任意です。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "암장과 로그북은 계속 무료로 사용할 수 있으며 회원 구매는 선택 사항입니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "岩馆与攀爬册仍可免费使用；会员购买是可选的。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "岩館與攀爬冊仍可免費使用；會員購買為選擇性項目。"
+          }
+        }
+      }
+    },
     "岩馆数据不完整": {
       "localizations": {
         "en": {
@@ -2109,6 +2245,40 @@
         }
       }
     },
+    "恢复购买": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restore purchases"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "購入を復元"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "구입 복원"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "恢复购买"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "回復購買"
+          }
+        }
+      }
+    },
     "手机温度较高，已停止分析。稍后可重新开始。": {
       "localizations": {
         "en": {
@@ -2313,6 +2483,74 @@
         }
       }
     },
+    "攀爬册终生会员标识": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lifetime member badge in Logbook"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ログブックの終身会員バッジ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "로그북의 평생 회원 배지"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "攀爬册终生会员标识"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "攀爬冊終生會員標識"
+          }
+        }
+      }
+    },
+    "支持独立开发，现在获得会员标识。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Support independent development and get a member badge today."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "個人開発を応援し、今すぐ会員バッジを受け取れます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "독립 개발을 응원하고 지금 회원 배지를 받으세요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "支持独立开发，现在获得会员标识。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "支持獨立開發，現在即可獲得會員標識。"
+          }
+        }
+      }
+    },
     "数据包格式（%lld）比这个版本的应用新。请更新应用。": {
       "localizations": {
         "en": {
@@ -2445,6 +2683,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "檔案"
+          }
+        }
+      }
+    },
+    "新岩馆数据": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New gym data"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新しいジムデータ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새 암장 데이터"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新岩馆数据"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新岩館資料"
           }
         }
       }
@@ -2619,6 +2891,108 @@
         }
       }
     },
+    "暂时无法完成购买，请稍后重试。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cannot complete the purchase right now. Try again later."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "現在購入を完了できません。後でもう一度お試しください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "현재 구매를 완료할 수 없습니다. 나중에 다시 시도해 주세요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂时无法完成购买，请稍后重试。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暫時無法完成購買，請稍後重試。"
+          }
+        }
+      }
+    },
+    "暂时无法恢复购买，请稍后重试。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cannot restore purchases right now. Try again later."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "現在購入を復元できません。後でもう一度お試しください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "현재 구매를 복원할 수 없습니다. 나중에 다시 시도해 주세요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂时无法恢复购买，请稍后重试。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暫時無法回復購買，請稍後重試。"
+          }
+        }
+      }
+    },
+    "暂时无法连接 App Store。请稍后重试。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cannot connect to the App Store right now. Try again later."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "現在App Storeに接続できません。後でもう一度お試しください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "현재 App Store에 연결할 수 없습니다. 나중에 다시 시도해 주세요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂时无法连接 App Store。请稍后重试。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暫時無法連接 App Store。請稍後重試。"
+          }
+        }
+      }
+    },
     "暂未可靠识别": {
       "localizations": {
         "en": {
@@ -2717,6 +3091,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "最高每秒 15 格 · 保留更多細節"
+          }
+        }
+      }
+    },
+    "未来计划": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Planned for later"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "今後の予定"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "향후 계획"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未来计划"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未來計畫"
           }
         }
       }
@@ -2891,6 +3299,74 @@
         }
       }
     },
+    "查看会员权益": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "See membership details"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "会員特典を見る"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "회원 혜택 보기"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "查看会员权益"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "查看會員權益"
+          }
+        }
+      }
+    },
+    "核心功能免费 · 终生会员为一次性内购 · 无订阅 · 无广告": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Core features are free · lifetime membership is a one-time purchase · no subscriptions or ads"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "基本機能は無料 · 終身会員は買い切り · サブスク・広告なし"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "핵심 기능은 무료 · 평생 회원은 일회성 인앱 구매 · 구독 및 광고 없음"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "核心功能免费 · 终生会员为一次性内购 · 无订阅 · 无广告"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "核心功能免費 · 終生會員為一次性 App 內購買 · 無訂閱 · 無廣告"
+          }
+        }
+      }
+    },
     "检测比例反映采样帧中髋部是否清晰，不是动作评分。角度为画面投影，不能直接比较不同拍摄角度。": {
       "localizations": {
         "en": {
@@ -3023,6 +3499,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在讀懂\n你的這一趟。"
+          }
+        }
+      }
+    },
+    "没有找到可恢复的终生会员购买。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No lifetime membership purchase was found to restore."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "復元できる終身会員の購入が見つかりませんでした。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복원할 평생 회원 구매 내역이 없습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有找到可恢复的终生会员购买。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "沒有找到可回復的終生會員購買。"
           }
         }
       }
@@ -3265,6 +3775,74 @@
         }
       }
     },
+    "终生会员": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lifetime member"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "終身会員"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "평생 회원"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "终生会员"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "終生會員"
+          }
+        }
+      }
+    },
+    "终生会员已解锁": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lifetime membership unlocked"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "終身会員を有効化しました"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "평생 회원이 활성화되었습니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "终生会员已解锁"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "終生會員已解鎖"
+          }
+        }
+      }
+    },
     "视频已就绪": {
       "localizations": {
         "en": {
@@ -3431,6 +4009,108 @@
           "stringUnit": {
             "state": "translated",
             "value": "影片進度"
+          }
+        }
+      }
+    },
+    "解锁终生会员": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unlock lifetime membership"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "終身会員を購入"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "평생 회원 잠금 해제"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "解锁终生会员"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "解鎖終生會員"
+          }
+        }
+      }
+    },
+    "解锁终生会员 ·": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unlock lifetime membership ·"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "終身会員を購入 ·"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "평생 회원 잠금 해제 ·"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "解锁终生会员 ·"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "解鎖終生會員 ·"
+          }
+        }
+      }
+    },
+    "训练建议": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Training suggestions"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "トレーニングの提案"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "훈련 제안"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "训练建议"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "訓練建議"
           }
         }
       }
@@ -3707,6 +4387,108 @@
         }
       }
     },
+    "购买后立即获得": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Available immediately"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "購入後すぐに利用可能"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "구매 즉시 제공"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "购买后立即获得"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "購買後立即獲得"
+          }
+        }
+      }
+    },
+    "购买成功后，标识会显示在攀爬册顶部。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "After purchase, your badge appears at the top of Logbook."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "購入後、ログブックの上部にバッジが表示されます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "구매 후 로그북 상단에 배지가 표시됩니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "购买成功后，标识会显示在攀爬册顶部。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "購買成功後，標識會顯示在攀爬冊頂部。"
+          }
+        }
+      }
+    },
+    "购买验证失败，请稍后重试。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Purchase verification failed. Try again later."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "購入を確認できませんでした。後でもう一度お試しください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "구매 확인에 실패했습니다. 나중에 다시 시도해 주세요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "购买验证失败，请稍后重试。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "購買驗證失敗，請稍後重試。"
+          }
+        }
+      }
+    },
     "跟随系统": {
       "localizations": {
         "en": {
@@ -3941,6 +4723,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "這個版本沒有內建岩館資料。場館模型、路線和攀爬模擬隨正式安裝檔提供，不在公開原始碼裡。"
+          }
+        }
+      }
+    },
+    "这些功能尚未上线，推出时间与具体内容可能调整。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "These features are not available yet. Timing and details may change."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "これらの機能はまだ提供していません。公開時期や内容は変更される場合があります。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 기능은 아직 제공되지 않습니다. 출시 시기와 세부 내용은 변경될 수 있습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这些功能尚未上线，推出时间与具体内容可能调整。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "這些功能尚未推出，上線時間與具體內容可能調整。"
           }
         }
       }
@@ -4247,6 +5063,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "重新載入"
+          }
+        }
+      }
+    },
+    "重试连接 App Store": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retry App Store connection"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App Store への接続を再試行"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App Store 연결 다시 시도"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重试连接 App Store"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重試連接 App Store"
           }
         }
       }

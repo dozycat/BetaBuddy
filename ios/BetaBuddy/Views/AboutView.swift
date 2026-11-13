@@ -3,7 +3,9 @@ import SwiftUI
 struct AboutView: View {
     @EnvironmentObject private var store: ClimbStore
     @EnvironmentObject private var language: LanguageSettings
+    @EnvironmentObject private var membership: MembershipStore
     @Environment(\.dismiss) private var dismiss
+    @State private var showingMembership = false
     private var version: String { Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "" }
     var body: some View {
         PaperPage {
@@ -15,9 +17,32 @@ struct AboutView: View {
                 }.background(.white.opacity(0.6),in:RoundedRectangle(cornerRadius:18))
             }
             Divider()
+            VStack(alignment:.leading,spacing:12) {
+                HStack(spacing:10) {
+                    MemberMark().frame(width:30,height:30)
+                    Text("终生会员").font(.title3.bold())
+                }
+                if membership.isMember {
+                    Text("终生会员已解锁").font(.headline).accessibilityIdentifier("membershipActive")
+                } else {
+                    Text("支持独立开发，现在获得会员标识。")
+                        .foregroundStyle(BB.muted)
+                    Button { showingMembership = true } label: {
+                        HStack(spacing:12) {
+                            BoltMark()
+                            Text("查看会员权益").font(.headline)
+                            Spacer()
+                            Image(systemName:"arrow.up.right")
+                        }.padding(14)
+                    }.buttonStyle(RouteButtonStyle(tone:.lime))
+                        .accessibilityIdentifier("membershipDetails")
+                }
+            }.padding(18).frame(maxWidth:.infinity,alignment:.leading)
+                .background(BB.lavender,in:RoundedRectangle(cornerRadius:20))
+            Divider()
             Text(verbatim:"YOUR BETA.\nYOUR DEVICE.").font(BB.display(37))
             Label("完全在这台 iPhone 上分析",systemImage:"lock.shield").font(.title3.bold())
-            Text("全部功能免费 · 无内购 · 无订阅 · 无广告").font(.subheadline.bold())
+            Text("核心功能免费 · 终生会员为一次性内购 · 无订阅 · 无广告").font(.subheadline.bold())
             Text("姿态模型随安装包提供。没有模型下载，没有账号，也没有云端 AI。导入的视频与分析记录保存在应用内，并排除在系统云备份之外。").foregroundStyle(BB.muted)
             Divider()
             SectionLabel(title:"分析边界",trailing:"KEEP IT HONEST")
@@ -36,14 +61,15 @@ struct AboutView: View {
             Text("已保存 \(store.climbs.count) 段攀爬。可在每条记录中删除原片和分析；卸载应用会移除本地记录。需要保留的复盘文字可通过分享导出。").foregroundStyle(BB.muted)
             NavigationLink("隐私政策") { PrivacyPolicyView() }
                 .font(.headline).padding(.vertical, 12).accessibilityIdentifier("privacyPolicy")
-            Link("在线隐私政策", destination: URL(string: "https://betabuddy-support.dozycfs.chatgpt.site/privacy")!)
-            Link("帮助与支持", destination: URL(string: "https://betabuddy-support.dozycfs.chatgpt.site")!)
+            Link("在线隐私政策", destination: URL(string: "https://betabuddy.dozycat.ai/privacy")!)
+            Link("帮助与支持", destination: URL(string: "https://betabuddy.dozycat.ai")!)
             Link(destination: URL(string: "mailto:hi@dozycat.ai")!) { Text(verbatim:"hi@dozycat.ai") }
             Text(verbatim:"BETABUDDY / \(version)\nBuilt for the next attempt.").font(.system(size:12,design:.monospaced)).lineSpacing(6)
         }.navigationTitle("设置与关于").navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement:.topBarTrailing) { Button("完成") { dismiss() }.accessibilityIdentifier("settingsDone") }
             }
+            .sheet(isPresented:$showingMembership) { NavigationStack { MembershipOfferView() } }
     }
     // Each language is written in itself; only “follow system” is translated.
     private func languageRow(_ code: String?) -> some View {
@@ -56,6 +82,81 @@ struct AboutView: View {
         }.buttonStyle(.plain).accessibilityIdentifier("language-\(code ?? "system")")
             .accessibilityAddTraits(language.selection == code ? .isSelected : [])
             .overlay(alignment:.bottom) { if code != AppLanguage.supported.last { Rectangle().fill(BB.line).frame(height:1).padding(.leading,16) } }
+    }
+}
+
+struct MembershipOfferView: View {
+    @EnvironmentObject private var membership: MembershipStore
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        PaperPage {
+            HStack {
+                Stamp(text:"BETABUDDY / LIFETIME")
+                Spacer()
+                MemberMark().frame(width:54,height:54)
+            }
+            VStack(alignment:.leading,spacing:12) {
+                Text("终生会员").font(BB.display(38))
+                Text("一次购买，支持 BetaBuddy 继续迭代。")
+                    .font(.title3.bold())
+                Text("岩馆与攀爬册仍可免费使用；会员购买是可选的。")
+                    .foregroundStyle(BB.muted)
+            }
+            VStack(alignment:.leading,spacing:16) {
+                SectionLabel(title:"购买后立即获得",trailing:"AVAILABLE NOW")
+                    .accessibilityIdentifier("membershipBenefitsNow")
+                HStack(spacing:12) {
+                    MemberMark().frame(width:32,height:32)
+                    Text("攀爬册终生会员标识").font(.headline)
+                }
+                Text("购买成功后，标识会显示在攀爬册顶部。")
+                    .foregroundStyle(BB.muted)
+            }.padding(20).frame(maxWidth:.infinity,alignment:.leading)
+                .background(BB.lavender,in:RoundedRectangle(cornerRadius:22))
+            if membership.isMember {
+                Label("终生会员已解锁",systemImage:"checkmark.seal.fill")
+                    .font(.headline).accessibilityIdentifier("membershipActive")
+            } else {
+                VStack(alignment:.leading,spacing:12) {
+                    if let product = membership.product {
+                        Button { Task { await membership.purchase() } } label: {
+                            HStack {
+                                BoltMark()
+                                Text("解锁终生会员")
+                                Spacer()
+                                Text(verbatim:product.displayPrice)
+                            }.font(.headline).padding(18).frame(maxWidth:.infinity)
+                        }.buttonStyle(RouteButtonStyle(tone:.lime))
+                            .disabled(membership.isBusy).accessibilityIdentifier("buyLifetime")
+                    } else {
+                        Text("暂时无法连接 App Store。请稍后重试。").foregroundStyle(BB.muted)
+                        Button("重试连接 App Store") { Task { await membership.load() } }
+                            .accessibilityIdentifier("retryMembershipProduct")
+                    }
+                    Button("恢复购买") { Task { await membership.restore() } }
+                        .disabled(membership.isBusy).accessibilityIdentifier("restoreLifetime")
+                    Text("一次性购买，无订阅。购买由 Apple 处理，可在同一 Apple 账户的设备上恢复。")
+                        .font(.caption).foregroundStyle(BB.muted)
+                    if membership.isBusy { ProgressView() }
+                }
+            }
+            VStack(alignment:.leading,spacing:12) {
+                SectionLabel(title:"未来计划",trailing:"PLANNED")
+                    .accessibilityIdentifier("membershipBenefitsLater")
+                Label("训练建议",systemImage:"figure.climbing")
+                Label("新岩馆数据",systemImage:"map")
+                Text("这些功能尚未上线，推出时间与具体内容可能调整。")
+                    .font(.subheadline).foregroundStyle(BB.muted)
+            }.padding(20).frame(maxWidth:.infinity,alignment:.leading)
+                .background(.white.opacity(0.6),in:RoundedRectangle(cornerRadius:22))
+        }.navigationTitle("终生会员").navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement:.topBarTrailing) { Button("完成") { dismiss() }.accessibilityIdentifier("membershipDone") }
+            }
+            .alert("暂时无法完成", isPresented: Binding(get: { membership.errorMessage != nil }, set: { if !$0 { membership.errorMessage = nil } })) {
+                Button("知道了", role:.cancel) { membership.errorMessage = nil }
+            } message: { Text(verbatim:membership.errorMessage ?? "") }
     }
 }
 
