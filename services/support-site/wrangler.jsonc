@@ -1,0 +1,6 @@
+{
+  "name": "betabuddy-support",
+  "compatibility_date": "2026-11-13",
+  "assets": { "directory": "./public" },
+  "routes": [{ "pattern": "betabuddy.dozycat.ai", "custom_domain": true }]
+}

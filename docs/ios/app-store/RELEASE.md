@@ -1,6 +1,6 @@
 # 发布流程
 
-从一份通过测试的代码到提交 App Store 审核，每个版本都走这几步。后台现在的状态见 [STATUS.md](STATUS.md)；每个版本自己的文案和清单在 `release-<版本>.md`；各版本通用的商店资料在 [metadata-zh-Hans.md](metadata-zh-Hans.md)。
+从一份通过测试的代码到提交 App Store 审核，每个版本都走这几步。后台现在的状态见 [STATUS.md](STATUS.md)；每个版本自己的文案和清单在 `release-<版本>.md`；1.2.0 商店英文资料在 [metadata-en.md](metadata-en.md)。
 
 BetaBuddy 的岩馆和攀爬册核心功能免费，没有订阅和广告。1.2.0 起提供可选的一次性终生会员内购；购买后立即显示会员标识。训练建议和新岩馆数据是后续计划，不应在审核资料中描述为已经提供。
 
@@ -52,7 +52,7 @@ PATH=/usr/bin:/bin:/usr/sbin:/sbin xcodebuild -exportArchive \
 2. Pricing and Availability：App 保持免费，选择实际要发布的地区。1.2.0 起把终生会员非消耗型内购与新版 App 一同提交审核；美国价格为 $10，其他地区以 App Store Connect 的价格矩阵为准。
 3. App Privacy：按最终实现填写。应用不向开发者或合作方传输个人数据，对应「不收集数据」；每次提交前对照打包的 SDK、隐私清单和 Apple 的验证报告复核。
 4. 年龄分级、内容权利、出口加密问卷。
-5. Support URL 与 Privacy Policy URL 填已上线、无需登录的 HTTPS 地址。内容源是 [support.md](support.md) 和 [privacy-policy.txt](privacy-policy.txt)；应用内的离线政策不能替代这两个网址。
+5. Support URL 填 `https://betabuddy.dozycat.ai`，Privacy Policy URL 填 `https://betabuddy.dozycat.ai/privacy`。站点由 Cloudflare 静态 Worker 托管，源文件在 `services/support-site`；应用内的离线政策不能替代这两个网址。
 6. 审核联系人填真实的姓名和电话。
 
 每个版本：

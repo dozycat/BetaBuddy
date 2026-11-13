@@ -1,31 +1,15 @@
-# BetaBuddy 支持
+# BetaBuddy Support
 
-BetaBuddy 的岩馆和攀爬册核心功能免费；终生会员为可选的一次性内购，没有订阅或广告。
+The public English support and privacy pages are hosted at <https://betabuddy.dozycat.ai> using Cloudflare's static Worker. The source and deployment notes are in [services/support-site](../../../services/support-site/README.md).
 
-联系邮箱：[hi@dozycat.ai](mailto:hi@dozycat.ai)
+Gym and Logbook core features are free. Lifetime membership is an optional one-time purchase; there is no subscription or advertising.
 
-反馈问题时请描述 iPhone 型号、iOS 版本、BetaBuddy 版本、操作步骤和错误提示。首次联系无需发送私人视频；请勿发送密码或验证码。
+Contact: [hi@dozycat.ai](mailto:hi@dozycat.ai). When reporting a problem, include your iPhone model, iOS and BetaBuddy versions, steps, and any error message. Do not send a personal video in the first message or share passwords and verification codes.
 
-## 无法识别人体
+- No climber detected: use a well-lit video of one climber, whole body visible, with a fixed camera; 0.5–180 seconds and up to 500 MB.
+- Video import: check the original in Photos, allow iCloud to download it if needed, and trim it before retrying.
+- iPhone feels hot: pause repeated analyses or use Everyday review; analysis stops at a serious thermal state.
+- Delete a climb: delete its app copy and analysis from the record; the original in Photos is unaffected. There is no cloud restore.
+- Lifetime membership: buy or restore from Settings & About using the same Apple Account. The badge appears in Logbook immediately. Training suggestions and new gym data are future plans.
 
-使用单人、全身入镜、光线充足、固定机位的视频。遮挡与远距离拍摄可能降低识别质量。视频长度须为 0.5–180 秒，大小不超过 500 MB。
-
-## 视频无法导入
-
-先在系统相册确认原片能够完整播放。如果原片在 iCloud，请先等待系统下载。可在相册中裁剪后再导入。
-
-## 手机温度较高
-
-停止连续分析，稍后重试，或选择“日常回看”。应用会在严重热状态时停止分析。
-
-## 删除记录
-
-进入对应攀爬记录使用删除功能，移除应用内的原片副本与分析结果；相册原片不受影响。删除应用会移除本地记录，应用没有云端恢复功能。
-
-## 终生会员与恢复购买
-
-在“设置与关于”中购买或点“恢复购买”。购买成功后攀爬册显示终生会员标识；换设备时使用购买时相同的 Apple 账户恢复。训练建议和新岩馆数据将在后续推出，目前不在应用内提供。
-
-## 隐私
-
-姿态模型随安装包内置，视频与分析在设备本地处理。完整说明见同站点公开的隐私政策。
+The full privacy policy is at <https://betabuddy.dozycat.ai/privacy>.

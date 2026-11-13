@@ -61,8 +61,8 @@ struct AboutView: View {
             Text("已保存 \(store.climbs.count) 段攀爬。可在每条记录中删除原片和分析；卸载应用会移除本地记录。需要保留的复盘文字可通过分享导出。").foregroundStyle(BB.muted)
             NavigationLink("隐私政策") { PrivacyPolicyView() }
                 .font(.headline).padding(.vertical, 12).accessibilityIdentifier("privacyPolicy")
-            Link("在线隐私政策", destination: URL(string: "https://betabuddy-support.dozycfs.chatgpt.site/privacy")!)
-            Link("帮助与支持", destination: URL(string: "https://betabuddy-support.dozycfs.chatgpt.site")!)
+            Link("在线隐私政策", destination: URL(string: "https://betabuddy.dozycat.ai/privacy")!)
+            Link("帮助与支持", destination: URL(string: "https://betabuddy.dozycat.ai")!)
             Link(destination: URL(string: "mailto:hi@dozycat.ai")!) { Text(verbatim:"hi@dozycat.ai") }
             Text(verbatim:"BETABUDDY / \(version)\nBuilt for the next attempt.").font(.system(size:12,design:.monospaced)).lineSpacing(6)
         }.navigationTitle("设置与关于").navigationBarTitleDisplayMode(.inline)

@@ -1,20 +1,20 @@
 # App Store metadata · English
 
-English store copy, matching what the app does today. Simplified Chinese: [metadata-zh-Hans.md](metadata-zh-Hans.md). What is actually filled in on App Store Connect is tracked in [STATUS.md](STATUS.md).
+English store copy, matching what the app does today. The Simplified Chinese storefront also uses English copy and screenshots for 1.2.0. What is actually filled in on App Store Connect is tracked in [STATUS.md](STATUS.md).
 
 - Name: BetaBuddy Climbing Journal
 - Subtitle: Gym beta & climb video review (29 of 30 characters)
 - Primary category: Sports
 - App price: Free; optional one-time lifetime membership, US price $10; no subscription
 - Keywords: climbing,bouldering,beta,gym,problem,send,video,review,pose,skeleton,logbook
-- Support URL: https://betabuddy-support.dozycfs.chatgpt.site
-- Privacy Policy URL: https://betabuddy-support.dozycfs.chatgpt.site/privacy
+- Support URL: https://betabuddy.dozycat.ai
+- Privacy Policy URL: https://betabuddy.dozycat.ai/privacy
 - Privacy label: Data Not Collected
 - Sign-in: none
 
 ## Promotional text
 
-Go again, a little differently. Explore an offline gym and see how a different build might climb a problem. Import a climb to replay skeleton and movement. Core features are free, with an optional one-time lifetime membership.
+Explore an offline gym and replay your climbs with on-device pose analysis. Core Gym and Logbook features are free; lifetime membership is an optional one-time purchase.
 
 ## Description
 
@@ -45,12 +45,6 @@ Requires iOS 17 or later. If a video exists only in iCloud, the system may need 
 
 The app’s interface is available in English, Simplified Chinese, Traditional Chinese, Japanese and Korean. It follows your system language, and you can switch it in the app at any time.
 
-## What’s New (1.1.0)
+## What’s New (1.2.0)
 
-Now in two tabs: Gym and Logbook.
-
-• Gym: an unofficial 3D map of one climbing gym, built in and offline. Filter problems by wall, grade band and hold color; pick a build and step through one sequence the model projects.
-• Logbook: importing a climb now starts here. Replay, notes and sent marks work as before.
-• Now in English, Simplified Chinese, Traditional Chinese, Japanese and Korean.
-
-The gym content is unofficial and may not match the wall. The projection is not coaching advice.
+Explore an offline 3D gym with 72 problems, switch climber builds, and step through a projected sequence. Logbook now brings video import, on-device pose review, notes, and sent marks together. A new optional $10 one-time lifetime membership adds a climbing-hold badge right away; training suggestions and new gym data are future plans. Core Gym and Logbook features remain free, with no ads or subscriptions. The interface supports English, Simplified Chinese, Traditional Chinese, Japanese, and Korean, following your system language or your in-app choice.

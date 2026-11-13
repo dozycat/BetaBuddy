@@ -1,5 +1,7 @@
 # BetaBuddy 发布状态
 
+2026-11-13：按用户要求，1.1.0 (5) 的审核提交已取消，App Store Connect 显示“被开发者拒绝”；版本记录改为 1.2.0。1.2.0 的简体中文和英语（美国）商店文案、更新说明、关键词、技术支持 URL 和中／大屏 iPhone 截图均已改成英文。两种语言的隐私政策 URL 均改为 `https://betabuddy.dozycat.ai/privacy`，会员内购的两种商店本地化也都使用英文。英文支持与隐私站点已部署在 Cloudflare 静态 Worker `betabuddy-support`，`https://betabuddy.dozycat.ai` 和 `/privacy` 均返回 200。App 内的帮助与隐私外链已改为新域名；1.2.0 (9) 已签名归档和上传 App Store Connect，归档内确认版本 9、GymPack 与新 URL，正在等待 Apple 处理后关联到版本并与首个内购一同提审。现有 1.0.0 的商店素材仍会在 1.2.0 发布前展示；Apple 不允许在缺少 1.0.0 英语截图时把 App 的主要语言从简体中文切成英语，但 1.2.0 的两种商店语言内容都已是英文。
+
 2026-11-13：1.2.0 (8) 已签名归档并上传 App Store Connect，Apple 处理完成；出口合规答复已保存，构建状态“准备提交”。攀爬册顶部以“会员权益”引导到详情页，明确区分购买后立即获得的岩点会员标识和仍在计划中的功能；购买按钮直接调用 StoreKit 2 的系统购买流程。主按钮、播放等控件采用岩点轮廓。英文界面定向 UI 测试通过，归档内 GymPack 1.2.1 清单与本地安装包 SHA-256 一致。首个内购的审核截图已换成新版会员页，审核备注已同步并显示“已保存”。1.1.0 仍显示“正在审核”，1.2.0 暂无法建立商店版本。Apple 账户密码／Face ID 验证由系统及设备设置决定，App 不能跳过。
 
 2026-11-13：1.2.0 (7) 终生会员版本已签名归档并成功上传 App Store Connect，二进制文件状态“已验证”；尚未提审。App Store Connect 已创建非消耗型内购 `com.betabuddy.ios.lifetime`，美国价格 $10，状态“准备提交”；内购审核截图已上传，仍需随新版 App 一同提交。Apple 要求当前 1.1.0 状态先成为“可供分发”，才能建立 1.2.0 商店版本；首个非消耗型内购必须随新版一起送审，不能单独提交。本地实现使用 StoreKit 2 的已验证权益决定会员标识，购买和恢复入口在攀爬册顶部“会员权益”和“设置与关于”通往的详情页；训练建议和新岩馆数据仍属后续计划。线上支持与隐私站点已更新发布。付费 App 协议状态“有效”；收款银行账户状态“可用”。美国税表 U.S. Certificate of Foreign Status of Beneficial Owner 和 W-8BEN 均于 11 月 13 日提交，状态“使用中”；中国大陆国务院令第 810 号合规资料已显示“有效”。域名 `dozycat.ai` 已切到 Cloudflare 权威服务器；支付核验 Worker 代码与 `pay.dozycat.ai` 自定义域名已部署，健康检查及无效签名拒绝测试通过。Apple 内购 API 的 Issuer ID、Key ID 和私钥已保存为 `betabuddy-pay` Production Secret；真实交易核验仍待沙盒交易验证，当前 App 不调用此服务。下文 1.1.0 的“无内购”描述指该已提交构建。
@@ -49,8 +51,8 @@
 
 - 中文名称、副标题、描述、关键词和推广文本；主要类别为体育。
 - 审核联系人已按用户提供的信息填写，支持邮箱 hi@dozycat.ai。
-- 支持网站：https://betabuddy-support.dozycfs.chatgpt.site
-- 隐私政策：https://betabuddy-support.dozycfs.chatgpt.site/privacy；英文版：https://betabuddy-support.dozycfs.chatgpt.site/privacy/en
+- 支持网站：https://betabuddy.dozycat.ai
+- 隐私政策：https://betabuddy.dozycat.ai/privacy
 - 两个公开网址无需登录，HTTP 200，应用内已链接；同时提供离线政策。
 - 隐私标签“不收集数据”已在后台发布。
 - 1.1.0 中英文各 4 张截图已上传至 6.9 英寸（1320 × 2868）和必需的中尺寸（1206 × 2622）栏目。
