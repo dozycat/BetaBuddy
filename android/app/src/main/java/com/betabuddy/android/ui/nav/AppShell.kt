@@ -55,6 +55,7 @@ import com.betabuddy.android.R
 import com.betabuddy.android.gym.GymScreen
 import com.betabuddy.android.gym.GymSession
 import com.betabuddy.android.journal.JournalScreen
+import com.betabuddy.android.settings.LicensesScreen
 import com.betabuddy.android.settings.PrivacyPolicyScreen
 import com.betabuddy.android.settings.SettingsScreen
 import com.betabuddy.android.ui.common.BBIcons
@@ -70,6 +71,7 @@ private object Routes {
     const val HOME = "home"
     const val SETTINGS = "settings"
     const val PRIVACY = "settings/privacy"
+    const val LICENSES = "settings/licenses"
 }
 
 /**
@@ -95,9 +97,15 @@ fun AppShell(gym: GymSession, initialTab: Int = Tabs.GYM) {
             HomeScreen(gym = gym, initialTab = initialTab, onOpenSettings = openSettings)
         }
         composable(Routes.SETTINGS) {
-            SettingsScreen(gym = gym.status, onBack = { navigation.popBackStack() }, onOpenPrivacy = { navigation.open(Routes.PRIVACY) })
+            SettingsScreen(
+                gym = gym.status,
+                onBack = { navigation.popBackStack() },
+                onOpenPrivacy = { navigation.open(Routes.PRIVACY) },
+                onOpenLicenses = { navigation.open(Routes.LICENSES) },
+            )
         }
         composable(Routes.PRIVACY) { PrivacyPolicyScreen(onBack = { navigation.popBackStack() }) }
+        composable(Routes.LICENSES) { LicensesScreen(onBack = { navigation.popBackStack() }) }
     }
 }
 

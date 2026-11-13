@@ -25,6 +25,14 @@ MediaPipe Tasks 依赖 Google 的 datatransport 库（SDK 自己的使用统计�
 
 Media3 的 Manifest 会带进来 `ACCESS_NETWORK_STATE` 和 `WAKE_LOCK`（码率估计和后台播放用），回看本地文件用不到，也已移除。AppCompat 带来的 EmojiCompat 启动时会向系统字体服务要新的表情字体，应用不用它，初始化项已移除。合并后剩下的唯一一条权限是 AndroidX Core 自动加的 `<应用 ID>.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`：签名级，只有应用自己能持有，不涉及用户数据。
 
-MediaPipe 的 AAR 不带 R8 规则，`app/proguard-rules.pro` 整体保留 `com.google.mediapipe.**` 和 `com.google.protobuf.**`（它们经 JNI 和反射访问）。
+MediaPipe 的 AAR 不带 R8 规则，`app/proguard-rules.pro` 整体保留 `com.google.mediapipe.**`、`com.google.protobuf.**`（经 JNI 和反射访问）和 `com.google.common.flogger.**`（靠类名在调用栈里找调用者，改名后第一次分析就会崩溃）。
+
+## 随应用打包的许可
+
+`app/src/main/assets/licenses/` 里的三个文件随应用打包，在「设置与关于」→「开源许可」里可以查看：
+
+- `components.txt` — 这个构建里的第三方组件和各自的许可。库的清单取自 Release 运行时依赖（`./gradlew :app:dependencies --configuration releaseRuntimeClasspath`），依赖有增减时要同步。
+- `Apache-2.0.txt` — Apache License 2.0 全文。
+- `MediaPipe-NOTICE.txt` — MediaPipe 原生库所含开源项目的声明，与 `ios/BetaBuddy/Resources/Licenses/MediaPipe-NOTICE.txt` 是同一个文件（取自 Google 发布的 MediaPipe Tasks 分发包）。
 
 没有分析、崩溃上报、广告或远程配置 SDK。Gradle wrapper（`gradle/wrapper/gradle-wrapper.jar`）是 Gradle 9.7.1 官方生成的，SHA-256 `7a9ce74cff467ca1bf60a4fcd9f05185acceda4d0f382434d393e17864262c5d`，与 gradle.org 公布的一致。

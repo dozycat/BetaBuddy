@@ -53,4 +53,6 @@
     <string name="about_support">帮助与支持</string>
     <string name="privacy_title">隐私政策</string>
     <string name="privacy_unreadable">隐私政策无法读取，请重新安装完整版本。</string>
+    <string name="licenses_title">开源许可</string>
+    <string name="licenses_unreadable">许可文本无法读取，请重新安装完整版本。</string>
 </resources>

@@ -53,4 +53,6 @@
     <string name="about_support">ヘルプとサポート</string>
     <string name="privacy_title">プライバシーポリシー</string>
     <string name="privacy_unreadable">プライバシーポリシーを読み込めません。アプリを入れ直してください。</string>
+    <string name="licenses_title">オープンソースライセンス</string>
+    <string name="licenses_unreadable">ライセンスを読み込めません。アプリを入れ直してください。</string>
 </resources>

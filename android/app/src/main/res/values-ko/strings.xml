@@ -53,4 +53,6 @@
     <string name="about_support">도움말 및 지원</string>
     <string name="privacy_title">개인정보 처리방침</string>
     <string name="privacy_unreadable">개인정보 처리방침을 읽을 수 없습니다. 앱을 다시 설치하세요.</string>
+    <string name="licenses_title">오픈소스 라이선스</string>
+    <string name="licenses_unreadable">라이선스를 읽을 수 없습니다. 앱을 다시 설치하세요.</string>
 </resources>

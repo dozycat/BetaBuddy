@@ -141,4 +141,4 @@ legacy/web/             早期的网页实现，不再维护
 
 源码以 MIT 许可发布。
 
-应用使用 Google 的 MediaPipe Tasks SDK 和 Pose Landmarker Full 模型（Apache-2.0），权重未改动。来源、版本和校验值见 [ios/THIRD_PARTY.md](ios/THIRD_PARTY.md) 和 [android/THIRD_PARTY.md](android/THIRD_PARTY.md)；iOS 版的许可全文随应用打包。场馆数据包不属于本仓库，不在这份许可之内。
+应用使用 Google 的 MediaPipe Tasks SDK 和 Pose Landmarker Full 模型（Apache-2.0），权重未改动。来源、版本和校验值见 [ios/THIRD_PARTY.md](ios/THIRD_PARTY.md) 和 [android/THIRD_PARTY.md](android/THIRD_PARTY.md)；许可全文随应用打包，Android 版在「设置与关于」里可以查看。场馆数据包不属于本仓库，不在这份许可之内。

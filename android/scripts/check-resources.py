@@ -12,6 +12,7 @@
 - locales_config.xml lists exactly the languages that have resources
 - the manifest declares no permission, removes the ones dependencies merge in, and both
   backup sections of data_extraction_rules.xml exclude every domain
+- the third-party license texts are in assets/licenses
 
 Exits non-zero and prints each problem when something is wrong.
 """
@@ -170,6 +171,12 @@ if rules is not None:
         excluded = {element.get("domain") for element in node.findall("exclude")} if node is not None else set()
         if excluded != domains or (node is not None and node.findall("include")):
             problem(f"data_extraction_rules.xml: <{section}> must exclude {sorted(domains)} and include nothing")
+
+# 6. The third-party license texts are bundled.
+for name in ("components.txt", "Apache-2.0.txt", "MediaPipe-NOTICE.txt"):
+    path = APP / "src/main/assets/licenses" / name
+    if not path.is_file() or path.stat().st_size == 0:
+        problem(f"assets/licenses/{name} is missing or empty")
 
 if problems:
     print("\n".join(problems))

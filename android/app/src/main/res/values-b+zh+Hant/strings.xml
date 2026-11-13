@@ -53,4 +53,6 @@
     <string name="about_support">說明與支援</string>
     <string name="privacy_title">隱私權政策</string>
     <string name="privacy_unreadable">隱私權政策無法讀取，請重新安裝完整版本。</string>
+    <string name="licenses_title">開放原始碼授權</string>
+    <string name="licenses_unreadable">授權條款無法讀取，請重新安裝完整版本。</string>
 </resources>
