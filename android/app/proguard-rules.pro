@@ -36,6 +36,10 @@
 -keepclassmembers class * extends com.google.protobuf.GeneratedMessageLite {
     <fields>;
 }
+# MediaPipe logs through Flogger, which finds the calling class by walking the stack and
+# comparing class names. Renamed or inlined, it throws "no caller found on the stack" from
+# Graph's static initializer and the first analysis crashes.
+-keep class com.google.common.flogger.** { *; }
 -dontwarn com.google.mediapipe.proto.CalculatorProfileProto$CalculatorProfile
 -dontwarn com.google.mediapipe.proto.GraphTemplateProto$CalculatorGraphTemplate
 -dontwarn javax.lang.model.**
