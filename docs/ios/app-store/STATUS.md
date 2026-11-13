@@ -1,5 +1,7 @@
 # BetaBuddy 发布状态
 
+2026-11-13 晚：App Store Connect 显示正式版 **1.2.0 (10)「可分发」**。原公开 TestFlight 链接 `https://testflight.apple.com/join/WZPw69Vx` 已启用，但外部群组目前只有 **1.0.1 (3)**，后台显示 27 天后过期。Apple 不允许将已关闭外部测试的 1.2.0 (10) 加入群组，因此从远端最新 1.2.0 (10) 源码仅递增版本号，制作 **1.2.1 (11)**：核对 72 条线路数据包、签名归档和 IPA 上传成功。Apple 正在处理新包；需等处理后完成出口合规、提交外部 Beta 审核。只有审核通过并加入该群组后，公开链接才会安装 1.2.1。TestFlight 的 App 描述、隐私网址、审核说明已更新为当前功能，构建 10 的测试重点也已保存；构建 10 未能通过外部 Beta 提交。
+
 2026-11-13 下午：Apple 以 Guideline 2.2（Beta Testing）拒绝了 1.2.0 (9)，认为 App 看起来像功能有限的预发布版本；截图是“设置与关于”页。已在审核消息中说明攀岩术语 beta 的含义，并询问具体未完成的功能。现已准备 1.2.0 (10)：将歧义标题 `YOUR BETA` 改为 `YOUR CLIMB`，移除会员页的未来计划，并使 App 内离线隐私文案只陈述当前权益；签名归档成功。App Store Connect 的简体中文及英语（美国）描述、更新说明、审核备注与副标题已改为英文并保存；内购从旧提交移除后，五种地区本地化的名称和描述已统一为英文，明确一次性购买立即获得永久徽章。新的 1206 × 2622 英文内购审核截图已上传，待 Apple 处理完成。Cloudflare 支持页已部署新版。当前 Xcode 导出上传提示个人团队 App Store Connect 授权失效，待 Xcode 账户重新登录后上传构建 10 并重新提交。现有 1.0.0 仍可分发。
 
 2026-11-13：按用户要求，1.1.0 (5) 的审核提交已取消，App Store Connect 显示“被开发者拒绝”；版本记录改为 1.2.0。1.2.0 的简体中文和英语（美国）商店文案、更新说明、关键词、技术支持 URL 和中／大屏 iPhone 截图均已改成英文。两种语言的隐私政策 URL 均改为 `https://betabuddy.dozycat.ai/privacy`，会员内购的两种商店本地化也都使用英文。英文支持与隐私站点已部署在 Cloudflare 静态 Worker `betabuddy-support`，`https://betabuddy.dozycat.ai` 和 `/privacy` 均返回 200。App 内的帮助与隐私外链已改为新域名；岩馆内嵌页面只能导航到安装包内的 `gympack://local`。1.2.0 (9) 已签名归档、上传并完成出口合规，归档内确认版本 9、GymPack 与新 URL；构建 9 和首个终生会员内购已在同一个审核提交中正式送审，均显示“等待审核”。提交 ID：`f851acda-7e1b-4c10-aaca-b5de4e7caeba`，提交时间 2026-11-13 08:16（中国时间）。现有 1.0.0 的商店素材仍会在 1.2.0 发布前展示；Apple 不允许在缺少 1.0.0 英语截图时把 App 的主要语言从简体中文切成英语，但 1.2.0 的两种商店语言内容都已是英文。
@@ -18,7 +20,7 @@
 
 ## 现在
 
-**当前正式版为 1.0.0；1.2.0 (9) 被 Apple 拒绝，修正版构建 10 已归档，等待上传和重新提交。** 旧提交 ID：`f851acda-7e1b-4c10-aaca-b5de4e7caeba`；[审核记录](https://appstoreconnect.apple.com/apps/6809249574/distribution/reviewsubmissions/details/f851acda-7e1b-4c10-aaca-b5de4e7caeba)。下方构建 3–5 为 1.1.0 历史记录，该版本的审核已取消。
+**当前正式版为 1.2.0 (10)；1.2.1 (11) 已上传，等待 Apple 处理和外部 TestFlight 审核。** 旧的 1.2.0 (9) 拒审提交 ID：`f851acda-7e1b-4c10-aaca-b5de4e7caeba`；[审核记录](https://appstoreconnect.apple.com/apps/6809249574/distribution/reviewsubmissions/details/f851acda-7e1b-4c10-aaca-b5de4e7caeba)。下方构建 3–5 为 1.1.0 历史记录，该版本的审核已取消。
 
 - 构建 3（2026-11-12 23:35 CST 上传成功）：四个入口的界面，只有简体中文。
 - 构建 4：两个入口——岩馆在前，攀爬册在后，导入并入攀爬册；支持简体中文、繁体中文、英语、日语、韩语。已上传，不提审。
