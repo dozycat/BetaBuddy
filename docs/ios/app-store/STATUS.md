@@ -1,5 +1,7 @@
 # BetaBuddy 发布状态
 
+2026-11-14：已在独立 worktree 准备 **1.3.0 (13)**，固定使用 GymPack **1.3.3** / climber **`8db5933`**。模拟器构建、核心测试和 iOS 单元／集成测试通过，签名归档成功且包内文件校验一致。用户要求跳过无法完成的模拟器手动播放验证后继续发布；该项及真机性能均未验证。上传尚未成功：Xcode 导出报告无法找到具有该团队 App Store Connect 权限的账户，需要完成 Xcode 账户认证后重试。测试重点及验证范围见 [release-1.3.0-build13.md](release-1.3.0-build13.md)。
+
 2026-11-14 00:50（中国时间）：攀爬册文件夹、组合筛选和离线岩馆目录已合入远端 main（功能提交 `9907175`，发布提交 `7034d9b`）。iOS **1.3.0 (12)** 已签名归档，于 00:38 上传成功（Xcode `EXPORT SUCCEEDED`）并完成 Apple 处理。现有「BetaBuddy 内部测试」群组已自动分发，状态 **Testing**，可安装；「BetaBuddy 邀请测试」已加入构建 12 并提交 Beta App Review，状态 **Waiting for Review**，已勾选审核通过后自动通知测试者。公开邀请链接继续使用 [TestFlight](https://testflight.apple.com/join/WZPw69Vx)，新版本需待外测审核通过后才对外可用。英文 What to Test 已保存，内容见 [release-1.3.0.md](release-1.3.0.md)。本次没有提交 App Store 正式版本审核。
 
 归档内版本、非豁免加密声明、342 条岩馆目录以及本机已安装的 GymPack 均已核对。构建 ID：`69e51629-9e4d-4ee1-90e8-c955ca803cd1`；[TestFlight 构建](https://appstoreconnect.apple.com/teams/5ed1fb00-fca4-4901-b156-1f383d335b4e/apps/6809249574/testflight/ios/69e51629-9e4d-4ee1-90e8-c955ca803cd1)。外测状态截图保存在本机忽略目录 `ios/build/testflight-1.3.0-12-review.png`。
