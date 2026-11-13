@@ -42,6 +42,15 @@ class AnalysisTypesTest {
         assertEquals(5, (0 until 5).count { slow.shouldSample(it / 5.0) })
     }
 
+    @Test fun samplerHoldsTheCapWithMicrosecondTimestamps() {
+        // What MediaCodec reports for 30 fps video: presentation times truncated to whole microseconds.
+        fun times(seconds: Int) = (0 until 30 * seconds).map { (it * 1_000_000L / 30) / 1_000_000.0 }
+        for ((fps, expected) in listOf(15.0 to 45, 10.0 to 30)) {
+            val sampler = FrameSampler(fps)
+            assertEquals("$fps fps", expected, times(3).count { sampler.shouldSample(it) })
+        }
+    }
+
     @Test fun timestampsAreStrictlyIncreasing() {
         val sampler = FrameSampler(10.0)
         assertEquals(listOf(0L, 1L, 2L, 100L), listOf(0.0, 0.0, 0.0004, 0.1).map { sampler.timestampMs(it) })

@@ -50,9 +50,15 @@ class FrameSampler(private val fps: Double) {
     private var lastTimestampMs = -1L
 
     fun shouldSample(time: Double): Boolean {
-        if (!time.isFinite() || time + 0.000001 < nextTime) return false
-        nextTime = (floor(time * fps + 0.000001) + 1) / fps
+        if (!time.isFinite() || time + TOLERANCE < nextTime) return false
+        nextTime = (floor((time + TOLERANCE) * fps) + 1) / fps
         return true
+    }
+
+    private companion object {
+        // Decoder timestamps are whole microseconds, so a frame due at 2/15 s arrives as 0.133333.
+        // Half a millisecond absorbs that; it is far below one frame interval of any real clip.
+        const val TOLERANCE = 0.0005
     }
 
     /** Strictly increasing millisecond timestamps, as the landmarker's video mode requires. */
