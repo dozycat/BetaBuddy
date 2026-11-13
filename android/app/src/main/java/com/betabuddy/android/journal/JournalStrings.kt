@@ -5,7 +5,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
-import androidx.core.os.ConfigurationCompat
 import com.betabuddy.android.R
 import com.betabuddy.android.data.Moment
 import com.betabuddy.android.data.UNGRADED_VALUE
@@ -18,7 +17,7 @@ import java.util.Locale
 
 /** The language the app is showing, for number and date formats. */
 @Composable
-internal fun appLocale(): Locale = ConfigurationCompat.getLocales(LocalConfiguration.current)[0] ?: Locale.getDefault()
+internal fun appLocale(): Locale = LocalConfiguration.current.locales[0]
 
 /** V grades are not translated; only the "no grade" sentinel has display text. */
 @Composable
