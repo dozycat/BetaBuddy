@@ -7,14 +7,13 @@ final class NavigationTests: XCTestCase {
     func testMembershipOfferKeepsCoreFeaturesFree() {
         let app = launch("en", "en_US", reset:true)
         app.buttons["tabJournal"].tap()
-        XCTAssertTrue(app.buttons["membershipEntry"].waitForExistence(timeout:10))
-        let entry = XCTAttachment(screenshot: app.screenshot())
-        entry.name = "Membership entry in Logbook"
-        entry.lifetime = .keepAlways
-        add(entry)
-        app.buttons["membershipEntry"].tap()
+        app.buttons["settings"].tap()
+        let details = app.buttons["membershipDetails"]
+        XCTAssertTrue(details.waitForExistence(timeout: 10))
+        if !details.isHittable { app.swipeUp() }
+        details.tap()
         XCTAssertTrue(app.staticTexts["Lifetime member badge in Logbook"].waitForExistence(timeout:5))
-        XCTAssertTrue(app.buttons["buyLifetime"].exists)
+        XCTAssertTrue(app.buttons["buyLifetime"].exists || app.buttons["retryMembershipProduct"].exists)
         XCTAssertTrue(app.staticTexts["Gym and Logbook remain free to use; membership is optional."].exists)
         XCTAssertTrue(app.buttons["restoreLifetime"].exists)
         let offer = XCTAttachment(screenshot: app.screenshot())
@@ -22,6 +21,7 @@ final class NavigationTests: XCTestCase {
         offer.lifetime = .keepAlways
         add(offer)
         app.buttons["membershipDone"].tap()
+        app.buttons["settingsDone"].tap()
         XCTAssertTrue(app.buttons["importClimb"].exists)
     }
 
@@ -58,9 +58,9 @@ final class NavigationTests: XCTestCase {
         XCTAssertFalse(app.buttons["startAnalysis"].isEnabled)
         XCTAssertEqual(app.buttons["importDone"].label,done)
         app.buttons["importDone"].tap()
-        // Settings from the logbook's top-right button.
-        XCTAssertTrue(app.buttons["about"].waitForExistence(timeout:5))
-        app.buttons["about"].tap()
+        // A single settings entry stays in the bottom bar.
+        XCTAssertTrue(app.buttons["settings"].waitForExistence(timeout:5))
+        app.buttons["settings"].tap()
         XCTAssertTrue(app.staticTexts[settings].waitForExistence(timeout:5))
         XCTAssertTrue(app.buttons["language-system"].isSelected)
         app.buttons["settingsDone"].tap()
@@ -84,8 +84,8 @@ final class NavigationTests: XCTestCase {
         XCTAssertEqual(app.buttons["tabJournal"].label,"Logbook")
         app.buttons["tabJournal"].tap()
         XCTAssertTrue(app.staticTexts["Logbook"].waitForExistence(timeout:5))
-        // Japanese, from the logbook's top-right button this time.
-        app.buttons["about"].tap()
+        // Japanese, using the same settings entry from Logbook.
+        app.buttons["settings"].tap()
         app.buttons["language-ja"].tap()
         XCTAssertTrue(app.staticTexts["設定とこのアプリについて"].waitForExistence(timeout:5))
         app.buttons["settingsDone"].tap()

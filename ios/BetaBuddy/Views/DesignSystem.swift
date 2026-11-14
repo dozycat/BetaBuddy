@@ -75,10 +75,16 @@ struct RouteButtonStyle: ButtonStyle {
     var tone: Tone = .dark
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
+            .font(.headline)
+            .multilineTextAlignment(.center)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
             .foregroundStyle(tone == .dark ? BB.paper : BB.ink)
             .frame(minHeight: 48)
             .background(HoldShape().fill(tone == .dark ? BB.ink : tone == .lime ? BB.lime : .white.opacity(0.65)))
             .overlay(HoldShape().stroke(BB.ink.opacity(tone == .paper ? 0.16 : 0.05), lineWidth: 1))
+            .contentShape(Rectangle())
             .scaleEffect(configuration.isPressed ? 0.985 : 1)
             .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
     }
@@ -106,19 +112,21 @@ struct BigButton: View {
                 Text(title).font(.headline).multilineTextAlignment(.leading)
                 Spacer()
                 Image(systemName: icon).font(.system(size: 19, weight: .bold))
-            }.padding(20)
+            }
         }.buttonStyle(RouteButtonStyle())
     }
 }
 
 struct SectionLabel: View {
     var title: LocalizedStringKey
-    var trailing: String
+    var trailing: String = ""
     var body: some View {
         HStack(alignment: .firstTextBaseline) {
             Text(title).font(.title3.bold())
             Spacer()
-            Text(verbatim: trailing).font(.system(size: 10, weight: .medium, design: .monospaced)).tracking(1).foregroundStyle(BB.muted).lineLimit(1)
+            if !trailing.isEmpty {
+                Text(verbatim: trailing).font(.system(size: 10, weight: .medium, design: .monospaced)).tracking(1).foregroundStyle(BB.muted).lineLimit(1)
+            }
         }
     }
 }
@@ -173,9 +181,10 @@ struct ClimbingArt: View {
 }
 
 struct PaperPage<Content: View>: View {
+    var spacing: CGFloat = 24
     @ViewBuilder var content: Content
     var body: some View {
-        ScrollView { VStack(alignment:.leading,spacing:28) { content }.padding(24).padding(.bottom,24) }.scrollDismissesKeyboard(.interactively)
+        ScrollView { VStack(alignment:.leading,spacing:spacing) { content }.padding(20).padding(.bottom,4) }.scrollDismissesKeyboard(.interactively)
             .background(BB.paper).foregroundStyle(BB.ink)
     }
 }

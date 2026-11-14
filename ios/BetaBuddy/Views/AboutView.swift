@@ -33,7 +33,7 @@ struct AboutView: View {
                             Text("查看会员权益").font(.headline)
                             Spacer()
                             Image(systemName:"arrow.up.right")
-                        }.padding(14)
+                        }
                     }.buttonStyle(RouteButtonStyle(tone:.lime))
                         .accessibilityIdentifier("membershipDetails")
                 }
@@ -126,7 +126,7 @@ struct MembershipOfferView: View {
                                 Text("解锁终生会员")
                                 Spacer()
                                 Text(verbatim:product.displayPrice)
-                            }.font(.headline).padding(18).frame(maxWidth:.infinity)
+                            }.font(.headline).frame(maxWidth:.infinity)
                         }.buttonStyle(RouteButtonStyle(tone:.lime))
                             .disabled(membership.isBusy).accessibilityIdentifier("buyLifetime")
                     } else {

@@ -22,6 +22,10 @@ struct GymDirectory: Decodable {
 }
 
 extension Climb {
+    var shortGymName: String {
+        if let name = gymName?.trimmingCharacters(in: .whitespacesAndNewlines), !name.isEmpty { return name }
+        return GymDirectory.bundled?.gyms.first(where: { $0.id == gymId })?.name ?? ""
+    }
     var displayGymName: String {
         guard let id = gymId, let gym = GymDirectory.bundled?.gyms.first(where: { $0.id == id }) else { return gymName ?? "" }
         return [gymName ?? gym.name, gym.city, gym.address].filter { !$0.isEmpty }.joined(separator: " · ")
@@ -213,7 +217,7 @@ struct FolderManagerView: View {
                                 .accessibilityIdentifier("folderMenu-\(folder.name)")
                         }
                     }
-                } footer: { Text("按自己的节奏收好：抱石、难度，或一个还想再试的计划。") }
+                }
                 if let error { Text(verbatim: error).foregroundStyle(.red).accessibilityIdentifier("folderError") }
             }.scrollContentBackground(.hidden).background(BB.paper)
                 .navigationTitle("文件夹").navigationBarTitleDisplayMode(.inline)
@@ -236,12 +240,18 @@ struct AlbumFilterView: View {
     @Environment(\.dismiss) private var dismiss
     @Binding var filter: JournalFilter
     @Binding var period: Int
+    @Binding var sendStatus: Int
     private var gymKeys: [String] { Array(Set(store.climbs.map(\.gymKey).filter { !$0.isEmpty })).sorted() }
     private var grades: [String] { Array(Set(store.climbs.map(\.grade))).sorted { $0.localizedStandardCompare($1) == .orderedAscending } }
     var body: some View {
         NavigationStack {
             Form {
                 Section {
+                    Picker("记录筛选", selection: $sendStatus) {
+                        Text("全部").tag(0)
+                        Text("已完攀").tag(1)
+                        Text("还在尝试").tag(2)
+                    }
                     Picker("岩馆", selection: $filter.gymKey) {
                         Text("全部岩馆").tag(nil as String?)
                         Text("未标岩馆").tag(Optional(""))
@@ -273,10 +283,10 @@ struct AlbumFilterView: View {
                     }
                 } footer: { Text("按攀爬当天筛选；旧记录默认使用导入日期，可以在回看页修改。") }
             }.scrollContentBackground(.hidden).background(BB.paper)
-                .navigationTitle("筛选这一趟").navigationBarTitleDisplayMode(.inline)
+                .navigationTitle("筛选记录").navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button("清除筛选") { filter.gymKey = nil; filter.grade = nil; filter.startDate = nil; filter.endDate = nil; period = 0 }
+                        Button("清除筛选") { filter.gymKey = nil; filter.grade = nil; filter.startDate = nil; filter.endDate = nil; period = 0; sendStatus = 0 }
                     }
                     ToolbarItem(placement: .confirmationAction) { Button("完成") { dismiss() } }
                 }

@@ -85,8 +85,6 @@ struct ImportView: View {
                 if let saved = model.saved { ReviewView(climb:saved) }
                 else {
                     PaperPage {
-                        Stamp(text:"A NEW ATTEMPT")
-                        Text(model.busy ? "正在读懂\n你的这一趟。" : "把这一趟，\n变成下一次的灵感。").font(.system(size:29,weight:.heavy)).lineSpacing(4)
                         if model.busy { processing }
                         else { selection }
                         if let error = model.error {
@@ -149,18 +147,20 @@ struct ImportView: View {
             VStack(alignment:.leading,spacing:14) {
                 HStack {
                     Image(systemName:model.selectedURL == nil ? "video.badge.plus" : "checkmark.circle.fill").font(.title)
-                    VStack(alignment:.leading,spacing:4) {
-                        Text(model.importing ? "正在取回原片…" : model.selectedURL == nil ? "选择攀爬视频" : "视频已就绪").font(.headline)
-                        Text("单人全身 · 固定机位 · 最长 3 分钟").font(.caption).foregroundStyle(BB.muted)
-                    }
+                    Text(model.importing ? "正在取回原片…" : model.selectedURL == nil ? "选择攀爬视频" : "视频已就绪")
+                        .font(.headline).fixedSize(horizontal: false, vertical: true)
                 }
-                HStack {
-                    PhotosPicker(selection:$photo,matching:.videos) { Label("从相册选择",systemImage:"photo").foregroundStyle(BB.paper) }
-                        .buttonStyle(RouteButtonStyle())
-                    Button { files = true } label: { Label("文件",systemImage:"folder") }
-                        .buttonStyle(RouteButtonStyle(tone:.paper))
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 12) { sourceButtons(expanded: false) }
+                        .fixedSize(horizontal: true, vertical: false)
+                    VStack(alignment: .leading, spacing: 12) { sourceButtons(expanded: true) }
                 }.disabled(model.importing)
                 if model.importing { ProgressView() }
+                DisclosureGroup("视频要求") {
+                    Text("单人全身 · 固定机位 · 最长 3 分钟")
+                        .font(.subheadline).foregroundStyle(BB.muted)
+                        .frame(maxWidth: .infinity, alignment: .leading).padding(.top, 8)
+                }.font(.subheadline)
             }.padding(20).frame(maxWidth:.infinity,alignment:.leading).background(BB.lime,in:RoundedRectangle(cornerRadius:22))
             VStack(alignment:.leading,spacing:14) {
                 Text("这一趟的名字").font(.caption.bold())
@@ -181,8 +181,8 @@ struct ImportView: View {
                     AlbumMetadataFields(gymId: $gymId, gymName: $gymName, climbedAt: $climbedAt, folderId: $folderId)
                 }.padding(.top, 12)
             }.tint(BB.ink)
-            VStack(alignment:.leading,spacing:12) {
-                SectionLabel(title:"回看精度",trailing:"SAME FULL MODEL")
+            DisclosureGroup("分析设置") {
+                VStack(alignment: .leading, spacing: 12) {
                 ForEach(AnalysisQuality.allCases) { option in
                     Button { quality = option } label: {
                         HStack {
@@ -195,23 +195,34 @@ struct ImportView: View {
                         }.padding(16).background(quality == option ? BB.lavender : .white.opacity(0.5),in:RoundedRectangle(cornerRadius:16))
                     }.buttonStyle(.plain)
                 }
+                Text("分析时请保持应用在前台。视频和模型都在手机上处理；iCloud 原片可能需由系统先下载。")
+                    .font(.caption).foregroundStyle(BB.muted)
+                }.padding(.top, 12)
             }
             BigButton(title:"开始本地分析",icon:"sparkle") { model.run(store:store,title:title,grade:grade,sent:sent,note:note,quality:quality,gymId:gymId,gymName:gymName,climbedAt:climbedAt,folderId:folderId) }
                 .disabled(model.selectedURL == nil || model.importing).opacity(model.selectedURL == nil ? 0.4 : 1)
                 .accessibilityIdentifier("startAnalysis")
-            Text("分析时请保持应用在前台。视频和模型都在手机上处理；iCloud 原片可能需由系统先下载。").font(.caption).foregroundStyle(BB.muted)
         }
+    }
+    @ViewBuilder
+    private func sourceButtons(expanded: Bool) -> some View {
+        PhotosPicker(selection: $photo, matching: .videos) {
+            Label("相册", systemImage: "photo")
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: expanded ? .infinity : nil)
+        }.buttonStyle(RouteButtonStyle()).accessibilityLabel("从相册选择")
+        Button { files = true } label: {
+            Label("文件", systemImage: "folder")
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: expanded ? .infinity : nil)
+        }.buttonStyle(RouteButtonStyle(tone: .paper))
     }
     private var processing: some View {
         VStack(alignment:.leading,spacing:24) {
-            ClimbingArt().frame(height:220).padding(24).background(BB.lime,in:RoundedRectangle(cornerRadius:24))
-            HStack(alignment:.firstTextBaseline) {
-                Text(verbatim:percentText(model.progress)).font(BB.display(54)).monospacedDigit()
-                Spacer()
-                Text(verbatim:"ON YOUR IPHONE").font(.system(size:10,weight:.bold,design:.monospaced))
-            }
+            Text("正在分析").font(.title2.bold())
+            Text(verbatim:percentText(model.progress)).font(BB.display(54)).monospacedDigit()
             ProgressView(value:model.progress).tint(BB.ink)
-            Text("逐帧读取 → 33 点姿态 → 整理回看片段\n无需上传。分析完成后自动保存。").font(.subheadline).lineSpacing(5).foregroundStyle(BB.muted)
+            Text("请保持应用在前台，完成后自动保存。").font(.subheadline).lineSpacing(5).foregroundStyle(BB.muted)
             Button("停止分析",role:.cancel) { model.cancel() }
                 .buttonStyle(RouteButtonStyle(tone:.paper)).frame(maxWidth:.infinity)
         }
