@@ -63,7 +63,6 @@ import com.betabuddy.android.journal.FilledButton
 import com.betabuddy.android.journal.Glyph
 import com.betabuddy.android.journal.GlyphButton
 import com.betabuddy.android.journal.JournalViewModel
-import com.betabuddy.android.journal.KeepScreenOn
 import com.betabuddy.android.journal.OutlineButton
 import com.betabuddy.android.journal.ProgressBar
 import com.betabuddy.android.journal.SwitchRow
@@ -99,8 +98,9 @@ internal fun ReviewScreen(climb: Climb, model: JournalViewModel, onBack: () -> U
     val analysis = climb.analysis
     val playback = remember(climb.id) { Playback(context) }
     val reanalysisState by model.reanalysis.collectAsState()
+    val requestNotifications = com.betabuddy.android.journal.rememberAnalysisNotifications()
     val reanalysis = reanalysisState.takeIf { it.climbId == climb.id }
-    var skeleton by rememberSaveable(climb.id) { mutableStateOf(true) }
+    var skeleton by rememberSaveable(climb.id) { mutableStateOf(climb.analysis.sampledFrames > 0) }
     var slow by rememberSaveable(climb.id) { mutableStateOf(false) }
     var note by rememberSaveable(climb.id) { mutableStateOf(climb.note) }
     var sent by rememberSaveable(climb.id) { mutableStateOf(climb.sent) }
@@ -118,17 +118,13 @@ internal fun ReviewScreen(climb: Climb, model: JournalViewModel, onBack: () -> U
         while (true) { playback.refreshTime(); delay(33) }
     }
     // Nothing keeps running once the app leaves the foreground.
-    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { playback.pause(); model.cancelReanalysis() }
-    DisposableEffect(climb.id) {
-        onDispose { model.cancelReanalysis(); model.clearReanalysisMessage() }
-    }
-    if (reanalysis?.busy == true) KeepScreenOn()
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { playback.pause() }
 
     val status = stringResource(if (climb.sent) R.string.journal_filter_sent else R.string.journal_filter_projecting)
     val coverageText = percentText(analysis.coverage, appLocale())
     val report = reportText(
         title = climb.title, grade = gradeText(climb.grade), status = status, clock = clockText(analysis.duration),
-        coverageLine = stringResource(R.string.journal_share_coverage, coverageText),
+        coverageLine = if (analysis.sampledFrames == 0) stringResource(R.string.journal_not_analyzed) else stringResource(R.string.journal_share_coverage, coverageText),
         note = climb.note, caveat = stringResource(R.string.journal_share_caveat),
     )
     val shareTitle = stringResource(R.string.journal_share)
@@ -146,13 +142,13 @@ internal fun ReviewScreen(climb: Climb, model: JournalViewModel, onBack: () -> U
         }
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(climb.title, style = BB.Title)
-            Text(dateText(climb.climbedAtMillis, withYear = true), style = BB.Caption, color = BB.Muted)
+            Text(java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT, appLocale()).format(java.util.Date(climb.climbedAtMillis)), style = BB.Caption, color = BB.Muted)
             if (!climb.gymName.isNullOrBlank()) Text(climb.gymName, style = BB.Caption, color = BB.Muted)
             OutlineButton(stringResource(R.string.album_organize), onClick = { organize = true })
         }
 
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            VideoStage(playback, climb, skeleton)
+            VideoStage(playback, climb, skeleton && analysis.sampledFrames > 0)
             val duration = maxOf(0.1, analysis.duration)
             val positionLabel = stringResource(R.string.journal_review_position_cd)
             Slider(
@@ -183,7 +179,7 @@ internal fun ReviewScreen(climb: Climb, model: JournalViewModel, onBack: () -> U
                 })
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.weight(1f)) { SwitchRow(stringResource(R.string.journal_review_skeleton), skeleton) { skeleton = it } }
+                Box(Modifier.weight(1f)) { SwitchRow(stringResource(R.string.journal_review_skeleton), skeleton && analysis.sampledFrames > 0) { skeleton = it && analysis.sampledFrames > 0 } }
                 Spacer(Modifier.width(16.dp))
                 Text(
                     stringResource(if (slow) R.string.journal_review_slow else R.string.journal_review_normal_speed),
@@ -197,46 +193,51 @@ internal fun ReviewScreen(climb: Climb, model: JournalViewModel, onBack: () -> U
         playback.failure?.let { Text(stringResource(it), style = BB.Caption, color = DangerColor) }
 
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            if (reanalysis?.busy == true) {
-                ProgressBar(reanalysis.progress)
-                OutlineButton(stringResource(R.string.journal_reanalyze_stop)) { model.cancelReanalysis() }
+            if (climb.pendingAnalysis != null) {
+                Text(stringResource(if (reanalysis?.busy == true) R.string.journal_analysis_background else R.string.journal_analysis_waiting), style = BB.Caption, color = BB.Muted)
+                ProgressBar(reanalysis?.progress ?: 0.0)
+                OutlineButton(stringResource(R.string.journal_reanalyze_stop)) { model.cancelReanalysis(climb) }
             } else {
-                OutlineButton(stringResource(R.string.journal_reanalyze)) { playback.pause(); model.reanalyze(climb) }
+                OutlineButton(stringResource(if (analysis.sampledFrames == 0) R.string.journal_analyze_skeleton else R.string.journal_reanalyze)) { playback.pause(); requestNotifications(); model.reanalyze(climb) }
             }
             reanalysis?.message?.let {
                 Text(it.text(), style = BB.Caption, color = BB.Muted, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
             }
         }
 
-        // Shares of sampled frames and projected angles. No scores.
-        Row {
-            Stat(coverageText, stringResource(R.string.journal_stat_coverage), Modifier.weight(1f))
-            Stat(analysis.averageElbowAngle?.let { "${it.toInt()}°" } ?: "—", stringResource(R.string.journal_stat_elbow), Modifier.weight(1f))
-        }
-        Text(stringResource(R.string.journal_stat_caveat), style = BB.Caption, color = BB.Muted)
+        if (analysis.sampledFrames == 0) {
+            Text(stringResource(R.string.journal_not_analyzed), style = BB.Caption, color = BB.Muted)
+        } else {
+            // Shares of sampled frames and projected angles. No scores.
+            Row {
+                Stat(coverageText, stringResource(R.string.journal_stat_coverage), Modifier.weight(1f))
+                Stat(analysis.averageElbowAngle?.let { "${it.toInt()}°" } ?: "—", stringResource(R.string.journal_stat_elbow), Modifier.weight(1f))
+            }
+            Text(stringResource(R.string.journal_stat_caveat), style = BB.Caption, color = BB.Muted)
 
-        SectionLabel(stringResource(R.string.journal_cues_title), "REPLAY CUES")
-        if (analysis.moments.isEmpty()) {
-            Text(stringResource(R.string.journal_cues_empty), style = BB.Subheadline, color = BB.Muted)
-        }
-        for (moment in analysis.moments) {
-            Row(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(CardColor)
-                    .clickable(role = Role.Button) { playback.pause(); playback.seek(moment.time) }.padding(16.dp),
-                verticalAlignment = Alignment.Top,
-            ) {
-                Text(
-                    clockText(moment.time), style = BB.mono(12.sp, FontWeight.Bold, 0.sp),
-                    modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(BB.Lime).padding(8.dp),
-                )
-                Spacer(Modifier.width(14.dp))
-                Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                    Text(moment.displayTitle(), style = BB.Subheadline, fontWeight = FontWeight.Bold)
-                    Text(moment.displayDetail(), style = BB.Caption, color = BB.Muted)
+            SectionLabel(stringResource(R.string.journal_cues_title), "REPLAY CUES")
+            if (analysis.moments.isEmpty()) {
+                Text(stringResource(R.string.journal_cues_empty), style = BB.Subheadline, color = BB.Muted)
+            }
+            for (moment in analysis.moments) {
+                Row(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(CardColor)
+                        .clickable(role = Role.Button) { playback.pause(); playback.seek(moment.time) }.padding(16.dp),
+                    verticalAlignment = Alignment.Top,
+                ) {
+                    Text(
+                        clockText(moment.time), style = BB.mono(12.sp, FontWeight.Bold, 0.sp),
+                        modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(BB.Lime).padding(8.dp),
+                    )
+                    Spacer(Modifier.width(14.dp))
+                    Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                        Text(moment.displayTitle(), style = BB.Subheadline, fontWeight = FontWeight.Bold)
+                        Text(moment.displayDetail(), style = BB.Caption, color = BB.Muted)
+                    }
                 }
             }
-        }
 
+        }
         ColorCard(BB.Lavender, cornerRadius = 22.dp, padding = 20.dp, spacing = 16.dp) {
             SectionLabel(stringResource(R.string.journal_note_title), "YOUR NOTE")
             OutlinedTextField(
@@ -264,11 +265,13 @@ internal fun ReviewScreen(climb: Climb, model: JournalViewModel, onBack: () -> U
         }
         failure?.let { Text(it.text(), style = BB.Caption, color = DangerColor, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) }
         OutlineButton(stringResource(R.string.journal_delete), Modifier.fillMaxWidth().testTag("deleteClimb"), color = DangerColor) { confirmDelete = true }
+        if (analysis.sampledFrames > 0) {
         val seconds = analysis.processingSeconds.let { if (it.isFinite()) it.toInt() else 0 }
         Text(
             pluralStringResource(R.plurals.journal_model_line, analysis.sampledFrames, analysis.sampledFrames, seconds),
             style = BB.mono(9.sp, FontWeight.Normal, 0.sp), color = BB.Muted,
         )
+        }
     }
 
     if (confirmDelete) {

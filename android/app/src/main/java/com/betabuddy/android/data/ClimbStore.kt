@@ -77,7 +77,7 @@ class ClimbStore(val root: File) {
         title: String, defaultTitle: String, grade: String, sent: Boolean, note: String,
         stagedVideo: File, thumbnail: ByteArray, analysis: PoseAnalysis,
         nowMillis: Long = System.currentTimeMillis(),
-        gymId: String? = null, gymName: String? = null, climbedAtMillis: Long? = null, folderId: String? = null,
+        gymId: String? = null, gymName: String? = null, climbedAtMillis: Long? = null, folderId: String? = null, pendingAnalysis: String? = null,
     ): Climb {
         if (!canWrite) throw IOException("The archive could not be read and is kept as it is")
         val id = newId()
@@ -90,7 +90,7 @@ class ClimbStore(val root: File) {
             grade = grade, sent = sent, note = note.prefix(1000),
             videoName = videoName, thumbnailName = thumbnailName, analysis = analysis,
             gymId = gymId, gymName = gymName?.trim()?.prefix(120)?.takeIf { it.isNotEmpty() },
-            climbedAt = climbedAtMillis?.let(Climb::dateFromMillis), folderId = validFolder(folderId),
+            climbedAt = climbedAtMillis?.let(Climb::dateFromMillis), folderId = validFolder(folderId), pendingAnalysis = pendingAnalysis,
         )
         var moved = false
         try {
@@ -163,11 +163,18 @@ class ClimbStore(val root: File) {
 
     /** Replaces only the analysis; id, date, notes, send status and the clip stay as they are. */
     @Synchronized
+    fun requestAnalysis(id: String, quality: String?) {
+        persist(state.value.copy(climbs = state.value.climbs.map {
+            if (it.id == id) it.copy(pendingAnalysis = quality) else it
+        }))
+    }
+
+    @Synchronized
     fun replaceAnalysis(climb: Climb, analysis: PoseAnalysis) {
         val current = state.value
         if (current.climbs.none { it.id == climb.id }) return
         persist(current.copy(climbs = current.climbs.map {
-            if (it.id == climb.id) it.copy(analysis = analysis) else it
+            if (it.id == climb.id) it.copy(analysis = analysis, pendingAnalysis = null) else it
         }))
     }
 

@@ -10,6 +10,10 @@ import com.betabuddy.android.R
 import com.betabuddy.android.data.Climb
 import com.betabuddy.android.data.ClimbFolder
 import com.betabuddy.android.data.ClimbStore
+import com.betabuddy.android.data.PoseAnalysis
+import com.betabuddy.android.pose.FrameGeometry
+import com.betabuddy.android.pose.ImportRules
+import java.util.Locale
 import com.betabuddy.android.pose.AnalysisError
 import com.betabuddy.android.pose.AnalysisException
 import com.betabuddy.android.pose.AnalysisQuality
@@ -32,11 +36,11 @@ data class UiMessage(@StringRes val id: Int, val argument: String? = null)
 
 data class ImportUiState(
     val staged: File? = null,
+    val recordingDateMillis: Long? = null,
     /** Copying the picked video into private storage. */
     val importing: Boolean = false,
-    /** Analysing. */
+    /** Preparing the thumbnail and committing the saved clip. */
     val busy: Boolean = false,
-    val progress: Double = 0.0,
     val error: UiMessage? = null,
     val savedId: String? = null,
 )
@@ -76,7 +80,7 @@ internal fun AnalysisError.message(): UiMessage = UiMessage(
 )
 
 /**
- * State for the logbook: the records, one import at a time and one re-analysis at a time.
+ * State for the logbook and one import at a time. Analysis belongs to the service.
  * Disk and inference never run on the main thread; the UI only receives low-frequency progress.
  */
 class JournalViewModel(application: Application) : AndroidViewModel(application) {
@@ -96,12 +100,10 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
     private val importState = MutableStateFlow(ImportUiState())
     val import: StateFlow<ImportUiState> = importState.asStateFlow()
 
-    private val reanalysisState = MutableStateFlow(ReanalysisUiState())
-    val reanalysis: StateFlow<ReanalysisUiState> = reanalysisState.asStateFlow()
+    val reanalysis: StateFlow<ReanalysisUiState> = AnalysisService.state
 
     private var stagingJob: Job? = null
-    private var analysisJob: Job? = null
-    private var reanalysisJob: Job? = null
+    private var saveJob: Job? = null
 
     init {
         viewModelScope.launch {
@@ -128,8 +130,9 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
                     store() // also clears stale staging files before the first import
                     VideoStager.stage(getApplication(), uri, JournalGraph.stagingDirectory(getApplication())) { isActive }
                 }
+                val recordingDate = withContext(Dispatchers.IO) { VideoDates.read(getApplication(), uri, staged) }
                 val previous = importState.value.staged
-                importState.update { it.copy(staged = staged, error = null) }
+                importState.update { it.copy(staged = staged, recordingDateMillis = recordingDate, error = null) }
                 previous?.delete()
             } catch (error: CancellationException) {
                 throw error
@@ -147,20 +150,26 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun startAnalysis(title: String, grade: String, sent: Boolean, note: String, quality: AnalysisQuality, defaultTitle: String, gymId: String? = null, gymName: String? = null, climbedAtMillis: Long? = null, folderId: String? = null) {
+    fun saveVideo(title: String, grade: String, sent: Boolean, note: String, quality: AnalysisQuality, defaultTitle: String, gymId: String? = null, gymName: String? = null, climbedAtMillis: Long? = null, folderId: String? = null, analyze: Boolean = false) {
         val state = importState.value
         val video = state.staged ?: return
         if (state.busy || state.importing) return
-        importState.update { it.copy(busy = true, progress = 0.0, error = null) }
-        analysisJob = viewModelScope.launch {
+        importState.update { it.copy(busy = true, error = null) }
+        saveJob = viewModelScope.launch {
             try {
-                val analysis = analyzer.analyze(video, quality) { value -> importState.update { it.copy(progress = value) } }
+                val analysis = withContext(Dispatchers.IO) {
+                    val info = VideoAnalyzer.probe(video)
+                    ImportRules.check(video.length(), info.durationSeconds, info.hasVideo)?.let { throw AnalysisException(it) }
+                    val (width, height) = FrameGeometry.displaySize(info.width, info.height, info.rotation)
+                    PoseAnalysis(emptyList(), 0, info.durationSeconds!!, width.toDouble() / height, 0.0, emptyList())
+                }
                 val thumbnail = analyzer.thumbnail(video)
                 ensureActive()
-                // Only a finished result is written to the record.
+                // Commit the clip and durable request before starting optional inference.
                 val climb = withContext(Dispatchers.IO) {
-                    store().save(title, defaultTitle, grade, sent, note, video, thumbnail, analysis, gymId = gymId, gymName = gymName, climbedAtMillis = climbedAtMillis, folderId = folderId)
+                    store().save(title, defaultTitle, grade, sent, note, video, thumbnail, analysis, gymId = gymId, gymName = gymName, climbedAtMillis = climbedAtMillis, folderId = folderId, pendingAnalysis = if (analyze) quality.name.lowercase(Locale.ROOT) else null)
                 }
+                if (analyze) AnalysisService.start(getApplication())
                 importState.update { it.copy(staged = null, savedId = climb.id) }
             } catch (error: CancellationException) {
                 importState.update { it.copy(error = UiMessage(R.string.journal_import_stopped)) }
@@ -174,17 +183,14 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    /** Stop button, and leaving the foreground. The video stays selected. */
-    fun cancelAnalysis() { analysisJob?.cancel() }
-
     /** Leaves the import flow: stops any work and removes a staged clip that was not saved. */
     fun closeImport() {
         stagingJob?.cancel()
-        analysisJob?.cancel()
+        saveJob?.cancel()
         val staged = importState.value.staged
         importState.value = ImportUiState()
         if (staged != null) viewModelScope.launch(Dispatchers.IO) {
-            analysisJob?.join() // the decoder has let go of the file by now
+            saveJob?.join() // the decoder has let go of the file by now
             staged.delete()
         }
     }
@@ -206,38 +212,24 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
     }
 
     suspend fun delete(climb: Climb): Result<Unit> {
-        if (reanalysisState.value.climbId == climb.id) reanalysisJob?.cancel()
+        AnalysisService.cancel(getApplication(), climb.id)
         return withContext(Dispatchers.IO) { runCatching { store().delete(climb) } }
     }
 
-    /** Recomputes the skeleton from the stored clip. Notes, send status, id and date are kept. */
+    /** The service owns inference, so leaving this screen or activity does not stop it. */
     fun reanalyze(climb: Climb) {
-        if (reanalysisState.value.busy || importState.value.busy) return
-        reanalysisState.value = ReanalysisUiState(climbId = climb.id, busy = true)
-        reanalysisJob = viewModelScope.launch {
-            val message = try {
-                val result = analyzer.analyze(videoFile(climb), AnalysisQuality.BALANCED) { value ->
-                    reanalysisState.update { it.copy(progress = value) }
-                }
-                ensureActive()
-                withContext(Dispatchers.IO) { store().replaceAnalysis(climb, result) }
-                UiMessage(R.string.journal_reanalyze_done)
-            } catch (error: CancellationException) {
-                UiMessage(R.string.journal_reanalyze_stopped) // cancelled or failed: the old analysis stays
-            } catch (error: AnalysisException) {
-                error.error.message()
+        if (climb.pendingAnalysis != null) return
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) { store().requestAnalysis(climb.id, "balanced") }
+                AnalysisService.start(getApplication())
             } catch (error: Exception) {
-                UiMessage(R.string.journal_import_failed, error.localizedMessage ?: error.javaClass.simpleName)
+                AnalysisService.reportFailure(climb.id, error)
             }
-            reanalysisState.update { it.copy(busy = false, message = message) }
         }
     }
 
-    fun cancelReanalysis() { reanalysisJob?.cancel() }
-
-    fun clearReanalysisMessage() {
-        if (!reanalysisState.value.busy) reanalysisState.value = ReanalysisUiState()
-    }
+    fun cancelReanalysis(climb: Climb) { AnalysisService.cancel(getApplication(), climb.id) }
 
     override fun onCleared() {
         importState.value.staged?.delete()

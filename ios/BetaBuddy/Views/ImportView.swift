@@ -23,7 +23,9 @@ func stageVideo(_ source: URL) throws -> URL {
 @MainActor
 final class ImportModel: ObservableObject {
     @Published var selectedURL: URL?
-    @Published var progress = 0.0
+    @Published var climbedAt = Date()
+    @Published var hasRecordingDate = false
+    @Published var readingDate = false
     @Published var busy = false
     @Published var importing = false
     @Published var error: String?
@@ -32,21 +34,31 @@ final class ImportModel: ObservableObject {
     private let analyzer = VideoAnalyzer()
     func replace(_ url: URL) {
         if let old = selectedURL { try? FileManager.default.removeItem(at:old) }
+        readingDate = true
         selectedURL = url
         error = nil
+        climbedAt = Date()
+        hasRecordingDate = false
     }
-    func run(store:ClimbStore,title:String,grade:String,sent:Bool,note:String,quality:AnalysisQuality,gymId:String?,gymName:String,climbedAt:Date,folderId:UUID?) {
+    func readRecordingDate(for url: URL) async {
+        defer { if selectedURL == url { readingDate = false } }
+        let originalDate = climbedAt
+        let date = await VideoAnalyzer().recordingDate(url: url)
+        guard !Task.isCancelled, selectedURL == url, climbedAt == originalDate else { return }
+        hasRecordingDate = date != nil
+        if let date { climbedAt = date }
+    }
+    func run(store:ClimbStore,title:String,grade:String,sent:Bool,note:String,quality:AnalysisQuality,gymId:String?,gymName:String,climbedAt:Date,folderId:UUID?,analyze:Bool) {
         guard !busy, let url = selectedURL else { return }
-        busy = true; progress = 0; error = nil
+        busy = true; error = nil
         work = Task {
             defer { busy = false }
             do {
-                let analysis = try await analyzer.analyze(url:url,quality:quality) { [weak self] value in
-                    await self?.setProgress(value)
-                }
+                let analysis = try await analyzer.videoSummary(url: url)
                 let thumbnail = try await analyzer.thumbnail(url:url)
                 try Task.checkCancellation()
-                saved = try store.save(title:title,grade:grade,sent:sent,note:note,stagedVideo:url,thumbnail:thumbnail,analysis:analysis,gymId:gymId,gymName:gymName,climbedAt:climbedAt,folderId:folderId)
+                saved = try store.save(title:title,grade:grade,sent:sent,note:note,stagedVideo:url,thumbnail:thumbnail,analysis:analysis,gymId:gymId,gymName:gymName,climbedAt:climbedAt,folderId:folderId,pendingAnalysis:analyze ? quality.rawValue : nil)
+                if analyze { store.resumeAnalysis() }
                 selectedURL = nil
                 try? FileManager.default.removeItem(at:url)
             } catch is CancellationError {
@@ -54,7 +66,6 @@ final class ImportModel: ObservableObject {
             } catch { self.error = error.localizedDescription }
         }
     }
-    private func setProgress(_ value: Double) { progress = value }
     func cancel() { work?.cancel() }
     func clean() {
         cancel()
@@ -66,7 +77,6 @@ final class ImportModel: ObservableObject {
 struct ImportView: View {
     @EnvironmentObject private var store: ClimbStore
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.scenePhase) private var phase
     @StateObject private var model = ImportModel()
     @State private var photo: PhotosPickerItem?
     @State private var files = false
@@ -76,7 +86,7 @@ struct ImportView: View {
     @State private var note = ""
     @State private var gymId: String?
     @State private var gymName = ""
-    @State private var climbedAt = Date()
+    @State private var analyze = false
     @State private var folderId: UUID?
     @State private var quality = AnalysisQuality.balanced
     var body: some View {
@@ -110,7 +120,9 @@ struct ImportView: View {
                    let staged = try? stageVideo(URL(fileURLWithPath: path)) { model.replace(staged) }
             }
             #endif
-            .onChange(of:phase) { _, state in if state == .background && model.busy { model.cancel() } }
+            .task(id: model.selectedURL) {
+                if let url = model.selectedURL { await model.readRecordingDate(for: url) }
+            }
             .task(id:photo) {
                 guard let photo else { return }
                 model.importing = true
@@ -176,37 +188,45 @@ struct ImportView: View {
                 Toggle("这趟完攀了",isOn:$sent).tint(BB.ink)
                 TextField("记住一个感受（可选）",text:$note,axis:.vertical).textFieldStyle(.roundedBorder).lineLimit(2...4)
             }
+            DatePicker("攀爬时间", selection: $model.climbedAt, displayedComponents: [.date, .hourAndMinute])
+                .accessibilityIdentifier("climbedAt")
+            if model.readingDate { ProgressView() }
+            else { Text(model.hasRecordingDate ? "已读取视频拍摄时间，可手动修改。" : "未读取到拍摄时间，默认使用当前时间，可手动修改。")
+                .font(.caption).foregroundStyle(BB.muted) }
             DisclosureGroup("收好这一趟（可选）") {
                 VStack(spacing: 14) {
-                    AlbumMetadataFields(gymId: $gymId, gymName: $gymName, climbedAt: $climbedAt, folderId: $folderId)
+                    AlbumMetadataFields(gymId: $gymId, gymName: $gymName, climbedAt: $model.climbedAt, folderId: $folderId, showsDate: false)
                 }.padding(.top, 12)
             }.tint(BB.ink)
-            DisclosureGroup("分析设置") {
-                VStack(alignment: .leading, spacing: 12) {
-                ForEach(AnalysisQuality.allCases) { option in
-                    Button { quality = option } label: {
-                        HStack {
-                            VStack(alignment:.leading,spacing:4) {
-                                Text(verbatim:option.title).font(.subheadline.bold())
-                                Text(verbatim:option.subtitle).font(.caption).foregroundStyle(BB.muted)
-                            }
-                            Spacer()
-                            Image(systemName:quality == option ? "checkmark.circle.fill" : "circle")
-                        }.padding(16).background(quality == option ? BB.lavender : .white.opacity(0.5),in:RoundedRectangle(cornerRadius:16))
-                    }.buttonStyle(.plain)
+            Toggle("保存后分析骨架", isOn: $analyze).tint(BB.ink).accessibilityIdentifier("analyzeAfterSaving")
+            if analyze {
+                DisclosureGroup("分析设置") {
+                    VStack(alignment: .leading, spacing: 12) {
+                    ForEach(AnalysisQuality.allCases) { option in
+                        Button { quality = option } label: {
+                            HStack {
+                                VStack(alignment:.leading,spacing:4) {
+                                    Text(verbatim:option.title).font(.subheadline.bold())
+                                    Text(verbatim:option.subtitle).font(.caption).foregroundStyle(BB.muted)
+                                }
+                                Spacer()
+                                Image(systemName:quality == option ? "checkmark.circle.fill" : "circle")
+                            }.padding(16).background(quality == option ? BB.lavender : .white.opacity(0.5),in:RoundedRectangle(cornerRadius:16))
+                        }.buttonStyle(.plain)
+                    }
+                    Text("视频先保存，分析可在离开页面后继续。系统暂停后台任务时，下次打开应用会重新分析。")
+                        .font(.caption).foregroundStyle(BB.muted)
+                    }.padding(.top, 12)
                 }
-                Text("分析时请保持应用在前台。视频和模型都在手机上处理；iCloud 原片可能需由系统先下载。")
-                    .font(.caption).foregroundStyle(BB.muted)
-                }.padding(.top, 12)
             }
-            BigButton(title:"开始本地分析",icon:"sparkle") { model.run(store:store,title:title,grade:grade,sent:sent,note:note,quality:quality,gymId:gymId,gymName:gymName,climbedAt:climbedAt,folderId:folderId) }
-                .disabled(model.selectedURL == nil || model.importing).opacity(model.selectedURL == nil ? 0.4 : 1)
+            BigButton(title:"保存这一趟",icon:"checkmark") { model.run(store:store,title:title,grade:grade,sent:sent,note:note,quality:quality,gymId:gymId,gymName:gymName,climbedAt:model.climbedAt,folderId:folderId,analyze:analyze) }
+                .disabled(model.selectedURL == nil || model.importing || model.readingDate).opacity(model.selectedURL == nil ? 0.4 : 1)
                 .accessibilityIdentifier("startAnalysis")
         }
     }
     @ViewBuilder
     private func sourceButtons(expanded: Bool) -> some View {
-        PhotosPicker(selection: $photo, matching: .videos) {
+        PhotosPicker(selection: $photo, matching: .videos, preferredItemEncoding: .current) {
             Label("相册", systemImage: "photo")
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: expanded ? .infinity : nil)
@@ -219,12 +239,8 @@ struct ImportView: View {
     }
     private var processing: some View {
         VStack(alignment:.leading,spacing:24) {
-            Text("正在分析").font(.title2.bold())
-            Text(verbatim:percentText(model.progress)).font(BB.display(54)).monospacedDigit()
-            ProgressView(value:model.progress).tint(BB.ink)
-            Text("请保持应用在前台，完成后自动保存。").font(.subheadline).lineSpacing(5).foregroundStyle(BB.muted)
-            Button("停止分析",role:.cancel) { model.cancel() }
-                .buttonStyle(RouteButtonStyle(tone:.paper)).frame(maxWidth:.infinity)
+            Text("正在保存视频…").font(.title2.bold())
+            ProgressView().tint(BB.ink)
         }
     }
 }

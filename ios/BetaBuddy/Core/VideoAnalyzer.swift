@@ -112,6 +112,32 @@ actor VideoAnalyzer {
         return result
     }
 
+    /// Reads playback facts without loading the pose model or decoding the full clip.
+    func videoSummary(url: URL) async throws -> PoseAnalysis {
+        let asset = AVURLAsset(url: url)
+        let duration = try await asset.load(.duration).seconds
+        guard duration.isFinite, duration >= 0.5,
+              let track = try await asset.loadTracks(withMediaType: .video).first else { throw AnalysisError.invalidVideo }
+        guard duration <= 180 else { throw AnalysisError.tooLong }
+        let size = try await track.load(.naturalSize)
+        let transform = try await track.load(.preferredTransform)
+        let rect = CGRect(origin: .zero, size: size).applying(transform)
+        let aspect = abs(rect.width / rect.height)
+        guard aspect.isFinite, aspect > 0 else { throw AnalysisError.invalidVideo }
+        return PoseAnalysis(frames: [], sampledFrames: 0, duration: duration, aspectRatio: aspect, processingSeconds: 0, moments: [])
+    }
+
+    func recordingDate(url: URL) async -> Date? {
+        let asset = AVURLAsset(url: url)
+        guard let item = try? await asset.load(.creationDate) else { return nil }
+        if let date = try? await item.load(.dateValue), date.timeIntervalSince1970 > 0 { return date }
+        guard let value = try? await item.load(.stringValue) else { return nil }
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let date = formatter.date(from: value) ?? ISO8601DateFormatter().date(from: value)
+        return date.flatMap { $0.timeIntervalSince1970 > 0 ? $0 : nil }
+    }
+
     func thumbnail(url: URL) async throws -> Data {
         let generator = AVAssetImageGenerator(asset: AVURLAsset(url: url))
         generator.appliesPreferredTrackTransform = true

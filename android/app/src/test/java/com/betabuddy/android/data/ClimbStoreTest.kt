@@ -26,6 +26,32 @@ class ClimbStoreTest {
     private fun ClimbStore.saveFixture(title: String = "测试", grade: String = "V3", video: File = staged()) =
         save(title, "今天的攀爬", grade, false, "", video, ByteArray(0), analysis)
 
+    @Test fun pendingAnalysisSurvivesReloadAndCompletionPreservesEdits() {
+        val store = ClimbStore(root)
+        val climb = store.save("Queue", "Default", "V1", false, "", staged(), ByteArray(0), analysis,
+            climbedAtMillis = 1_000_000, pendingAnalysis = "detailed")
+        val reopened = ClimbStore(root)
+        assertEquals("detailed", reopened.climbs.single().pendingAnalysis)
+        assertEquals(0, reopened.climbs.single().analysis.sampledFrames)
+        reopened.update(climb, "Edited during analysis", true)
+        reopened.organize(climb, "V4", null, null, 2_000_000, null)
+        reopened.replaceAnalysis(climb, analysis.copy(sampledFrames = 42))
+        val saved = ClimbStore(root).climbs.single()
+        assertNull(saved.pendingAnalysis)
+        assertEquals("Edited during analysis", saved.note)
+        assertTrue(saved.sent)
+        assertEquals("V4", saved.grade)
+        assertEquals(2_000_000L, saved.climbedAtMillis)
+        assertEquals(42, saved.analysis.sampledFrames)
+        reopened.requestAnalysis(climb.id, "balanced")
+        reopened.requestAnalysis(climb.id, null)
+        assertNull(ClimbStore(root).climbs.single().pendingAnalysis)
+        assertTrue(reopened.file(climb.videoName).exists())
+        reopened.delete(climb)
+        reopened.replaceAnalysis(climb, analysis)
+        assertTrue(reopened.climbs.isEmpty())
+    }
+
     @Test fun saveReloadEditAndDelete() {
         val store = ClimbStore(root)
         val climb = store.saveFixture()

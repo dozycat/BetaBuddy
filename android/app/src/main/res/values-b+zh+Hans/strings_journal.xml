@@ -26,7 +26,6 @@
     <string name="journal_import_nav_title">记录攀爬</string>
     <string name="journal_import_done">完成</string>
     <string name="journal_import_headline">把这一趟，\n变成下一次的灵感。</string>
-    <string name="journal_import_headline_busy">正在读懂\n你的这一趟。</string>
     <string name="journal_import_pick_title">选择攀爬视频</string>
     <string name="journal_import_ready">视频已就绪</string>
     <string name="journal_import_fetching">正在取回原片…</string>
@@ -42,10 +41,7 @@
     <string name="journal_quality_balanced_detail">最高 10 帧/秒 · 较少计算</string>
     <string name="journal_quality_detailed">动作细看</string>
     <string name="journal_quality_detailed_detail">最高 15 帧/秒 · 保留更多细节</string>
-    <string name="journal_import_start">开始本地分析</string>
-    <string name="journal_import_foreground_note">分析时请保持应用在前台。视频和模型都在手机上处理；存在云端的原片可能需由系统先下载。</string>
-    <string name="journal_import_steps">逐帧读取 → 33 点姿态 → 整理回看片段\n无需上传。分析完成后自动保存。</string>
-    <string name="journal_import_stop">停止分析</string>
+    <string name="journal_import_foreground_note">视频先保存，分析可在离开页面后继续。系统暂停后台任务时，下次打开应用会重新分析。</string>
     <string name="journal_import_stopped">分析已停止。视频仍已选中，可以重新开始。</string>
     <string name="journal_import_failed">导入失败：%1$s</string>
     <string name="journal_import_unavailable">未能取得视频。若原片存在云端，请先在相册中下载。</string>
@@ -94,4 +90,15 @@
     <plurals name="journal_model_line">
         <item quantity="other">FULL / FLOAT16 · %1$d 采样帧 · 分析用时 %2$d 秒</item>
     </plurals>
+    <string name="journal_climbed_at">攀爬时间</string>
+    <string name="journal_recording_date_found">已读取视频拍摄时间，可手动修改。</string>
+    <string name="journal_recording_date_missing">未读取到拍摄时间，默认使用当前时间，可手动修改。</string>
+    <string name="journal_analyze_after_save">保存后分析骨架</string>
+    <string name="journal_save_climb">保存这一趟</string>
+    <string name="journal_saving_video">正在保存视频…</string>
+    <string name="journal_analyze_skeleton">分析骨架</string>
+    <string name="journal_analysis_background">正在分析，可离开此页面。</string>
+    <string name="journal_not_analyzed">尚未分析，可随时分析骨架。</string>
+    <string name="journal_analysis_deferred">等待返回应用后重新分析。</string>
+    <string name="journal_analysis_waiting">等待分析…</string>
 </resources>

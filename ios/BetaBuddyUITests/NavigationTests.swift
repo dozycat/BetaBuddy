@@ -4,6 +4,21 @@ final class NavigationTests: XCTestCase {
     func testBothEntriesInSimplifiedChinese() { walk(language:"zh-Hans", locale:"zh_CN", gym:"岩馆", logbook:"攀爬册", settings:"设置与关于", done:"完成") }
     func testBothEntriesInEnglish() { walk(language:"en", locale:"en_US", gym:"Gym", logbook:"Logbook", settings:"Settings and About", done:"Done") }
 
+    func testImportDefaultsToSavingWithEditableTime() {
+        let app = launch("en", "en_US", reset: true)
+        app.buttons["tabJournal"].tap()
+        app.buttons["importClimb"].tap()
+        XCTAssertTrue(app.datePickers["climbedAt"].waitForExistence(timeout: 5))
+        let toggle = app.switches["analyzeAfterSaving"]
+        if !toggle.isHittable { app.swipeUp() }
+        XCTAssertEqual(toggle.value as? String, "0")
+        XCTAssertEqual(app.buttons["startAnalysis"].label, "Save this climb")
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "Import with editable time and optional analysis"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+    }
+
     func testMembershipOfferKeepsCoreFeaturesFree() {
         let app = launch("en", "en_US", reset:true)
         app.buttons["tabJournal"].tap()

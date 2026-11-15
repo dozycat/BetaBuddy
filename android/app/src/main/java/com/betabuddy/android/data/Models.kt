@@ -103,6 +103,7 @@ data class Climb(
     val gymName: String? = null,
     val climbedAt: Double? = null,
     val folderId: String? = null,
+    val pendingAnalysis: String? = null,
 ) {
     val climbedAtMillis: Long get() = (((climbedAt ?: date) + REFERENCE_DATE_OFFSET_SECONDS) * 1000).toLong()
     val dateMillis: Long get() = ((date + REFERENCE_DATE_OFFSET_SECONDS) * 1000).toLong()

@@ -10,7 +10,7 @@
 - every R.string / R.plurals / R.raw / R.drawable / R.mipmap / R.xml / R.color the code or
   the XML refers to exists, and no string is left unused
 - locales_config.xml lists exactly the languages that have resources
-- the manifest declares no permission, removes the ones dependencies merge in, and both
+- the manifest only allows local analysis/notification permissions, removes network permissions, and both
   backup sections of data_extraction_rules.xml exclude every domain
 - the third-party license texts are in assets/licenses
 
@@ -146,14 +146,14 @@ for folder in (RES / "raw").iterdir():
         if not (RES / language_folder / folder.name).is_file():
             problem(f"{language_folder}/{folder.name} is missing")
 
-# 5. Manifest: no permission, nothing online, nothing backed up.
+# 5. Manifest: local analysis/notification permissions only, nothing online or backed up.
 if manifest is not None:
     removed = set()
     for element in manifest.findall("uses-permission"):
         name = element.get(ANDROID + "name")
         if element.get(TOOLS + "node") == "remove":
             removed.add(name)
-        else:
+        elif name not in {"android.permission.POST_NOTIFICATIONS", "android.permission.FOREGROUND_SERVICE", "android.permission.FOREGROUND_SERVICE_DATA_SYNC", "android.permission.FOREGROUND_SERVICE_MEDIA_PROCESSING"}:
             problem(f"manifest declares permission {name}")
     for name in ("android.permission.INTERNET", "android.permission.ACCESS_NETWORK_STATE", "android.permission.WAKE_LOCK"):
         if name not in removed:

@@ -1,5 +1,5 @@
 BetaBuddy Privacy Policy
-Updated: November 13, 2026
+Updated: November 15, 2026
 
 Your climbing stays on your device.
 
@@ -7,6 +7,8 @@ BetaBuddy is a climbing video review logbook and gym route viewer that runs loca
 
 1. What the app handles
 Videos you choose are copied into the app for on-device pose estimation. The app stores the video copy, a thumbnail, pose keypoints, analysis results, the grade and notes you enter, and whether you marked the climb as sent. None of this is sent to the developer or to any third-party server, and the app contains no advertising or analytics SDK that collects usage.
+
+Import saves the original video without pose analysis by default. The app reads the selected video’s recording time (or the selected media item’s date), stores it as the editable climb time, and uses the current time when it is unavailable. Only analysis you request runs in the background on your device. Unfinished requests are kept locally and retried when you return to the app.
 
 2. Model and network
 The pose model ships inside the app and runs on the device. The app does not download models and does not call any cloud AI or large language model. If you pick a video that exists only in iCloud, the system may download the original first; that is part of Apple's Photos service. App Store downloads, purchases, restore transactions, system diagnostics and system services follow Apple's settings and policies. Apple handles payment details; BetaBuddy checks the purchase entitlement with StoreKit on the device.

@@ -30,7 +30,6 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -41,7 +40,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -51,8 +49,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LifecycleEventEffect
 import com.betabuddy.android.R
 import com.betabuddy.android.data.UNGRADED_VALUE
 import com.betabuddy.android.pose.AnalysisQuality
@@ -68,12 +64,12 @@ import com.betabuddy.android.ui.theme.BB
 internal val gradeValues: List<String> = listOf(UNGRADED_VALUE) + (0..12).map { "V$it" }
 
 /**
- * Pick one video with the system photo picker → tag it → choose the detail level → analyse on
- * this phone. Counterpart of ImportView on iOS.
+ * Pick a video, edit its time and tags, then save it. Pose analysis is optional.
  */
 @Composable
 internal fun ImportScreen(model: JournalViewModel, onClose: () -> Unit, onSaved: (String) -> Unit) {
     val state by model.import.collectAsState()
+    val requestNotifications = rememberAnalysisNotifications()
     var title by rememberSaveable { mutableStateOf("") }
     var grade by rememberSaveable { mutableStateOf(UNGRADED_VALUE) }
     var sent by rememberSaveable { mutableStateOf(false) }
@@ -83,6 +79,8 @@ internal fun ImportScreen(model: JournalViewModel, onClose: () -> Unit, onSaved:
     var climbedOn by rememberSaveable { mutableStateOf(System.currentTimeMillis()) }
     var folderId by rememberSaveable { mutableStateOf<String?>(null) }
     var organizing by rememberSaveable { mutableStateOf(false) }
+    var analyze by rememberSaveable { mutableStateOf(false) }
+    var appliedVideo by rememberSaveable { mutableStateOf<String?>(null) }
     var quality by rememberSaveable { mutableStateOf(AnalysisQuality.BALANCED) }
     val defaultTitle = stringResource(R.string.journal_default_title) // in the language shown at save time
 
@@ -90,12 +88,16 @@ internal fun ImportScreen(model: JournalViewModel, onClose: () -> Unit, onSaved:
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> model.onVideoPicked(uri) }
 
     val locked = state.busy || state.importing
-    // As on iOS, the flow cannot be dismissed while it is copying or analysing; stop first.
+    // Lock only while copying or committing the video. Inference runs after saving.
     BackHandler { if (!locked) onClose() }
-    // Leaving the foreground stops the analysis. There is no background continuation.
-    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { model.cancelAnalysis() }
+    LaunchedEffect(state.staged) {
+        val path = state.staged?.path
+        if (path != null && path != appliedVideo) {
+            climbedOn = state.recordingDateMillis ?: System.currentTimeMillis()
+            appliedVideo = path
+        }
+    }
     LaunchedEffect(state.savedId) { state.savedId?.let(onSaved) }
-    if (state.busy) KeepScreenOn()
 
     PaperPage {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -104,11 +106,11 @@ internal fun ImportScreen(model: JournalViewModel, onClose: () -> Unit, onSaved:
         }
         Stamp("A NEW ATTEMPT")
         Text(
-            stringResource(if (state.busy) R.string.journal_import_headline_busy else R.string.journal_import_headline),
+            stringResource(if (state.busy) R.string.journal_saving_video else R.string.journal_import_headline),
             style = BB.display(29.sp),
         )
         if (state.busy) {
-            Processing(state.progress) { model.cancelAnalysis() }
+            androidx.compose.material3.CircularProgressIndicator(color = BB.Ink)
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(22.dp)) {
                 ColorCard(BB.Lime, cornerRadius = 22.dp, padding = 20.dp, spacing = 14.dp) {
@@ -141,9 +143,11 @@ internal fun ImportScreen(model: JournalViewModel, onClose: () -> Unit, onSaved:
                         modifier = Modifier.fillMaxWidth().testTag("climbTitle"),
                     )
                     GradePicker(grade) { grade = it }
+                    ClimbDateTimeField(climbedOn) { climbedOn = it }
+                    Text(stringResource(if (state.recordingDateMillis != null) R.string.journal_recording_date_found else R.string.journal_recording_date_missing), style = BB.Caption, color = BB.Muted)
                     TextButton(onClick = { organizing = !organizing }) { Text(stringResource(R.string.album_optional_tags)) }
                     if (organizing) MetadataFields(model, gymId, gymName, climbedOn, folderId,
-                        { id, name -> gymId = id; gymName = name }, { climbedOn = it }, { folderId = it })
+                        { id, name -> gymId = id; gymName = name }, { climbedOn = it }, { folderId = it }, showDate = false)
                     SwitchRow(stringResource(R.string.journal_sent_toggle), sent) { sent = it }
                     OutlinedTextField(
                         value = note, onValueChange = { note = it.take(1000) }, minLines = 2, maxLines = 4,
@@ -151,14 +155,15 @@ internal fun ImportScreen(model: JournalViewModel, onClose: () -> Unit, onSaved:
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
-                Column(Modifier.selectableGroup(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                SwitchRow(stringResource(R.string.journal_analyze_after_save), analyze) { analyze = it }
+                if (analyze) Column(Modifier.selectableGroup(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     SectionLabel(stringResource(R.string.journal_quality_label), "SAME FULL MODEL")
                     QualityOption(R.string.journal_quality_balanced, R.string.journal_quality_balanced_detail, quality == AnalysisQuality.BALANCED) { quality = AnalysisQuality.BALANCED }
                     QualityOption(R.string.journal_quality_detailed, R.string.journal_quality_detailed_detail, quality == AnalysisQuality.DETAILED) { quality = AnalysisQuality.DETAILED }
                 }
                 BigButton(
-                    stringResource(R.string.journal_import_start),
-                    { model.startAnalysis(title, grade, sent, note, quality, defaultTitle, gymId, gymName, climbedOn, folderId) },
+                    stringResource(R.string.journal_save_climb),
+                    { if (analyze) requestNotifications(); model.saveVideo(title, grade, sent, note, quality, defaultTitle, gymId, gymName, climbedOn, folderId, analyze) },
                     Modifier.testTag("startAnalysis"),
                     enabled = state.staged != null && !state.importing,
                 )
@@ -172,22 +177,6 @@ internal fun ImportScreen(model: JournalViewModel, onClose: () -> Unit, onSaved:
                 Text(error.text(), style = BB.Subheadline, color = DangerColor)
             }
         }
-    }
-}
-
-@Composable
-private fun Processing(progress: Double, onStop: () -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(24.dp)) {
-        Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(BB.Lime).padding(24.dp)) {
-            ClimbingArt(Modifier.fillMaxWidth().height(220.dp))
-        }
-        Row(verticalAlignment = Alignment.Bottom) {
-            Text(percentText(progress, appLocale()), style = BB.display(54.sp), modifier = Modifier.weight(1f))
-            Text("ON YOUR PHONE", style = BB.mono(10.sp, FontWeight.Bold)) // brand mark, not translated
-        }
-        ProgressBar(progress)
-        Text(stringResource(R.string.journal_import_steps), style = BB.Subheadline, color = BB.Muted)
-        OutlineButton(stringResource(R.string.journal_import_stop), Modifier.fillMaxWidth().testTag("stopAnalysis"), onClick = onStop)
     }
 }
 
@@ -244,11 +233,14 @@ private fun QualityOption(title: Int, detail: Int, selected: Boolean, onSelect: 
 }
 
 /** Analysis only runs in the foreground, so the screen is kept awake while it does. */
+/** Notification permission is optional; refusing it never blocks local analysis. */
 @Composable
-internal fun KeepScreenOn() {
-    val view = LocalView.current
-    DisposableEffect(view) {
-        view.keepScreenOn = true
-        onDispose { view.keepScreenOn = false }
+internal fun rememberAnalysisNotifications(): () -> Unit {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
+    return {
+        if (android.os.Build.VERSION.SDK_INT >= 33 && context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            launcher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        }
     }
 }

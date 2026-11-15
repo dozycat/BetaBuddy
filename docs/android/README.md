@@ -1,10 +1,18 @@
 # BetaBuddy · Android 工程
 
-Kotlin + Jetpack Compose 原生应用，Android 8.0（API 26）及以上，竖屏，只有浅色。和 iOS 版是同一个产品：两个入口（岩馆、攀爬册）加「设置与关于」，五种语言并可在应用内切换，全部离线，不向用户申请任何权限。产品介绍见[仓库首页](../../README.md)，Android 上的设计见 [design.md](design.md)，岩馆的数据包接口见 [../ios/gym-design.md](../ios/gym-design.md)。
+Kotlin + Jetpack Compose 原生应用，Android 8.0（API 26）及以上，竖屏，只有浅色。和 iOS 版是同一个产品：两个入口（岩馆、攀爬册）加「设置与关于」，五种语言并可在应用内切换，全部离线；后台分析使用本地媒体处理服务，进度通知权限可选。产品介绍见[仓库首页](../../README.md)，Android 上的设计见 [design.md](design.md)，岩馆的数据包接口见 [../ios/gym-design.md](../ios/gym-design.md)。
 
-应用 ID `com.betabuddy.android`，版本 `1.1.0`（`android/app/build.gradle.kts` 里的 `versionName` / `versionCode`）。
+应用 ID `com.betabuddy.android`，版本 `1.2.0`（`android/app/build.gradle.kts` 里的 `versionName` / `versionCode`）。
 
 ## 构建
+
+### 2026-11-15 · 默认保存、后台分析与拍摄时间（未发布）
+
+`check-resources.py`、80 项 JVM 单元测试、`assembleDebug`、`lintDebug` 均通过（lint 无 error）。Android 15 独立模拟器上的 8 项设备测试通过，包括新增的「保存请求后退到桌面，后台分析完成并保留原片与笔记」。使用仓库既有的 `arm64.nosme` 模拟器参数，避免宿主 SME 指令误报导致 MediaPipe SIGILL；最初未加参数的设备运行失败，不计作通过结果。
+
+默认只保存原片；拍摄时间优先使用所选媒体日期，其次解析视频元数据，支持时区与毫秒；缺失时明确回退当前时间，可编辑日期和时分。分析请求与记录原子保存，后台服务负责执行，进程终止后在下次打开应用重试。JVM 测试覆盖时间格式、无效日期、请求持久化、停止与分析完成保留期间编辑的数据。仅增加本地前台服务和可选通知权限，没有增加网络或相册权限。
+
+尚未验证：真机后台配额、厂商省电限制、耗电／温升，以及本轮 Android 8–14 的服务实机行为；拒绝通知不影响分析，但通知栏不显示进度。
 
 ### 2026-11-14 · 攀爬册迭代验证（未发布）
 
@@ -147,10 +155,10 @@ android/
 ## 约定
 
 - **界面用同一套组件。** 颜色和字体取 `ui/theme` 的 `BB`（`Paper/Ink/Lime/Lavender/Muted/Line`、`display()`、`mono()`、`Title…Caption`），页面和控件取 `ui/common`（`PaperPage`、`Stamp`、`BigButton`、`SectionLabel`、`Stat`、`CircleIconButton`、`ColorCard`、`Hairline`、`BBIcons`）。岩馆、攀爬册、设置都依赖这些名字，改名要一起改。
-- **攀爬册只有一个入口** `JournalScreen(onOpenSettings)`。它内部的页面用 `rememberSaveable` 的路由加 `BackHandler` 切换，不往 NavHost 里加路由。导入和回看时底部导航仍然可见；分析中切到岩馆不会停止分析，应用退到后台才会停。
+- **攀爬册只有一个入口** `JournalScreen(onOpenSettings)`。它内部的页面用 `rememberSaveable` 的路由加 `BackHandler` 切换，不往 NavHost 里加路由。导入和回看时底部导航仍然可见；分析由服务持有，切到岩馆、离开回看页或应用退到后台均不取消。系统结束服务时保留请求，下一次打开应用重试。
 - **存储**都在应用私有目录：攀爬册在 `filesDir/BetaBuddy/`（`archive.json`、原片、缩略图、`staging/`），岩馆只有 `SharedPreferences` 里的两个布尔值。不写外部存储。
 - **文字**：导航、岩馆、设置的在 `strings.xml`，攀爬册的在 `strings_journal.xml` 且名字以 `journal_` 开头，两个文件不重名。
-- **不加权限，不加联网依赖。** 新增依赖先看它的 Manifest 会合并进来什么权限和组件，该移除的在应用的 Manifest 里移除，并在 `THIRD_PARTY.md` 补一行；依赖有增减时同步 `assets/licenses/components.txt` 里的清单。
+- **不加联网依赖。** 仅允许本地分析服务与可选进度通知权限； 新增依赖先看它的 Manifest 会合并进来什么权限和组件，该移除的在应用的 Manifest 里移除，并在 `THIRD_PARTY.md` 补一行；依赖有增减时同步 `assets/licenses/components.txt` 里的清单。
 - **单元测试是纯 JVM 测试**，读 `src/main/res` 和 `src/main/assets` 用相对模块目录的路径（Gradle 运行测试时的工作目录）。测试夹具用合成数据。
 
 ## 语言

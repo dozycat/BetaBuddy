@@ -91,6 +91,7 @@ struct AlbumMetadataFields: View {
     @Binding var gymName: String
     @Binding var climbedAt: Date
     @Binding var folderId: UUID?
+    var showsDate = true
     var body: some View {
         NavigationLink {
             GymPickerView(gymId: $gymId, gymName: $gymName)
@@ -102,7 +103,7 @@ struct AlbumMetadataFields: View {
                 else { Text(verbatim: gymName).foregroundStyle(BB.muted).lineLimit(1) }
             }.frame(minHeight: 44)
         }.buttonStyle(.plain)
-        DatePicker("攀爬日期", selection: $climbedAt, in: ...Date(), displayedComponents: .date)
+        if showsDate { DatePicker("攀爬时间", selection: $climbedAt, displayedComponents: [.date, .hourAndMinute]) }
         Picker("放入文件夹", selection: $folderId) {
             Text("未归档").tag(nil as UUID?)
             ForEach(store.folders) { folder in Text(verbatim: folder.name).tag(Optional(folder.id)) }

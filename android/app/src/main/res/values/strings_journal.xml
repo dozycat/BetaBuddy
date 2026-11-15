@@ -26,7 +26,6 @@
     <string name="journal_import_nav_title">Log a climb</string>
     <string name="journal_import_done">Done</string>
     <string name="journal_import_headline">Turn this go\ninto the next idea.</string>
-    <string name="journal_import_headline_busy">Reading\nyour climb.</string>
     <string name="journal_import_pick_title">Choose a climbing video</string>
     <string name="journal_import_ready">Video ready</string>
     <string name="journal_import_fetching">Getting the original…</string>
@@ -42,10 +41,7 @@
     <string name="journal_quality_balanced_detail">Up to 10 fps · lighter</string>
     <string name="journal_quality_detailed">Close look</string>
     <string name="journal_quality_detailed_detail">Up to 15 fps · keeps more detail</string>
-    <string name="journal_import_start">Analyze on this phone</string>
-    <string name="journal_import_foreground_note">Keep the app in the foreground while it analyzes. The video and the model stay on your phone; an original kept in the cloud may need to be downloaded by the system first.</string>
-    <string name="journal_import_steps">Read frames → 33-point pose → gather replay cues\nNothing is uploaded. Saved automatically when done.</string>
-    <string name="journal_import_stop">Stop analysis</string>
+    <string name="journal_import_foreground_note">The video is saved first. Analysis continues after you leave this page. If the system stops background work, analysis restarts when you next open the app.</string>
     <string name="journal_import_stopped">Analysis stopped. The video is still selected, so you can start again.</string>
     <string name="journal_import_failed">Import failed: %1$s</string>
     <string name="journal_import_unavailable">Couldn’t get the video. If the original is kept in the cloud, download it in your gallery app first.</string>
@@ -95,4 +91,15 @@
         <item quantity="one">FULL / FLOAT16 · %1$d sampled frame · analyzed in %2$d s</item>
         <item quantity="other">FULL / FLOAT16 · %1$d sampled frames · analyzed in %2$d s</item>
     </plurals>
+    <string name="journal_climbed_at">Climb date and time</string>
+    <string name="journal_recording_date_found">Video recording time filled in. You can edit it.</string>
+    <string name="journal_recording_date_missing">Recording time was unavailable. Using the current time; you can edit it.</string>
+    <string name="journal_analyze_after_save">Analyze skeleton after saving</string>
+    <string name="journal_save_climb">Save this climb</string>
+    <string name="journal_saving_video">Saving video…</string>
+    <string name="journal_analyze_skeleton">Analyze skeleton</string>
+    <string name="journal_analysis_background">Analyzing. You can leave this page.</string>
+    <string name="journal_not_analyzed">Not analyzed yet. You can analyze the skeleton anytime.</string>
+    <string name="journal_analysis_deferred">Analysis will restart when you return to the app.</string>
+    <string name="journal_analysis_waiting">Waiting to analyze…</string>
 </resources>

@@ -5,10 +5,16 @@ import CoreImage
 @testable import BetaBuddy
 
 final class VideoAnalyzerTests: XCTestCase {
-    private func makeVideo(image:UIImage?, transform:CGAffineTransform = .identity) async throws -> URL {
+    private func makeVideo(image:UIImage?, transform:CGAffineTransform = .identity, creationDate: String? = nil) async throws -> URL {
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("smoke-\(UUID()).mov")
         let width = 640, height = 426
         let writer = try AVAssetWriter(outputURL:url,fileType:.mov)
+        if let creationDate {
+            let metadata = AVMutableMetadataItem()
+            metadata.identifier = .quickTimeMetadataCreationDate
+            metadata.value = creationDate as NSString
+            writer.metadata = [metadata]
+        }
         let input = AVAssetWriterInput(mediaType:.video,outputSettings:[AVVideoCodecKey:AVVideoCodecType.h264,AVVideoWidthKey:width,AVVideoHeightKey:height])
         let adaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput:input,sourcePixelBufferAttributes:[kCVPixelBufferPixelFormatTypeKey as String:kCVPixelFormatType_32ARGB,kCVPixelBufferWidthKey as String:width,kCVPixelBufferHeightKey as String:height,kCVPixelBufferCGImageCompatibilityKey as String:true,kCVPixelBufferCGBitmapContextCompatibilityKey as String:true])
         input.transform = transform
@@ -37,6 +43,80 @@ final class VideoAnalyzerTests: XCTestCase {
         XCTAssertEqual(writer.status,.completed)
         return url
     }
+    @MainActor
+    func testImportWithoutAnalysisUsesRecordingTimeAndKeepsPlayableVideo() async throws {
+        let url = try await makeVideo(image: nil, transform: CGAffineTransform(a: 0, b: 1, c: -1, d: 0, tx: 426, ty: 0), creationDate: "2024-03-02T14:35:00+08:00")
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root); try? FileManager.default.removeItem(at: url) }
+        let model = ImportModel()
+        model.replace(url)
+        await model.readRecordingDate(for: url)
+        XCTAssertTrue(model.hasRecordingDate)
+        XCTAssertEqual(model.climbedAt, ISO8601DateFormatter().date(from: "2024-03-02T06:35:00Z"))
+        let store = ClimbStore(root: root)
+        model.run(store: store, title: "No person required", grade: "V2", sent: false, note: "Keep", quality: .balanced, gymId: nil, gymName: "", climbedAt: model.climbedAt, folderId: nil, analyze: false)
+        for _ in 0..<1000 { if !model.busy { break }; try await Task.sleep(for: .milliseconds(20)) }
+        XCTAssertFalse(model.busy)
+        XCTAssertNil(model.error)
+        let climb = try XCTUnwrap(model.saved)
+        XCTAssertEqual(climb.analysis.sampledFrames, 0)
+        XCTAssertEqual(climb.analysis.duration, 1, accuracy: 0.05)
+        XCTAssertEqual(climb.analysis.aspectRatio, 426.0 / 640, accuracy: 0.01)
+        XCTAssertEqual(climb.climbingDate, model.climbedAt)
+        XCTAssertNil(climb.pendingAnalysis)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: store.file(climb.videoName).path))
+    }
+
+    @MainActor
+    func testBackgroundExpirationRetainsRequestAndResumePreservesEdits() async throws {
+        let source = try XCTUnwrap(Bundle(for: Self.self).url(forResource: "pose", withExtension: "jpg"))
+        let url = try await makeVideo(image: UIImage(contentsOfFile: source.path))
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root); try? FileManager.default.removeItem(at: url) }
+        let store = ClimbStore(root: root)
+        let summary = try await VideoAnalyzer().videoSummary(url: url)
+        let climb = try store.save(title: "Queue", grade: "V1", sent: false, note: "", stagedVideo: url, thumbnail: Data(), analysis: summary, pendingAnalysis: "balanced")
+        store.resumeAnalysis()
+        store.pauseAnalysisForBackgroundExpiration()
+        for _ in 0..<1000 { if store.analysisProgress[climb.id] == nil { break }; try await Task.sleep(for: .milliseconds(20)) }
+        XCTAssertNil(store.analysisProgress[climb.id])
+        XCTAssertEqual(ClimbStore(root: root).climbs.first?.pendingAnalysis, "balanced")
+        store.resumeAnalysis()
+        try store.update(climb, note: "Edited during analysis", sent: true)
+        let editedTime = Date(timeIntervalSince1970: 1_700_000_000)
+        try store.organize(climb, title: "Edited", grade: "V4", gymId: nil, gymName: nil, climbedAt: editedTime, folderId: nil)
+        for _ in 0..<1000 { if store.analysisProgress[climb.id] == nil { break }; try await Task.sleep(for: .milliseconds(20)) }
+        XCTAssertNil(store.analysisProgress[climb.id])
+        let saved = try XCTUnwrap(ClimbStore(root: root).climbs.first)
+        XCTAssertNil(saved.pendingAnalysis)
+        XCTAssertGreaterThan(saved.analysis.sampledFrames, 0)
+        XCTAssertEqual(saved.note, "Edited during analysis")
+        XCTAssertTrue(saved.sent)
+        XCTAssertEqual(saved.climbingDate, editedTime)
+        XCTAssertEqual(saved.grade, "V4")
+    }
+
+    func testMissingRecordingDateDoesNotUseFileCreationTime() async throws {
+        let url = try await makeVideo(image: nil)
+        defer { try? FileManager.default.removeItem(at: url) }
+        // AVAssetWriter writes a container creation time even without tagged metadata.
+        // Zero the movie/track/media header timestamps to model a clip with no recorded date.
+        var data = try Data(contentsOf: url)
+        for atom in ["mvhd", "tkhd", "mdhd"] {
+            var search = data.startIndex..<data.endIndex
+            while let range = data.range(of: Data(atom.utf8), in: search) {
+                let version = data[range.upperBound]
+                let start = range.upperBound + 4
+                let count = version == 1 ? 16 : 8
+                data.replaceSubrange(start..<(start + count), with: repeatElement(UInt8(0), count: count))
+                search = (start + count)..<data.endIndex
+            }
+        }
+        try data.write(to: url)
+        let date = await VideoAnalyzer().recordingDate(url: url)
+        XCTAssertNil(date)
+    }
+
     func testBundledModelProcessesVideoOffline() async throws {
         let source = try XCTUnwrap(Bundle(for:Self.self).url(forResource:"pose",withExtension:"jpg"))
         let image = try XCTUnwrap(UIImage(contentsOfFile:source.path))

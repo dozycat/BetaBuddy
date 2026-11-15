@@ -265,6 +265,7 @@ private fun ClimbRow(climb: Climb, thumbnail: File, onClick: () -> Unit) {
             Text(climb.title, style = BB.Headline, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text("${gradeText(climb.grade)}  /  ${clockText(climb.analysis.duration)}", style = BB.mono(12.sp, FontWeight.Bold, 0.sp))
             Text(dateText(climb.climbedAtMillis, withYear = false), style = BB.Caption, color = BB.Muted)
+            if (climb.pendingAnalysis != null) Text(stringResource(R.string.journal_analysis_background), style = BB.Caption, color = BB.Muted)
             if (!climb.gymName.isNullOrBlank()) Text(climb.gymName, style = BB.Caption, color = BB.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
             // The status is words plus a mark, never colour alone.
             Text(

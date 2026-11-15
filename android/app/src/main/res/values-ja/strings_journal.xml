@@ -26,7 +26,6 @@
     <string name="journal_import_nav_title">トライを記録</string>
     <string name="journal_import_done">完了</string>
     <string name="journal_import_headline">このトライを、\n次のヒントに。</string>
-    <string name="journal_import_headline_busy">このトライを\n読み取っています。</string>
     <string name="journal_import_pick_title">クライミング動画を選ぶ</string>
     <string name="journal_import_ready">動画の準備ができました</string>
     <string name="journal_import_fetching">元の映像を取得中…</string>
@@ -42,10 +41,7 @@
     <string name="journal_quality_balanced_detail">最大 10 fps · 軽め</string>
     <string name="journal_quality_detailed">じっくり見る</string>
     <string name="journal_quality_detailed_detail">最大 15 fps · より細かく</string>
-    <string name="journal_import_start">この端末で解析</string>
-    <string name="journal_import_foreground_note">解析中はアプリを前面のままにしてください。動画もモデルも端末内で処理します。クラウドにある元の映像は、先にシステムがダウンロードすることがあります。</string>
-    <string name="journal_import_steps">フレームを読み込む → 33 点の姿勢 → 見直すシーンを整理\nアップロードは不要です。解析が終わると自動で保存します。</string>
-    <string name="journal_import_stop">解析を中止</string>
+    <string name="journal_import_foreground_note">動画を先に保存し、画面を離れても解析を続けます。システムがバックグラウンド処理を停止した場合、次回アプリを開くと解析をやり直します。</string>
     <string name="journal_import_stopped">解析を中止しました。動画は選択されたままなので、もう一度始められます。</string>
     <string name="journal_import_failed">読み込みに失敗しました：%1$s</string>
     <string name="journal_import_unavailable">動画を取得できませんでした。元の映像がクラウドにある場合は、先にギャラリーアプリでダウンロードしてください。</string>
@@ -94,4 +90,15 @@
     <plurals name="journal_model_line">
         <item quantity="other">FULL / FLOAT16 · サンプル %1$d フレーム · 解析 %2$d 秒</item>
     </plurals>
+    <string name="journal_climbed_at">登った日時</string>
+    <string name="journal_recording_date_found">動画の撮影日時を入力しました。変更できます。</string>
+    <string name="journal_recording_date_missing">撮影日時を取得できなかったため、現在の日時を入力しました。変更できます。</string>
+    <string name="journal_analyze_after_save">保存後に骨格を解析</string>
+    <string name="journal_save_climb">このトライを保存</string>
+    <string name="journal_saving_video">動画を保存中…</string>
+    <string name="journal_analyze_skeleton">骨格を解析</string>
+    <string name="journal_analysis_background">解析中です。この画面を離れても続行します。</string>
+    <string name="journal_not_analyzed">まだ解析していません。骨格はいつでも解析できます。</string>
+    <string name="journal_analysis_deferred">アプリに戻ると解析をやり直します。</string>
+    <string name="journal_analysis_waiting">解析待ち…</string>
 </resources>

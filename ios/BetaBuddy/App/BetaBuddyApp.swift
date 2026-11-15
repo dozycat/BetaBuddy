@@ -46,9 +46,9 @@ struct BetaBuddyApp: App {
                     Button("知道了", role: .cancel) { store.error = nil }
                 } message: { Text(verbatim: store.error ?? "") }
                 .environment(\.locale, language.locale)
-                .task { await membership.refreshEntitlement() }
+                .task { store.resumeAnalysis(); await membership.refreshEntitlement() }
                 .onChange(of: scenePhase) { _, phase in
-                    if phase == .active { Task { await membership.load() } }
+                    if phase == .active { store.resumeAnalysis(); Task { await membership.load() } }
                 }
         }
     }

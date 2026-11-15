@@ -93,39 +93,11 @@ struct SkeletonOverlay: View {
     }
 }
 
-@MainActor
-final class Reanalysis: ObservableObject {
-    @Published var busy = false
-    @Published var progress = 0.0
-    @Published var message: String?
-    private var work: Task<Void, Never>?
-    func run(climb: Climb, store: ClimbStore) {
-        guard !busy else { return }
-        busy = true; progress = 0; message = nil
-        work = Task {
-            defer { busy = false }
-            do {
-                let result = try await VideoAnalyzer().analyze(url: store.file(climb.videoName), quality: .balanced) { [weak self] value in
-                    await self?.setProgress(value)
-                }
-                try Task.checkCancellation()
-                try store.replaceAnalysis(climb, analysis: result)
-                message = String(localized: "骨架分析已更新。", bundle: AppLanguage.bundle)
-            } catch is CancellationError { message = String(localized: "已停止，原分析和笔记已保留。", bundle: AppLanguage.bundle) }
-            catch { message = error.localizedDescription }
-        }
-    }
-    private func setProgress(_ value: Double) { progress = value }
-    func cancel() { work?.cancel() }
-}
-
 struct ReviewView: View {
     @EnvironmentObject private var store: ClimbStore
     @Environment(\.dismiss) private var dismiss
     @StateObject private var playback = Playback()
-    @StateObject private var reanalysis = Reanalysis()
-    @Environment(\.scenePhase) private var phase
-    @State private var skeleton = true
+    @State private var skeleton = false
     @State private var slow = false
     @State private var note = ""
     @State private var sent = false
@@ -136,7 +108,7 @@ struct ReviewView: View {
     private var current: Climb { store.climbs.first { $0.id == climb.id } ?? climb }
     private var report: String {
         let status = current.sent ? String(localized: "已完攀", bundle: AppLanguage.bundle) : String(localized: "还在尝试", bundle: AppLanguage.bundle)
-        let coverage = String(localized: "可用髋部检测：\(percentText(current.analysis.coverage)) 的采样帧", bundle: AppLanguage.bundle)
+        let coverage = current.analysis.sampledFrames == 0 ? String(localized: "尚未分析，可随时分析骨架。", bundle: AppLanguage.bundle) : String(localized: "可用髋部检测：\(percentText(current.analysis.coverage)) 的采样帧", bundle: AppLanguage.bundle)
         let caveat = String(localized: "二维姿态辅助回看；候选动作未经人工确认。", bundle: AppLanguage.bundle)
         return "BetaBuddy · \(current.displayTitle)\n\(gradeText(current.grade)) · \(status) · \(clockText(current.analysis.duration))\n\(coverage)\n\(current.note)\n\n\(caveat)"
     }
@@ -158,14 +130,15 @@ struct ReviewView: View {
             } else {
                 replay
             }
-            if reanalysis.busy {
+            if current.pendingAnalysis != nil {
                 VStack(alignment: .leading, spacing: 12) {
-                    ProgressView(value: reanalysis.progress)
-                    Button("停止重新分析") { reanalysis.cancel() }
+                    Text(store.analysisProgress[climb.id] == nil ? "等待分析…" : "正在分析，可离开此页面。")
+                    ProgressView(value: store.analysisProgress[climb.id] ?? 0)
+                    Button("停止重新分析") { store.cancelAnalysis(current) }
                         .buttonStyle(RouteButtonStyle(tone: .paper))
                 }
             }
-            if let message = reanalysis.message {
+            if let message = store.analysisMessages[climb.id] {
                 Text(verbatim: message).font(.caption).foregroundStyle(BB.muted)
             }
             if !current.analysis.moments.isEmpty {
@@ -202,7 +175,14 @@ struct ReviewView: View {
                     Text(savedNotice ? "已保存 ✓" : "保存复盘").frame(maxWidth: .infinity)
                 }.buttonStyle(RouteButtonStyle())
             }.padding(20).background(BB.lavender, in: RoundedRectangle(cornerRadius: 22))
-            analysisDetails
+            if current.analysis.sampledFrames > 0 { analysisDetails }
+            else if current.pendingAnalysis == nil {
+                Text("尚未分析，可随时分析骨架。").font(.caption).foregroundStyle(BB.muted)
+                Button("分析骨架") {
+                    do { try store.requestAnalysis(current) }
+                    catch { store.error = error.localizedDescription }
+                }.buttonStyle(RouteButtonStyle(tone: .paper))
+            }
         }.navigationTitle("动作回看").navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -212,10 +192,11 @@ struct ReviewView: View {
                         }.accessibilityIdentifier("organizeClimb")
                         Button {
                             playback.pause()
-                            reanalysis.run(climb: current, store: store)
+                            do { try store.requestAnalysis(current) }
+                            catch { store.error = error.localizedDescription }
                         } label: {
-                            Label("重新分析骨架", systemImage: "arrow.clockwise")
-                        }.disabled(reanalysis.busy)
+                            Label(current.analysis.sampledFrames == 0 ? "分析骨架" : "重新分析骨架", systemImage: "arrow.clockwise")
+                        }.disabled(current.pendingAnalysis != nil)
                         ShareLink(item: report) { Label("分享复盘文字", systemImage: "square.and.arrow.up") }
                         Button("删除这一趟", role: .destructive) { confirmDelete = true }
                             .accessibilityIdentifier("deleteClimb")
@@ -225,9 +206,8 @@ struct ReviewView: View {
                 }
             }
             .sheet(isPresented: $organizing) { OrganizeClimbView(climb: current) }
-            .onAppear { note = current.note; sent = current.sent; playback.load(store.file(climb.videoName)) }
-            .onDisappear { playback.unload(); reanalysis.cancel() }
-            .onChange(of: phase) { _, value in if value == .background { reanalysis.cancel() } }
+            .onAppear { skeleton = current.analysis.sampledFrames > 0; note = current.note; sent = current.sent; playback.load(store.file(climb.videoName)) }
+            .onDisappear { playback.unload() }
             .onChange(of:note) { _,_ in savedNotice = false }
             .onChange(of:sent) { _,_ in savedNotice = false }
             .confirmationDialog("删除原片、分析和笔记？此操作无法撤销。",isPresented:$confirmDelete,titleVisibility:.visible) {
@@ -240,15 +220,15 @@ struct ReviewView: View {
     @ViewBuilder
     private var climbMetadata: some View {
         Text(verbatim: gradeText(current.grade)).font(.headline)
-        Text(current.climbingDate, format: .dateTime.year().month().day())
+        Text(current.climbingDate, format: .dateTime.year().month().day().hour().minute())
             .font(.caption).foregroundStyle(BB.muted)
     }
     private var replay: some View {
         VStack(spacing: 12) {
             ZStack(alignment: .topLeading) {
                 PlayerSurface(player: playback.player)
-                if skeleton { SkeletonOverlay(analysis: current.analysis, time: playback.time) }
-                if skeleton && current.analysis.nearestFrame(to: playback.time) == nil {
+                if skeleton && current.analysis.sampledFrames > 0 { SkeletonOverlay(analysis: current.analysis, time: playback.time) }
+                if skeleton && current.analysis.sampledFrames > 0 && current.analysis.nearestFrame(to: playback.time) == nil {
                     Text("暂未可靠识别").font(.caption.bold())
                         .padding(.horizontal, 12).padding(.vertical, 8)
                         .background(BB.paper, in: Capsule()).padding(12)
@@ -287,7 +267,7 @@ struct ReviewView: View {
     }
     @ViewBuilder
     private var playbackOptions: some View {
-        Toggle("骨架", isOn: $skeleton).font(.subheadline.bold()).tint(BB.ink).fixedSize()
+        Toggle("骨架", isOn: $skeleton).disabled(current.analysis.sampledFrames == 0).font(.subheadline.bold()).tint(BB.ink).fixedSize()
             .frame(minHeight: 44)
         Button {
             slow.toggle(); playback.rate = slow ? 0.5 : 1

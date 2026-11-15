@@ -74,6 +74,8 @@ struct Climb: Codable, Identifiable, Sendable {
     var gymName: String? = nil
     var climbedAt: Date? = nil
     var folderId: UUID? = nil
+    /// Persisted before starting work, so interrupted analysis can restart on the next launch.
+    var pendingAnalysis: String? = nil
     var climbingDate: Date { climbedAt ?? date }
     var gymKey: String {
         if let id = gymId, !id.isEmpty { return "id:" + id }

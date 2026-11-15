@@ -3,6 +3,12 @@ package com.betabuddy.android
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
+import androidx.lifecycle.lifecycleScope
+import com.betabuddy.android.journal.AnalysisService
+import com.betabuddy.android.journal.JournalGraph
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -48,6 +54,14 @@ class MainActivity : AppCompatActivity() {
             BetaBuddyTheme {
                 AppShell(gym = gym.session, initialTab = initialTab)
             }
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        lifecycleScope.launch {
+            val pending = withContext(Dispatchers.IO) { JournalGraph.store(this@MainActivity).climbs.any { it.pendingAnalysis != null } }
+            if (pending) AnalysisService.start(this@MainActivity)
         }
     }
 

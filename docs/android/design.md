@@ -123,14 +123,14 @@ Debug 构建还可以用 Chrome 的 `chrome://inspect` 连上页面。加载耗�
 | `review/` | 回看：播放、骨架与髋部短轨迹的叠加、候选片段、笔记、分享 |
 
 - **选视频**用系统照片选择器（`PickVisualMedia`，只选视频），不需要任何存储权限；选中的那一段被复制到应用私有目录的 `staging/`，超过 500 MB 在复制途中就停下。
-- **分析**：`MediaExtractor` + `MediaCodec` 顺序解码，不采样的帧在颜色转换之前丢弃；采样帧按旋转信息摆正、缩放后交给 MediaPipe Pose Landmarker Full（视频模式，CPU，33 点），与 iOS 是同一个模型文件，加载前核对 SHA-256。同一时间只跑一个分析，在专用线程上；取消和设备过热在帧与帧之间检查。分析期间保持亮屏，应用退到后台就停止，不留半份结果。
+- **分析**：`MediaExtractor` + `MediaCodec` 顺序解码，不采样的帧在颜色转换之前丢弃；采样帧按旋转信息摆正、缩放后交给 MediaPipe Pose Landmarker Full（视频模式，CPU，33 点），与 iOS 是同一个模型文件，加载前核对 SHA-256。同一时间只跑一个分析，在专用线程上；取消和设备过热在帧与帧之间检查。默认只保存视频和缩略图，不运行模型；可选择保存后分析，也可在回看页手动分析。分析由 `AnalysisService` 持有，离开页面、切换入口或退到桌面不取消。请求先写入存档，任务按队列串行执行；服务被系统结束时保留请求，下次打开应用重试；显式停止清除请求。结果只替换分析字段，保留同期编辑的笔记、日期与难度。Android 15+ 使用 `mediaProcessing` 前台服务，较旧系统使用 `dataSync` 的本地文件处理类型。Android 13+ 可选允许通知以查看进度，拒绝不影响分析；不再为了分析保持屏幕常亮。
 - **回看**：Media3 ExoPlayer 画到 `TextureView`，骨架用 Compose `Canvas` 画在与画面完全重合的矩形上；0.1 秒步进按精确定位，0.5× 慢放。播放器等 `TextureView` 有了 surface 才开始解码，这样暂停状态下打开也能看到第一帧。
 - **诚实性**与 iOS 同一套规则：髋部轨迹不叫重心，角度是二维投影角，高抬脚只算候选片段，骨架不跨检测空白延续；`JournalStringsTest` 检查文字里没有这些词。
 - 存档里不写界面语言：候选片段按类型保存，显示时取当前语言的文字。
 
 ### 文件夹与组合筛选
 
-与 iOS 的[收纳交互](../ios/product-design.md#收好每一趟)一致：文件夹可以新建、改名、删除，删除后保留视频并移回未分类；每条记录最多属于一个文件夹。导入和回看时都能调整岩馆、攀爬日期与归属文件夹。
+与 iOS 的[收纳交互](../ios/product-design.md#收好每一趟)一致：文件夹可以新建、改名、删除，删除后保留视频并移回未分类；每条记录最多属于一个文件夹。导入时优先读取所选媒体的 `DATE_TAKEN`，其次读取视频容器的拍摄时间（含时区）；缺失或无效时使用当前时间并提示。日期与时分直接展示并允许修改，回看时也能通过「整理」修改时间、岩馆与归属文件夹。
 
 首页使用横向文件夹入口和紧凑筛选入口，岩馆、难度、时间与原有完攀状态、搜索共同生效。日期以用户本地日历计算，旧记录继续用原日期。全国岩馆目录从 assets 中离线读取，可按城市和馆名搜索，未收录时手填；不会增加网络或定位权限。目录来源与覆盖见[目录说明](../gym-directory.md)。
 
@@ -138,7 +138,7 @@ Debug 构建还可以用 Chrome 的 `chrome://inspect` 连上页面。加载耗�
 
 ## 隐私与存储
 
-- **不向用户申请任何权限。** Manifest 自己不声明，并移除依赖库会合并进来的 `INTERNET`、`ACCESS_NETWORK_STATE` 和 `WAKE_LOCK`。合并后只剩 AndroidX Core 自动加的一条应用自用的签名级权限。AppCompat 带来的 EmojiCompat 启动项也已移除（它会向系统字体服务要新的表情字体）。
+- **只申请本地分析服务和可选通知权限。** Manifest 声明 `FOREGROUND_SERVICE`、`FOREGROUND_SERVICE_DATA_SYNC`、`FOREGROUND_SERVICE_MEDIA_PROCESSING` 与 `POST_NOTIFICATIONS`，不申请相册、存储、定位或网络权限，并移除依赖库会合并进来的 `INTERNET`、`ACCESS_NETWORK_STATE` 和 `WAKE_LOCK`。另有 AndroidX Core 自动加的一条应用自用的签名级权限。AppCompat 带来的 EmojiCompat 启动项也已移除（它会向系统字体服务要新的表情字体）。
 - 岩馆只在本机记两个布尔值（是否读过说明、手势提示是否看过），存在应用私有的 `SharedPreferences` 里。攀爬册的数据全部在 `filesDir/BetaBuddy/`，不写外部存储。
 - **不进备份，也不随换机迁移。** `allowBackup="false"`、`fullBackupContent="false"`；`data_extraction_rules.xml` 把 `<cloud-backup>` 和 `<device-transfer>` 两节的全部数据域都排除（Android 12 起两者分开，`allowBackup` 管不到设备间直传）。
 - **第三方许可全文**随应用打包在 `assets/licenses/`（组件清单、Apache License 2.0、MediaPipe 原生库的全部声明），在「设置与关于」→「开源许可」里离线查看；许可保持英文原文。

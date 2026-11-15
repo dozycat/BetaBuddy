@@ -26,7 +26,6 @@
     <string name="journal_import_nav_title">記錄攀爬</string>
     <string name="journal_import_done">完成</string>
     <string name="journal_import_headline">把這一趟，\n變成下一次的靈感。</string>
-    <string name="journal_import_headline_busy">正在讀懂\n你的這一趟。</string>
     <string name="journal_import_pick_title">選擇攀爬影片</string>
     <string name="journal_import_ready">影片已就緒</string>
     <string name="journal_import_fetching">正在取回原片…</string>
@@ -42,10 +41,7 @@
     <string name="journal_quality_balanced_detail">最高每秒 10 格 · 計算較少</string>
     <string name="journal_quality_detailed">動作細看</string>
     <string name="journal_quality_detailed_detail">最高每秒 15 格 · 保留更多細節</string>
-    <string name="journal_import_start">開始本機分析</string>
-    <string name="journal_import_foreground_note">分析時請讓 App 保持在前景。影片和模型都在手機上處理；存在雲端的原片可能需要系統先下載。</string>
-    <string name="journal_import_steps">逐格讀取 → 33 點姿態 → 整理回看片段\n不需要上傳。分析完成後自動儲存。</string>
-    <string name="journal_import_stop">停止分析</string>
+    <string name="journal_import_foreground_note">影片先儲存，分析可在離開頁面後繼續。系統暫停背景工作時，下次開啟應用程式會重新分析。</string>
     <string name="journal_import_stopped">分析已停止。影片仍在選取中，可以重新開始。</string>
     <string name="journal_import_failed">匯入失敗：%1$s</string>
     <string name="journal_import_unavailable">未能取得影片。如果原片存在雲端，請先在相簿中下載。</string>
@@ -94,4 +90,15 @@
     <plurals name="journal_model_line">
         <item quantity="other">FULL / FLOAT16 · %1$d 取樣影格 · 分析用時 %2$d 秒</item>
     </plurals>
+    <string name="journal_climbed_at">攀爬時間</string>
+    <string name="journal_recording_date_found">已讀取影片拍攝時間，可手動修改。</string>
+    <string name="journal_recording_date_missing">未讀取到拍攝時間，預設使用目前時間，可手動修改。</string>
+    <string name="journal_analyze_after_save">儲存後分析骨架</string>
+    <string name="journal_save_climb">儲存這一趟</string>
+    <string name="journal_saving_video">正在儲存影片…</string>
+    <string name="journal_analyze_skeleton">分析骨架</string>
+    <string name="journal_analysis_background">正在分析，可離開此頁面。</string>
+    <string name="journal_not_analyzed">尚未分析，可隨時分析骨架。</string>
+    <string name="journal_analysis_deferred">等待返回應用程式後重新分析。</string>
+    <string name="journal_analysis_waiting">等待分析…</string>
 </resources>

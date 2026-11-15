@@ -95,6 +95,29 @@ class VideoAnalyzerInstrumentedTest {
         return file
     }
 
+    @Test fun savedAnalysisContinuesAfterActivityGoesToBackground() = runBlocking {
+        val video = makeVideo(fixture())
+        val store = com.betabuddy.android.journal.JournalGraph.store(context)
+        val info = VideoAnalyzer.probe(video)
+        val summary = com.betabuddy.android.data.PoseAnalysis(emptyList(), 0, info.durationSeconds!!, 640.0 / 480, 0.0, emptyList())
+        val climb = store.save("Background fixture", "Fixture", "V1", false, "Keep note", video, ByteArray(0), summary, pendingAnalysis = "balanced")
+        try {
+            context.startActivity(android.content.Intent(context, com.betabuddy.android.MainActivity::class.java).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+            instrumentation.waitForIdleSync()
+            instrumentation.runOnMainSync { com.betabuddy.android.journal.AnalysisService.start(context) }
+            context.startActivity(android.content.Intent(android.content.Intent.ACTION_MAIN).addCategory(android.content.Intent.CATEGORY_HOME).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+            val deadline = System.currentTimeMillis() + 45_000
+            while (store.climbs.first { it.id == climb.id }.pendingAnalysis != null && System.currentTimeMillis() < deadline) kotlinx.coroutines.delay(100)
+            val result = store.climbs.first { it.id == climb.id }
+            assertEquals(null, result.pendingAnalysis)
+            assertTrue("A saved request should finish in background", result.analysis.sampledFrames > 0)
+            assertEquals("Keep note", result.note)
+            assertTrue(store.file(climb.videoName).exists())
+        } finally {
+            store.delete(climb)
+        }
+    }
+
     @Test fun bundledModelIsThePinnedFile() {
         assertEquals(PoseModel.BYTES.toInt(), VideoAnalyzer.loadModel(context).capacity())
     }

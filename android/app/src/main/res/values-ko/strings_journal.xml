@@ -26,7 +26,6 @@
     <string name="journal_import_nav_title">등반 기록</string>
     <string name="journal_import_done">완료</string>
     <string name="journal_import_headline">이번 시도를\n다음 아이디어로.</string>
-    <string name="journal_import_headline_busy">이번 등반을\n읽는 중.</string>
     <string name="journal_import_pick_title">등반 영상 선택</string>
     <string name="journal_import_ready">영상 준비 완료</string>
     <string name="journal_import_fetching">원본을 가져오는 중…</string>
@@ -42,10 +41,7 @@
     <string name="journal_quality_balanced_detail">최대 10fps · 가볍게</string>
     <string name="journal_quality_detailed">자세히 보기</string>
     <string name="journal_quality_detailed_detail">최대 15fps · 더 세밀하게</string>
-    <string name="journal_import_start">이 기기에서 분석</string>
-    <string name="journal_import_foreground_note">분석하는 동안 앱을 화면에 띄워 두세요. 영상과 모델은 모두 기기에서 처리합니다. 클라우드에 있는 원본은 시스템이 먼저 내려받을 수 있습니다.</string>
-    <string name="journal_import_steps">프레임 읽기 → 33점 자세 → 다시 볼 구간 정리\n업로드하지 않습니다. 분석이 끝나면 자동으로 저장합니다.</string>
-    <string name="journal_import_stop">분석 중지</string>
+    <string name="journal_import_foreground_note">영상을 먼저 저장하고 화면을 나가도 분석을 계속해요. 시스템이 백그라운드 작업을 중지하면 다음에 앱을 열 때 다시 분석해요.</string>
     <string name="journal_import_stopped">분석을 중지했습니다. 영상은 선택된 상태이니 다시 시작할 수 있습니다.</string>
     <string name="journal_import_failed">가져오기 실패: %1$s</string>
     <string name="journal_import_unavailable">영상을 가져오지 못했습니다. 원본이 클라우드에 있다면 먼저 갤러리 앱에서 내려받으세요.</string>
@@ -94,4 +90,15 @@
     <plurals name="journal_model_line">
         <item quantity="other">FULL / FLOAT16 · 샘플 %1$d프레임 · 분석 %2$d초</item>
     </plurals>
+    <string name="journal_climbed_at">등반 날짜와 시간</string>
+    <string name="journal_recording_date_found">영상 촬영 시간을 불러왔어요. 직접 수정할 수 있어요.</string>
+    <string name="journal_recording_date_missing">촬영 시간을 찾지 못해 현재 시간을 입력했어요. 직접 수정할 수 있어요.</string>
+    <string name="journal_analyze_after_save">저장 후 골격 분석</string>
+    <string name="journal_save_climb">이번 등반 저장</string>
+    <string name="journal_saving_video">영상 저장 중…</string>
+    <string name="journal_analyze_skeleton">골격 분석</string>
+    <string name="journal_analysis_background">분석 중이에요. 이 화면을 나가도 괜찮아요.</string>
+    <string name="journal_not_analyzed">아직 분석하지 않았어요. 언제든 골격을 분석할 수 있어요.</string>
+    <string name="journal_analysis_deferred">앱으로 돌아오면 다시 분석해요.</string>
+    <string name="journal_analysis_waiting">분석 대기 중…</string>
 </resources>

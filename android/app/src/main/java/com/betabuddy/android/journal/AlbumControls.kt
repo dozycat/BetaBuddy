@@ -123,13 +123,32 @@ internal fun ClimbDateField(label: String, millis: Long?, onChange: (Long) -> Un
 }
 
 @Composable
-internal fun MetadataFields(model: JournalViewModel, gymId: String?, gymName: String, date: Long, folderId: String?, onGym: (String?, String) -> Unit, onDate: (Long) -> Unit, onFolder: (String?) -> Unit) {
+internal fun ClimbDateTimeField(millis: Long, onChange: (Long) -> Unit) {
+    val context = LocalContext.current
+    val date = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault())
+    val label = stringResource(R.string.journal_climbed_at)
+    TextButton(onClick = {
+        DatePickerDialog(context, { _, y, m, d ->
+            val selected = LocalDate.of(y, m + 1, d).atTime(date.toLocalTime())
+            // Commit the date independently: dismissing the time picker still keeps that edit.
+            onChange(selected.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli())
+            android.app.TimePickerDialog(context, { _, hour, minute ->
+                onChange(selected.withHour(hour).withMinute(minute).withSecond(0).withNano(0).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli())
+            }, date.hour, date.minute, android.text.format.DateFormat.is24HourFormat(context)).show()
+        }, date.year, date.monthValue - 1, date.dayOfMonth).show()
+    }) {
+        Text("$label · ${java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT, appLocale()).format(java.util.Date(millis))}")
+    }
+}
+
+@Composable
+internal fun MetadataFields(model: JournalViewModel, gymId: String?, gymName: String, date: Long, folderId: String?, onGym: (String?, String) -> Unit, onDate: (Long) -> Unit, onFolder: (String?) -> Unit, showDate: Boolean = true) {
     val folders by model.folders.collectAsState()
     var pickGym by remember { mutableStateOf(false) }
     val unfiled = stringResource(R.string.album_unfiled)
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         TextButton(onClick = { pickGym = true }, modifier = Modifier.fillMaxWidth()) { Text("${stringResource(R.string.album_gym)} · ${gymName.ifBlank { stringResource(R.string.album_choose_gym) }}") }
-        ClimbDateField(stringResource(R.string.album_climbed_on), date, onDate)
+        if (showDate) ClimbDateTimeField(date, onDate)
         ChoiceRow(stringResource(R.string.album_folder), folders.firstOrNull { it.id == folderId }?.name ?: unfiled,
             listOf("" to unfiled) + folders.map { it.id to it.name }) { onFolder(it.takeIf(String::isNotEmpty)) }
     }
