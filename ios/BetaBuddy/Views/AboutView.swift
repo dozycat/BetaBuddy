@@ -47,7 +47,7 @@ struct AboutView: View {
             Divider()
             SectionLabel(title:"分析边界",trailing:"KEEP IT HONEST")
             Text("33 个关键点用于骨架回放与画面内几何分析。角度是二维投影角度；髋部轨迹不是物理重心。遮挡、镜头移动、多人入镜会影响结果。候选片段需要结合原片确认。")
-            Text("适合单人、全身入镜、固定机位的视频；单段 0.5–180 秒，最大 500 MB。建议先在相册里裁掉无关片段。").foregroundStyle(BB.muted)
+            Text("适合单人、全身入镜、固定机位的视频；单段 0.5 秒–20 分钟，最大 500 MB。建议先在相册里裁掉无关片段。").foregroundStyle(BB.muted)
             Divider()
             if let pack = GymPack.current {
                 GymNoticeList()

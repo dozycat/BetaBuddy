@@ -5,7 +5,7 @@ import CoreImage
 @testable import BetaBuddy
 
 final class VideoAnalyzerTests: XCTestCase {
-    private func makeVideo(image:UIImage?, transform:CGAffineTransform = .identity, creationDate: String? = nil) async throws -> URL {
+    private func makeVideo(image:UIImage?, transform:CGAffineTransform = .identity, creationDate: String? = nil, endTime: Double? = nil) async throws -> URL {
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("smoke-\(UUID()).mov")
         let width = 640, height = 426
         let writer = try AVAssetWriter(outputURL:url,fileType:.mov)
@@ -38,10 +38,27 @@ final class VideoAnalyzerTests: XCTestCase {
             CVPixelBufferUnlockBaseAddress(buffer,[])
             XCTAssertTrue(adaptor.append(buffer,withPresentationTime:CMTime(value:Int64(frame),timescale:30)))
         }
+        if let endTime { writer.endSession(atSourceTime: CMTime(seconds: endTime, preferredTimescale: 600)) }
         input.markAsFinished()
         await writer.finishWriting()
         XCTAssertEqual(writer.status,.completed)
         return url
+    }
+    func testTwentyMinuteVideoDurationLimit() async throws {
+        let accepted = try await makeVideo(image: nil, endTime: 20 * 60)
+        let rejected = try await makeVideo(image: nil, endTime: 20 * 60 + 1)
+        defer {
+            try? FileManager.default.removeItem(at: accepted)
+            try? FileManager.default.removeItem(at: rejected)
+        }
+        let summary = try await VideoAnalyzer().videoSummary(url: accepted)
+        XCTAssertEqual(summary.duration, 20 * 60, accuracy: 0.05)
+        do {
+            _ = try await VideoAnalyzer().videoSummary(url: rejected)
+            XCTFail("A video longer than 20 minutes should be rejected")
+        } catch AnalysisError.tooLong {
+            // Expected.
+        }
     }
     @MainActor
     func testImportWithoutAnalysisUsesRecordingTimeAndKeepsPlayableVideo() async throws {
