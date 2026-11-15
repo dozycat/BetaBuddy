@@ -1,8 +1,14 @@
 # BetaBuddy 发布状态
 
-2026-11-15：默认直接保存视频、可选后台分析、自动提取及编辑拍摄时间已提交，发布版本设为 **1.4.0 (15)**。本机签名 Release 归档成功，包内版本与 GymPack **1.3.9** 的 10 个文件校验通过。两次上传均在 Xcode 账户检查阶段返回 `Failed to Use Accounts`，**未上传成功、未分发 TestFlight，也未提交 App Store 审核**。用户决定换电脑继续发布；需要在新机器登录有该 App 上传权限的 Apple 账号，安全迁移本地 GymPack 后重新归档。继续前先核对 Connect 是否已有同版本／构建，避免重复上传。测试说明见 [release-1.4.0.md](release-1.4.0.md)。
+2026-11-15 11:52（中国时间）：**iOS 1.4.0 (15) 已上传 TestFlight。** Xcode 于 11:44 返回 `Upload succeeded` / `EXPORT SUCCEEDED`，Apple 处理完成后[构建 15](https://appstoreconnect.apple.com/teams/5ed1fb00-fca4-4901-b156-1f383d335b4e/apps/6809249574/testflight/ios/6bd4bc79-9120-408d-b6e4-2e4c91893c55)出现。英文 What to Test 已保存。现有「BetaBuddy 内部测试」群组已自动关联，群组构建状态为**正在测试**；现有「BetaBuddy 邀请测试」群组已加入构建 15、自动通知测试员已开启，群组构建状态为**正在等待审核**，需待 Apple 的 TestFlight 外测审核通过才可供外部测试员安装。[公开邀请链接](https://testflight.apple.com/join/WZPw69Vx)沿用原链接。本次**未提交 App Store 正式审核**。
 
-同轮 Android **1.2.0 (2)** 的签名 APK/AAB 已在本机生成，与此前 GitHub 发布 APK 的签名证书一致；用户切换电脑前尚未创建 `android-v1.2.0` Release。见 [Android 1.2.0](../../android/releases/1.2.0.md)。支持站点的新版说明与隐私文案已提交，但线上部署未完成：本机 Wrangler 当前可访问的两个账号都不拥有 `betabuddy-support`，应切换到现有 Worker 所属账号后更新，不在错误账号新建同名站点。
+同日准备：先拉取远端 `main` 并确认其包含功能提交 `0805607`；App Store Connect 上传前未见 1.4.0，构建 15 未占用。在独立发布工作树执行 iOS bootstrap，固定版本 SDK 与模型校验通过；GymPack 1.3.9 来自私有仓库 `betabuddy-gym-data` 的已发布快照 `6ad87ac`，安装脚本逐文件校验清单中的 10 个 SHA-256。未签名真机构建与签名 Release 归档均成功；归档内确认 Bundle ID `com.betabuddy.ios`、版本 1.4.0 (15) 及 GymPack 1.3.9 的 10 个文件校验一致，签名团队与原发布包一致。真机后台执行时长、热状态及不同视频元数据仍未验收，自动化测试范围见 [release-1.4.0.md](release-1.4.0.md)。用户本轮暂停 Android 发布；`android-v1.2.0` 未创建。
+
+2026-11-15 11:39（中国时间）：在持有现有 `betabuddy-support` Worker 的 Cloudflare 账号中，通过控制台将 `services/support-site/public/` 的首页与隐私页部署到原 Worker，部署版本 `23e5c1c6` 显示 Ready。`https://betabuddy.dozycat.ai/` 与 `/privacy/` 均返回 200，响应内容的 SHA-256 分别与仓库构建产物一致。
+
+2026-11-15（原电脑记录）：默认直接保存视频、可选后台分析、自动提取及编辑拍摄时间已提交，发布版本设为 **1.4.0 (15)**。当时签名 Release 归档成功，包内版本与 GymPack **1.3.9** 的 10 个文件校验通过。两次上传均在 Xcode 账户检查阶段返回 `Failed to Use Accounts`，当时**未上传成功、未分发 TestFlight，也未提交 App Store 审核**。用户决定换电脑继续发布；测试说明见 [release-1.4.0.md](release-1.4.0.md)。本轮新电脑上的后续状态见上方记录。
+
+同轮 Android **1.2.0 (2)** 的签名 APK/AAB 曾在原电脑生成，与此前 GitHub 发布 APK 的签名证书一致；用户切换电脑前尚未创建 `android-v1.2.0` Release。见 [Android 1.2.0](../../android/releases/1.2.0.md)。当时支持站点的新版说明与隐私文案已提交，但尚未部署；本轮已在正确的现有 Worker 所属账号完成部署，见上方记录。
 
 2026-11-14 10:16（中国时间）：按用户要求，将现有可安装的 TestFlight **1.3.0 (13)** 提交 App Store 正式审核。Connect 确认 `1 Item Submitted`，已建立 1.3.0 正式版本并关联构建 13；简体中文与英语（美国）栏目继续使用英文文案，更新说明、相册功能描述和审核备注已保存。保留审核通过后自动发布、立即向全部用户供应更新和现有评分。提交前确认旧正式版 1.2.0 已为 `Ready for Distribution`。本次提交**不包含构建 14 的布局修正**；构建 14 在解锁后重试上传仍报账户权限错误，未出现在 Connect 构建列表。提交成功截图保存在本机忽略目录 `ios/build/appstore-1.3.0-13-submitted.png`。
 
