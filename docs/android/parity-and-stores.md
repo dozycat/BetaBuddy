@@ -22,6 +22,8 @@
 
 ## 外部资料
 
+具体会员接入边界见 [membership-integration.md](membership-integration.md)；小米与 OPPO 文案和截图清单见 [store-listing-zh-Hans.md](store-listing-zh-Hans.md)。
+
 - 小米 IAP 与白名单：https://dev.mi.com/xiaomihyperos/documentation/detail?pId=2232
 - 小米单机应用备案选项：https://dev.mi.com/xiaomihyperos/documentation/detail?pId=1775
 - 小米基础资质：https://dev.mi.com/xiaomihyperos/documentation/detail?pId=2251
