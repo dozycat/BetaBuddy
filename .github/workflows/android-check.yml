@@ -18,7 +18,9 @@ jobs:
           distribution: temurin
           java-version: '17'
       - name: Install Android SDK
-        run: "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-37.0' 'build-tools;36.0.0'
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
+            'platforms;android-37.0' 'build-tools;36.0.0'
       - name: Check resources
         run: python3 android/scripts/check-resources.py
       - name: Build and test
