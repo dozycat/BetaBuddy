@@ -29,8 +29,9 @@
     <string name="journal_import_pick_title">選擇攀爬影片</string>
     <string name="journal_import_ready">影片已就緒</string>
     <string name="journal_import_fetching">正在取回原片…</string>
-    <string name="journal_import_requirements">單人全身 · 固定機位 · 最長 3 分鐘</string>
+    <string name="journal_import_requirements">單人全身 · 固定機位 · 最長 20 分鐘</string>
     <string name="journal_import_pick_action">從相簿選擇</string>
+    <string name="journal_import_pick_file">從檔案選擇</string>
     <string name="journal_import_name_label">這一趟的名字</string>
     <string name="journal_import_name_hint">例如：週日的紫色路線</string>
     <string name="journal_import_grade_label">路線難度</string>
@@ -47,7 +48,7 @@
     <string name="journal_import_unavailable">未能取得影片。如果原片存在雲端，請先在相簿中下載。</string>
     <string name="journal_error_missing_model">安裝檔缺少姿態模型，請重新安裝完整版本。</string>
     <string name="journal_error_invalid_video">無法讀取這段影片，請選擇沒有損壞的 MOV 或 MP4 檔案。</string>
-    <string name="journal_error_too_long">影片超過 3 分鐘。請先在相簿中裁剪成單趟攀爬。</string>
+    <string name="journal_error_too_long">影片超過 20 分鐘。請先在相簿或檔案 App 中裁剪。</string>
     <string name="journal_error_too_large">影片超過 500 MB，請先在相簿中裁剪或輸出較小的版本。</string>
     <string name="journal_error_no_pose">沒有辨識到夠清楚的人體。請使用全身入鏡、光線充足、單人攀爬的影片。</string>
     <string name="journal_error_overheated">手機溫度偏高，已停止分析。稍後可以重新開始。</string>

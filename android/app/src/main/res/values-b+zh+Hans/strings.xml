@@ -45,11 +45,13 @@
     <string name="about_local">姿态模型随安装包提供。没有模型下载，没有账号，也没有云端 AI。导入的视频与分析记录保存在应用内，并排除在系统云备份之外。</string>
     <string name="about_limits_title">分析边界</string>
     <string name="about_limits_body">33 个关键点用于骨架回放与画面内几何分析。角度是二维投影角度；髋部轨迹不是物理重心。遮挡、镜头移动、多人入镜会影响结果。候选片段需要结合原片确认。</string>
-    <string name="about_video_requirements">适合单人、全身入镜、固定机位的视频；单段 0.5–180 秒，最大 500 MB。建议先在相册里裁掉无关片段。</string>
+    <string name="about_video_requirements">适合单人、全身入镜、固定机位的视频；单段 0.5 秒至 20 分钟，最大 500 MB。建议先在相册或文件应用中裁掉无关片段。</string>
     <string name="about_gym_pack_line">%1$s · %2$d 条线路 · 数据版本 %3$s（%4$s）</string>
     <string name="about_gym_missing">这个构建没有内置岩馆数据。场馆模型、线路和攀爬模拟随正式安装包提供，不在公开源码里。</string>
     <string name="about_records_title">记录管理</string>
     <string name="about_records_body">可在每条记录中删除原片和分析；卸载应用会移除本地记录。需要保留的复盘文字可通过分享导出。</string>
+    <string name="about_saved_climbs">已保存 %1$d 段攀爬。</string>
+    <string name="privacy_online">在线隐私政策</string>
     <string name="about_support">帮助与支持</string>
     <string name="privacy_title">隐私政策</string>
     <string name="privacy_unreadable">隐私政策无法读取，请重新安装完整版本。</string>

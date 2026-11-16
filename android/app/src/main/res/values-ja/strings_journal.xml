@@ -29,8 +29,9 @@
     <string name="journal_import_pick_title">クライミング動画を選ぶ</string>
     <string name="journal_import_ready">動画の準備ができました</string>
     <string name="journal_import_fetching">元の映像を取得中…</string>
-    <string name="journal_import_requirements">1 人・全身 · 固定カメラ · 最長 3 分</string>
+    <string name="journal_import_requirements">1 人・全身 · 固定カメラ · 最長 20 分</string>
     <string name="journal_import_pick_action">ギャラリーから選ぶ</string>
+    <string name="journal_import_pick_file">ファイルから選ぶ</string>
     <string name="journal_import_name_label">このトライの名前</string>
     <string name="journal_import_name_hint">例：日曜の紫の課題</string>
     <string name="journal_import_grade_label">グレード</string>
@@ -47,7 +48,7 @@
     <string name="journal_import_unavailable">動画を取得できませんでした。元の映像がクラウドにある場合は、先にギャラリーアプリでダウンロードしてください。</string>
     <string name="journal_error_missing_model">このインストールには姿勢推定モデルがありません。アプリを入れ直してください。</string>
     <string name="journal_error_invalid_video">この動画を読み込めません。壊れていない MOV または MP4 ファイルを選んでください。</string>
-    <string name="journal_error_too_long">動画が 3 分を超えています。先にギャラリーアプリで 1 トライ分にトリミングしてください。</string>
+    <string name="journal_error_too_long">動画が 20 分を超えています。先にギャラリーまたはファイルアプリでトリミングしてください。</string>
     <string name="journal_error_too_large">動画が 500 MB を超えています。先にギャラリーアプリでトリミングするか、小さいサイズで書き出してください。</string>
     <string name="journal_error_no_pose">人物を十分にはっきり検出できませんでした。明るい場所で、1 人の全身が映った動画を使ってください。</string>
     <string name="journal_error_overheated">端末の温度が高いため解析を中止しました。しばらくしてからやり直してください。</string>

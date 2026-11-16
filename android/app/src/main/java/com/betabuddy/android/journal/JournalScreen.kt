@@ -49,7 +49,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.betabuddy.android.R
 import com.betabuddy.android.data.Climb
 import com.betabuddy.android.data.UNGRADED_VALUE
@@ -74,8 +73,7 @@ private const val ROUTE_REVIEW = "review:"
  * Counterpart of JournalView / ImportView / ReviewView on iOS.
  */
 @Composable
-fun JournalScreen(onOpenSettings: () -> Unit) {
-    val model: JournalViewModel = viewModel()
+fun JournalScreen(model: JournalViewModel, onOpenSettings: () -> Unit) {
     var route by rememberSaveable { mutableStateOf(ROUTE_LIST) }
     val climbs by model.climbs.collectAsState()
     val unreadable by model.storeUnreadable.collectAsState()

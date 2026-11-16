@@ -25,11 +25,11 @@ enum class AnalysisQuality(val fps: Double, val maxDimension: Int) {
     DETAILED(15.0, 960),
 }
 
-/** Limits on an imported clip: 0.5–180 s, at most 500 MB, with a video track. */
+/** Limits on an imported clip: 0.5–1200 s, at most 500 MB, with a video track. */
 object ImportRules {
     const val MAX_BYTES = 500L * 1024 * 1024
     const val MIN_SECONDS = 0.5
-    const val MAX_SECONDS = 180.0
+    const val MAX_SECONDS = 20.0 * 60.0
 
     /** Returns null when the clip is acceptable. Same order of checks as iOS. */
     fun check(sizeBytes: Long, durationSeconds: Double?, hasVideoTrack: Boolean): AnalysisError? = when {

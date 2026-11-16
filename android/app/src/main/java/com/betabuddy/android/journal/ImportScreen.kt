@@ -84,8 +84,9 @@ internal fun ImportScreen(model: JournalViewModel, onClose: () -> Unit, onSaved:
     var quality by rememberSaveable { mutableStateOf(AnalysisQuality.BALANCED) }
     val defaultTitle = stringResource(R.string.journal_default_title) // in the language shown at save time
 
-    // The system photo picker returns only the item the user chose; no storage permission is requested.
+    // Both system pickers return only the item the user chose; no storage permission is requested.
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> model.onVideoPicked(uri) }
+    val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> model.onVideoPicked(uri) }
 
     val locked = state.busy || state.importing
     // Lock only while copying or committing the video. Inference runs after saving.
@@ -133,6 +134,9 @@ internal fun ImportScreen(model: JournalViewModel, onClose: () -> Unit, onSaved:
                     }
                     FilledButton(stringResource(R.string.journal_import_pick_action), Modifier.testTag("pickVideo"), enabled = !state.importing) {
                         picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.VideoOnly))
+                    }
+                    OutlineButton(stringResource(R.string.journal_import_pick_file), Modifier.testTag("pickVideoFile"), enabled = !state.importing) {
+                        filePicker.launch(arrayOf("video/*"))
                     }
                 }
                 Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
