@@ -11,10 +11,10 @@ class AnalysisTypesTest {
     @Test fun importLimits() {
         val mb = 1024L * 1024
         assertNull(ImportRules.check(10 * mb, 12.0, true))
-        assertNull(ImportRules.check(500 * mb, 180.0, true))
+        assertNull(ImportRules.check(500 * mb, 1200.0, true))
         assertNull(ImportRules.check(1, 0.5, true))
         assertEquals(AnalysisError.TOO_LARGE, ImportRules.check(500 * mb + 1, 12.0, true))
-        assertEquals(AnalysisError.TOO_LONG, ImportRules.check(10 * mb, 180.01, true))
+        assertEquals(AnalysisError.TOO_LONG, ImportRules.check(10 * mb, 1200.01, true))
         assertEquals(AnalysisError.INVALID_VIDEO, ImportRules.check(10 * mb, 0.49, true))
         assertEquals(AnalysisError.INVALID_VIDEO, ImportRules.check(10 * mb, null, true))
         assertEquals(AnalysisError.INVALID_VIDEO, ImportRules.check(10 * mb, Double.NaN, true))
