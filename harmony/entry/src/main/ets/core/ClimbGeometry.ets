@@ -44,6 +44,12 @@ export function hip(frame: PoseFrame): Joint | null {
   };
 }
 
+export function hasReliableTorso(frame: PoseFrame): boolean {
+  return frame.joints.length === 33 && validJoint(frame.joints[11]) &&
+    validJoint(frame.joints[12]) && validJoint(frame.joints[23]) &&
+    validJoint(frame.joints[24]);
+}
+
 // This is a projected 2D angle in the picture, not a physical joint angle.
 export function angle(frame: PoseFrame, a: number, b: number, c: number, aspect: number): number | null {
   if (!Number.isFinite(aspect) || aspect <= 0) return null;
@@ -61,4 +67,43 @@ export function angle(frame: PoseFrame, a: number, b: number, c: number, aspect:
   if (length <= 0.000001) return null;
   const cosine = Math.max(-1, Math.min(1, (ux * vx + uy * vy) / length));
   return Math.acos(cosine) * 180 / Math.PI;
+}
+
+export function coverage(frames: PoseFrame[], sampledFrames: number): number {
+  if (sampledFrames <= 0) return 0;
+  let reliable = 0;
+  for (const frame of frames) {
+    if (hip(frame) !== null) reliable++;
+  }
+  return reliable / sampledFrames;
+}
+
+export function averageElbowAngle(frames: PoseFrame[], aspect: number): number | null {
+  let sum = 0;
+  let count = 0;
+  for (const frame of frames) {
+    const left = angle(frame, 11, 13, 15, aspect);
+    const right = angle(frame, 12, 14, 16, aspect);
+    if (left !== null) { sum += left; count++; }
+    if (right !== null) { sum += right; count++; }
+  }
+  return count === 0 ? null : sum / count;
+}
+
+// Frames are stored in time order. Never draw a stale skeleton across a missing detection.
+export function nearestFrame(frames: PoseFrame[], time: number): PoseFrame | null {
+  let low = 0;
+  let high = frames.length;
+  while (low < high) {
+    const mid = Math.floor((low + high) / 2);
+    if (frames[mid].time < time) low = mid + 1;
+    else high = mid;
+  }
+  let best: PoseFrame | null = null;
+  if (low > 0) best = frames[low - 1];
+  if (low < frames.length &&
+    (best === null || Math.abs(frames[low].time - time) < Math.abs(best.time - time))) {
+    best = frames[low];
+  }
+  return best !== null && Math.abs(best.time - time) <= 0.16 && hasReliableTorso(best) ? best : null;
 }

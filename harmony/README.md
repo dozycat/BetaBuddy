@@ -1,7 +1,8 @@
 # BetaBuddy HarmonyOS
 
-This directory starts the native HarmonyOS 5+ port. The portable geometry and import limits in
-`entry/src/main/ets/core/` match the iOS and Android record model. They have not yet been compiled
+This directory starts the native HarmonyOS 5+ port. The portable archive schema, review geometry,
+and import limits in `entry/src/main/ets/core/` match the iOS and Android record model. A Bun
+TypeScript smoke check exercised the source copies, but they have not yet been compiled
 with DevEco Studio; this directory is not an installable app.
 
 The application will use a Stage-model ArkTS project. The two product entries remain Gym and
