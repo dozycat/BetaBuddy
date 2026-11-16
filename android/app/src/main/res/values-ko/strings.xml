@@ -50,6 +50,8 @@
     <string name="about_gym_missing">이 빌드에는 암장 데이터가 없습니다. 암장 모델, 문제, 등반 시뮬레이션은 정식 배포 앱에 들어 있으며 공개 소스에는 없습니다.</string>
     <string name="about_records_title">기록 관리</string>
     <string name="about_records_body">기록마다 영상과 분석을 삭제할 수 있습니다. 앱을 삭제하면 기기 안의 기록도 지워집니다. 남기고 싶은 메모는 공유로 내보내세요.</string>
+    <string name="about_saved_climbs">저장된 등반 기록 %1$d개.</string>
+    <string name="privacy_online">온라인 개인정보 처리방침</string>
     <string name="about_support">도움말 및 지원</string>
     <string name="privacy_title">개인정보 처리방침</string>
     <string name="privacy_unreadable">개인정보 처리방침을 읽을 수 없습니다. 앱을 다시 설치하세요.</string>

@@ -28,6 +28,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -51,10 +52,12 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.betabuddy.android.R
 import com.betabuddy.android.gym.GymScreen
 import com.betabuddy.android.gym.GymSession
 import com.betabuddy.android.journal.JournalScreen
+import com.betabuddy.android.journal.JournalViewModel
 import com.betabuddy.android.settings.LicensesScreen
 import com.betabuddy.android.settings.PrivacyPolicyScreen
 import com.betabuddy.android.settings.SettingsScreen
@@ -81,6 +84,8 @@ private object Routes {
  */
 @Composable
 fun AppShell(gym: GymSession, initialTab: Int = Tabs.GYM) {
+    val journal: JournalViewModel = viewModel()
+    val climbs by journal.climbs.collectAsState()
     val navigation = rememberNavController()
     val openSettings = { navigation.open(Routes.SETTINGS) }
 
@@ -94,11 +99,12 @@ fun AppShell(gym: GymSession, initialTab: Int = Tabs.GYM) {
 
     NavHost(navController = navigation, startDestination = Routes.HOME, modifier = Modifier.fillMaxSize().background(BB.Paper)) {
         composable(Routes.HOME) {
-            HomeScreen(gym = gym, initialTab = initialTab, onOpenSettings = openSettings)
+            HomeScreen(gym = gym, journal = journal, initialTab = initialTab, onOpenSettings = openSettings)
         }
         composable(Routes.SETTINGS) {
             SettingsScreen(
                 gym = gym.status,
+                savedClimbCount = climbs?.size,
                 onBack = { navigation.popBackStack() },
                 onOpenPrivacy = { navigation.open(Routes.PRIVACY) },
                 onOpenLicenses = { navigation.open(Routes.LICENSES) },
@@ -112,7 +118,7 @@ fun AppShell(gym: GymSession, initialTab: Int = Tabs.GYM) {
 private fun NavHostController.open(route: String) = navigate(route) { launchSingleTop = true }
 
 @Composable
-private fun HomeScreen(gym: GymSession, initialTab: Int, onOpenSettings: () -> Unit) {
+private fun HomeScreen(gym: GymSession, journal: JournalViewModel, initialTab: Int, onOpenSettings: () -> Unit) {
     var tab by rememberSaveable { mutableIntStateOf(initialTab.coerceIn(Tabs.GYM, Tabs.JOURNAL)) }
     var barHeight by rememberSaveable { mutableIntStateOf(0) }
     val journalState = rememberSaveableStateHolder()
@@ -139,7 +145,7 @@ private fun HomeScreen(gym: GymSession, initialTab: Int, onOpenSettings: () -> U
                             .background(BB.Paper)
                             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)),
                     ) {
-                        JournalScreen(onOpenSettings = onOpenSettings)
+                        JournalScreen(model = journal, onOpenSettings = onOpenSettings)
                     }
                 }
             }

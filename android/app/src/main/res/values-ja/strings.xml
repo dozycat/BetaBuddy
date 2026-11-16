@@ -50,6 +50,8 @@
     <string name="about_gym_missing">このビルドにはジムのデータがありません。ジムのモデル、課題、登りのシミュレーションは配信版のアプリに同梱され、公開ソースには含まれません。</string>
     <string name="about_records_title">記録の管理</string>
     <string name="about_records_body">動画と解析は記録ごとに削除できます。アプリを削除すると端末内の記録も消えます。残したいメモは共有から書き出せます。</string>
+    <string name="about_saved_climbs">保存したクライミング記録: %1$d 件。</string>
+    <string name="privacy_online">オンラインプライバシーポリシー</string>
     <string name="about_support">ヘルプとサポート</string>
     <string name="privacy_title">プライバシーポリシー</string>
     <string name="privacy_unreadable">プライバシーポリシーを読み込めません。アプリを入れ直してください。</string>

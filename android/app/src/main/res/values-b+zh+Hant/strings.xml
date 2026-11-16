@@ -50,6 +50,8 @@
     <string name="about_gym_missing">這個版本沒有內建岩館資料。場館模型、路線和攀爬模擬隨正式安裝檔提供，不在公開原始碼裡。</string>
     <string name="about_records_title">記錄管理</string>
     <string name="about_records_body">可在每筆記錄中刪除原片和分析；移除 App 會刪除本機記錄。需要保留的複盤文字可透過分享匯出。</string>
+    <string name="about_saved_climbs">已儲存 %1$d 段攀爬。</string>
+    <string name="privacy_online">線上隱私權政策</string>
     <string name="about_support">說明與支援</string>
     <string name="privacy_title">隱私權政策</string>
     <string name="privacy_unreadable">隱私權政策無法讀取，請重新安裝完整版本。</string>

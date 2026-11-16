@@ -54,6 +54,8 @@
     <string name="about_gym_missing">This build has no gym data. The gym model, problems and climbing simulation ship with the released app, not with the public source code.</string>
     <string name="about_records_title">Your records</string>
     <string name="about_records_body">You can delete the video and analysis from each record. Uninstalling the app removes local records. Use Share to keep notes you want.</string>
+    <string name="about_saved_climbs">%1$d climbs saved.</string>
+    <string name="privacy_online">Online privacy policy</string>
     <string name="about_support">Help and support</string>
     <string name="privacy_title">Privacy policy</string>
     <string name="privacy_unreadable">The privacy policy can’t be read. Reinstall the app.</string>

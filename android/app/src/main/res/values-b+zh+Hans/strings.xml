@@ -50,6 +50,8 @@
     <string name="about_gym_missing">这个构建没有内置岩馆数据。场馆模型、线路和攀爬模拟随正式安装包提供，不在公开源码里。</string>
     <string name="about_records_title">记录管理</string>
     <string name="about_records_body">可在每条记录中删除原片和分析；卸载应用会移除本地记录。需要保留的复盘文字可通过分享导出。</string>
+    <string name="about_saved_climbs">已保存 %1$d 段攀爬。</string>
+    <string name="privacy_online">在线隐私政策</string>
     <string name="about_support">帮助与支持</string>
     <string name="privacy_title">隐私政策</string>
     <string name="privacy_unreadable">隐私政策无法读取，请重新安装完整版本。</string>

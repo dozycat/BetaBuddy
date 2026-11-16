@@ -62,6 +62,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 private const val SUPPORT_URL = "https://betabuddy.dozycat.ai"
+private const val PRIVACY_URL = "$SUPPORT_URL/privacy/"
 private const val SUPPORT_MAIL = "hi@dozycat.ai"
 
 /** A settings page: back button and title on top, then the content. Fills the whole window. */
@@ -142,7 +143,7 @@ private fun LanguagePicker() {
  * not claim, and what stays on the phone. Mirrors ios/BetaBuddy/Views/AboutView.swift.
  */
 @Composable
-fun SettingsScreen(gym: GymPackStatus, onBack: () -> Unit, onOpenPrivacy: () -> Unit, onOpenLicenses: () -> Unit) {
+fun SettingsScreen(gym: GymPackStatus, savedClimbCount: Int?, onBack: () -> Unit, onOpenPrivacy: () -> Unit, onOpenLicenses: () -> Unit) {
     val context = LocalContext.current
     SettingsPage(stringResource(R.string.settings_title), onBack) {
         LanguagePicker()
@@ -176,9 +177,12 @@ fun SettingsScreen(gym: GymPackStatus, onBack: () -> Unit, onOpenPrivacy: () -> 
         }
         Hairline()
         Text(stringResource(R.string.about_records_title), style = BB.Headline, modifier = Modifier.semantics { heading() })
+        if (savedClimbCount != null) Text(stringResource(R.string.about_saved_climbs, savedClimbCount), style = BB.Body, color = BB.Muted)
         Text(stringResource(R.string.about_records_body), style = BB.Body, color = BB.Muted)
         Column {
             SettingsRow(stringResource(R.string.privacy_title), onOpenPrivacy, Modifier.testTag("privacyPolicy"))
+            Hairline()
+            SettingsRow(stringResource(R.string.privacy_online), { context.view(Uri.parse(PRIVACY_URL)) })
             Hairline()
             SettingsRow(stringResource(R.string.licenses_title), onOpenLicenses, Modifier.testTag("licenses"))
             Hairline()
