@@ -32,7 +32,7 @@ xcodegen generate --spec ios/project.yml --project ios
 ## 测试
 
 ```sh
-# 几何与时序的核心测试，在 Mac 上直接跑
+# 姿态数据与存档兼容的核心测试，在 Mac 上直接跑
 swift test --package-path ios
 
 # 单元、集成与界面测试；把设备名换成已安装的模拟器
@@ -43,6 +43,15 @@ xcodebuild -project ios/BetaBuddy.xcodeproj -scheme BetaBuddy \
 xcodebuild -project ios/BetaBuddy.xcodeproj -scheme BetaBuddy \
   -destination 'generic/platform=iOS' -derivedDataPath ios/.derivedData \
   CODE_SIGNING_ALLOWED=NO build
+```
+
+「分析这一趟」的端到端测试需要一段真实的攀爬视频和装好的数据包，两样都不在仓库里，所以默认跳过。要跑的时候把视频路径交给测试进程（`<label>` 是数据包分析页面上「在视频里看这一刻」那个按钮的简体中文文字，可省略）：
+
+```sh
+TEST_RUNNER_BB_ANALYSIS_CLIP=<视频> TEST_RUNNER_BB_ANALYSIS_SEEK=<label> \
+  xcodebuild -project ios/BetaBuddy.xcodeproj -scheme BetaBuddy \
+  -destination 'platform=iOS Simulator,name=<模拟器>' -derivedDataPath ios/.derivedData \
+  test -only-testing:BetaBuddyUITests/AnalysisUITests
 ```
 
 第三方 SDK 可能输出反馈张量或投影相关的诊断提示，模拟器也会输出系统框架提示；这些不等于测试失败。做过和没做过的验证记在 [../docs/ios/validation.md](../docs/ios/validation.md)。
@@ -76,19 +85,20 @@ xcrun simctl launch booted com.betabuddy.ios -AppleLanguages "(ja)"
 - 推理在独立 actor 上，界面只收低频进度。每帧一个 autoreleasepool，Core Image 不缓存中间图。
 - 用 CPU 推理，作为可复现的基线，避开 GPU 线程亲和与模拟器支持的差异。这不代表它是最快的 delegate；GPU 对照和实际能耗要等真机基准。
 - 设备进入 critical 热状态时终止；取消在帧间检查；应用级队列申请有限后台执行时间，额度到期保留已落盘的请求，下次回到前台从头重试。离开页面不取消；默认导入只保存原片，用户选择分析才运行模型。
-- 置信度不足或出界的关键点不进入角度和骨架；不跨检测空白计算位移或画轨迹。
+- 置信度不足或出界的关键点不进入骨架；骨架不跨检测空白延续。
+- 每个保留下来的采样帧同时存 33 个画面关键点和 Pose Landmarker 的 world landmarks（33 个 `[x, y, z, visibility]`），数值保留 4 位小数。后者只交给数据包的分析页面用，应用自己不拿它算任何东西。
 
 这些是工程上的管线选择。模型没有针对攀岩重新训练，也没有证据表明准确率或性能因此提升。
 
 ## 目录
 
 - `BetaBuddy/App`：应用入口与两个入口（岩馆、攀爬册）的导航。
-- `BetaBuddy/Core`：数据结构、几何、MediaPipe 推理、原子写入的本地存储，以及岩馆数据包的定位、清单读取和页面消息解析。
-- `BetaBuddy/Views`：设计系统、攀爬册、导入、回看、关于、岩馆页面容器，以及存储值到界面文字的转换。
+- `BetaBuddy/Core`：数据结构、骨架连线、MediaPipe 推理与给分析页面抽画面、原子写入的本地存储（含分析结果文件），以及岩馆数据包的定位、清单读取、两个页面的消息解析和调用。
+- `BetaBuddy/Views`：设计系统、攀爬册、导入、回看、关于、岩馆页面容器、分析页面容器，以及存储值到界面文字的转换。
 - `BetaBuddy/Resources`：图标、姿态模型、`Localizable.xcstrings` 与 `InfoPlist.xcstrings`、隐私清单、三种语言的离线隐私政策、第三方许可。
-- `CoreTests`：可在 macOS 直接运行的几何与时序边界测试。
-- `BetaBuddyTests`：本地存储、模型打包、视频推理、数据包加载、本地化完整性的测试。
-- `BetaBuddyUITests`：在简体中文和英语下各走一遍两个入口的冒烟测试。
+- `CoreTests`：可在 macOS 直接运行的姿态数据、旧存档兼容与筛选边界测试。
+- `BetaBuddyTests`：本地存储、模型打包、视频推理、数据包加载、分析页面的消息与调用、本地化完整性的测试。
+- `BetaBuddyUITests`：在简体中文和英语下各走一遍两个入口的冒烟测试，文件夹流程，以及需要本地视频才运行的「分析这一趟」端到端测试。
 - `LocalMediaPipe`：SDK 指标上报工厂的本地空实现及其头文件依赖。
 - `scripts`：`bootstrap.sh`、`install-gym-pack.sh`、`prepare-local-graph.sh`、`generate-icon.swift`、`ExportOptions.plist`。
 - [THIRD_PARTY.md](THIRD_PARTY.md)：第三方 SDK、模型与素材的来源和校验值。

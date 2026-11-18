@@ -139,7 +139,7 @@ private fun HomeScreen(gym: GymSession, initialTab: Int, onOpenSettings: () -> U
                             .background(BB.Paper)
                             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)),
                     ) {
-                        JournalScreen(onOpenSettings = onOpenSettings)
+                        JournalScreen(onOpenSettings = onOpenSettings, analysisPack = gym.pack)
                     }
                 }
             }

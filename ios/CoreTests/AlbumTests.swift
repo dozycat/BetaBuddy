@@ -3,7 +3,7 @@ import XCTest
 
 final class AlbumTests: XCTestCase {
     private func climb(date: Date) -> Climb {
-        Climb(id: UUID(), date: date, title: "", grade: "V3", sent: false, note: "keep", videoName: "v.mov", thumbnailName: "t.jpg", analysis: PoseAnalysis(frames: [], sampledFrames: 0, duration: 1, aspectRatio: 1, processingSeconds: 0, moments: []))
+        Climb(id: UUID(), date: date, title: "", grade: "V3", sent: false, note: "keep", videoName: "v.mov", thumbnailName: "t.jpg", analysis: PoseAnalysis(frames: [], sampledFrames: 0, duration: 1, aspectRatio: 1))
     }
     func testLegacyArchiveDecodesWithoutOrganizationFields() throws {
         let original = climb(date: Date(timeIntervalSince1970: 1000))

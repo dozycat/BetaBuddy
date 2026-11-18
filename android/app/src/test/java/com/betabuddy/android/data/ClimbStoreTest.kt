@@ -16,7 +16,7 @@ import org.junit.Test
 /** Ported from ios/BetaBuddyTests/ClimbStoreTests.swift, plus cases for the atomic write. */
 class ClimbStoreTest {
     private lateinit var root: File
-    private val analysis = PoseAnalysis(emptyList(), 0, 1.0, 1.0, 0.0, emptyList())
+    private val analysis = PoseAnalysis(emptyList(), 0, 1.0, 1.0)
 
     @Before fun setUp() { root = File(Files.createTempDirectory("betabuddy-store").toFile(), "BetaBuddy") }
     @After fun tearDown() { root.parentFile.deleteRecursively() }
@@ -143,16 +143,18 @@ class ClimbStoreTest {
         assertEquals("""{"version":2,"climbs":[]}""", file.readText())
     }
 
-    // An archive exactly as the iOS app writes it, including a retired `training` array and a cue
-    // saved before `kind` existed. Unknown fields are ignored, not an error.
-    @Test fun iosArchiveWithRetiredFieldsStillLoads() {
+    // An archive as earlier builds of either app wrote it: a retired `training` array, and an analysis
+    // that still carries its processing time and candidate cues and has no world landmarks.
+    // Unknown and retired fields are ignored, not an error, and nothing of the record is lost.
+    @Test fun archiveFromEarlierBuildsStillLoads() {
         root.mkdirs()
         val legacy = """
         {"version":1,"training":[{"id":"6F9619FF-8B86-D011-B42D-00C04FC964FF","date":774000000,"drillID":"quiet-feet"}],
          "climbs":[{"id":"7F9619FF-8B86-D011-B42D-00C04FC964FF","date":774000000,"title":"旧记录","grade":"未标级","sent":true,"note":"n",
            "videoName":"v.mov","thumbnailName":"t.jpg","futureField":{"a":[1,2]},
            "analysis":{"frames":[{"time":0.1,"joints":[{"x":0.5,"y":0.25,"confidence":0.9,"z":-0.1}]}],"sampledFrames":4,"duration":2,"aspectRatio":0.5,"processingSeconds":1,
-             "moments":[{"id":"8F9619FF-8B86-D011-B42D-00C04FC964FF","time":1,"title":"高抬脚 · 候选片段","detail":"d"}]}}]}
+             "moments":[{"id":"8F9619FF-8B86-D011-B42D-00C04FC964FF","time":1,"title":"高抬脚 · 候选片段","detail":"d"},
+                        {"id":"9F9619FF-8B86-D011-B42D-00C04FC964FF","time":2,"title":"t","detail":"d","kind":"fastMove"}]}}]}
         """.trimIndent()
         File(root, "archive.json").writeText(legacy)
         val store = ClimbStore(root)
@@ -164,35 +166,124 @@ class ClimbStoreTest {
         assertNull(climb.gymId)
         assertTrue(store.archive.value.folders.isEmpty())
         assertEquals(UNGRADED_VALUE, climb.grade)
-        assertNull(climb.analysis.moments[0].kind)
+        assertEquals(4, climb.analysis.sampledFrames)
+        assertEquals(2.0, climb.analysis.duration, 0.0)
         assertEquals(0.25, climb.analysis.frames[0].joints[0].y, 0.0)
+        // No world landmarks in old records: the skeleton still plays, the analysis page needs pose recognition again.
+        assertNull(climb.analysis.frames[0].world)
+        assertFalse(climb.analysis.hasWorldLandmarks)
         assertEquals(1_752_307_200_000L, climb.dateMillis) // 774000000 s after 2001-01-01 = 2025-07-12T08:00:00Z
         store.update(climb, "改过", false)
         val rewritten = File(root, "archive.json").readText()
-        assertFalse(rewritten.contains("training"))
-        assertFalse(rewritten.contains("futureField"))
-        assertFalse(rewritten.contains("\"kind\"")) // absent stays absent, as iOS writes it
+        for (retired in listOf("training", "futureField", "moments", "processingSeconds", "\"world\"")) assertFalse(retired, rewritten.contains(retired))
         assertTrue(rewritten.contains("\"version\":1"))
-        assertEquals("改过", ClimbStore(root).climbs.first().note)
+        val reread = ClimbStore(root).climbs.first()
+        assertEquals("改过", reread.note)
+        assertEquals(climb.analysis, reread.analysis)
     }
 
     @Test fun writtenArchiveUsesTheIosFieldNames() {
         val store = ClimbStore(root)
-        val frame = PoseFrame(0.5, List(33) { Joint(0.5, 0.5, 1.0) })
-        val moment = Moment(time = 0.5, title = "t", detail = "d", kind = Moment.FAST_MOVE)
+        val frame = PoseFrame(0.5, List(33) { Joint(0.5, 0.5, 1.0) }, List(33) { listOf(0.1234, -0.5, 0.0, 0.9876) })
         val climb = store.save("a", "x", "V4", true, "n", staged(), byteArrayOf(1),
-            PoseAnalysis(listOf(frame), 2, 1.0, 0.5625, 3.0, listOf(moment)), nowMillis = 978_307_200_000L + 5000)
+            PoseAnalysis(listOf(frame), 2, 1.0, 0.5625), nowMillis = 978_307_200_000L + 5000)
         val text = File(root, "archive.json").readText()
         for (key in listOf("version", "climbs", "id", "date", "title", "grade", "sent", "note", "videoName", "thumbnailName",
-            "analysis", "frames", "time", "joints", "x", "y", "confidence", "sampledFrames", "duration", "aspectRatio",
-            "processingSeconds", "moments", "detail", "kind")) {
+            "analysis", "frames", "time", "joints", "x", "y", "confidence", "world", "sampledFrames", "duration", "aspectRatio")) {
             assertTrue(key, text.contains("\"$key\":"))
         }
         assertEquals(5.0, climb.date, 0.0)
         assertTrue(text.contains("\"date\":5.0"))
         assertEquals(climb.id.uppercase(), climb.id)
         assertEquals(36, climb.id.length)
-        assertEquals(moment.id.uppercase(), moment.id)
+    }
+
+    @Test fun worldLandmarksSurviveReloadAsPlainArrays() {
+        val store = ClimbStore(root)
+        val world = List(33) { index -> listOf(rounded4(index / 7.0), rounded4(-index / 13.0), 0.0, 1.0) }
+        val frame = PoseFrame(0.5, List(33) { Joint(0.5, 0.5, 1.0) }, world)
+        val bare = PoseFrame(0.6, List(33) { Joint(0.5, 0.5, 1.0) })
+        store.save("a", "x", "V4", true, "n", staged(), byteArrayOf(1), PoseAnalysis(listOf(frame, bare), 2, 1.0, 0.5625))
+        val text = File(root, "archive.json").readText()
+        assertTrue(text, text.contains("\"world\":[[0.0,0.0,0.0,1.0],[0.1429,-0.0769,0.0,1.0],"))
+        assertEquals(1, Regex("\"world\"").findAll(text).count()) // a sample without them writes no field at all
+        val reread = ClimbStore(root).climbs.single().analysis
+        assertEquals(world, reread.frames[0].world)
+        assertTrue(reread.frames[0].hasWorldLandmarks)
+        assertFalse(reread.frames[1].hasWorldLandmarks)
+        assertTrue(reread.hasWorldLandmarks)
+        assertFalse(PoseAnalysis(listOf(bare), 1, 1.0, 1.0).hasWorldLandmarks)
+        assertFalse(bare.copy(world = world.take(32)).hasWorldLandmarks)
+        assertFalse(bare.copy(world = List(33) { listOf(0.0, 0.0, 0.0) }).hasWorldLandmarks)
+    }
+
+    @Test fun storedLandmarksKeepFourDecimals() {
+        assertEquals(0.1235, rounded4(0.123456789), 0.0)
+        assertEquals(-0.1235, rounded4(-0.12345678), 0.0)
+        assertEquals(1.0, rounded4(0.99996), 0.0)
+        assertEquals(0.0, rounded4(0.00004), 0.0)
+    }
+
+    // The result of the pack's analysis page is opaque text here; the fixture is synthetic.
+    @Test fun analysisResultIsKeptAsReceivedReplacedAndDeletedWithTheRecord() {
+        val store = ClimbStore(root)
+        val climb = store.saveFixture()
+        val other = store.saveFixture(title = "other")
+        assertNull(store.analysisResult(climb.id))
+        assertTrue(store.analysisResultIds().isEmpty())
+        val first = """{"v":1,"note":"引号 \" 反斜杠 \\ 换行 \n","plate":"data:image/jpeg;base64,AAAA"}"""
+        assertTrue(store.saveAnalysisResult(climb.id, first))
+        assertEquals(first, store.analysisResult(climb.id))
+        assertEquals(first, File(root, climb.id + ".analysis.json").readText())
+        assertFalse(File(root, climb.id + ".analysis.json.tmp").exists())
+        assertTrue(store.saveAnalysisResult(climb.id, """{"v":1,"again":true}"""))
+        assertEquals("""{"v":1,"again":true}""", ClimbStore(root).analysisResult(climb.id))
+        assertEquals(setOf(climb.id), ClimbStore(root).analysisResultIds())
+        // Pose recognition again, notes and filing do not touch the saved result.
+        store.replaceAnalysis(climb, analysis.copy(sampledFrames = 3))
+        store.update(climb, "note", true)
+        assertEquals("""{"v":1,"again":true}""", store.analysisResult(climb.id))
+        // "Analyse again" drops it; the record and its clip stay.
+        store.discardAnalysisResult(climb.id)
+        assertNull(store.analysisResult(climb.id))
+        assertTrue(store.file(climb.videoName).exists())
+        assertEquals(2, store.climbs.size)
+        // Deleting the record removes the result with the clip.
+        assertTrue(store.saveAnalysisResult(climb.id, first))
+        assertTrue(store.saveAnalysisResult(other.id, first))
+        store.delete(climb)
+        assertFalse(File(root, climb.id + ".analysis.json").exists())
+        assertEquals(setOf(other.id), store.analysisResultIds())
+        assertEquals(first, store.analysisResult(other.id))
+    }
+
+    @Test fun analysisResultForAMissingRecordIsNotWritten() {
+        val store = ClimbStore(root)
+        val climb = store.saveFixture()
+        store.delete(climb)
+        assertFalse(store.saveAnalysisResult(climb.id, "{}")) // deleted while the page was open
+        assertFalse(store.saveAnalysisResult("../outside", "{}"))
+        assertEquals(listOf("archive.json"), root.list()!!.toList())
+        assertFalse(File(root.parentFile, "outside.analysis.json").exists())
+    }
+
+    @Test fun analysisResultWriteIsAtomic() {
+        val store = ClimbStore(root)
+        val climb = store.saveFixture()
+        assertTrue(store.saveAnalysisResult(climb.id, "first"))
+        // If the temporary file cannot be created, the previous result survives byte for byte.
+        val blocker = File(root, climb.id + ".analysis.json.tmp")
+        blocker.mkdir()
+        File(blocker, "blocker").writeText("x")
+        try { store.saveAnalysisResult(climb.id, "second"); fail() } catch (expected: IOException) { }
+        assertEquals("first", store.analysisResult(climb.id))
+        blocker.deleteRecursively()
+        // A write that never reached the rename is cleaned up on the next start and is not a result.
+        blocker.writeText("half a res")
+        val reopened = ClimbStore(root)
+        assertFalse(blocker.exists())
+        assertEquals("first", reopened.analysisResult(climb.id))
+        assertEquals(setOf(climb.id), reopened.analysisResultIds())
     }
 
     @Test fun writeIsAtomicAndLeavesNoTemporaryFile() {

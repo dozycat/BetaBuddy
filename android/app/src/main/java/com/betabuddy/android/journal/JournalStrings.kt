@@ -6,7 +6,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import com.betabuddy.android.R
-import com.betabuddy.android.data.Moment
 import com.betabuddy.android.data.UNGRADED_VALUE
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -34,19 +33,4 @@ internal fun dateText(millis: Long, withYear: Boolean): String {
         val pattern = DateFormat.getBestDateTimePattern(locale, if (withYear) "yMMMd" else "MMMd")
         SimpleDateFormat(pattern, locale).format(Date(millis))
     }
-}
-
-/** Known cue kinds are shown in the current language; unknown ones fall back to the stored text. */
-@Composable
-internal fun Moment.displayTitle(): String = when (resolvedKind()) {
-    Moment.RAISED_HEEL -> stringResource(R.string.journal_cue_raised_heel_title)
-    Moment.FAST_MOVE -> stringResource(R.string.journal_cue_fast_move_title)
-    else -> title
-}
-
-@Composable
-internal fun Moment.displayDetail(): String = when (resolvedKind()) {
-    Moment.RAISED_HEEL -> stringResource(R.string.journal_cue_raised_heel_detail)
-    Moment.FAST_MOVE -> stringResource(R.string.journal_cue_fast_move_detail)
-    else -> detail
 }

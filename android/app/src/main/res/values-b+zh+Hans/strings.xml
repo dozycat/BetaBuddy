@@ -44,7 +44,7 @@
     <string name="about_free">全部功能免费 · 无内购 · 无订阅 · 无广告</string>
     <string name="about_local">姿态模型随安装包提供。没有模型下载，没有账号，也没有云端 AI。导入的视频与分析记录保存在应用内，并排除在系统云备份之外。</string>
     <string name="about_limits_title">分析边界</string>
-    <string name="about_limits_body">33 个关键点用于骨架回放与画面内几何分析。角度是二维投影角度；髋部轨迹不是物理重心。遮挡、镜头移动、多人入镜会影响结果。候选片段需要结合原片确认。</string>
+    <string name="about_limits_body">33 个关键点用于骨架回放。遮挡、镜头移动、多人入镜会影响结果。</string>
     <string name="about_video_requirements">适合单人、全身入镜、固定机位的视频；单段 0.5–180 秒，最大 500 MB。建议先在相册里裁掉无关片段。</string>
     <string name="about_gym_pack_line">%1$s · %2$d 条线路 · 数据版本 %3$s（%4$s）</string>
     <string name="about_gym_missing">这个构建没有内置岩馆数据。场馆模型、线路和攀爬模拟随正式安装包提供，不在公开源码里。</string>

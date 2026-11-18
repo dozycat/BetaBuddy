@@ -10,11 +10,11 @@ import android.media.MediaFormat
 import android.media.MediaMetadataRetriever
 import android.os.Build
 import android.os.PowerManager
-import android.os.SystemClock
 import androidx.annotation.VisibleForTesting
 import com.betabuddy.android.data.Joint
 import com.betabuddy.android.data.PoseAnalysis
 import com.betabuddy.android.data.PoseFrame
+import com.betabuddy.android.data.rounded4
 import com.google.mediapipe.framework.image.BitmapImageBuilder
 import com.google.mediapipe.tasks.core.BaseOptions
 import com.google.mediapipe.tasks.core.Delegate
@@ -76,7 +76,6 @@ class VideoAnalyzer(context: Context) {
 
     private suspend fun run(video: File, quality: AnalysisQuality, useGpu: Boolean, progress: (Double) -> Unit): PoseAnalysis {
         coroutineContext.ensureActive()
-        val start = SystemClock.elapsedRealtime()
         val model = loadModel(context)
         val info = probe(video)
         ImportRules.check(video.length(), info.durationSeconds, info.hasVideo)?.let { throw AnalysisException(it) }
@@ -206,13 +205,19 @@ class VideoAnalyzer(context: Context) {
                         sampled += 1
                         val points = result.landmarks().firstOrNull()
                         if (points != null && points.size == 33) {
+                            // Four decimals: a fraction of a pixel on screen, and a much smaller archive.
                             val joints = points.map { point ->
                                 val x = point.x().toDouble()
                                 val y = point.y().toDouble()
                                 val confidence = minOf(point.visibility().orElse(0f), point.presence().orElse(0f)).toDouble()
-                                if (x.isFinite() && y.isFinite() && confidence.isFinite()) Joint(x, y, confidence) else Joint(0.0, 0.0, 0.0)
+                                if (x.isFinite() && y.isFinite() && confidence.isFinite()) Joint(rounded4(x), rounded4(y), rounded4(confidence)) else Joint(0.0, 0.0, 0.0)
                             }
-                            val frame = PoseFrame(time, joints)
+                            // The same sample in the model's metric space, kept for the pack's analysis page.
+                            val world = result.worldLandmarks().firstOrNull()?.takeIf { it.size == 33 }?.map { point ->
+                                val values = listOf(point.x(), point.y(), point.z(), point.visibility().orElse(0f)).map { it.toDouble() }
+                                if (values.all { it.isFinite() }) values.map(::rounded4) else listOf(0.0, 0.0, 0.0, 0.0)
+                            }
+                            val frame = PoseFrame(time, joints, world)
                             // Keep only samples whose shoulders and hips are reliable and inside the picture.
                             if (frame.hasReliableTorso) frames.add(frame)
                         }
@@ -225,13 +230,9 @@ class VideoAnalyzer(context: Context) {
             }
 
             coroutineContext.ensureActive()
-            if (frames.count { it.hip != null } < 3) throw AnalysisException(AnalysisError.NO_POSE)
+            if (frames.size < 3) throw AnalysisException(AnalysisError.NO_POSE)
             progress(1.0)
-            return PoseAnalysis(
-                frames = frames, sampledFrames = sampled, duration = duration, aspectRatio = aspect,
-                processingSeconds = (SystemClock.elapsedRealtime() - start) / 1000.0,
-                moments = PoseMath.moments(frames, aspect),
-            )
+            return PoseAnalysis(frames = frames, sampledFrames = sampled, duration = duration, aspectRatio = aspect)
         } finally {
             runCatching { openCodec?.stop() }
             runCatching { openCodec?.release() }

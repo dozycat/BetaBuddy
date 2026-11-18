@@ -114,6 +114,17 @@ class GymPackTest {
         assertEquals("$base?lang=en", pack.entryUrl(hintSeen = false, language = "en", extraQuery = " "))
     }
 
+    @Test fun analysisPageIsOfferedOnlyWhenThePackListsIt() {
+        assertNull(ready().analysisUrl("en")) // a pack without the page: no analysis entry in the app
+        val withPage = manifest.replace("""{"path":"index.html","sha256":"aa","bytes":7}""", """{"path":"index.html","sha256":"aa","bytes":7},{"path":"analysis.html","sha256":"cc","bytes":7}""")
+        val listed = (pack(withPage, listOf("index.html", "data/scene.bin", "analysis.html")) as GymPackStatus.Ready).pack
+        assertEquals("https://appassets.androidplatform.net/gympack/analysis.html?lang=zh-Hant", listed.analysisUrl("zh-Hant"))
+        assertTrue(GymPack.allows(listed.analysisUrl("ja")))
+        assertTrue("analysis.html" in listed.servedPaths)
+        // Listed but not in the build: the pack as a whole is refused, as for any missing file.
+        assertEquals(GymPackStatus.Invalid(GymPackError.MissingFile("analysis.html")), pack(withPage))
+    }
+
     @Test fun onlyListedFilesAreServed() {
         assertEquals(setOf("index.html", "data/scene.bin"), ready().servedPaths)
     }

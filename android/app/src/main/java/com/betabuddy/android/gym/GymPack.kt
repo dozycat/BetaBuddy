@@ -42,10 +42,20 @@ class GymPack(val manifest: GymManifest) {
         return (if (extra.isEmpty()) null else url(known + extra)) ?: url(known) ?: entryUrl
     }
 
+    /**
+     * Address of the pack's video analysis page in the given interface language, or null when this
+     * pack does not list one. No page, no analysis entry anywhere in the app.
+     */
+    fun analysisUrl(language: String): String? {
+        if (manifest.files.none { it.path == ANALYSIS_PAGE }) return null
+        return URI("https", HOST, PATH_PREFIX + ANALYSIS_PAGE, "lang=$language", null).toASCIIString().takeIf(::allows)
+    }
+
     companion object {
         /** Directory under the app's assets. Ignored by Git; filled by the install script. */
         const val ASSET_DIRECTORY = "gympack"
         const val MANIFEST = "manifest.json"
+        const val ANALYSIS_PAGE = "analysis.html"
 
         /** WebViewAssetLoader's reserved domain. It is never resolved; requests to it are answered locally. */
         const val HOST = "appassets.androidplatform.net"

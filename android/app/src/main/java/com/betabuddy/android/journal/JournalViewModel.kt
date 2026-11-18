@@ -4,9 +4,11 @@ import android.app.Application
 import android.content.Context
 import android.net.Uri
 import androidx.annotation.StringRes
+import androidx.core.content.edit
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.betabuddy.android.R
+import com.betabuddy.android.data.Archive
 import com.betabuddy.android.data.Climb
 import com.betabuddy.android.data.ClimbFolder
 import com.betabuddy.android.data.ClimbStore
@@ -80,7 +82,7 @@ internal fun AnalysisError.message(): UiMessage = UiMessage(
 )
 
 /**
- * State for the logbook and one import at a time. Analysis belongs to the service.
+ * State for the logbook and one import at a time. Pose recognition belongs to the service.
  * Disk and inference never run on the main thread; the UI only receives low-frequency progress.
  */
 class JournalViewModel(application: Application) : AndroidViewModel(application) {
@@ -102,6 +104,20 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
 
     val reanalysis: StateFlow<ReanalysisUiState> = AnalysisService.state
 
+    private val resultsState = MutableStateFlow<Set<String>>(emptySet())
+    /** Ids of the climbs that have a saved result from the pack's analysis page. */
+    val analysisResults: StateFlow<Set<String>> = resultsState.asStateFlow()
+
+    private val awaitingState = MutableStateFlow<String?>(null)
+    /** The climb whose pose recognition was asked for by "Analyse this attempt" and has not finished yet. */
+    val awaitingPose: StateFlow<String?> = awaitingState.asStateFlow()
+
+    private val poseReadyState = MutableStateFlow<String?>(null)
+    /** That climb, once its pose recognition has finished with data the analysis page can use. */
+    val poseReady: StateFlow<String?> = poseReadyState.asStateFlow()
+
+    private val preferences by lazy { application.getSharedPreferences("journal", Context.MODE_PRIVATE) }
+
     private var stagingJob: Job? = null
     private var saveJob: Job? = null
 
@@ -109,7 +125,12 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             val store = store()
             unreadableState.value = store.loadFailed
-            store.archive.collect { climbsState.value = ClimbStore.sorted(it); foldersState.value = it.folders }
+            resultsState.value = withContext(Dispatchers.IO) { store.analysisResultIds() }
+            store.archive.collect {
+                climbsState.value = ClimbStore.sorted(it)
+                foldersState.value = it.folders
+                settleAwaitedPose(it)
+            }
         }
     }
 
@@ -161,7 +182,7 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
                     val info = VideoAnalyzer.probe(video)
                     ImportRules.check(video.length(), info.durationSeconds, info.hasVideo)?.let { throw AnalysisException(it) }
                     val (width, height) = FrameGeometry.displaySize(info.width, info.height, info.rotation)
-                    PoseAnalysis(emptyList(), 0, info.durationSeconds!!, width.toDouble() / height, 0.0, emptyList())
+                    PoseAnalysis(emptyList(), 0, info.durationSeconds!!, width.toDouble() / height)
                 }
                 val thumbnail = analyzer.thumbnail(video)
                 ensureActive()
@@ -214,6 +235,7 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
     suspend fun delete(climb: Climb): Result<Unit> {
         AnalysisService.cancel(getApplication(), climb.id)
         return withContext(Dispatchers.IO) { runCatching { store().delete(climb) } }
+            .onSuccess { resultsState.update { ids -> ids - climb.id } }
     }
 
     /** The service owns inference, so leaving this screen or activity does not stop it. */
@@ -231,7 +253,70 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
 
     fun cancelReanalysis(climb: Climb) { AnalysisService.cancel(getApplication(), climb.id) }
 
+    // The pack's analysis page
+
+    /**
+     * "Analyse this attempt" on a climb whose saved poses the page cannot use (never recognised, or
+     * saved before world landmarks were kept): pose recognition goes through the usual queue, and
+     * [poseReady] names the climb when it has finished with usable data.
+     */
+    fun analyzeWhenPoseReady(climb: Climb) {
+        viewModelScope.launch {
+            try {
+                val store = store()
+                val queued = store.archive.value.climbs.firstOrNull { it.id == climb.id }?.pendingAnalysis != null
+                if (!queued) withContext(Dispatchers.IO) { store.requestAnalysis(climb.id, "balanced") }
+                poseReadyState.value = null
+                awaitingState.value = climb.id
+                settleAwaitedPose(store.archive.value) // the request is in the archive by now, so this only ends the wait if it is already over
+                AnalysisService.start(getApplication())
+            } catch (error: Exception) {
+                AnalysisService.reportFailure(climb.id, error)
+            }
+        }
+    }
+
+    /** The wait ends when the request leaves the archive: finished, stopped, failed, or the climb deleted. */
+    private fun settleAwaitedPose(archive: Archive) {
+        val id = awaitingState.value ?: return
+        val climb = archive.climbs.firstOrNull { it.id == id }
+        if (climb?.pendingAnalysis != null) return
+        awaitingState.value = null
+        if (climb != null && climb.analysis.hasWorldLandmarks) poseReadyState.value = id
+    }
+
+    /** The screen has acted on [poseReady], or is going away and no longer wants to be told. */
+    fun forgetAnalysisIntent(id: String) {
+        if (awaitingState.value == id) awaitingState.value = null
+        if (poseReadyState.value == id) poseReadyState.value = null
+    }
+
+    suspend fun analysisResult(id: String): String? = withContext(Dispatchers.IO) { store().analysisResult(id) }
+
+    /**
+     * Keeps what the page handed back: the result next to the clip, replacing an earlier one, and
+     * the body measurements it used in this phone's preferences for the next analysis.
+     */
+    suspend fun saveAnalysisResult(id: String, json: String, climber: String?): Result<Unit> = withContext(Dispatchers.IO) {
+        runCatching {
+            if (store().saveAnalysisResult(id, json)) resultsState.update { it + id }
+            if (climber != null) preferences.edit { putString(KEY_ANALYSIS_CLIMBER, climber) }
+        }
+    }
+
+    suspend fun discardAnalysisResult(id: String) {
+        withContext(Dispatchers.IO) { runCatching { store().discardAnalysisResult(id) } }
+        resultsState.update { it - id }
+    }
+
+    /** JSON text of the body measurements the page last used, or null before the first result. */
+    suspend fun analysisClimber(): String? = withContext(Dispatchers.IO) { preferences.getString(KEY_ANALYSIS_CLIMBER, null) }
+
     override fun onCleared() {
         importState.value.staged?.delete()
+    }
+
+    private companion object {
+        const val KEY_ANALYSIS_CLIMBER = "analysisClimber"
     }
 }

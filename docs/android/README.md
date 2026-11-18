@@ -6,6 +6,60 @@ Kotlin + Jetpack Compose 原生应用，Android 8.0（API 26）及以上，竖�
 
 ## 构建
 
+### 2026-11-18 · 攀爬册的分析换成数据包里的分析页面（未发布）
+
+回看页原来的指标（检测比例、肘角）、候选片段、髋部短轨迹和模型信息行下掉，对应的存档字段、计算、文字和测试一并删除；旧存档照常读取。姿态识别多存一份 world landmarks，数值保留 4 位小数。回看页新增「分析这一趟」：原生把画面和姿态交给场馆数据包里的分析页面，保存它交回的结果。数据包没有这个页面（或没有数据包）时不出现入口。设计见 [design.md](design.md#分析这一趟)。
+
+实际做过的：
+
+- `python3 android/scripts/check-resources.py` 通过（168 条文字，五种语言）。
+- `./gradlew :app:testDebugUnitTest`：85 项 JVM 测试通过。新增或改写的覆盖：早期存档（含已下掉的字段、没有 world landmarks）照常读取且不丢记录；world landmarks 的读写与 4 位小数；分析结果文件的原样保存、覆盖、随记录删除、原子写入与中断清理；数据包清单里有没有分析页面决定入口；页面消息的解析（结果原样、进度与未知类型忽略、岩馆消息不受影响）；传给页面的调用经 JSON 编码（带引号、反斜杠、换行的字符串）；取帧时间与尺寸；姿态分批。测试夹具都是合成数据。
+- `./gradlew :app:assembleDebug :app:lintDebug`：通过，lint 0 error（警告与上一轮相同：固定版本的更新提示、两处复数建议、KTX 写法等）。
+- `./gradlew :app:compileDebugAndroidTestKotlin`：设备测试能编译（新增一项取帧测试，原推理测试加了 world landmarks 的断言）。
+- `./gradlew :app:assembleRelease`：R8 与资源压缩通过，没有缺类报错（只说明能构建；产物没有安装运行，已删除）。
+- 上面的构建都是在装着数据包（清单含分析页面）的工作区里做的。单元测试不读数据包，用合成的清单。
+- 模拟器验证之后又改了一处：交给分析页面的画面关键点可见度改用识别器原始的可见度（与 world landmarks 里的同一个值，和 iPhone 版一致）。改后重跑了 `check-resources.py`、85 项 JVM 测试、`assembleDebug` 和 `lintDebug`（数据包 1.4.5），都通过；这一处改动之后没有再上模拟器。
+- 之后又把交给分析页面的画面改成按短边 540 取（横屏 1920×1080 的视频取 960×540，原来是 540×304），改了对应的单元测试；`check-resources.py`、85 项 JVM 测试、`assembleDebug`、`lintDebug` 在数据包 1.5.0 下重跑通过。横屏视频、以及这次改动之后的流程没有在模拟器或真机上跑过。数据包换到 1.5.1 后只重跑了 85 项 JVM 测试和 `assembleDebug`（通过）；提交前在数据包 1.5.3 下重跑了 `check-resources.py`、85 项 JVM 测试、`assembleDebug`、`lintDebug`（通过）。
+
+**模拟器上实际走过的**（一台已有的模拟器：Android 15 / API 35，google_apis arm64，Pixel 外形 1080×2400，系统 WebView 124；Apple 芯片的 Mac，启动时带 `arm64.nosme`；debug 包，内置数据包清单含分析页面）：
+
+- `./gradlew :app:connectedDebugAndroidTest`：9 项设备测试全部通过，包括新增的取帧测试和推理结果里 world landmarks 的断言。
+- 一段 16.6 秒、720×1280、30 帧/秒的真实攀爬视频（放在仓库之外，推到模拟器后经系统照片选择器由应用自己的导入界面导入，默认只保存、不识别姿态）。界面由 adb 驱动，逐步截图看过。走了两遍：简体中文一遍，英语一遍。
+- 「分析这一趟」→ 姿态识别经原有队列运行（存档里 166 个采样帧、164 帧保留，每帧 33 个 `joints` 和 33 个 `world`，4 位小数；`archive.json` 约 408 KB）→ 结束后分析页面自动打开 → 顶栏出现「正在准备画面…」→ 页面依次显示自己的几个阶段 → 停在结果上（墙面图、带编号的点、步进控制、结论卡片）。结果文件 `<记录 id>.analysis.json` 约 101 KB，`journal` 偏好里记下了身材参数。
+- 全屏对话框：盖住底部导航，页面在状态栏和手势条之内，状态栏图标是深色，「完成」和系统返回都能关掉。
+- 页面里走到第 4 步点「看视频里这一刻」：对话框关闭，回看停在 00:07，处于暂停。
+- 回到回看页，按钮变成「看分析」和「重新分析」。「看分析」约 3 秒后显示保存的结果，结果文件的修改时间没有变（没有重算）。在页面里把身高加 2 cm：约 14 秒后结果文件被覆盖，偏好里的身高变成 172。
+- 「重新分析」：旧结果文件先消失，重新取帧、计算，写入新结果（带着偏好里记下的 172 cm）。之后杀掉应用重开，「看分析」显示的是这份保存的结果。
+- 系统的通知权限询问盖在应用上面时（没有点掉），姿态识别、自动打开、取帧和计算照常完成；点「不允许」之后界面正常。
+- 删除记录：`filesDir/BetaBuddy/` 里只剩索引，原片、缩略图和结果文件都没有了。
+- 岩馆页面（改用共用的 `PackWebView` 之后）：冷启动后 3D 场景出现，`ready` 在开始加载后约 6.5 秒到达；跳过手势提示后 `hintSeen` 记进了偏好（消息桥可用）；英语界面下页面是英语。
+- 整个过程 logcat 里没有应用崩溃、渲染进程被回收或分析页面的报错。这一轮没有发现需要改代码的问题。
+
+这台模拟器上的耗时（软件解码，宿主机同时在跑别的任务，只说明量级）：
+
+| 阶段 | 耗时 |
+| --- | --- |
+| 姿态识别（16.6 秒的视频，每秒 10 帧） | 26–31 秒 |
+| 分析页面从打开到就绪 | 约 3 秒 |
+| 取 60 帧画面（「正在准备画面…」） | 约 43 秒 |
+| 页面计算到出结果 | 约 27 秒 |
+| 从分析页面打开到结果保存，合计 | 73–75 秒（三次） |
+| 在页面里改身高后的重算 | 约 14 秒 |
+
+取帧是最慢的一段：这段视频是重新编码过的，关键帧间隔很长，按时间逐帧精确定位时每一帧都要从上一个关键帧解起。手机直接拍的视频关键帧密得多，真机上的耗时没有测过。
+
+尚未验证：
+
+- **任何真机**：取帧、姿态识别和页面计算的真实耗时与发热；硬件解码器下取到的画面；长视频（接近 3 分钟）或高分辨率视频取帧时的内存。
+- **Android 15 以外的系统**：包括 API 26 上不带缩放的取帧路径（代码里有，设备测试只在 API 35 上跑过），以及旧版本 WebView 上分析页面是否可用（已有的 API 31 模拟器这一轮没有启动）。
+- 页面报告「分析不了」时的表现、页面没加载出来或渲染进程被回收时的说明卡片与「重新加载」、原片缺失时的提示：代码路径在，这一轮没有触发。
+- 旧存档（没有 world landmarks 的已识别记录）在设备上点「分析这一趟」：走的是和「从未识别」同一条路径，那条路径走过了；旧存档本身只有单元测试。
+- 等待姿态识别期间点「停止」、离开回看页再回来、分析页面开着时 Activity 重建。
+- 繁体中文、日语、韩语界面下新文字的排版（简体中文和英语看过）；最大字号、TalkBack。
+- 岩馆页面的换语言重载回到原线路、`openSettings`、网络审计在这次重构之后没有重新做（只看了加载、`ready` 和一条消息）。
+- 不装数据包的构建：这一轮没有移走已安装的数据包重新构建。代码对数据包文件没有编译期依赖，「清单里没有分析页面就没有入口」有单元测试，但没有数据包时的构建和界面这一轮没有实际看过。
+- Release 包（R8 之后）上的这条流程：只确认过能构建，没有安装运行。
+
 ### 2026-11-15 · 默认保存、后台分析与拍摄时间（未发布）
 
 `check-resources.py`、80 项 JVM 单元测试、`assembleDebug`、`lintDebug` 均通过（lint 无 error）。Android 15 独立模拟器上的 8 项设备测试通过，包括新增的「保存请求后退到桌面，后台分析完成并保留原片与笔记」。使用仓库既有的 `arm64.nosme` 模拟器参数，避免宿主 SME 指令误报导致 MediaPipe SIGILL；最初未加参数的设备运行失败，不计作通过结果。
@@ -111,12 +165,12 @@ android/
       ui/theme/                        BB 颜色与字体、Material 3 底座
       ui/common/                       PaperPage、Stamp、BigButton、SectionLabel、ColorCard、BBIcons…
       ui/nav/                          AppShell：两个入口、底部导航与齿轮、设置页的导航
-      gym/                             数据包、WebView 容器、消息桥、岩馆界面
+      gym/                             数据包、WebView 容器（岩馆页面与分析页面共用）、消息桥、岩馆界面
       settings/                        设置与关于、隐私政策、开源许可
       i18n/                            AppLanguage：当前界面语言与应用内语言选择
       journal/                         攀爬册：列表、导入、文字
       pose/                            解码、姿态识别、几何
-      review/                          回看：播放与骨架叠加
+      review/                          回看：播放与骨架叠加；数据包分析页面的宿主
       data/                            记录的数据结构与本地存储
     src/main/res/
       values*/strings.xml              导航、岩馆、设置的文字（五种语言）
@@ -139,13 +193,14 @@ android/
 | `App/BetaBuddyApp.swift`（`RootView`） | `MainActivity.kt`、`ui/nav/AppShell.kt` |
 | `Views/DesignSystem.swift`、`BrandMark.swift` | `ui/theme/Theme.kt`、`ui/common/Components.kt`、`ui/common/Icons.kt` |
 | `Core/GymPack.swift` | `gym/GymManifest.kt`、`gym/GymPack.kt`、`gym/GymMessage.kt` |
-| `Views/GymView.swift`（`GymSession`、`GymView`） | `gym/GymSession.kt`、`gym/GymScreen.kt` |
+| `Views/GymView.swift`（`GymSession`、`GymView`） | `gym/PackWebView.kt`、`gym/GymSession.kt`、`gym/GymScreen.kt` |
 | `Core/AppLanguage.swift` | `i18n/LanguageTags.kt`、`i18n/AppLanguage.kt` |
 | `Views/AboutView.swift` | `settings/SettingsScreens.kt` |
 | `Core/Models.swift`、`ClimbStore.swift` | `data/Models.kt`、`data/ClimbStore.kt` |
 | `Core/PoseMath.swift`、`VideoAnalyzer.swift` | `pose/PoseMath.kt`、`pose/VideoAnalyzer.kt`、`pose/AnalysisTypes.kt` |
 | `Views/JournalView.swift`、`ImportView.swift` | `journal/JournalScreen.kt`、`journal/ImportScreen.kt` |
 | `Views/ReviewView.swift` | `review/ReviewScreen.kt`、`review/Playback.kt`、`review/SkeletonOverlay.kt` |
+| `Views/AnalysisView.swift` | `review/AnalysisScreen.kt`、`review/AnalysisSession.kt`、`review/AnalysisBridge.kt`、`review/AnalysisFrames.kt` |
 | `Resources/Localizable.xcstrings` | `res/values*/strings.xml`、`strings_journal.xml` |
 | `Resources/PrivacyPolicy.<语言>.txt` | `res/raw*/privacy_policy.txt` |
 | `ios/GymPack/`（被忽略） | `app/src/main/assets/gympack/`（被忽略） |
@@ -156,7 +211,7 @@ android/
 
 - **界面用同一套组件。** 颜色和字体取 `ui/theme` 的 `BB`（`Paper/Ink/Lime/Lavender/Muted/Line`、`display()`、`mono()`、`Title…Caption`），页面和控件取 `ui/common`（`PaperPage`、`Stamp`、`BigButton`、`SectionLabel`、`Stat`、`CircleIconButton`、`ColorCard`、`Hairline`、`BBIcons`）。岩馆、攀爬册、设置都依赖这些名字，改名要一起改。
 - **攀爬册只有一个入口** `JournalScreen(onOpenSettings)`。它内部的页面用 `rememberSaveable` 的路由加 `BackHandler` 切换，不往 NavHost 里加路由。导入和回看时底部导航仍然可见；分析由服务持有，切到岩馆、离开回看页或应用退到后台均不取消。系统结束服务时保留请求，下一次打开应用重试。
-- **存储**都在应用私有目录：攀爬册在 `filesDir/BetaBuddy/`（`archive.json`、原片、缩略图、`staging/`），岩馆只有 `SharedPreferences` 里的两个布尔值。不写外部存储。
+- **存储**都在应用私有目录：攀爬册在 `filesDir/BetaBuddy/`（`archive.json`、原片、缩略图、分析页面交回的 `<记录 id>.analysis.json`、`staging/`），外加 `SharedPreferences` 里分析页面上一次用的身材参数；岩馆只有 `SharedPreferences` 里的两个布尔值。不写外部存储。
 - **文字**：导航、岩馆、设置的在 `strings.xml`，攀爬册的在 `strings_journal.xml` 且名字以 `journal_` 开头，两个文件不重名。
 - **不加联网依赖。** 仅允许本地分析服务与可选进度通知权限； 新增依赖先看它的 Manifest 会合并进来什么权限和组件，该移除的在应用的 Manifest 里移除，并在 `THIRD_PARTY.md` 补一行；依赖有增减时同步 `assets/licenses/components.txt` 里的清单。
 - **单元测试是纯 JVM 测试**，读 `src/main/res` 和 `src/main/assets` 用相对模块目录的路径（Gradle 运行测试时的工作目录）。测试夹具用合成数据。
@@ -274,11 +329,12 @@ adb install -r app/build/outputs/apk/release/app-release.apk
 adb logcat -s gym AndroidRuntime
 ```
 
-预期：单元测试 73 个、设备测试 7 个通过；lint 没有 error；权限里没有 `INTERNET`、`ACCESS_NETWORK_STATE`、`WAKE_LOCK`。然后用 Release 包在设备上走一遍：
+预期：单元测试 85 个、设备测试 9 个通过；lint 没有 error；权限里没有 `INTERNET`、`ACCESS_NETWORK_STATE`、`WAKE_LOCK`。然后用 Release 包在设备上走一遍：
 
 1. 不装数据包的构建：落在岩馆，显示「这个构建没有内置岩馆数据」；底部齿轮、右上角按钮都能进「设置与关于」，里面的隐私政策和开源许可能打开。
 2. 装了数据包的构建：说明页只出现一次 → 场景出现、能转动缩放、选线 → 切到攀爬册再回来不重载 → 在页面菜单里点「语言与设置」打开原生设置 → 换一种语言，返回后页面是新语言并回到刚才的线路 → 开不开飞行模式表现一致。
 3. 语言：五种语言加「跟随系统」逐个选；杀掉应用重开仍是所选语言；系统语言设成五种之外的语言时界面是英语。
-4. 攀爬册：导入一段竖拍视频和一段横拍视频 → 分析完成 → 回看时一打开就有画面、骨架与人重合、0.1 秒步进、0.5× 慢放 → 写笔记、标记完攀、分享文字 → 删除。Release 包上分析能跑完，说明 R8 没有裁坏 MediaPipe。
+4. 攀爬册：导入一段竖拍视频和一段横拍视频 → 分析骨架完成 → 回看时一打开就有画面、骨架与人重合、0.1 秒步进、0.5× 慢放 → 写笔记、标记完攀、分享文字 → 删除。Release 包上分析能跑完，说明 R8 没有裁坏 MediaPipe。
+5. 分析这一趟（需要清单里带分析页面的数据包）：没识别过姿态的记录点「分析这一趟」→ 先跑姿态识别 → 自动进入全屏分析页面 →「正在准备画面…」之后页面开始计算并显示结果 → 在页面里请求看视频里的某一刻，分析页面关掉、回看停在那一刻 →「完成」后按钮变成「看分析」和「重新分析」→ 杀掉应用重开，「看分析」直接显示保存的结果 →「重新分析」从头再来 → 删除记录后 `filesDir/BetaBuddy/` 里没有这条记录的结果文件。不装数据包的构建里回看页没有这个按钮。
 
 岩馆页面的网络审计只能在 Debug 包上做（只有它打开了 WebView 调试）：`adb forward tcp:9222 localabstract:webview_devtools_remote_<应用的 pid>`，再用 Chrome 的 `chrome://inspect` 或 DevTools 协议看 Network。

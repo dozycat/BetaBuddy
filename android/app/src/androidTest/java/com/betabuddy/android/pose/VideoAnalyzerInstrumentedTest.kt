@@ -99,7 +99,7 @@ class VideoAnalyzerInstrumentedTest {
         val video = makeVideo(fixture())
         val store = com.betabuddy.android.journal.JournalGraph.store(context)
         val info = VideoAnalyzer.probe(video)
-        val summary = com.betabuddy.android.data.PoseAnalysis(emptyList(), 0, info.durationSeconds!!, 640.0 / 480, 0.0, emptyList())
+        val summary = com.betabuddy.android.data.PoseAnalysis(emptyList(), 0, info.durationSeconds!!, 640.0 / 480)
         val climb = store.save("Background fixture", "Fixture", "V1", false, "Keep note", video, ByteArray(0), summary, pendingAnalysis = "balanced")
         try {
             context.startActivity(android.content.Intent(context, com.betabuddy.android.MainActivity::class.java).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
@@ -126,9 +126,15 @@ class VideoAnalyzerInstrumentedTest {
         val video = makeVideo(fixture())
         var lastProgress = 0.0
         val result = VideoAnalyzer(context).analyze(video, AnalysisQuality.BALANCED) { lastProgress = it }
-        assertTrue("coverage ${result.coverage}", result.coverage > 0.5)
+        assertTrue("kept ${result.frames.size} of ${result.sampledFrames}", result.frames.size > result.sampledFrames / 2)
         assertTrue(result.frames.size > 2)
         assertEquals(33, result.frames.first().joints.size)
+        // World landmarks are kept with every sample, four values each, at four decimals like the picture landmarks.
+        assertTrue(result.hasWorldLandmarks)
+        assertTrue(result.frames.all { it.hasWorldLandmarks })
+        val stored = result.frames.flatMap { frame -> frame.world!!.flatten() + frame.joints.flatMap { listOf(it.x, it.y, it.confidence) } }
+        assertTrue(stored.all { it.isFinite() && it == com.betabuddy.android.data.rounded4(it) })
+        assertTrue("world landmarks are not all zero", result.frames.first().world!!.any { point -> point.take(3).any { it != 0.0 } })
         assertEquals(640.0 / 480, result.aspectRatio, 0.01)
         assertTrue("sampled ${result.sampledFrames}", result.sampledFrames <= 12)
         assertTrue(result.frames.all { it.hasReliableTorso })
@@ -189,6 +195,29 @@ class VideoAnalyzerInstrumentedTest {
         val work = async { VideoAnalyzer(context).analyze(video, AnalysisQuality.DETAILED) { } }
         work.cancel()
         try { work.await(); fail("Cancelled analysis returned results") } catch (expected: CancellationException) { }
+    }
+
+    // The pictures handed to the pack's analysis page: upright like the pose landmarks, the size asked for, JPEG.
+    @Test fun analysisFramesAreUprightScaledJpegs() = runBlocking {
+        val video = makeVideo(fixture(), rotation = 90) // coded 640×480, shown 480×640
+        val info = VideoAnalyzer.probe(video)
+        val (width, height) = FrameGeometry.displaySize(info.width, info.height, info.rotation)
+        assertEquals(480 to 640, width to height)
+        val (frameWidth, frameHeight) = com.betabuddy.android.review.AnalysisFeed.frameSize(width, height)
+        val times = com.betabuddy.android.review.AnalysisFeed.frameTimes(info.durationSeconds!!)
+        val seen = mutableListOf<Double>()
+        val delivered = com.betabuddy.android.review.AnalysisFrames.extract(video, times, frameWidth, frameHeight) { time, jpeg ->
+            val bytes = android.util.Base64.decode(jpeg, android.util.Base64.NO_WRAP)
+            assertEquals(0xFF.toByte(), bytes[0]); assertEquals(0xD8.toByte(), bytes[1]) // JPEG
+            val decoded = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+            assertEquals(frameWidth to frameHeight, decoded.width to decoded.height)
+            seen += time
+        }
+        assertEquals(seen.size, delivered)
+        assertTrue("delivered $delivered of ${times.size}", delivered >= com.betabuddy.android.review.AnalysisFeed.MIN_FRAMES)
+        assertEquals(seen.sorted(), seen)
+        val broken = File(context.cacheDir, "broken-frames.mp4").also { created += it; it.writeText("not a video") }
+        assertEquals(0, com.betabuddy.android.review.AnalysisFrames.extract(broken, times, frameWidth, frameHeight) { _, _ -> fail() })
     }
 
     @Test fun thumbnailIsASmallJpeg() = runBlocking {

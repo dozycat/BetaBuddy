@@ -137,74 +137,6 @@
         }
       }
     },
-    "33 个关键点用于骨架回放与画面内几何分析。角度是二维投影角度；髋部轨迹不是物理重心。遮挡、镜头移动、多人入镜会影响结果。候选片段需要结合原片确认。": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "33 keypoints drive the skeleton replay and in-frame geometry. Angles are 2D projections; the hip trail is not your physical center of mass. Occlusion, camera movement and other people in frame all affect results. Check every cue against the original video."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "33 個のキーポイントをスケルトン再生と画面内の幾何解析に使います。角度は 2 次元に投影した角度で、腰の軌跡は物理的な重心ではありません。隠れ、カメラの動き、複数人の映り込みは結果に影響します。候補シーンは元の映像で確かめてください。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "33개의 키포인트로 스켈레톤 재생과 화면 안의 기하 분석을 합니다. 각도는 2차원 투영 각도이고, 골반 궤적은 실제 무게중심이 아닙니다. 가림, 카메라 움직임, 여러 사람이 찍힌 영상은 결과에 영향을 줍니다. 후보 구간은 원본 영상으로 확인하세요."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "33 个关键点用于骨架回放与画面内几何分析。角度是二维投影角度；髋部轨迹不是物理重心。遮挡、镜头移动、多人入镜会影响结果。候选片段需要结合原片确认。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "33 個關鍵點用於骨架回放與畫面內的幾何分析。角度是二維投影角度；髖部軌跡不是物理重心。遮擋、鏡頭移動、多人入鏡都會影響結果。候選片段需要對照原片確認。"
-          }
-        }
-      }
-    },
-    "FULL / FLOAT16 · %lld 采样帧 · 分析用时 %lld 秒": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "FULL / FLOAT16 · %lld sampled frames · analyzed in %lld s"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "FULL / FLOAT16 · サンプル %lld フレーム · 解析 %lld 秒"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "FULL / FLOAT16 · 샘플 %lld프레임 · 분석 %lld초"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "FULL / FLOAT16 · %lld 采样帧 · 分析用时 %lld 秒"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "FULL / FLOAT16 · %lld 取樣影格 · 分析用時 %lld 秒"
-          }
-        }
-      }
-    },
     "“不同身材怎么爬”是模型推演，不是教练建议，不保证动作可行或安全。": {
       "localizations": {
         "en": {
@@ -443,40 +375,6 @@
         }
       }
     },
-    "二维姿态辅助回看；候选动作未经人工确认。": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "2D pose estimate for review only; cues have not been checked by a person."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "2 次元の姿勢推定による振り返り用です。候補のムーブは人の目で確認していません。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "2차원 자세 추정을 이용한 복기용입니다. 후보 동작은 사람이 확인하지 않았습니다."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "二维姿态辅助回看；候选动作未经人工确认。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "二維姿態輔助回看；候選動作未經人工確認。"
-          }
-        }
-      }
-    },
     "今天的攀爬": {
       "localizations": {
         "en": {
@@ -643,40 +541,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "儲存筆記"
-          }
-        }
-      }
-    },
-    "值得再看一眼": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Worth another look"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "もう一度見たいところ"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "다시 볼 만한 구간"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "值得再看一眼"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "值得再看一眼"
           }
         }
       }
@@ -1221,74 +1085,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "只記一個想嘗試的改變"
-          }
-        }
-      }
-    },
-    "可用髋部检测": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Frames with hips found"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "腰を検出できた割合"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "골반이 검출된 비율"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "可用髋部检测"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "可用髖部偵測"
-          }
-        }
-      }
-    },
-    "可用髋部检测：%@ 的采样帧": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hips found in %@ of sampled frames"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "腰を検出できたフレーム：サンプルの %@"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "골반 검출: 샘플 프레임의 %@"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "可用髋部检测：%@ 的采样帧"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "可用髖部偵測：%@ 的取樣影格"
           }
         }
       }
@@ -2143,40 +1939,6 @@
         }
       }
     },
-    "平均二维肘角": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Average 2D elbow angle"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "肘の平均角度（2D）"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "평균 팔꿈치 각도(2D)"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "平均二维肘角"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "平均二維肘角"
-          }
-        }
-      }
-    },
     "开始本地分析": {
       "localizations": {
         "en": {
@@ -2207,40 +1969,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "開始本機分析"
-          }
-        }
-      }
-    },
-    "快速移动 · 回看一下": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fast movement · take a look"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "速い動き · 見直してみる"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "빠른 움직임 · 다시 보기"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "快速移动 · 回看一下"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "快速移動 · 回看一下"
           }
         }
       }
@@ -3367,40 +3095,6 @@
         }
       }
     },
-    "检测比例反映采样帧中髋部是否清晰，不是动作评分。角度为画面投影，不能直接比较不同拍摄角度。": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The percentage is how often your hips were clearly visible in sampled frames. It is not a score. Angles are projected onto the image and can’t be compared across camera angles."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "この割合は、サンプルしたフレームで腰がはっきり見えていたかを示すもので、ムーブの評価ではありません。角度は画面への投影なので、撮影角度が違う動画どうしは比べられません。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이 비율은 샘플 프레임에서 골반이 뚜렷하게 보였는지를 나타내며 동작 점수가 아닙니다. 각도는 화면에 투영된 값이라 촬영 각도가 다른 영상끼리 비교할 수 없습니다."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "检测比例反映采样帧中髋部是否清晰，不是动作评分。角度为画面投影，不能直接比较不同拍摄角度。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "偵測比例反映取樣影格中髖部是否清楚，不是動作評分。角度是畫面投影，不同拍攝角度之間不能直接比較。"
-          }
-        }
-      }
-    },
     "正在取回原片…": {
       "localizations": {
         "en": {
@@ -3567,40 +3261,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "沒有白爬的一趟。"
-          }
-        }
-      }
-    },
-    "画面中脚跟高于髋部。回看是否为跟勾或高踩；模型无法确认岩点接触。": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "A heel is above the hips in frame. Check whether it’s a heel hook or a high step; the model can’t tell if the foot is on a hold."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "画面内でかかとが腰より高い位置にあります。ヒールフックかハイステップか見直してください。ホールドに触れているかどうかはモデルにはわかりません。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "화면에서 발뒤꿈치가 골반보다 높습니다. 힐훅인지 하이스텝인지 다시 보세요. 발이 홀드에 닿았는지는 모델이 알 수 없습니다."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "画面中脚跟高于髋部。回看是否为跟勾或高踩；模型无法确认岩点接触。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "畫面中腳跟高於髖部。回看是不是掛腳或高踩；模型無法確認是否碰到岩點。"
           }
         }
       }
@@ -4591,40 +4251,6 @@
         }
       }
     },
-    "这一趟没有触发候选片段。试着慢放，自己寻找最想调整的一步。": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No cues came up for this climb. Try slow motion and find the move you most want to change."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "このトライでは候補シーンがありませんでした。スロー再生で、いちばん直したい一手を探してみてください。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이번 등반에서는 후보 구간이 없었습니다. 느리게 재생하며 가장 바꾸고 싶은 한 동작을 찾아보세요."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "这一趟没有触发候选片段。试着慢放，自己寻找最想调整的一步。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "這一趟沒有觸發候選片段。試著慢速播放，自己找出最想調整的一步。"
-          }
-        }
-      }
-    },
     "这一趟的名字": {
       "localizations": {
         "en": {
@@ -4965,40 +4591,6 @@
         }
       }
     },
-    "逐帧读取 → 33 点姿态 → 整理回看片段\n无需上传。分析完成后自动保存。": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Read frames → 33-point pose → gather replay cues\nNothing is uploaded. Saved automatically when done."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "フレームを読み込む → 33 点の姿勢 → 見直すシーンを整理\nアップロードは不要です。解析が終わると自動で保存します。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "프레임 읽기 → 33점 자세 → 다시 볼 구간 정리\n업로드하지 않습니다. 분석이 끝나면 자동으로 저장합니다."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "逐帧读取 → 33 点姿态 → 整理回看片段\n无需上传。分析完成后自动保存。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "逐格讀取 → 33 點姿態 → 整理回看片段\n不需要上傳。分析完成後自動儲存。"
-          }
-        }
-      }
-    },
     "重新分析骨架": {
       "localizations": {
         "en": {
@@ -5301,74 +4893,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "骨架分析已更新。"
-          }
-        }
-      }
-    },
-    "髋部在画面中的移动较快。可能是动态动作、下落或镜头移动，请结合原片判断。": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The hips move fast in frame. It could be a dynamic move, a fall, or the camera moving. Judge it against the original video."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "画面内で腰が速く動いています。ダイナミックなムーブ、フォール、カメラの動きのいずれかかもしれません。元の映像で確かめてください。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "화면에서 골반이 빠르게 움직입니다. 다이내믹한 동작, 추락, 카메라 움직임일 수 있으니 원본 영상으로 판단하세요."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "髋部在画面中的移动较快。可能是动态动作、下落或镜头移动，请结合原片判断。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "髖部在畫面中移動得比較快。可能是動態動作、墜落或鏡頭移動，請對照原片判斷。"
-          }
-        }
-      }
-    },
-    "高抬脚 · 候选片段": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "High foot · cue"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "高い足 · 候補シーン"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "높은 발 · 후보 구간"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "高抬脚 · 候选片段"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "高抬腳 · 候選片段"
           }
         }
       }
@@ -6801,40 +6325,6 @@
         }
       }
     },
-    "分析详情": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Analysis details"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "解析の詳細"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "분석 상세"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "分析详情"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "分析詳情"
-          }
-        }
-      }
-    },
     "导入": {
       "localizations": {
         "en": {
@@ -7613,6 +7103,244 @@
           "stringUnit": {
             "state": "translated",
             "value": "분석 대기 중…"
+          }
+        }
+      }
+    },
+    "分析这一趟": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analyse this attempt"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このトライを分析"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이번 시도 분석"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分析这一趟"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分析這一趟"
+          }
+        }
+      }
+    },
+    "看分析": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "View analysis"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分析を見る"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "분석 보기"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "看分析"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "看分析"
+          }
+        }
+      }
+    },
+    "重新分析": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analyse again"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "もう一度分析"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다시 분석"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重新分析"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重新分析"
+          }
+        }
+      }
+    },
+    "从这段视频里认出墙上的岩点和你的动作，放进人体模型里比较。全程在本机完成。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finds the holds and your moves in this clip and compares them against a body model. Everything stays on this device."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この動画から壁のホールドとあなたのムーブを読み取り、身体モデルで比較します。すべて端末内で処理します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 영상에서 벽의 홀드와 내 동작을 읽어 신체 모델과 비교합니다. 모든 처리는 기기 안에서 이루어집니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从这段视频里认出墙上的岩点和你的动作，放进人体模型里比较。全程在本机完成。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "從這段影片裡認出牆上的岩點和你的動作，放進人體模型裡比較。全程在本機完成。"
+          }
+        }
+      }
+    },
+    "正在准备画面…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preparing frames…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フレームを準備中…"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "프레임 준비 중…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在准备画面…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在準備畫面…"
+          }
+        }
+      }
+    },
+    "分析页面没有打开": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The analysis page didn’t open"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分析ページを開けませんでした"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "분석 페이지를 열지 못했습니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分析页面没有打开"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分析頁面沒有開啟"
+          }
+        }
+      }
+    },
+    "33 个关键点用于骨架回放。遮挡、镜头移动、多人入镜会影响结果。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "33 keypoints drive the skeleton replay. Occlusion, camera movement and other people in frame all affect results."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "33 個のキーポイントをスケルトン再生に使います。隠れ、カメラの動き、複数人の映り込みは結果に影響します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "33개의 키포인트로 스켈레톤을 재생합니다. 가림, 카메라 움직임, 여러 사람이 찍힌 영상은 결과에 영향을 줍니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "33 个关键点用于骨架回放。遮挡、镜头移动、多人入镜会影响结果。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "33 個關鍵點用於骨架回放。遮擋、鏡頭移動、多人入鏡都會影響結果。"
           }
         }
       }

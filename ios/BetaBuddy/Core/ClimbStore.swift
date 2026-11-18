@@ -14,8 +14,14 @@ final class ClimbStore: ObservableObject {
     private var activeAnalysis: UUID?
     private var backgroundTask: UIBackgroundTaskIdentifier = .invalid
     private var mayAnalyze = true
+    /// Records that have a saved result from the pack's analysis page (`<id>.analysis.json`).
+    @Published private(set) var analysisResults: Set<UUID> = []
+    static let analysisResultSuffix = ".analysis.json"
+    static let analysisClimberKey = "analysisClimber"
+    private let defaults: UserDefaults
 
-    init(root: URL? = nil) {
+    init(root: URL? = nil, defaults: UserDefaults = .standard) {
+        self.defaults = defaults
         self.root = root ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("BetaBuddy", isDirectory: true)
         do {
             try FileManager.default.createDirectory(at: self.root, withIntermediateDirectories: true)
@@ -28,6 +34,8 @@ final class ClimbStore: ObservableObject {
                 archive = try JSONDecoder().decode(Archive.self, from: Data(contentsOf: index))
                 guard archive.version == 1 else { throw CocoaError(.fileReadCorruptFile) }
             }
+            let names = (try? FileManager.default.contentsOfDirectory(atPath: self.root.path)) ?? []
+            analysisResults = Set(names.compactMap { $0.hasSuffix(Self.analysisResultSuffix) ? UUID(uuidString: String($0.dropLast(Self.analysisResultSuffix.count))) : nil })
         } catch {
             canWrite = false // Never overwrite an unreadable archive with an empty one.
             self.error = String(localized: "本地记录无法读取，已保留原文件。请检查存储空间或重新启动。", bundle: AppLanguage.bundle)
@@ -73,6 +81,38 @@ final class ClimbStore: ObservableObject {
         if activeAnalysis == climb.id { analysisWork?.cancel() }
         try? FileManager.default.removeItem(at: file(climb.videoName))
         try? FileManager.default.removeItem(at: file(climb.thumbnailName))
+        try? FileManager.default.removeItem(at: analysisResultFile(climb.id))
+        analysisResults.remove(climb.id)
+    }
+
+    // MARK: Result of the pack's analysis page
+
+    private func analysisResultFile(_ id: UUID) -> URL { file("\(id)" + Self.analysisResultSuffix) }
+
+    /// The page's result exactly as it handed it over, or `nil` when there is none.
+    func analysisResult(for climb: Climb) -> String? {
+        guard analysisResults.contains(climb.id) else { return nil }
+        return try? String(contentsOf: analysisResultFile(climb.id), encoding: .utf8)
+    }
+
+    /// Kept next to the clip, written atomically, inside the directory that is excluded from backup.
+    /// The page sends a result again after the user adjusts it; each one replaces the last.
+    func saveAnalysisResult(_ json: String, for id: UUID) throws {
+        guard archive.climbs.contains(where: { $0.id == id }) else { return }   // Deleted while the page was open.
+        guard canWrite else { throw CocoaError(.fileWriteNoPermission) }
+        try Data(json.utf8).write(to: analysisResultFile(id), options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+        analysisResults.insert(id)
+    }
+
+    func discardAnalysisResult(_ climb: Climb) {
+        try? FileManager.default.removeItem(at: analysisResultFile(climb.id))
+        analysisResults.remove(climb.id)
+    }
+
+    /// Body measurements the analysis page last used, so the next analysis starts from them.
+    var analysisClimber: [String: Double]? {
+        get { (defaults.dictionary(forKey: Self.analysisClimberKey) as? [String: NSNumber])?.mapValues(\.doubleValue) }
+        set { defaults.set(newValue, forKey: Self.analysisClimberKey) }
     }
 
     func update(_ climb: Climb, note: String, sent: Bool) throws {

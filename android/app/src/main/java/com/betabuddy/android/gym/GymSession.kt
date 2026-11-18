@@ -1,42 +1,18 @@
 package com.betabuddy.android.gym
 
-import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Context
 import android.content.MutableContextWrapper
 import android.content.res.AssetManager
-import android.graphics.Bitmap
-import android.net.Uri
-import android.os.Handler
-import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
-import android.view.View
-import android.view.ViewGroup
-import android.webkit.ConsoleMessage
-import android.webkit.JavascriptInterface
-import android.webkit.RenderProcessGoneDetail
-import android.webkit.WebChromeClient
-import android.webkit.WebResourceError
-import android.webkit.WebResourceRequest
-import android.webkit.WebResourceResponse
-import android.webkit.WebSettings
-import android.webkit.WebStorage
 import android.webkit.WebView
-import android.webkit.WebViewClient
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.edit
-import androidx.core.graphics.toColorInt
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.AndroidViewModel
-import androidx.webkit.WebViewAssetLoader
-import androidx.webkit.WebViewCompat
-import androidx.webkit.WebViewFeature
 import com.betabuddy.android.BuildConfig
-import java.io.ByteArrayInputStream
 import java.io.IOException
 
 /** Reads the pack from `assets/gympack/`. */
@@ -78,6 +54,7 @@ data class GymDebugOptions(
 /**
  * Owns the one gym web view. It outlives the screen and the activity (it sits in [GymViewModel]),
  * so switching tabs, opening settings or a configuration change keeps the scene and the selection.
+ * How the page is served and kept offline is [PackWebView]'s business.
  */
 class GymSession(private val app: Application) {
     sealed interface Phase {
@@ -88,12 +65,15 @@ class GymSession(private val app: Application) {
     }
 
     val status: GymPackStatus = GymPack.load(AssetGymPackFiles(app.assets))
-    private val pack: GymPack? get() = (status as? GymPackStatus.Ready)?.pack
+
+    /** The pack in this build, or null when there is none or it cannot be used. */
+    val pack: GymPack? get() = (status as? GymPackStatus.Ready)?.pack
 
     var phase: Phase by mutableStateOf<Phase>(Phase.Idle)
         private set
     var webView: WebView? by mutableStateOf<WebView?>(null)
         private set
+    private var host: PackWebView? = null
 
     /** Last route picked in the page. Kept in memory only, for linking a recorded climb to a route (id and name). */
     var selectedRoute: GymRoute? by mutableStateOf<GymRoute?>(null)
@@ -114,7 +94,6 @@ class GymSession(private val app: Application) {
     // The web view is created against this wrapper, so it can be moved to a new activity after a
     // configuration change and never holds on to a finished one.
     private val viewContext = MutableContextWrapper(app)
-    private val main = Handler(Looper.getMainLooper())
 
     /** Set by the page's `ready`. Before it, a page error means the scene never came up; after it, errors are the page's own to show. */
     private var pageReady = false
@@ -148,12 +127,12 @@ class GymSession(private val app: Application) {
      */
     fun start(language: String) {
         val pack = pack ?: return
-        val view = webView
+        val host = host
         when {
-            view == null && phase == Phase.Idle -> open(pack, language)
-            view != null && phase !is Phase.Failed && loadedLanguage != language -> {
+            host == null && phase == Phase.Idle -> open(pack, language)
+            host != null && phase !is Phase.Failed && loadedLanguage != language -> {
                 routeToRestore = selectedRoute?.id
-                load(view, pack, language)
+                load(host, pack, language)
             }
         }
     }
@@ -161,12 +140,12 @@ class GymSession(private val app: Application) {
     /** The reload button on the failure card. */
     fun reload(language: String) {
         val pack = pack ?: return
-        val view = webView
-        if (view == null) open(pack, language) else load(view, pack, language)
+        val host = host
+        if (host == null) open(pack, language) else load(host, pack, language)
     }
 
     fun send(command: GymCommand) {
-        if (phase == Phase.Ready) webView?.evaluateJavascript(command.script, null)
+        if (phase == Phase.Ready) host?.evaluate(command.script)
     }
 
     /** Pauses the page's animation while the gym is not what the user is looking at. */
@@ -177,106 +156,58 @@ class GymSession(private val app: Application) {
     }
 
     fun destroy() {
-        webView?.let(::dispose)
+        host?.dispose()
+        host = null
         webView = null
         phase = Phase.Idle
     }
 
     private fun open(pack: GymPack, language: String) {
-        val view = try {
-            create(pack)
+        val created = try {
+            PackWebView(viewContext, pack, Page())
         } catch (error: Exception) {
             // No usable system WebView on this device.
             Log.e(TAG, "web view unavailable", error)
             phase = Phase.Failed(GymFailure.Load(error.message ?: error.javaClass.simpleName))
             return
         }
-        webView = view
-        if (!active) view.onPause()
-        load(view, pack, language)
+        host = created
+        webView = created.view
+        if (!active) created.view.onPause()
+        load(created, pack, language)
     }
 
-    private fun load(view: WebView, pack: GymPack, language: String) {
+    private fun load(host: PackWebView, pack: GymPack, language: String) {
         phase = Phase.Loading
         pageReady = false
         documentFailed = false
         loadedLanguage = language
         loadStarted = SystemClock.elapsedRealtime()
         val query = if (BuildConfig.DEBUG) debug.query else null
-        view.loadUrl(pack.entryUrl(hintSeen = preferences.getBoolean(KEY_HINT_SEEN, false), language = language, extraQuery = query))
+        host.load(pack.entryUrl(hintSeen = preferences.getBoolean(KEY_HINT_SEEN, false), language = language, extraQuery = query))
     }
 
-    @SuppressLint("SetJavaScriptEnabled", "JavascriptInterface")
-    private fun create(pack: GymPack): WebView {
-        // Nothing the page stores survives a launch.
-        WebStorage.getInstance().deleteAllData()
-        WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG)
-
-        val view = WebView(viewContext)
-        view.layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
-        view.setBackgroundColor(PAPER.toColorInt())
-        view.overScrollMode = View.OVER_SCROLL_NEVER
-        view.isVerticalScrollBarEnabled = false
-        view.isHorizontalScrollBarEnabled = false
-        view.isHapticFeedbackEnabled = false
-        view.setOnLongClickListener { true }   // No text selection or link menus; gestures belong to the page.
-        // The screen pads the web view clear of the system bars itself, so the page must not also
-        // be told about them through env(safe-area-inset-*).
-        ViewCompat.setOnApplyWindowInsetsListener(view) { _, _ -> WindowInsetsCompat.CONSUMED }
-
-        view.settings.apply {
-            javaScriptEnabled = true
-            domStorageEnabled = true            // In-memory use within a run; cleared at every start.
-            // Offline, enforced here rather than left to the page:
-            blockNetworkLoads = true
-            allowFileAccess = false
-            allowContentAccess = false
-            mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
-            cacheMode = WebSettings.LOAD_NO_CACHE
-            safeBrowsingEnabled = false
-            setGeolocationEnabled(false)
-            javaScriptCanOpenWindowsAutomatically = false
-            setSupportMultipleWindows(false)
-            // The page lays itself out; no zooming, no font scaling from the system.
-            setSupportZoom(false)
-            builtInZoomControls = false
-            displayZoomControls = false
-            textZoom = 100
-            mediaPlaybackRequiresUserGesture = false
+    /** What the web view reports. Each web view is disposed before another is made, so these are always about the current one. */
+    private inner class Page : PackWebView.Listener {
+        override fun onMessage(json: String?) {
+            receive(GymMessage.parse(json) ?: return)
         }
 
-        val loader = WebViewAssetLoader.Builder()
-            .setDomain(GymPack.HOST)
-            .setHttpAllowed(false)
-            .addPathHandler(GymPack.PATH_PREFIX, PackPathHandler(app.assets, pack))
-            .build()
-        view.webViewClient = Client(pack, loader, documentStartShim = installBridge(view))
-        view.webChromeClient = object : WebChromeClient() {
-            override fun onConsoleMessage(message: ConsoleMessage): Boolean {
-                if (BuildConfig.DEBUG) Log.d(TAG, "console: ${message.message()} (${message.sourceId()}:${message.lineNumber()})")
-                return true
-            }
+        override fun onDocumentLoaded(url: String?) {
+            Log.i(TAG, "document loaded in ${SystemClock.elapsedRealtime() - loadStarted} ms")
+            // A page that never posts `ready` still gets shown once its document is in.
+            if (phase == Phase.Loading && !documentFailed && GymPack.allows(url)) phase = Phase.Ready
         }
-        return view
-    }
 
-    /**
-     * Gives the page `window.webkit.messageHandlers.gym`. Returns whether the shim is installed to
-     * run at document start; when the WebView is too old for that, the client injects it by hand.
-     */
-    @SuppressLint("JavascriptInterface", "RequiresFeature")
-    private fun installBridge(view: WebView): Boolean {
-        view.addJavascriptInterface(Bridge(view), GymBridge.NATIVE_NAME)
-        if (!WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) return false
-        WebViewCompat.addDocumentStartJavaScript(view, GymBridge.shim, setOf(GymPack.ORIGIN))
-        return true
-    }
+        override fun onLoadFailed(description: String) {
+            documentFailed = true
+            phase = Phase.Failed(GymFailure.Load(description))
+        }
 
-    /** Called by the page, on a WebView thread. */
-    private inner class Bridge(private val owner: WebView) {
-        @JavascriptInterface
-        fun postMessage(json: String?) {
-            main.post { if (owner === webView) receive(GymMessage.parse(json) ?: return@post) }
+        override fun onRendererGone() {
+            host = null
+            webView = null
+            phase = Phase.Failed(GymFailure.RendererGone)
         }
     }
 
@@ -305,112 +236,10 @@ class GymSession(private val app: Application) {
         }
     }
 
-    private fun fail(failure: GymFailure) {
-        documentFailed = true
-        phase = Phase.Failed(failure)
-    }
-
-    private fun dispose(view: WebView) {
-        (view.parent as? ViewGroup)?.removeView(view)
-        view.removeJavascriptInterface(GymBridge.NATIVE_NAME)
-        view.destroy()
-    }
-
-    private inner class Client(
-        private val pack: GymPack,
-        private val loader: WebViewAssetLoader,
-        private val documentStartShim: Boolean,
-    ) : WebViewClient() {
-
-        /**
-         * The offline rule. A request is answered from the pack, answered with an empty refusal, or
-         * (for in-memory `data:` / `blob:` / `about:` content) left to the WebView. Nothing reaches a network stack.
-         */
-        override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
-            val url = request.url
-            return when {
-                url.scheme?.lowercase() in IN_MEMORY_SCHEMES -> null
-                GymPack.allows(url.toString()) -> loader.shouldInterceptRequest(url) ?: refusal(404, "Not Found")
-                else -> refusal(403, "Blocked")
-            }
-        }
-
-        /** Navigation stays inside the pack. Links to anywhere else do nothing. */
-        override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
-            val url = request.url
-            val blankSubframe = !request.isForMainFrame && url.scheme?.lowercase() == "about"
-            return !(GymPack.allows(url.toString()) || blankSubframe)
-        }
-
-        override fun onPageStarted(view: WebView, url: String?, favicon: Bitmap?) {
-            if (!documentStartShim) view.evaluateJavascript(GymBridge.shim, null)
-        }
-
-        override fun onPageFinished(view: WebView, url: String?) {
-            if (view !== webView) return
-            if (!documentStartShim) view.evaluateJavascript(GymBridge.shim, null)
-            Log.i(TAG, "document loaded in ${SystemClock.elapsedRealtime() - loadStarted} ms")
-            // A page that never posts `ready` still gets shown once its document is in.
-            if (phase == Phase.Loading && !documentFailed && GymPack.allows(url)) phase = Phase.Ready
-        }
-
-        override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
-            if (view !== webView || !request.isForMainFrame) return
-            Log.e(TAG, "load failed: ${error.errorCode} ${error.description}")
-            fail(GymFailure.Load(error.description?.toString().orEmpty()))
-        }
-
-        override fun onReceivedHttpError(view: WebView, request: WebResourceRequest, errorResponse: WebResourceResponse) {
-            if (view !== webView || !request.isForMainFrame) return
-            Log.e(TAG, "load failed: HTTP ${errorResponse.statusCode}")
-            fail(GymFailure.Load("${errorResponse.statusCode} ${errorResponse.reasonPhrase.orEmpty()}".trim()))
-        }
-
-        /** The renderer died or was killed for memory. The view is unusable; drop it and offer a reload. */
-        override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {
-            Log.e(TAG, "renderer gone (crashed: ${detail.didCrash()})")
-            if (view === webView) {
-                webView = null
-                phase = Phase.Failed(GymFailure.RendererGone)
-            }
-            dispose(view)
-            return true   // Handled: the app keeps running.
-        }
-    }
-
-    /** Serves `/gympack/<path>` from the pack in the app's assets, and only paths the manifest lists. */
-    private class PackPathHandler(private val assets: AssetManager, private val pack: GymPack) : WebViewAssetLoader.PathHandler {
-        override fun handle(path: String): WebResourceResponse? {
-            if (path !in pack.servedPaths) return null
-            val stream = try {
-                assets.open(GymPack.ASSET_DIRECTORY + "/" + path)
-            } catch (error: IOException) {
-                return null
-            }
-            val (type, charset) = GymPack.contentType(path)
-            return WebResourceResponse(type, charset, 200, "OK", RESPONSE_HEADERS, stream)
-        }
-    }
-
     companion object {
         private const val TAG = "gym"   // Local logcat only: load timings and the text of page-reported errors.
         private const val KEY_NOTICE_SEEN = "gymNoticeSeen"
         private const val KEY_HINT_SEEN = "gymHintSeen"
-        private const val PAPER = "#F5F2E8"
-        private val IN_MEMORY_SCHEMES = setOf("data", "blob", "about")
-
-        // No remote source of any kind. The pack uses inline scripts, Blob workers and data: URLs.
-        const val CONTENT_SECURITY_POLICY =
-            "default-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob: data:; object-src 'none'; base-uri 'self'; form-action 'none'"
-
-        private val RESPONSE_HEADERS = mapOf(
-            "Cache-Control" to "no-store",
-            "Content-Security-Policy" to CONTENT_SECURITY_POLICY,
-            "X-Content-Type-Options" to "nosniff",
-        )
-
-        private fun refusal(status: Int, reason: String) =
-            WebResourceResponse("text/plain", "utf-8", status, reason, mapOf("Cache-Control" to "no-store"), ByteArrayInputStream(ByteArray(0)))
     }
 }
 

@@ -1,5 +1,5 @@
 BetaBuddy Privacy Policy
-Updated: November 15, 2026
+Updated: November 18, 2026
 
 Your climbing stays on your device.
 
@@ -10,11 +10,13 @@ Videos you choose are copied into the app for on-device pose estimation. The app
 
 Import saves the original video without pose analysis by default. The app reads the selected video’s recording time (or the selected media item’s date), stores it as the editable climb time, and uses the current time when it is unavailable. Only analysis you request runs in the background on your device. Unfinished requests are kept locally and retried when you return to the app.
 
+When you use “Analyse this attempt”, the app takes a set of still frames from the clip and hands them, together with the pose data, to the analysis page that ships inside the app, where the work is done on the device. The frames are used in memory only and are not saved. The app stores the result for that climb locally (it includes an image of the wall composed from the video frames), along with the body measurements, such as height and weight, that you set on the analysis page. Like the Gym page, the analysis page cannot reach the network, and none of this leaves the device.
+
 2. Model and network
 The pose model ships inside the app and runs on the device. The app does not download models and does not call any cloud AI or large language model. If you pick a video that exists only in iCloud, the system may download the original first; that is part of Apple's Photos service. App Store downloads, purchases, restore transactions, system diagnostics and system services follow Apple's settings and policies. Apple handles payment details; BetaBuddy checks the purchase entitlement with StoreKit on the device.
 
 3. Gym
-The gym model, routes and climbing simulation in the Gym tab ship inside the app and open on the device. That page cannot reach the network. The app does not record or send which routes you look at or which body parameters you choose. The gym content is an unofficial compilation and may not match the gym as it is today; the simulation is a model's projection, not coaching advice.
+The gym model, routes and climbing simulation in the Gym tab ship inside the app and open on the device. That page cannot reach the network. The app does not record or send which routes you look at or which body parameters you choose there. The gym content is an unofficial compilation and may not match the gym as it is today; the simulation is a model's projection, not coaching advice.
 
 4. Photos and sharing
 You decide which video to import through the system photo picker; the app does not scan your photo library. When you use the system share sheet, the text you choose is sent to the app or recipient you pick and is then covered by their privacy policy.

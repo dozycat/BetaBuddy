@@ -84,7 +84,7 @@ Android 的版本号在 `android/app/build.gradle.kts`（`versionName`、`versio
 
 **不引入联网依赖。** 不加会访问网络的 SDK、遥测、远程配置或远程资源。岩馆页面只能读数据包目录，`http(s)` / `ws(s)` / `ftp` 被内容规则拦截。新增第三方代码要固定版本和校验值，并更新 `ios/THIRD_PARTY.md`。Android 只声明本地分析前台服务和可选通知权限：新增依赖先看它的 Manifest 会合并进来什么，权限和上报组件在应用的 Manifest 里用 `tools:node="remove"` 去掉，并更新 `android/THIRD_PARTY.md`。
 
-**分析诚实性。** 不展示没验证过的评分或诊断。髋部中点不叫重心，二维角度不叫关节角度，候选片段不下结论，骨架不跨检测空白延续。岩馆内容标明非官方，推演不说成建议。新增文案和指标先对照 `docs/ios/product-design.md` 和 `docs/ios/gym-design.md`。验证记录只写实际做过的事，没做的列在「尚未验证」里。
+**分析诚实性。** 不展示没验证过的评分或诊断。骨架不跨检测空白延续。攀爬册的「分析这一趟」由数据包里的分析页面完成：岩点、墙面和动作是从视频里自动认的，会认错；数字是模型里比出来的相对值，不说成教练意见——原生界面上配套的文字守同一个口径。岩馆内容标明非官方，推演不说成建议。新增文案和指标先对照 `docs/ios/product-design.md` 和 `docs/ios/gym-design.md`。验证记录只写实际做过的事，没做的列在「尚未验证」里。
 
 **多语言。** 开发语言是简体中文，另有繁体中文、英语、日语、韩语。面向用户的文字一律走 `Localizable.xcstrings`：视图里用字符串字面量（键就是简体中文原文），非视图代码用 `String(localized: "…", bundle: AppLanguage.bundle)`，格式化用 `AppLanguage.locale`——语言可以在应用内切换，不能依赖进程启动时的语言；不翻译的品牌标记和数据用 `Text(verbatim:)`。新增或改动文字时，五种语言一起补齐，占位符个数和换行数保持一致，`LocalizationTests` 会检查。用攀岩的人实际说的话，不加原文没有的承诺。不要把界面语言写进存档：存类型或原值，显示时再取文字。 Android 的文字在 `res/values*/strings.xml` 和 `strings_journal.xml`，`values/` 是英语；与 iOS 是同一句话就用同一份译文，五种语言的键、占位符和换行一致，`ShellStringsTest`、`JournalStringsTest` 和 `check-resources.py` 会检查。
 

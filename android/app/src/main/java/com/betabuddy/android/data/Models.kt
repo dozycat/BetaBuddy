@@ -1,6 +1,5 @@
 package com.betabuddy.android.data
 
-import com.betabuddy.android.pose.PoseMath
 import java.util.Locale
 import java.util.UUID
 import kotlin.math.abs
@@ -16,62 +15,37 @@ data class Joint(val x: Double, val y: Double, val confidence: Double) {
 }
 
 @Serializable
-data class PoseFrame(val time: Double, val joints: List<Joint>) {
+data class PoseFrame(
+    val time: Double,
+    val joints: List<Joint>,
+    /**
+     * The landmarker's world landmarks for the same sample: 33 × `[x, y, z, visibility]`.
+     * Absent in records written before they were kept; those need pose recognition again
+     * before the pack's analysis page can use them.
+     */
+    val world: List<List<Double>>? = null,
+) {
     val hasReliableTorso: Boolean
         get() = joints.size == 33 && joints[11].valid && joints[12].valid && joints[23].valid && joints[24].valid
 
-    /** Image-space hip midpoint; never presented as physical center of mass. */
-    val hip: Joint?
-        get() {
-            if (joints.size != 33 || !joints[23].valid || !joints[24].valid) return null
-            return Joint(
-                x = (joints[23].x + joints[24].x) / 2,
-                y = (joints[23].y + joints[24].y) / 2,
-                confidence = minOf(joints[23].confidence, joints[24].confidence),
-            )
-        }
+    val hasWorldLandmarks: Boolean
+        get() = joints.size == 33 && world?.size == 33 && world.all { it.size == 4 }
 }
 
-@Serializable
-data class Moment(
-    val id: String = newId(),
-    val time: Double,
-    /** Stored in the source language (Simplified Chinese), like iOS; shown only for unknown kinds. */
-    val title: String,
-    val detail: String,
-    /** What triggered the cue. The UI shows text in the current language for known kinds. */
-    val kind: String? = null,
-) {
-    companion object {
-        const val RAISED_HEEL = "raisedHeel"
-        const val FAST_MOVE = "fastMove"
-    }
-}
-
+/**
+ * Pose recognition output for one clip. Fields older builds wrote and this one no longer uses
+ * (`processingSeconds`, `moments`) are ignored when an archive is read.
+ */
 @Serializable
 data class PoseAnalysis(
     val frames: List<PoseFrame>,
     val sampledFrames: Int,
     val duration: Double,
     val aspectRatio: Double,
-    val processingSeconds: Double,
-    val moments: List<Moment>,
 ) {
-    /** Share of sampled frames in which both hips are reliable. Not a model accuracy or a score. */
-    val coverage: Double
-        get() = if (sampledFrames > 0) frames.count { it.hip != null }.toDouble() / sampledFrames else 0.0
-
-    /** Aspect-corrected 2D projected angle, averaged over both elbows. Not a joint angle. */
-    val averageElbowAngle: Double?
-        get() {
-            var sum = 0.0
-            var count = 0
-            for (frame in frames) {
-                PoseMath.angle(frame, 11, 13, 15, aspectRatio)?.let { sum += it; count++ }
-                PoseMath.angle(frame, 12, 14, 16, aspectRatio)?.let { sum += it; count++ }
-            }
-            return if (count == 0) null else sum / count
-        }
+    /** False for records analysed before world landmarks were kept, and for clips not analysed yet. */
+    val hasWorldLandmarks: Boolean
+        get() = frames.any { it.hasWorldLandmarks }
 
     /** Binary search. A stale skeleton is never drawn across missing detections. */
     fun nearestFrame(time: Double): PoseFrame? {
@@ -127,6 +101,9 @@ data class Archive(
 
 /** Stored sentinel for a climb without a grade. Kept as is so archives stay readable on both platforms. */
 const val UNGRADED_VALUE = "未标级"
+
+/** Four decimal places are enough for stored landmarks and keep the archive small. */
+fun rounded4(value: Double): Double = Math.round(value * 10_000) / 10_000.0
 
 /** Uppercase, as iOS writes UUIDs. */
 fun newId(): String = UUID.randomUUID().toString().uppercase(Locale.ROOT)

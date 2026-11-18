@@ -229,3 +229,106 @@ extension GymManifest {
         return gymName
     }
 }
+
+// MARK: - Video analysis page
+
+extension GymPack {
+    static let analysisPage = "analysis.html"
+    /// Whether this pack carries the video analysis page. Without it the app shows no entry for it.
+    var supportsAnalysis: Bool { manifest.files.contains { $0.path == Self.analysisPage } }
+    /// The analysis page is loaded the same way as the entry page, from the same directory.
+    func analysisURL(language: String) -> URL? {
+        guard supportsAnalysis else { return nil }
+        var parts = URLComponents()
+        parts.scheme = Self.scheme; parts.host = Self.host; parts.path = "/" + Self.analysisPage
+        parts.queryItems = [URLQueryItem(name: "lang", value: language)]
+        return parts.url.flatMap { allows($0) ? $0 : nil }
+    }
+}
+
+/// Analysis page → app messages. They arrive on the same `gym` handler as `GymMessage`,
+/// from the analysis page's own web view. What the page computes is the pack's business:
+/// the app keeps the result as an opaque string and hands it back unchanged.
+enum AnalysisMessage: Equatable, Sendable {
+    case ready
+    /// `id` is the record id given in `begin`, or empty when the page was showing a saved result.
+    case result(id: String, json: String, climber: [String: Double])
+    case seek(Double)
+    /// The page could not analyse the clip and is showing its own explanation.
+    case failed(code: String)
+    /// A script error. Before `ready` it means the page never came up.
+    case pageError(String)
+
+    static let maximumResultLength = 8_000_000
+
+    init?(body: Any) {
+        guard let body = body as? [String: Any], let type = body["type"] as? String else { return nil }
+        switch type {
+        case "analysisReady": self = .ready
+        case "analysisResult":
+            guard let json = body["json"] as? String, !json.isEmpty, json.utf8.count <= Self.maximumResultLength else { return nil }
+            var climber: [String: Double] = [:]
+            for (key, value) in body["climber"] as? [String: Any] ?? [:] where key.count <= 32 && climber.count < 16 {
+                // Numbers only; a JSON boolean is not a body measurement.
+                guard let number = value as? NSNumber, CFGetTypeID(number) != CFBooleanGetTypeID(), number.doubleValue.isFinite else { continue }
+                climber[key] = number.doubleValue
+            }
+            self = .result(id: String((body["id"] as? String ?? "").prefix(80)), json: json, climber: climber)
+        case "analysisSeek":
+            guard let time = (body["t"] as? NSNumber)?.doubleValue, time.isFinite else { return nil }
+            self = .seek(max(0, time))
+        case "analysisError": self = .failed(code: String((body["code"] as? String ?? "").prefix(80)))
+        case "error": self = .pageError(String((body["message"] as? String ?? "").prefix(300)))
+        default: return nil   // Progress and anything newer: the page shows it itself.
+        }
+    }
+}
+
+/// App → analysis page calls on `window.BetaBuddyAnalysis`.
+enum AnalysisCommand: Sendable {
+    case begin(id: String, width: Int, height: Int, climber: [String: Double]?)
+    case addFrame(index: Int, time: Double, jpegBase64: String)
+    case addPoses([PoseFrame])
+    case run
+    case show(String)
+
+    static let poseBatch = 40
+
+    private struct Meta: Encodable {
+        var id: String
+        var w: Int
+        var h: Int
+        var climber: [String: Double]?
+    }
+    private struct Pose: Encodable {
+        var t: Double
+        var img: [[Double]]
+        var lm: [[Double]]
+    }
+
+    /// Every argument becomes a JavaScript literal through JSON encoding, never by joining quotes.
+    private static func literal<T: Encodable>(_ value: T) -> String {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .withoutEscapingSlashes   // Base64 is full of them.
+        return (try? encoder.encode(value)).flatMap { String(data: $0, encoding: .utf8) } ?? "null"
+    }
+
+    var script: String {
+        let (function, arguments): (String, [String]) = switch self {
+        case .begin(let id, let width, let height, let climber):
+            ("begin", [Self.literal(Meta(id: id, w: width, h: height, climber: climber?.isEmpty == false ? climber : nil))])
+        case .addFrame(let index, let time, let jpegBase64):
+            ("addFrame", [Self.literal(index), Self.literal(rounded4(time)), Self.literal(jpegBase64)])
+        case .addPoses(let frames):
+            // Only samples that have world landmarks. Their fourth value is the landmarker's own
+            // visibility, which the page expects for the image points as well.
+            ("addPoses", [Self.literal(frames.compactMap { frame -> Pose? in
+                guard let world = frame.world, world.count == 33, frame.joints.count == 33, world.allSatisfy({ $0.count == 4 }) else { return nil }
+                return Pose(t: rounded4(frame.time), img: zip(frame.joints, world).map { $0.x.isFinite && $0.y.isFinite ? [$0.x, $0.y, $1[3]] : [0, 0, 0] }, lm: world)
+            })])
+        case .run: ("run", [])
+        case .show(let json): ("show", [Self.literal(json)])
+        }
+        return "window.BetaBuddyAnalysis && typeof window.BetaBuddyAnalysis.\(function) === 'function' ? (window.BetaBuddyAnalysis.\(function)(\(arguments.joined(separator: ","))), true) : false"
+    }
+}

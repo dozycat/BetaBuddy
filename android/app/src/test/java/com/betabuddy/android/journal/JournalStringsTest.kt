@@ -71,17 +71,23 @@ class JournalStringsTest {
     }
 
     @Test fun wordingKeepsTheAnalysisHonest() {
-        // The hip trail is never called a centre of mass, and nothing promises a score or accuracy.
+        // Nothing is called a centre of mass, and nothing promises a score, accuracy or coaching.
         val banned = listOf("重心", "center of mass", "centre of mass", "精准", "最佳", "教练级", "accurate", "accuracy", "AI coach")
         for ((language, folder) in folders) {
             for ((name, text) in load(folder)) {
                 for (word in banned) assertFalse("$name / $language contains “$word”", text.contains(word, ignoreCase = true))
             }
         }
+    }
+
+    @Test fun retiredAnalysisTextIsGone() {
+        // The metrics, the candidate cues and the model line left the replay; their text must not linger.
         val english = load("values")
-        assertTrue(english.getValue("journal_cue_raised_heel_title").contains("cue"))
-        assertTrue(load("values-b+zh+Hans").getValue("journal_cue_raised_heel_title").contains("候选"))
-        assertTrue(english.getValue("journal_stat_elbow").contains("2D"))
-        assertTrue(english.getValue("journal_stat_caveat").contains("not a score"))
+        for (prefix in listOf("journal_stat_", "journal_cue", "journal_share_", "journal_model_line")) {
+            assertTrue(prefix, english.keys.none { it.startsWith(prefix) })
+        }
+        for (name in listOf("journal_analysis_start", "journal_analysis_view", "journal_analysis_again", "journal_analysis_note", "journal_analysis_preparing", "journal_analysis_failed_title")) {
+            assertTrue(name, name in english)
+        }
     }
 }

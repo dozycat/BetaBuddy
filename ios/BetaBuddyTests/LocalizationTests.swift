@@ -127,7 +127,7 @@ final class LocalizationTests: XCTestCase {
         let store = ClimbStore(root: root)
         let staged = root.appendingPathComponent("fixture.mov")
         try Data([0]).write(to: staged)
-        let analysis = PoseAnalysis(frames: [], sampledFrames: 0, duration: 1, aspectRatio: 1, processingSeconds: 0, moments: [])
+        let analysis = PoseAnalysis(frames: [], sampledFrames: 0, duration: 1, aspectRatio: 1)
         var climb = try store.save(title: "  ", grade: ungradedValue, sent: false, note: "", stagedVideo: staged, thumbnail: Data(), analysis: analysis)
         XCTAssertEqual(climb.title, "")                       // no language is written into the archive
         XCTAssertFalse(climb.displayTitle.isEmpty)
@@ -142,10 +142,5 @@ final class LocalizationTests: XCTestCase {
     func testStoredValuesHaveDisplayText() {
         XCTAssertFalse(gradeText(ungradedValue).isEmpty)
         XCTAssertEqual(gradeText("V4"), "V4")
-        let cue = Moment(time: 1, title: "stored", detail: "stored detail", kind: Moment.fastMove)
-        XCTAssertNotEqual(cue.displayTitle, "stored")
-        let unknown = Moment(time: 1, title: "stored", detail: "stored detail", kind: "futureKind")
-        XCTAssertEqual(unknown.displayTitle, "stored")
-        XCTAssertEqual(unknown.displayDetail, "stored detail")
     }
 }

@@ -10,44 +10,25 @@ struct Joint: Codable, Equatable, Sendable {
 struct PoseFrame: Codable, Sendable {
     var time: Double
     var joints: [Joint]
+    /// The landmarker's world landmarks for the same sample: 33 × `[x, y, z, visibility]`.
+    /// Absent in records written before they were kept; those need pose recognition again
+    /// before the pack's analysis page can use them.
+    var world: [[Double]]? = nil
     var hasReliableTorso: Bool {
         joints.count == 33 && [11, 12, 23, 24].allSatisfy { joints[$0].valid }
     }
-    // Image-space hip midpoint; never presented as physical center of mass.
-    var hip: Joint? {
-        guard joints.count == 33, joints[23].valid, joints[24].valid else { return nil }
-        return Joint(x: (joints[23].x + joints[24].x) / 2,
-                     y: (joints[23].y + joints[24].y) / 2,
-                     confidence: min(joints[23].confidence, joints[24].confidence))
-    }
+    var hasWorldLandmarks: Bool { world?.count == 33 }
 }
 
-struct Moment: Codable, Identifiable, Sendable {
-    var id = UUID()
-    var time: Double
-    var title: String
-    var detail: String
-    /// What triggered the cue. The app shows localized text for known kinds and falls back to
-    /// the stored `title` / `detail`, which stay in the source language.
-    var kind: String? = nil
-    static let raisedHeel = "raisedHeel"
-    static let fastMove = "fastMove"
-}
-
+/// Pose recognition output for one clip. Fields older builds wrote and this one no longer
+/// uses are ignored when an archive is read.
 struct PoseAnalysis: Codable, Sendable {
     var frames: [PoseFrame]
     var sampledFrames: Int
     var duration: Double
     var aspectRatio: Double
-    var processingSeconds: Double
-    var moments: [Moment]
-    var coverage: Double { sampledFrames > 0 ? Double(frames.filter { $0.hip != nil }.count) / Double(sampledFrames) : 0 }
-    var averageElbowAngle: Double? {
-        let values = frames.flatMap { frame in
-            [PoseMath.angle(frame, 11, 13, 15, aspect: aspectRatio), PoseMath.angle(frame, 12, 14, 16, aspect: aspectRatio)].compactMap { $0 }
-        }
-        return values.isEmpty ? nil : values.reduce(0, +) / Double(values.count)
-    }
+    /// False for records analysed before world landmarks were kept, and for clips not analysed yet.
+    var hasWorldLandmarks: Bool { frames.contains(where: \.hasWorldLandmarks) }
     func nearestFrame(to time: Double) -> PoseFrame? {
         // Binary search. Do not draw a stale skeleton across missing detections.
         var low = 0, high = frames.count
@@ -125,6 +106,9 @@ struct Archive: Codable {
         folders = try values.decodeIfPresent([ClimbFolder].self, forKey: .folders) ?? []
     }
 }
+
+/// Four decimal places are enough for stored landmarks and keep the archive small.
+func rounded4(_ value: Double) -> Double { (value * 10_000).rounded() / 10_000 }
 
 func clockText(_ time: Double) -> String {
     let seconds = max(0, Int(time.isFinite ? time : 0))

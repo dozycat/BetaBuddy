@@ -54,6 +54,7 @@ import com.betabuddy.android.R
 import com.betabuddy.android.data.Climb
 import com.betabuddy.android.data.UNGRADED_VALUE
 import com.betabuddy.android.data.clockText
+import com.betabuddy.android.gym.GymPack
 import com.betabuddy.android.review.ReviewScreen
 import com.betabuddy.android.ui.common.BBIcons
 import com.betabuddy.android.ui.common.BigButton
@@ -72,9 +73,11 @@ private const val ROUTE_REVIEW = "review:"
 /**
  * The logbook: the user's own climbs. List → import → replay, all inside this one entry.
  * Counterpart of JournalView / ImportView / ReviewView on iOS.
+ *
+ * [analysisPack] is the gym pack in this build, if any; the replay offers its analysis page.
  */
 @Composable
-fun JournalScreen(onOpenSettings: () -> Unit) {
+fun JournalScreen(onOpenSettings: () -> Unit, analysisPack: GymPack? = null) {
     val model: JournalViewModel = viewModel()
     var route by rememberSaveable { mutableStateOf(ROUTE_LIST) }
     val climbs by model.climbs.collectAsState()
@@ -92,7 +95,7 @@ fun JournalScreen(onOpenSettings: () -> Unit) {
             val climb = list?.firstOrNull { it.id == id }
             BackHandler { route = ROUTE_LIST }
             when {
-                climb != null -> ReviewScreen(climb = climb, model = model, onBack = { route = ROUTE_LIST })
+                climb != null -> ReviewScreen(climb = climb, model = model, analysisPack = analysisPack, onBack = { route = ROUTE_LIST })
                 list != null -> LaunchedEffect(id) { route = ROUTE_LIST } // deleted, or gone after a restore
                 else -> Box(Modifier.fillMaxSize().background(BB.Paper))
             }

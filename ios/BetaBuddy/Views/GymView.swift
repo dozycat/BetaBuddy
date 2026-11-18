@@ -82,42 +82,56 @@ final class GymSession: NSObject, ObservableObject, WKNavigationDelegate, WKScri
         return URLRequest(url: pack.entryURL(hintSeen: UserDefaults.standard.bool(forKey: Self.hintSeenKey), language: AppLanguage.current, extraQuery: query))
     }
 
+    /// The one way a pack page is hosted, shared by the gym and the analysis page: files come from
+    /// the pack's own scheme, network loads are blocked, no website data is kept, and scrolling
+    /// bounce, zoom and link previews are off. `nil` when the network block cannot be installed:
+    /// fail closed, the page is not shown at all.
+    static func makeWebView(pack: GymPack, handler: WKScriptMessageHandler, delegate: WKNavigationDelegate) async -> WKWebView? {
+        guard let rules = try? await WKContentRuleListStore.default()
+            .compileContentRuleList(forIdentifier: "gym-offline", encodedContentRuleList: blockRules) else { return nil }
+        let configuration = WKWebViewConfiguration()
+        configuration.websiteDataStore = .nonPersistent()
+        configuration.allowsInlineMediaPlayback = true
+        configuration.setURLSchemeHandler(GymSchemeHandler(pack: pack), forURLScheme: GymPack.scheme)
+        configuration.userContentController.add(rules)
+        configuration.userContentController.add(handler, name: handlerName)
+        let view = WKWebView(frame: .zero, configuration: configuration)
+        view.navigationDelegate = delegate
+        view.allowsBackForwardNavigationGestures = false
+        view.allowsLinkPreview = false
+        view.isOpaque = false
+        view.backgroundColor = UIColor(BB.paper)
+        view.scrollView.backgroundColor = UIColor(BB.paper)
+        view.scrollView.bounces = false
+        view.scrollView.alwaysBounceVertical = false
+        view.scrollView.bouncesZoom = false
+        view.scrollView.minimumZoomScale = 1
+        view.scrollView.maximumZoomScale = 1
+        view.scrollView.pinchGestureRecognizer?.isEnabled = false
+        view.scrollView.showsVerticalScrollIndicator = false
+        view.scrollView.showsHorizontalScrollIndicator = false
+        // The page lays itself out with env(safe-area-inset-*).
+        view.scrollView.contentInsetAdjustmentBehavior = .never
+        #if DEBUG
+        view.isInspectable = true
+        #endif
+        return view
+    }
+
+    /// Only the pack's own origin may be navigated to, plus blank subframes the page makes itself.
+    static func navigationPolicy(pack: GymPack?, for action: WKNavigationAction) -> WKNavigationActionPolicy {
+        let blankSubframe = action.targetFrame?.isMainFrame == false && action.request.url?.scheme == "about"
+        return action.targetFrame != nil && (pack?.allows(action.request.url) == true || blankSubframe) ? .allow : .cancel
+    }
+
     func start() {
         guard phase == .idle, let pack else { return }
         phase = .loading
         Task {
-            // Fail closed: without the network block the page is not shown at all.
-            guard let rules = try? await WKContentRuleListStore.default()
-                .compileContentRuleList(forIdentifier: "gym-offline", encodedContentRuleList: Self.blockRules) else {
+            guard let view = await Self.makeWebView(pack: pack, handler: self, delegate: self) else {
                 phase = .failed(String(localized: "无法启用离线保护，岩馆页面没有打开。", bundle: AppLanguage.bundle))
                 return
             }
-            let configuration = WKWebViewConfiguration()
-            configuration.websiteDataStore = .nonPersistent()
-            configuration.allowsInlineMediaPlayback = true
-            configuration.setURLSchemeHandler(GymSchemeHandler(pack: pack), forURLScheme: GymPack.scheme)
-            configuration.userContentController.add(rules)
-            configuration.userContentController.add(self, name: Self.handlerName)
-            let view = WKWebView(frame: .zero, configuration: configuration)
-            view.navigationDelegate = self
-            view.allowsBackForwardNavigationGestures = false
-            view.allowsLinkPreview = false
-            view.isOpaque = false
-            view.backgroundColor = UIColor(BB.paper)
-            view.scrollView.backgroundColor = UIColor(BB.paper)
-            view.scrollView.bounces = false
-            view.scrollView.alwaysBounceVertical = false
-            view.scrollView.bouncesZoom = false
-            view.scrollView.minimumZoomScale = 1
-            view.scrollView.maximumZoomScale = 1
-            view.scrollView.pinchGestureRecognizer?.isEnabled = false
-            view.scrollView.showsVerticalScrollIndicator = false
-            view.scrollView.showsHorizontalScrollIndicator = false
-            // The page lays itself out with env(safe-area-inset-*).
-            view.scrollView.contentInsetAdjustmentBehavior = .never
-            #if DEBUG
-            view.isInspectable = true
-            #endif
             webView = view
             loadStarted = Date()
             view.load(entryRequest(pack))
@@ -146,8 +160,7 @@ final class GymSession: NSObject, ObservableObject, WKNavigationDelegate, WKScri
     }
 
     func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction) async -> WKNavigationActionPolicy {
-        let blankSubframe = action.targetFrame?.isMainFrame == false && action.request.url?.scheme == "about"
-        return action.targetFrame != nil && (pack?.allows(action.request.url) == true || blankSubframe) ? .allow : .cancel
+        Self.navigationPolicy(pack: pack, for: action)
     }
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         log.info("document loaded in \(Date().timeIntervalSince(self.loadStarted), format: .fixed(precision: 2)) s")

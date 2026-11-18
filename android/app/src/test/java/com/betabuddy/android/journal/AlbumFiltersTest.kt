@@ -10,7 +10,7 @@ import org.junit.Test
 
 class AlbumFiltersTest {
     private val zone = ZoneId.of("Asia/Shanghai")
-    private val climb = Climb("id", Climb.dateFromMillis(Instant.parse("2026-11-13T16:00:00Z").toEpochMilli()), "project", "V3", false, "", "v", "t", PoseAnalysis(emptyList(), 0, 1.0, 1.0, 0.0, emptyList()))
+    private val climb = Climb("id", Climb.dateFromMillis(Instant.parse("2026-11-13T16:00:00Z").toEpochMilli()), "project", "V3", false, "", "v", "t", PoseAnalysis(emptyList(), 0, 1.0, 1.0))
 
     @Test fun datesAreInclusiveInLocalTimeAndOldRecordsFallBackToImportDate() {
         val day = LocalDate.of(2026, 11, 14)

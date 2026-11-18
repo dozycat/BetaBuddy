@@ -187,6 +187,76 @@ final class GymPackTests: XCTestCase {
         let hostile = GymCommand.openWall(#"a");alert(1);("#).script
         XCTAssertTrue(hostile.contains(#"openWall("a\");alert(1);(")"#))
     }
+    // The analysis page is offered only by a pack that lists it.
+    func testAnalysisPageIsOfferedOnlyWhenThePackListsIt() throws {
+        let without = try GymPack(directory:try writePack(manifest:manifest))
+        XCTAssertFalse(without.supportsAnalysis)
+        XCTAssertNil(without.analysisURL(language:"en"))
+        let listed = manifest.replacingOccurrences(of:#""files":["#,with:#""files":[{"path":"analysis.html","sha256":"cc","bytes":7},"#)
+        let with = try GymPack(directory:try writePack(manifest:listed,files:["index.html","data/scene.bin","analysis.html"]))
+        XCTAssertTrue(with.supportsAnalysis)
+        let url = try XCTUnwrap(with.analysisURL(language:"zh-Hant"))
+        XCTAssertEqual(url.absoluteString,"gympack://local/analysis.html?lang=zh-Hant")
+        XCTAssertTrue(with.allows(url))
+        XCTAssertEqual(with.file(for:url)?.lastPathComponent,"analysis.html")
+        // Listed but not on disk: the pack as a whole is incomplete, as for any other file.
+        try FileManager.default.removeItem(at:root.appendingPathComponent("GymPack/analysis.html"))
+        XCTAssertEqual(GymPack.status(in:root),.invalid(.missingFile("analysis.html")))
+    }
+    func testAnalysisPageMessages() {
+        XCTAssertEqual(AnalysisMessage(body:["type":"analysisReady","packVersion":"0.0.1"]),.ready)
+        XCTAssertEqual(AnalysisMessage(body:["type":"analysisResult","id":"abc","json":"{\"v\":1}","climber":["height":171,"weight":62.5,"flag":true,"name":"x","bad":Double.nan]]),
+                       .result(id:"abc",json:"{\"v\":1}",climber:["height":171,"weight":62.5]))
+        XCTAssertEqual(AnalysisMessage(body:["type":"analysisResult","json":"{}"]),.result(id:"",json:"{}",climber:[:]))
+        XCTAssertNil(AnalysisMessage(body:["type":"analysisResult","id":"abc"]))
+        XCTAssertNil(AnalysisMessage(body:["type":"analysisResult","json":""]))
+        XCTAssertNil(AnalysisMessage(body:["type":"analysisResult","json":String(repeating:"x",count:AnalysisMessage.maximumResultLength + 1)]))
+        XCTAssertEqual(AnalysisMessage(body:["type":"analysisSeek","t":12.5]),.seek(12.5))
+        XCTAssertEqual(AnalysisMessage(body:["type":"analysisSeek","t":-3]),.seek(0))
+        XCTAssertNil(AnalysisMessage(body:["type":"analysisSeek"]))
+        XCTAssertNil(AnalysisMessage(body:["type":"analysisSeek","t":"soon"]))
+        XCTAssertNil(AnalysisMessage(body:["type":"analysisSeek","t":Double.infinity]))
+        XCTAssertEqual(AnalysisMessage(body:["type":"analysisError","code":"synthetic","message":"m"]),.failed(code:"synthetic"))
+        XCTAssertEqual(AnalysisMessage(body:["type":"error","message":"boom"]),.pageError("boom"))
+        // Progress is the page's own to show; unknown types and other shapes are ignored.
+        XCTAssertNil(AnalysisMessage(body:["type":"analysisProgress","stage":"s","fraction":0.5]))
+        XCTAssertNil(AnalysisMessage(body:["type":"somethingElse"]))
+        XCTAssertNil(AnalysisMessage(body:"analysisReady"))
+        // The gym page's messages are untouched, and neither parser takes the other's types.
+        XCTAssertNil(GymMessage(body:["type":"analysisReady"]))
+        XCTAssertNil(GymMessage(body:["type":"analysisSeek","t":1]))
+        XCTAssertNil(AnalysisMessage(body:["type":"ready"]))
+        XCTAssertNil(AnalysisMessage(body:["type":"routeSelected","id":"r-1"]))
+    }
+    func testAnalysisCommandsEncodeTheirArguments() throws {
+        XCTAssertTrue(AnalysisCommand.run.script.contains("BetaBuddyAnalysis.run()"))
+        let begin = AnalysisCommand.begin(id:"7F9619FF",width:1080,height:1920,climber:["height":171]).script
+        XCTAssertTrue(begin.contains(#""id":"7F9619FF""#))
+        XCTAssertTrue(begin.contains(#""w":1080"#))
+        XCTAssertTrue(begin.contains(#""h":1920"#))
+        XCTAssertTrue(begin.contains(#""climber":{"height":171}"#))
+        // No remembered measurements: the key is left out so the page uses its own defaults.
+        XCTAssertFalse(AnalysisCommand.begin(id:"a",width:1,height:1,climber:nil).script.contains("climber"))
+        XCTAssertFalse(AnalysisCommand.begin(id:"a",width:1,height:1,climber:[:]).script.contains("climber"))
+        XCTAssertTrue(AnalysisCommand.addFrame(index:3,time:1.23456,jpegBase64:"QUJD+/8=").script.contains(#"addFrame(3,1.2346,"QUJD+/8=")"#))
+        // A saved result goes back as one string literal, whatever it contains.
+        let hostile = "{\"a\":\"\\\"); alert(1); (\\\"\",\"b\":\"line\\nbreak \u{2028} </script>\"}"
+        let show = AnalysisCommand.show(hostile).script
+        let start = try XCTUnwrap(show.range(of:"BetaBuddyAnalysis.show(",options:.backwards))
+        let end = try XCTUnwrap(show.range(of:"), true)"))
+        let literal = String(show[start.upperBound..<end.lowerBound])
+        XCTAssertEqual(try JSONDecoder().decode(String.self,from:Data(literal.utf8)),hostile)
+        XCTAssertFalse(literal.dropFirst().dropLast().contains { $0 == "\n" })
+        // Samples without world landmarks are not sent.
+        var frame = PoseFrame(time:0.5,joints:Array(repeating:Joint(x:0.25,y:0.75,confidence:0.9),count:33))
+        XCTAssertTrue(AnalysisCommand.addPoses([frame]).script.contains("addPoses([])"))
+        frame.world = Array(repeating:[0.1,-0.2,0.3,0.8],count:33)
+        let poses = AnalysisCommand.addPoses([frame]).script
+        XCTAssertTrue(poses.contains(#"addPoses([{"#))
+        XCTAssertTrue(poses.contains(#""t":0.5"#))
+        XCTAssertTrue(poses.contains("[0.25,0.75,0.8]"))
+        XCTAssertTrue(poses.contains("[0.1,-0.2,0.3,0.8]"))
+    }
     func testOfflineRulesAreValidJSON() throws {
         let rules = try XCTUnwrap(JSONSerialization.jsonObject(with:Data(GymSession.blockRules.utf8)) as? [[String:Any]])
         XCTAssertEqual(rules.count,3)

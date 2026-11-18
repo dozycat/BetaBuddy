@@ -9,10 +9,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.serialization.json.Json
 
 /**
- * Local records: one JSON index plus the original clip and a thumbnail per climb, all inside
+ * Local records: one JSON index plus the original clip and a thumbnail per climb, and for a climb
+ * the pack's analysis page has worked on, that page's result (`<id>.analysis.json`). All inside
  * [root] (an app-private directory). Counterpart of ios/BetaBuddy/Core/ClimbStore.swift.
  *
- * - The index is written to a temporary file, synced, then renamed over the old one.
+ * - The index and a result are written to a temporary file, synced, then renamed over the old one.
  * - An index that cannot be read is left untouched and the store refuses to write.
  * - Unknown fields are ignored on read.
  *
@@ -36,7 +37,9 @@ class ClimbStore(val root: File) {
                 if (loaded.version != 1) throw IOException("Unsupported archive version ${loaded.version}")
                 state.value = loaded
             }
-            file("$INDEX_NAME.tmp").delete() // left behind only if a write was interrupted before the rename
+            // Left behind only if a write was interrupted before the rename.
+            file("$INDEX_NAME.tmp").delete()
+            root.listFiles { _, name -> name.endsWith("$ANALYSIS_RESULT_SUFFIX.tmp") }?.forEach { it.delete() }
         } catch (error: Exception) {
             canWrite = false // Never overwrite an unreadable archive with an empty one.
             loadFailed = true
@@ -51,8 +54,12 @@ class ClimbStore(val root: File) {
     @Synchronized
     private fun persist(next: Archive) {
         if (!canWrite) throw IOException("The archive could not be read and is kept as it is")
-        val temporary = file("$INDEX_NAME.tmp")
-        val bytes = json.encodeToString(Archive.serializer(), next).toByteArray(Charsets.UTF_8)
+        writeAtomically(file(INDEX_NAME), json.encodeToString(Archive.serializer(), next).toByteArray(Charsets.UTF_8))
+        state.value = next
+    }
+
+    private fun writeAtomically(target: File, bytes: ByteArray) {
+        val temporary = File(target.parentFile, target.name + ".tmp")
         try {
             FileOutputStream(temporary).use { stream ->
                 stream.write(bytes)
@@ -60,12 +67,11 @@ class ClimbStore(val root: File) {
                 stream.fd.sync()
             }
             // rename(2) replaces the destination atomically on Android and other POSIX systems.
-            if (!temporary.renameTo(file(INDEX_NAME))) throw IOException("Cannot replace $INDEX_NAME")
+            if (!temporary.renameTo(target)) throw IOException("Cannot replace ${target.name}")
         } catch (error: Exception) {
             temporary.delete()
             throw error
         }
-        state.value = next
     }
 
     /**
@@ -106,12 +112,49 @@ class ClimbStore(val root: File) {
         }
     }
 
-    /** Removes the record, then its clip and thumbnail. */
+    /** Removes the record, then its clip, thumbnail and saved analysis result. */
     @Synchronized
     fun delete(climb: Climb) {
         persist(state.value.copy(climbs = state.value.climbs.filterNot { it.id == climb.id }))
         owned(climb.videoName)?.delete()
         owned(climb.thumbnailName)?.delete()
+        analysisResultFile(climb.id)?.delete()
+    }
+
+    // Result of the pack's analysis page. The text is the page's own format: kept and handed back as it is.
+
+    private fun analysisResultFile(id: String): File? = owned(id + ANALYSIS_RESULT_SUFFIX)
+
+    /** Ids of the climbs that have a saved result. */
+    fun analysisResultIds(): Set<String> {
+        val names = root.list()?.toSet().orEmpty()
+        return state.value.climbs.mapNotNullTo(mutableSetOf()) { climb -> climb.id.takeIf { it + ANALYSIS_RESULT_SUFFIX in names } }
+    }
+
+    /** The page's result exactly as it handed it over, or null when there is none. */
+    fun analysisResult(id: String): String? = try {
+        analysisResultFile(id)?.takeIf { it.isFile }?.readText(Charsets.UTF_8)
+    } catch (error: IOException) {
+        null
+    }
+
+    /**
+     * Kept next to the clip and written like the index. The page sends a result again after the
+     * user adjusts it; each one replaces the last. Returns false when the record is gone
+     * (deleted while the page was open) and nothing was written.
+     */
+    @Synchronized
+    fun saveAnalysisResult(id: String, json: String): Boolean {
+        if (state.value.climbs.none { it.id == id }) return false
+        if (!canWrite) throw IOException("The archive could not be read and is kept as it is")
+        val target = analysisResultFile(id) ?: throw IOException("Unusable record id")
+        writeAtomically(target, json.toByteArray(Charsets.UTF_8))
+        return true
+    }
+
+    @Synchronized
+    fun discardAnalysisResult(id: String) {
+        analysisResultFile(id)?.delete()
     }
 
     @Synchronized
@@ -161,7 +204,7 @@ class ClimbStore(val root: File) {
         }))
     }
 
-    /** Replaces only the analysis; id, date, notes, send status and the clip stay as they are. */
+    /** Queues pose recognition for a climb ([quality] names the level), or clears the request with null. */
     @Synchronized
     fun requestAnalysis(id: String, quality: String?) {
         persist(state.value.copy(climbs = state.value.climbs.map {
@@ -169,6 +212,7 @@ class ClimbStore(val root: File) {
         }))
     }
 
+    /** Replaces only the pose data; id, date, notes, send status, the clip and a saved analysis result stay as they are. */
     @Synchronized
     fun replaceAnalysis(climb: Climb, analysis: PoseAnalysis) {
         val current = state.value
@@ -192,6 +236,7 @@ class ClimbStore(val root: File) {
 
     companion object {
         const val INDEX_NAME = "archive.json"
+        const val ANALYSIS_RESULT_SUFFIX = ".analysis.json"
 
         /** Missing optional fields read as null, unknown fields are ignored, defaults are written. */
         val json = Json { ignoreUnknownKeys = true; explicitNulls = false; encodeDefaults = true }

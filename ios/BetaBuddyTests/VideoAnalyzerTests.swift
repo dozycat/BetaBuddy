@@ -123,9 +123,25 @@ final class VideoAnalyzerTests: XCTestCase {
         let url = try await makeVideo(image:image)
         defer { try? FileManager.default.removeItem(at:url) }
         let result = try await VideoAnalyzer().analyze(url:url,quality:.balanced) { _ in }
-        XCTAssertGreaterThan(result.coverage,0.5)
+        XCTAssertGreaterThan(Double(result.frames.count),0.5 * Double(result.sampledFrames))
         XCTAssertGreaterThan(result.frames.count,2)
         XCTAssertEqual(result.frames.first?.joints.count,33)
+        // World landmarks are kept with every stored sample, as 33 × [x, y, z, visibility] to four decimals.
+        XCTAssertTrue(result.hasWorldLandmarks)
+        XCTAssertTrue(result.frames.allSatisfy { $0.world?.count == 33 && $0.world?.allSatisfy { $0.count == 4 } == true })
+        let numbers = result.frames.flatMap { ($0.world ?? []).flatMap { $0 } + $0.joints.flatMap { [$0.x,$0.y,$0.confidence] } }
+        XCTAssertTrue(numbers.allSatisfy { $0.isFinite && abs($0 * 10_000 - ($0 * 10_000).rounded()) < 0.000_001 })
+        XCTAssertTrue(result.frames.allSatisfy { ($0.world ?? []).allSatisfy { (0...1).contains($0[3]) } })
+        // What goes to the analysis page: each sample as {t, img, lm}, in a script that is valid JSON inside the call.
+        let script = AnalysisCommand.addPoses(result.frames).script
+        let start = try XCTUnwrap(script.range(of:"addPoses(["))
+        let end = try XCTUnwrap(script.range(of:"]), true)"))
+        let payload = "[" + script[start.upperBound..<end.lowerBound] + "]"
+        let poses = try XCTUnwrap(JSONSerialization.jsonObject(with:Data(payload.utf8)) as? [[String:Any]])
+        XCTAssertEqual(poses.count,result.frames.count)
+        XCTAssertEqual((poses[0]["img"] as? [[Double]])?.count,33)
+        XCTAssertEqual((poses[0]["img"] as? [[Double]])?.first?.count,3)
+        XCTAssertEqual(poses[0]["lm"] as? [[Double]],result.frames[0].world)
         XCTAssertEqual(result.aspectRatio,640.0/426,accuracy:0.01)
         XCTAssertLessThanOrEqual(result.sampledFrames,11)
     }
@@ -189,17 +205,51 @@ final class VideoAnalyzerTests: XCTestCase {
         print("REGRESSION",try await track.load(.naturalSize),try await track.load(.preferredTransform))
         for quality in AnalysisQuality.allCases {
             let result = try await VideoAnalyzer().analyze(url:url,quality:quality) { _ in }
-            print("REGRESSION",quality.rawValue,"COVERAGE",result.coverage)
+            let detected = Double(result.frames.count) / Double(max(1,result.sampledFrames))
+            print("REGRESSION",quality.rawValue,"DETECTED",detected)
             try JSONEncoder().encode(result).write(to:URL(fileURLWithPath:"/tmp/bb-regression-\(quality.rawValue).json"))
             // At the user's reported 9-second point, the hips are on the climber
             // near the middle of the frame, not the pipes near the top-right corner.
             let frame = try XCTUnwrap(result.nearestFrame(to:9))
-            let hip = try XCTUnwrap(frame.hip)
-            XCTAssertTrue((0.40...0.60).contains(hip.x))
-            XCTAssertTrue((0.30...0.50).contains(hip.y))
-            XCTAssertGreaterThan(result.coverage,0.45)
+            let hipX = (frame.joints[23].x + frame.joints[24].x) / 2, hipY = (frame.joints[23].y + frame.joints[24].y) / 2
+            XCTAssertTrue((0.40...0.60).contains(hipX))
+            XCTAssertTrue((0.30...0.50).contains(hipY))
+            XCTAssertGreaterThan(detected,0.45)
             XCTAssertTrue(result.frames.allSatisfy(\.hasReliableTorso))
         }
+    }
+
+    // Stills for the analysis page: upright like the pose coordinates, about 540 px wide, in memory only.
+    func testStillsAreUprightEvenlySpreadJPEGs() async throws {
+        let source = try XCTUnwrap(Bundle(for:Self.self).url(forResource:"pose",withExtension:"jpg"))
+        let image = try XCTUnwrap(UIImage(contentsOfFile:source.path))
+        // Stored 640×426, shown rotated: 426×640.
+        let url = try await makeVideo(image:image,transform:CGAffineTransform(a:0,b:1,c:-1,d:0,tx:426,ty:0))
+        defer { try? FileManager.default.removeItem(at:url) }
+        let before = try FileManager.default.contentsOfDirectory(atPath:FileManager.default.temporaryDirectory.path).count
+        let stills = try await VideoAnalyzer().stills(url:url,count:12)
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath:FileManager.default.temporaryDirectory.path).count,before)
+        XCTAssertEqual(stills.width,426)
+        XCTAssertEqual(stills.height,640)
+        XCTAssertEqual(stills.frames.count,12)
+        XCTAssertEqual(stills.frames.map(\.time),stills.frames.map(\.time).sorted())
+        XCTAssertTrue(stills.frames.allSatisfy { (0...1.0).contains($0.time) })
+        XCTAssertGreaterThan(try XCTUnwrap(stills.frames.last).time - stills.frames[0].time,0.5)
+        for frame in stills.frames {
+            let data = try XCTUnwrap(Data(base64Encoded:frame.jpegBase64))
+            XCTAssertEqual(Array(data.prefix(2)),[0xFF,0xD8])
+            let decoded = try XCTUnwrap(UIImage(data:data)?.cgImage)
+            XCTAssertLessThanOrEqual(decoded.width,540)
+            XCTAssertEqual(Double(decoded.width) / Double(decoded.height),426.0 / 640,accuracy:0.01)
+        }
+        // A wide clip is brought down so that its shorter side is the requested size.
+        let wide = try await makeVideo(image:image)
+        defer { try? FileManager.default.removeItem(at:wide) }
+        let small = try await VideoAnalyzer().stills(url:wide,count:5,width:320)
+        XCTAssertEqual(small.width,640)
+        let first = try XCTUnwrap(UIImage(data:try XCTUnwrap(Data(base64Encoded:small.frames[0].jpegBase64)))?.cgImage)
+        XCTAssertEqual(Double(first.height),320,accuracy:1)
+        XCTAssertEqual(Double(first.width) / Double(first.height),640.0 / 426,accuracy:0.01)
     }
 
     func testNoPersonReturnsActionableError() async throws {

@@ -1,15 +1,11 @@
 package com.betabuddy.android.review
 
 import com.betabuddy.android.data.Joint
-import com.betabuddy.android.data.PoseAnalysis
 import com.betabuddy.android.data.PoseFrame
 import com.betabuddy.android.pose.PoseMath
 
 /** Where things go on the replay, with no Android dependency so the rules can be unit-tested. */
 object OverlayGeometry {
-    const val TRAIL_SECONDS = 2.0
-    const val MAX_GAP_SECONDS = 0.3
-
     /**
      * Size of the largest box with the picture's [aspect] (width / height) that fits the container
      * (aspect-fit, i.e. letterboxed or pillarboxed). The video surface and the skeleton canvas are
@@ -33,23 +29,4 @@ object OverlayGeometry {
 
     /** Body points (shoulders down; the face points are left out) that are reliable. */
     fun points(frame: PoseFrame): List<Joint> = frame.joints.drop(11).filter { it.valid }
-
-    /**
-     * The hip-midpoint trail of the last [TRAIL_SECONDS], split into separate polylines wherever
-     * the hips were not reliable or two samples are more than [MAX_GAP_SECONDS] apart. Nothing is
-     * ever drawn across a detection gap.
-     */
-    fun hipTrail(analysis: PoseAnalysis, time: Double): List<List<Joint>> {
-        val segments = mutableListOf<MutableList<Joint>>()
-        var previous: Double? = null
-        for (sample in analysis.frames) {
-            if (sample.time > time || sample.time < time - TRAIL_SECONDS) continue
-            val hip = sample.hip
-            if (hip == null) { previous = null; continue }
-            val last = previous
-            if (last != null && sample.time - last <= MAX_GAP_SECONDS) segments.last().add(hip) else segments.add(mutableListOf(hip))
-            previous = sample.time
-        }
-        return segments
-    }
 }
