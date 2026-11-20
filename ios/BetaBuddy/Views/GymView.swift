@@ -18,10 +18,16 @@ final class GymSchemeHandler: NSObject, WKURLSchemeHandler {
     // No remote source of any kind. The pack uses inline scripts, Blob workers and data: URLs.
     static let contentSecurityPolicy = "default-src 'self' gympack: 'unsafe-inline' 'wasm-unsafe-eval' blob: data:; object-src 'none'; base-uri 'self'; form-action 'none'"
     let pack: GymPack
-    init(pack: GymPack) { self.pack = pack }
+    var isMember: () -> Bool
+    init(pack: GymPack, isMember: @escaping () -> Bool = { false }) {
+        self.pack = pack; self.isMember = isMember
+    }
 
     func webView(_ webView: WKWebView, start task: WKURLSchemeTask) {
         guard let url = task.request.url else { return task.didFailWithError(URLError(.badURL)) }
+        if !isMember(), pack.manifest.requiresMembership(for: url) {
+            return respond(task, url: url, status: 403, type: "text/plain; charset=utf-8", data: Data("Membership required".utf8))
+        }
         // Memory-mapped: a large model is paged in by the kernel instead of being copied onto the heap.
         guard let file = pack.file(for: url), let data = try? Data(contentsOf: file, options: .mappedIfSafe) else {
             return respond(task, url: url, status: 404, type: "text/plain; charset=utf-8", data: Data("Not found".utf8))
@@ -62,7 +68,63 @@ final class GymSession: NSObject, ObservableObject, WKNavigationDelegate, WKScri
     @Published private(set) var selectedRoute: GymRoute?
     /// Bumped when the page asks for the app's settings (`openSettings`).
     @Published private(set) var settingsRequests = 0
+    @Published var showingMembership = false
+    private(set) var isMember = false
+    private(set) var pendingMemberURL: URL?
     private var routeToRestore: String?
+
+    func updateMembership(_ active: Bool) {
+        guard isMember != active else { return }
+        isMember = active
+        if active, let url = pendingMemberURL {
+            pendingMemberURL = nil
+            showingMembership = false
+            load(url)
+        } else if !active, let url = webView?.url, pack?.manifest.requiresMembership(for: url) == true {
+            selectedRoute = nil
+            routeToRestore = nil
+            if let pack { load(pack.entryURL(hintSeen: true, language: AppLanguage.current)) }
+        }
+        decorateVenueList()
+    }
+
+    func cancelMembershipRequest() { pendingMemberURL = nil }
+
+    @discardableResult
+    func authorize(_ url: URL) -> Bool {
+        guard let pack, pack.allows(url) else { return false }
+        guard !isMember && pack.manifest.requiresMembership(for: url) else { return true }
+        pendingMemberURL = url
+        showingMembership = true
+        return false
+    }
+
+    private func load(_ url: URL) {
+        guard authorize(url) else { return }
+        phase = .loading; pageReady = false; loadStarted = Date()
+        webView?.load(URLRequest(url: url))
+    }
+
+    private func decorateVenueList() {
+        let label = String(localized: "会员解锁", bundle: AppLanguage.bundle)
+        let ids = pack?.manifest.venues.filter { GymManifest.requiresMembership(venueID: $0.id) }.map(\.id) ?? []
+        guard let data = try? JSONSerialization.data(withJSONObject: ["ids": ids, "label": label, "member": isMember]),
+              let json = String(data: data, encoding: .utf8) else { return }
+        webView?.evaluateJavaScript("""
+        (() => {
+          const access = \(json);
+          document.querySelectorAll('#venuelist button[data-venue]').forEach(button => {
+            let badge = button.querySelector('[data-membership]');
+            if (badge) badge.remove();
+            if (!access.member && access.ids.includes(button.dataset.venue)) {
+              badge = document.createElement('span'); badge.dataset.membership = 'locked';
+              badge.textContent = '🔒 ' + access.label;
+              button.appendChild(badge);
+            }
+          });
+        })();
+        """)
+    }
     /// Set by the page's `ready`. Before it, a page error means the scene never came up; after it,
     /// errors (an unknown route id, say) are the page's own to show and must not cover it.
     private var pageReady = false
@@ -79,20 +141,27 @@ final class GymSession: NSObject, ObservableObject, WKNavigationDelegate, WKScri
         // `-gymQuery "sheet=half&tab=steps"` on the launch command line puts the page in a given state for screenshots.
         query = UserDefaults.standard.string(forKey: "gymQuery")
         #endif
-        return URLRequest(url: pack.entryURL(hintSeen: UserDefaults.standard.bool(forKey: Self.hintSeenKey), language: AppLanguage.current, extraQuery: query))
+        // Preserve the current venue when changing the interface language.
+        if query == nil, let current = webView?.url,
+           let venue = URLComponents(url: current, resolvingAgainstBaseURL: false)?.queryItems?.first(where: { $0.name == "venue" })?.value {
+            var components = URLComponents(); components.queryItems = [URLQueryItem(name: "venue", value: venue)]
+            query = components.percentEncodedQuery
+        }
+        let requested = pack.entryURL(hintSeen: UserDefaults.standard.bool(forKey: Self.hintSeenKey), language: AppLanguage.current, extraQuery: query)
+        return URLRequest(url: authorize(requested) ? requested : pack.entryURL(hintSeen: true, language: AppLanguage.current))
     }
 
     /// The one way a pack page is hosted, shared by the gym and the analysis page: files come from
     /// the pack's own scheme, network loads are blocked, no website data is kept, and scrolling
     /// bounce, zoom and link previews are off. `nil` when the network block cannot be installed:
     /// fail closed, the page is not shown at all.
-    static func makeWebView(pack: GymPack, handler: WKScriptMessageHandler, delegate: WKNavigationDelegate) async -> WKWebView? {
+    static func makeWebView(pack: GymPack, handler: WKScriptMessageHandler, delegate: WKNavigationDelegate, isMember: @escaping () -> Bool = { false }) async -> WKWebView? {
         guard let rules = try? await WKContentRuleListStore.default()
             .compileContentRuleList(forIdentifier: "gym-offline", encodedContentRuleList: blockRules) else { return nil }
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = .nonPersistent()
         configuration.allowsInlineMediaPlayback = true
-        configuration.setURLSchemeHandler(GymSchemeHandler(pack: pack), forURLScheme: GymPack.scheme)
+        configuration.setURLSchemeHandler(GymSchemeHandler(pack: pack, isMember: isMember), forURLScheme: GymPack.scheme)
         configuration.userContentController.add(rules)
         configuration.userContentController.add(handler, name: handlerName)
         let view = WKWebView(frame: .zero, configuration: configuration)
@@ -128,7 +197,7 @@ final class GymSession: NSObject, ObservableObject, WKNavigationDelegate, WKScri
         guard phase == .idle, let pack else { return }
         phase = .loading
         Task {
-            guard let view = await Self.makeWebView(pack: pack, handler: self, delegate: self) else {
+            guard let view = await Self.makeWebView(pack: pack, handler: self, delegate: self, isMember: { [weak self] in self?.isMember == true }) else {
                 phase = .failed(String(localized: "无法启用离线保护，岩馆页面没有打开。", bundle: AppLanguage.bundle))
                 return
             }
@@ -160,9 +229,12 @@ final class GymSession: NSObject, ObservableObject, WKNavigationDelegate, WKScri
     }
 
     func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction) async -> WKNavigationActionPolicy {
-        Self.navigationPolicy(pack: pack, for: action)
+        guard Self.navigationPolicy(pack: pack, for: action) == .allow else { return .cancel }
+        if let url = action.request.url, pack?.allows(url) == true, !authorize(url) { return .cancel }
+        return .allow
     }
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        decorateVenueList()
         log.info("document loaded in \(Date().timeIntervalSince(self.loadStarted), format: .fixed(precision: 2)) s")
         if phase == .loading { phase = .ready }
     }
@@ -181,6 +253,7 @@ final class GymSession: NSObject, ObservableObject, WKNavigationDelegate, WKScri
         guard message.frameInfo.isMainFrame, let parsed = GymMessage(body: message.body) else { return }
         switch parsed {
         case .ready:
+            decorateVenueList()
             pageReady = true
             log.info("page ready in \(Date().timeIntervalSince(self.loadStarted), format: .fixed(precision: 2)) s")
             if phase == .loading { phase = .ready }

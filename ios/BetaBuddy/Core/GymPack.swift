@@ -8,6 +8,26 @@ struct GymManifest: Decodable, Equatable, Sendable {
         var path: String
         var sha256: String
     }
+    struct Venue: Decodable, Equatable, Sendable {
+        var id: String
+        var files: [String]
+    }
+    var venues: [Venue] = []
+    // The original venue remains free, even if a future pack changes its default.
+    static let freeVenueID = "banana-kerry"
+    static func requiresMembership(venueID: String) -> Bool { venueID != freeVenueID }
+
+    func requiresMembership(for url: URL) -> Bool {
+        let query = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+        for item in query {
+            guard let value = item.value, !value.isEmpty else { continue }
+            if item.name == "venue", Self.requiresMembership(venueID: value) { return true }
+            if ["route", "wall"].contains(item.name), value.contains("/"),
+               Self.requiresMembership(venueID: String(value.split(separator: "/", omittingEmptySubsequences: false)[0])) { return true }
+        }
+        let path = url.standardized.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        return venues.contains { Self.requiresMembership(venueID: $0.id) && $0.files.contains(path) }
+    }
     static let supportedSchema = 1
     var schema: Int
     var packVersion: String
@@ -43,6 +63,7 @@ struct GymManifest: Decodable, Equatable, Sendable {
             }
             return value
         }
+        venues = try first([Venue].self, "venues") ?? []
         schema = try first(Int.self, "schema", "schemaVersion", "schema_version") ?? 1
         packVersion = try required(first(String.self, "packVersion", "pack_version", "version"), "packVersion")
         generatedAt = try required(first(String.self, "generatedAt", "generated_at"), "generatedAt")

@@ -1,5 +1,7 @@
 # BetaBuddy 发布状态
 
+2026-11-20：已准备 iOS **1.5.0 (17)**，内置 GymPack **1.6.0**（数据提交 `3a91196`）。额外岩馆绑定现有终生会员；香蕉嘉里继续免费。StoreKit 本地购买、恢复、退款与实际 WKWebView 切馆集成验证通过，签名归档及 16 个数据文件哈希校验通过。首次上传返回 `Failed to Use Accounts`，正在处理 Xcode 账户认证；**尚未上传或分发本构建**。详情见 [release-1.5.0.md](release-1.5.0.md)。
+
 2026-11-15：默认直接保存视频、可选后台分析、自动提取及编辑拍摄时间已提交，发布版本设为 **1.4.0 (15)**。本机签名 Release 归档成功，包内版本与 GymPack **1.3.9** 的 10 个文件校验通过。两次上传均在 Xcode 账户检查阶段返回 `Failed to Use Accounts`，**未上传成功、未分发 TestFlight，也未提交 App Store 审核**。用户决定换电脑继续发布；需要在新机器登录有该 App 上传权限的 Apple 账号，安全迁移本地 GymPack 后重新归档。继续前先核对 Connect 是否已有同版本／构建，避免重复上传。测试说明见 [release-1.4.0.md](release-1.4.0.md)。
 
 同轮 Android **1.2.0 (2)** 的签名 APK/AAB 已在本机生成，与此前 GitHub 发布 APK 的签名证书一致；用户切换电脑前尚未创建 `android-v1.2.0` Release。见 [Android 1.2.0](../../android/releases/1.2.0.md)。支持站点的新版说明与隐私文案已提交，但线上部署未完成：本机 Wrangler 当前可访问的两个账号都不拥有 `betabuddy-support`，应切换到现有 Worker 所属账号后更新，不在错误账号新建同名站点。

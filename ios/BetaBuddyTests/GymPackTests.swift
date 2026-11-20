@@ -37,6 +37,55 @@ final class GymPackTests: XCTestCase {
      "entry":"index.html","files":[{"path":"index.html","sha256":"aa","bytes":7},{"path":"data/scene.bin","sha256":"bb","bytes":7}]}
     """
 
+    private func multiVenuePack() throws -> GymPack {
+        let json = manifest.replacingOccurrences(of: #""schema":1"#, with: #""schema":1,"venues":[{"id":"banana-kerry","files":["index.html"]},{"id":"dome-xuhui","files":["data/scene.bin"]}]"#)
+        return try GymPack(directory: writePack(manifest: json))
+    }
+
+    func testAdditionalVenueGateCoversLinksAndResources() throws {
+        let pack = try multiVenuePack()
+        for suffix in ["?venue=dome-xuhui", "?route=dome-xuhui%2Froute", "?wall=dome-xuhui%2Froof", "?venue=banana-kerry&route=dome-xuhui/r", "?venue=future-gym", "?route=/malformed"] {
+            XCTAssertTrue(pack.manifest.requiresMembership(for: URL(string: "gympack://local/index.html" + suffix)!), suffix)
+        }
+        for suffix in ["", "?venue=banana-kerry", "?route=baishan-green", "?wall=banana-kerry/baishan"] {
+            XCTAssertFalse(pack.manifest.requiresMembership(for: URL(string: "gympack://local/index.html" + suffix)!), suffix)
+        }
+        var member = false
+        let handler = GymSchemeHandler(pack: pack, isMember: { member })
+        let view = WKWebView()
+        for path in ["data/scene.bin", "data/%73cene.bin", "data/../data/scene.bin"] {
+            let task = SchemeTask("gympack://local/" + path)
+            handler.webView(view, start: task)
+            XCTAssertEqual(task.response?.statusCode, 403)
+            XCTAssertNotEqual(task.body, Data("fixture".utf8))
+        }
+        member = true
+        let unlocked = SchemeTask("gympack://local/data/scene.bin")
+        handler.webView(view, start: unlocked)
+        XCTAssertEqual(unlocked.response?.statusCode, 200)
+        member = false
+        let revoked = SchemeTask("gympack://local/data/scene.bin")
+        handler.webView(view, start: revoked)
+        XCTAssertEqual(revoked.response?.statusCode, 403)
+    }
+
+    func testCancelledPaywallDoesNotOpenPremiumVenue() throws {
+        let session = GymSession(status: .ready(try multiVenuePack()))
+        let premium = URL(string: "gympack://local/index.html?venue=dome-xuhui")!
+        XCTAssertFalse(session.authorize(premium))
+        XCTAssertTrue(session.showingMembership)
+        XCTAssertEqual(session.pendingMemberURL, premium)
+        session.cancelMembershipRequest()
+        XCTAssertNil(session.pendingMemberURL)
+        XCTAssertFalse(session.authorize(premium))
+        session.updateMembership(true)
+        XCTAssertNil(session.pendingMemberURL)
+        XCTAssertFalse(session.showingMembership)
+        XCTAssertTrue(session.authorize(premium))
+        session.updateMembership(false)
+        XCTAssertFalse(session.authorize(premium))
+    }
+
     func testManifestDecodes() throws {
         let decoded = try JSONDecoder().decode(GymManifest.self, from:Data(manifest.utf8))
         XCTAssertEqual(decoded.packVersion,"0.0.1")

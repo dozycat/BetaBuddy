@@ -7344,6 +7344,181 @@
           }
         }
       }
+    },
+    "会员解锁": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "会员解锁"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "會員解鎖"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Members only"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メンバー限定"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "회원 전용"
+          }
+        }
+      }
+    },
+    "解锁更多岩馆，并获得终生会员标识。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "解锁更多岩馆，并获得终生会员标识。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "解鎖更多岩館，並獲得終生會員標識。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unlock more gyms and receive a lifetime member badge."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "より多くのジムと永久メンバーバッジをアンロック。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "더 많은 암장과 평생 회원 배지를 이용하세요."
+          }
+        }
+      }
+    },
+    "香蕉嘉里与攀爬册免费使用；更多岩馆需终生会员解锁。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "香蕉嘉里与攀爬册免费使用；更多岩馆需终生会员解锁。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "香蕉嘉里與攀爬冊免費使用；更多岩館需終生會員解鎖。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BANANA+ Kerry and Logbook are free. Lifetime membership unlocks additional gyms."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BANANA+ ケリーとクライムログは無料です。追加のジムは永久メンバーシップで利用できます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BANANA+ 케리와 등반 일지는 무료입니다. 추가 암장은 평생 회원으로 이용할 수 있습니다."
+          }
+        }
+      }
+    },
+    "解锁更多岩馆": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "解锁更多岩馆"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "解鎖更多岩館"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unlock more gyms"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "より多くのジムをアンロック"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "더 많은 암장 이용"
+          }
+        }
+      }
+    },
+    "解锁 DOME 徐汇万科及后续新增岩馆的线路与攀爬推演。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "解锁 DOME 徐汇万科及后续新增岩馆的线路与攀爬推演。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "解鎖 DOME 徐匯萬科及後續新增岩館的路線與攀爬推演。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unlock problems and movement simulations at DOME Xuhui Vanke and future additional gyms."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DOME 徐匯万科と今後追加されるジムの課題と登り方シミュレーションを利用できます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DOME 쉬후이 완커와 앞으로 추가되는 암장의 문제 및 등반 시뮬레이션을 이용하세요."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

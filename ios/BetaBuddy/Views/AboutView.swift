@@ -25,7 +25,7 @@ struct AboutView: View {
                 if membership.isMember {
                     Text("终生会员已解锁").font(.headline).accessibilityIdentifier("membershipActive")
                 } else {
-                    Text("支持独立开发，现在获得会员标识。")
+                    Text("解锁更多岩馆，并获得终生会员标识。")
                         .foregroundStyle(BB.muted)
                     Button { showingMembership = true } label: {
                         HStack(spacing:12) {
@@ -100,12 +100,15 @@ struct MembershipOfferView: View {
                 Text("终生会员").font(BB.display(38))
                 Text("一次购买，支持 BetaBuddy 继续迭代。")
                     .font(.title3.bold())
-                Text("岩馆与攀爬册仍可免费使用；会员购买是可选的。")
+                Text("香蕉嘉里与攀爬册免费使用；更多岩馆需终生会员解锁。")
                     .foregroundStyle(BB.muted)
             }
             VStack(alignment:.leading,spacing:16) {
                 SectionLabel(title:"购买后立即获得",trailing:"AVAILABLE NOW")
                     .accessibilityIdentifier("membershipBenefitsNow")
+                Label("解锁更多岩馆", systemImage: "map.fill").font(.headline)
+                Text("解锁 DOME 徐汇万科及后续新增岩馆的线路与攀爬推演。")
+                    .foregroundStyle(BB.muted)
                 HStack(spacing:12) {
                     MemberMark().frame(width:32,height:32)
                     Text("攀爬册终生会员标识").font(.headline)

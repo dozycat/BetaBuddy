@@ -20,8 +20,8 @@ targets:
       base:
         TARGETED_DEVICE_FAMILY: '1'
         PRODUCT_BUNDLE_IDENTIFIER: com.betabuddy.ios
-        MARKETING_VERSION: '1.4.0'
-        CURRENT_PROJECT_VERSION: 15
+        MARKETING_VERSION: '1.5.0'
+        CURRENT_PROJECT_VERSION: 17
         GENERATE_INFOPLIST_FILE: YES
         ENABLE_USER_SCRIPT_SANDBOXING: NO
         INFOPLIST_KEY_CFBundleDisplayName: BetaBuddy
@@ -71,7 +71,10 @@ targets:
   BetaBuddyTests:
     type: bundle.unit-test
     platform: iOS
-    sources: [BetaBuddyTests]
+    sources:
+      - BetaBuddyTests
+      - path: StoreKit/Lifetime.storekit
+        buildPhase: resources
     dependencies:
       - target: BetaBuddy
     settings:

@@ -55,6 +55,7 @@ struct BetaBuddyApp: App {
 }
 
 struct RootView: View {
+    @EnvironmentObject private var membership: MembershipStore
     @EnvironmentObject private var language: LanguageSettings
     // 0 = 岩馆, 1 = 攀爬册. `-initialTab 1` on the launch command line opens the logbook; nothing writes this key.
     @State private var tab = min(1, max(0, UserDefaults.standard.integer(forKey: "initialTab")))
@@ -83,6 +84,12 @@ struct RootView: View {
             .sheet(isPresented:$settings) {
                 NavigationStack { AboutView() }.id(language.language).environment(\.locale, language.locale).tint(BB.ink)
             }
+            .sheet(isPresented: $gym.showingMembership, onDismiss: { gym.cancelMembershipRequest() }) {
+                NavigationStack { MembershipOfferView() }
+                    .environment(\.locale, language.locale).tint(BB.ink)
+            }
+            .onAppear { gym.updateMembership(membership.isMember) }
+            .onChange(of: membership.isMember) { _, active in gym.updateMembership(active) }
             .onChange(of: language.language) { _, _ in gym.languageChanged() }
             .onReceive(gym.$settingsRequests.dropFirst()) { _ in settings = true }
     }

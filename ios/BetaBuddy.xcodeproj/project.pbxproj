@@ -42,6 +42,7 @@
 		A12147024A4CA862D346FE8B /* GymView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85F50739B83E9927D442985F /* GymView.swift */; };
 		A5C72DB499BCC606758BA91C /* PoseMath.swift in Sources */ = {isa = PBXBuildFile; fileRef = D223147C2D7F097ECD8149E6 /* PoseMath.swift */; };
 		A5F04A407DAACC93DBF3EB71 /* JournalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC6B978A0067117F43BF8620 /* JournalView.swift */; };
+		A6CCE212361BF1F9111BB557 /* MembershipTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 098503FA49B611AD0616C62D /* MembershipTests.swift */; };
 		A96C10334BDC71914EBE9469 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C9F3BFB7EEED9BE808D1130 /* AVFoundation.framework */; };
 		ADB7801DC2438A7B6D4E7884 /* CoreMedia.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 95F7B89B57416C9C6E6F5B54 /* CoreMedia.framework */; };
 		BFF41156BA3A9A81EE253DAF /* MediaPipeTasksVision.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2EF79A2082843E4FAA12EB15 /* MediaPipeTasksVision.xcframework */; };
@@ -59,6 +60,7 @@
 		F6D7FB90B021A91BE921D1C2 /* PrivacyPolicy.zh-Hant.txt in Resources */ = {isa = PBXBuildFile; fileRef = B0649400930E39CFF60A087A /* PrivacyPolicy.zh-Hant.txt */; };
 		F8255E49A19A07759A685565 /* GymDirectoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04D26467BEEDD8CB1AE638D9 /* GymDirectoryTests.swift */; };
 		F912FE304C3B66C059B51027 /* ClimbStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C4FB4CECDEE3100CF22FF22 /* ClimbStoreTests.swift */; };
+		FA9F59E066ECB94076ACACAE /* Lifetime.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 445811D9319624B389D3A244 /* Lifetime.storekit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -83,6 +85,7 @@
 		03348833A75068E88ECDAE98 /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
 		04252B4DF93CA2D2C02CB050 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		04D26467BEEDD8CB1AE638D9 /* GymDirectoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GymDirectoryTests.swift; sourceTree = "<group>"; };
+		098503FA49B611AD0616C62D /* MembershipTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MembershipTests.swift; sourceTree = "<group>"; };
 		1CD99D493E1B4B93BA6A1EDD /* BetaBuddyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BetaBuddyApp.swift; sourceTree = "<group>"; };
 		1F1A0F0CEA9DD60D3F574A78 /* MembershipStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MembershipStore.swift; sourceTree = "<group>"; };
 		2109D140B32372930A88FB14 /* AlbumUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlbumUITests.swift; sourceTree = "<group>"; };
@@ -96,6 +99,7 @@
 		3FC04FB3A97368DF160C336E /* ReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewView.swift; sourceTree = "<group>"; };
 		409A3404909ABC21AE90E6FD /* LocalTasksLogger.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = LocalTasksLogger.cc; sourceTree = "<group>"; };
 		42A6F303EF87EE37EFBE4353 /* BrandMark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrandMark.swift; sourceTree = "<group>"; };
+		445811D9319624B389D3A244 /* Lifetime.storekit */ = {isa = PBXFileReference; path = Lifetime.storekit; sourceTree = "<group>"; };
 		494540B4B6EC6FBF8A07CD7D /* AnalysisView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalysisView.swift; sourceTree = "<group>"; };
 		4E647546AE9AC14BC8F5396E /* BetaBuddyUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = BetaBuddyUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		594EB98E4EE6131FFD0E8988 /* LocalizationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationTests.swift; sourceTree = "<group>"; };
@@ -247,6 +251,14 @@
 			path = Core;
 			sourceTree = "<group>";
 		};
+		AA25DF398564243AC20B293C /* StoreKit */ = {
+			isa = PBXGroup;
+			children = (
+				445811D9319624B389D3A244 /* Lifetime.storekit */,
+			);
+			path = StoreKit;
+			sourceTree = "<group>";
+		};
 		BBB1982700F161353C98037C /* Fixtures */ = {
 			isa = PBXGroup;
 			children = (
@@ -279,6 +291,7 @@
 				04D26467BEEDD8CB1AE638D9 /* GymDirectoryTests.swift */,
 				A7318870BC8802A65E6F1001 /* GymPackTests.swift */,
 				594EB98E4EE6131FFD0E8988 /* LocalizationTests.swift */,
+				098503FA49B611AD0616C62D /* MembershipTests.swift */,
 				ECCFE48838B717B182EE97DE /* VideoAnalyzerTests.swift */,
 				BBB1982700F161353C98037C /* Fixtures */,
 			);
@@ -310,6 +323,7 @@
 				EF52E5E76E36D7772D9CBD75 /* BetaBuddyTests */,
 				F98945FB07B9076B50934EA6 /* BetaBuddyUITests */,
 				FCFBE03AF09756F0389CBB19 /* LocalMediaPipe */,
+				AA25DF398564243AC20B293C /* StoreKit */,
 				75A84AB88065F16F87A45D9B /* Frameworks */,
 				7807E0EC0A58090FB5B7504C /* Products */,
 			);
@@ -426,6 +440,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FA9F59E066ECB94076ACACAE /* Lifetime.storekit in Resources */,
 				1DF8E8AB37624057221AA670 /* pose.jpg in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -483,6 +498,7 @@
 				F8255E49A19A07759A685565 /* GymDirectoryTests.swift in Sources */,
 				3055DB323A34FC37D2A7A210 /* GymPackTests.swift in Sources */,
 				07D0E8425853630B63AB89CF /* LocalizationTests.swift in Sources */,
+				A6CCE212361BF1F9111BB557 /* MembershipTests.swift in Sources */,
 				1124280948F2454C8A8D2FC9 /* VideoAnalyzerTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -562,7 +578,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_CXX_LANGUAGE_STANDARD = "c++17";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 15;
+				CURRENT_PROJECT_VERSION = 17;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
@@ -582,7 +598,7 @@
 					"@executable_path/Frameworks",
 				);
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MARKETING_VERSION = 1.4.0;
+				MARKETING_VERSION = 1.5.0;
 				OTHER_LDFLAGS = "$(inherited) -ObjC";
 				"OTHER_LDFLAGS[sdk=iphoneos*]" = "$(inherited) -force_load $(PROJECT_DIR)/Vendor/LocalGraph/device.a";
 				"OTHER_LDFLAGS[sdk=iphonesimulator*]" = "$(inherited) -force_load $(PROJECT_DIR)/Vendor/LocalGraph/simulator.a";
@@ -739,7 +755,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_CXX_LANGUAGE_STANDARD = "c++17";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 15;
+				CURRENT_PROJECT_VERSION = 17;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
@@ -759,7 +775,7 @@
 					"@executable_path/Frameworks",
 				);
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MARKETING_VERSION = 1.4.0;
+				MARKETING_VERSION = 1.5.0;
 				OTHER_LDFLAGS = "$(inherited) -ObjC";
 				"OTHER_LDFLAGS[sdk=iphoneos*]" = "$(inherited) -force_load $(PROJECT_DIR)/Vendor/LocalGraph/device.a";
 				"OTHER_LDFLAGS[sdk=iphonesimulator*]" = "$(inherited) -force_load $(PROJECT_DIR)/Vendor/LocalGraph/simulator.a";
