@@ -1,6 +1,12 @@
 # BetaBuddy 发布状态
 
-2026-11-20：已准备 iOS **1.5.0 (17)**，内置 GymPack **1.6.0**（数据提交 `3a91196`）。额外岩馆绑定现有终生会员；香蕉嘉里继续免费。StoreKit 本地购买、恢复、退款与实际 WKWebView 切馆集成验证通过，签名归档及 16 个数据文件哈希校验通过。首次上传返回 `Failed to Use Accounts`，正在处理 Xcode 账户认证；**尚未上传或分发本构建**。详情见 [release-1.5.0.md](release-1.5.0.md)。
+2026-11-20 14:30（中国时间）：iOS **1.5.0 (17)** 与现有终生会员内购的权益说明更新已联合提交 App Store 正式审核，Connect 确认 `2 Items Submitted`，状态 **Waiting for Review**。发布方式为审核通过后自动发布、立即向全部用户供应更新；现有正式版仍为 **1.4.0 (16)**。提交 ID：`74d3b7ec-edfd-44a2-8d7e-2b4e300adff8`；[审核记录](https://appstoreconnect.apple.com/apps/6809249574/distribution/reviewsubmissions/details/74d3b7ec-edfd-44a2-8d7e-2b4e300adff8)。简体中文与英语（美国）的商店描述、更新说明和审核备注已保存；会员商品五种本地化继续使用英文，描述增加额外岩馆解锁，并上传新版真实模拟器会员界面截图。价格和销售地区未变。
+
+构建内置 GymPack **1.6.0**（数据提交 `3a91196`），额外岩馆绑定现有终生会员，香蕉嘉里继续免费。StoreKit 本地购买、恢复、退款与实际 WKWebView 切馆集成验证通过；签名归档及 16 个数据文件哈希校验通过。命令行上传报 `Failed to Use Accounts`，改用 **Xcode Organizer** 后于 14:20 上传成功，不能把该命令行错误等同于用户未登录。代码发布提交 `2a5a32f` 位于 `codex/member-gyms-testflight`，详情见 [release-1.5.0.md](release-1.5.0.md)。
+
+构建 17 已加入现有内测群组和「BetaBuddy 邀请测试」外测群组，外测已提交 Beta App Review，并开启审核通过后自动通知测试者。[公开测试链接](https://testflight.apple.com/join/WZPw69Vx) 沿用原链接；构建 17 的外测仍需 Apple 审核通过。构建 ID：`882a5fa4-7581-4fae-b670-5ae0c4ae6b1b`。正式送审凭证保存在本机忽略目录 `ios/build/appstore-1.5.0-17-submitted.jpg`，会员审核截图为 `ios/build/lifetime-member-gyms-1.5.0.png`。真机 StoreKit 沙盒及性能尚未验证。
+
+支持站点与隐私页的新权益说明已更新源文件并重新生成，但尚未部署：当前 Wrangler 可访问的两个账号均不拥有现有 `betabuddy-support` Worker，未在错误账号创建新站点。App 内离线政策与 App Store 元数据已更新。
 
 2026-11-15：默认直接保存视频、可选后台分析、自动提取及编辑拍摄时间已提交，发布版本设为 **1.4.0 (15)**。本机签名 Release 归档成功，包内版本与 GymPack **1.3.9** 的 10 个文件校验通过。两次上传均在 Xcode 账户检查阶段返回 `Failed to Use Accounts`，**未上传成功、未分发 TestFlight，也未提交 App Store 审核**。用户决定换电脑继续发布；需要在新机器登录有该 App 上传权限的 Apple 账号，安全迁移本地 GymPack 后重新归档。继续前先核对 Connect 是否已有同版本／构建，避免重复上传。测试说明见 [release-1.4.0.md](release-1.4.0.md)。
 

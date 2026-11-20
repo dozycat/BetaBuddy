@@ -2,7 +2,7 @@
 
 从一份通过测试的代码到提交 App Store 审核，每个版本都走这几步。后台现在的状态见 [STATUS.md](STATUS.md)；每个版本自己的文案和清单在 `release-<版本>.md`；1.2.0 商店英文资料在 [metadata-en.md](metadata-en.md)。
 
-BetaBuddy 的岩馆和攀爬册核心功能免费，没有订阅和广告。1.2.0 起提供可选的一次性终生会员内购；购买后立即显示永久会员标识。审核资料只描述当前可用的功能。
+BetaBuddy 的香蕉嘉里岩馆与攀爬册免费，没有订阅和广告。1.2.0 起提供可选的一次性终生会员内购；1.5.0 起会员同时解锁额外岩馆和永久会员标识，已有会员无需重复购买。审核资料只描述当前可用的功能。
 
 ## 1. 准备构建
 
@@ -39,6 +39,8 @@ PATH=/usr/bin:/bin:/usr/sbin:/sbin xcodebuild -exportArchive \
 **导出时要用系统自带的 rsync。** 如果 `PATH` 里排在前面的是 Homebrew 的 rsync，Xcode 会报「Copy failed」。上面的命令把 `PATH` 限制在系统目录来避开它。
 
 `ExportOptions.plist` 的方式是 `app-store-connect`。把其中的 `destination` 从 `export` 改成 `upload`（另存一份临时的 plist 即可），`xcodebuild -exportArchive` 会在导出后直接上传到 App Store Connect，1.1.0 (3) 就是这样上传的；需要 Xcode 的 Settings → Accounts 里已登录账号持有人的 Apple ID。也可以保持 `export`，再用 Xcode Organizer 或 Transporter 上传导出的 IPA。上传后等 Apple 处理完成，构建才会出现在后台。
+
+如果命令行上传返回 `Failed to Use Accounts`，先核对 Xcode 登录及权限，并尝试 Organizer → Distribute App → App Store Connect。1.5.0 (17) 在命令行失败后通过此路径成功上传；不要仅凭该错误认定用户未登录。上传成功后先核对后台构建，避免重复上传。
 
 `ios/build/` 被 Git 忽略。归档和 IPA 不进仓库。
 
