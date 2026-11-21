@@ -9,11 +9,44 @@
 - Simpler recording: one Save button keeps your video and returns to Logbook. Cancel closes without saving.
 - Restored support for climbing videos up to 20 minutes.
 
+## 商店描述（简体中文与英语〔美国〕均填以下英文）
+
+Keep your climbing videos, notes and beta together on your iPhone.
+
+LOG YOUR CLIMBS
+Import a video, add a grade and notes, then tap Save. Your recording returns to Logbook, ready to replay. Organize attempts in folders and edit the climb date and time. Optional on-device pose analysis adds skeleton playback and movement review to saved recordings.
+
+EXPLORE OFFLINE GYMS
+Browse unofficial 3D gym models, select problems and replay simulated movement with different climber builds. BANANA+ Kerry includes 72 problems and is free to explore. Lifetime membership unlocks additional gyms, including 36 problems at DOME Xuhui Vanke.
+
+LET A CAT CLIMB
+Lifetime members can watch cat climbing replays with two cat presets. Choose between using the wall's holds and only the selected problem's holds. These are simulated animations; results depend on the available route data.
+
+ONE-TIME MEMBERSHIP
+Human climbing at BANANA+ Kerry and Logbook are free. The optional lifetime membership unlocks more gyms, cat climbing and a permanent member badge. Existing lifetime members receive these features at no extra cost. Restore purchases using the same Apple Account. No subscriptions or ads.
+
+YOUR CLIMB, YOUR DEVICE
+The pose model and gym data are bundled with the app. Imported videos, notes and analysis stay on your device. No app account or cloud AI upload is required. Videos can be 0.5 seconds to 20 minutes long and up to 500 MB.
+
+Gym models and problems are unofficial and may differ from the current venue. Pose results can be affected by occlusion, camera movement and multiple people. Simulations and analysis are tools for review, not safety or coaching advice.
+
+## 宣传文本
+
+Let a cat climb. Lifetime members get two cat presets and more offline gyms. Recording is simpler too: one Save button keeps your climb in Logbook.
+
+## 现有终生会员内购元数据
+
+沿用 `com.betabuddy.ios.lifetime`，不新建商品，不改价格或销售地区。五种现有商品本地化继续使用英文：
+
+- Display Name: `BetaBuddy Lifetime Member`
+- Description: `More gyms, cat climbing and a member badge.`
+- Review Screenshot: 本机 `ios/build/1.6.0/membership.png`，1206 × 2622，来自实际模拟器页面。
+
 ## 审核备注
 
 This version adds cat climbing to the existing non-consumable lifetime membership (com.betabuddy.ios.lifetime). No new purchase is required for existing lifetime members. In Gym, select a problem and choose Cat in the climber controls. Non-members see the existing membership offer. A verified purchase or Restore Purchases unlocks the feature. Refund or revocation removes access. Additional gyms remain part of the same membership. Human climbing at BANANA+ Kerry and Logbook remain free.
 
-The cat animation is a prerecorded simulation from the bundled gym pack, not video analysis or a claim that a real cat can safely climb the route. Two cat presets and two hold modes are included. It runs offline after purchase verification, as do the gym viewer and the on-device video review tools. Imported videos and notes remain on the device.
+The cat animation uses precomputed movement plans from the bundled gym pack, rendered in 3D. It is not video analysis or a claim that a real cat can safely climb the route. Two cat presets and two hold modes are included. It runs offline after purchase verification, as do the gym viewer and the on-device video review tools. Imported videos and notes remain on the device.
 
 In Logbook, tap the import button, select a video, then tap Save at the top right. The recording is saved before returning to Logbook. Cancel at the top left discards the import. Optional pose analysis runs after saving. Videos from 0.5 seconds to 20 minutes and up to 500 MB are supported.
 
