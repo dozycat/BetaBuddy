@@ -6,7 +6,7 @@ Gym and Logbook core features are free. Lifetime membership is an optional one-t
 
 Contact: [hi@dozycat.ai](mailto:hi@dozycat.ai). When reporting a problem, include your iPhone model, iOS and BetaBuddy versions, steps, and any error message. Do not send a personal video in the first message or share passwords and verification codes.
 
-- No climber detected: use a well-lit video of one climber, whole body visible, with a fixed camera; 0.5–180 seconds and up to 500 MB.
+- No climber detected: use a well-lit video of one climber, whole body visible, with a fixed camera; 0.5 seconds–20 minutes and up to 500 MB.
 - Video import: check the original in Photos, allow iCloud to download it if needed, and trim it before retrying.
 - iPhone feels hot: pause repeated analyses or use Everyday review; analysis stops at a serious thermal state.
 - Delete a climb: delete its app copy and analysis from the record; the original in Photos is unaffected. There is no cloud restore.

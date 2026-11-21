@@ -9,7 +9,7 @@ enum AnalysisError: LocalizedError {
         switch self {
         case .missingModel: return String(localized: "安装包缺少姿态模型，请重新安装完整版本。", bundle: AppLanguage.bundle)
         case .invalidVideo: return String(localized: "无法读取这个视频，请选择未损坏的 MOV 或 MP4 文件。", bundle: AppLanguage.bundle)
-        case .tooLong: return String(localized: "视频超过 3 分钟。请先在相册中裁剪成单趟攀爬。", bundle: AppLanguage.bundle)
+        case .tooLong: return String(localized: "视频超过 20 分钟。请先在相册中裁剪。", bundle: AppLanguage.bundle)
         case .tooLarge: return String(localized: "视频超过 500 MB，请先在相册中裁剪或导出较小版本。", bundle: AppLanguage.bundle)
         case .noPose: return String(localized: "未识别到足够清晰的人体。请使用全身入镜、光线充足、单人攀爬的视频。", bundle: AppLanguage.bundle)
         case .overheated: return String(localized: "手机温度较高，已停止分析。稍后可重新开始。", bundle: AppLanguage.bundle)
@@ -39,6 +39,7 @@ struct ClipStills: Sendable {
 
 // A single worker owns decoder, Core Image context, and model. Never infer on MainActor.
 actor VideoAnalyzer {
+    private static let maximumDurationSeconds: Double = 20 * 60
     func analyze(url: URL, quality: AnalysisQuality,
                  progress: @escaping @Sendable (Double) async -> Void) async throws -> PoseAnalysis {
         try Task.checkCancellation()
@@ -47,7 +48,7 @@ actor VideoAnalyzer {
         let duration = try await asset.load(.duration).seconds
         guard duration.isFinite, duration >= 0.5,
               let track = try await asset.loadTracks(withMediaType: .video).first else { throw AnalysisError.invalidVideo }
-        guard duration <= 180 else { throw AnalysisError.tooLong }
+        guard duration <= Self.maximumDurationSeconds else { throw AnalysisError.tooLong }
         let transform = try await track.load(.preferredTransform)
         let natural = try await track.load(.naturalSize)
         let displayRect = CGRect(origin: .zero, size: natural).applying(transform)
@@ -132,7 +133,7 @@ actor VideoAnalyzer {
         let duration = try await asset.load(.duration).seconds
         guard duration.isFinite, duration >= 0.5,
               let track = try await asset.loadTracks(withMediaType: .video).first else { throw AnalysisError.invalidVideo }
-        guard duration <= 180 else { throw AnalysisError.tooLong }
+        guard duration <= Self.maximumDurationSeconds else { throw AnalysisError.tooLong }
         let size = try await track.load(.naturalSize)
         let transform = try await track.load(.preferredTransform)
         let rect = CGRect(origin: .zero, size: size).applying(transform)

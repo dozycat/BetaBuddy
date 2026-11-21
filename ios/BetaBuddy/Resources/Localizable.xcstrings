@@ -953,36 +953,36 @@
         }
       }
     },
-    "单人全身 · 固定机位 · 最长 3 分钟": {
+    "单人全身 · 固定机位 · 最长 20 分钟": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "One climber, full body · fixed camera · up to 3 min"
+            "value": "One climber, full body · fixed camera · up to 20 min"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "1 人・全身 · 固定カメラ · 最長 3 分"
+            "value": "1 人・全身 · 固定カメラ · 最長 20 分"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "한 명, 전신 · 고정 카메라 · 최대 3분"
+            "value": "한 명, 전신 · 고정 카메라 · 최대 20분"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "单人全身 · 固定机位 · 最长 3 分钟"
+            "value": "单人全身 · 固定机位 · 最长 20 分钟"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "單人全身 · 固定機位 · 最長 3 分鐘"
+            "value": "單人全身 · 固定機位 · 最長 20 分鐘"
           }
         }
       }
@@ -3571,36 +3571,36 @@
         }
       }
     },
-    "视频超过 3 分钟。请先在相册中裁剪成单趟攀爬。": {
+    "视频超过 20 分钟。请先在相册中裁剪。": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The video is longer than 3 minutes. Trim it to a single climb in Photos first."
+            "value": "The video is longer than 20 minutes. Trim it in Photos first."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "動画が 3 分を超えています。先に「写真」で 1 トライ分にトリミングしてください。"
+            "value": "動画が 20 分を超えています。先に「写真」でトリミングしてください。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "영상이 3분을 넘습니다. 먼저 사진 앱에서 한 번의 등반만 남기고 잘라 주세요."
+            "value": "영상이 20분을 넘습니다. 먼저 사진 앱에서 잘라 주세요."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "视频超过 3 分钟。请先在相册中裁剪成单趟攀爬。"
+            "value": "视频超过 20 分钟。请先在相册中裁剪。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "影片超過 3 分鐘。請先在「照片」中裁剪成單趟攀爬。"
+            "value": "影片超過 20 分鐘。請先在「照片」中裁剪。"
           }
         }
       }
@@ -4489,36 +4489,36 @@
         }
       }
     },
-    "适合单人、全身入镜、固定机位的视频；单段 0.5–180 秒，最大 500 MB。建议先在相册里裁掉无关片段。": {
+    "适合单人、全身入镜、固定机位的视频；单段 0.5 秒–20 分钟，最大 500 MB。建议先在相册里裁掉无关片段。": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Works with videos of one climber, whole body in frame, from a fixed camera: 0.5–180 seconds, up to 500 MB each. Trim anything else in Photos first."
+            "value": "Works with videos of one climber, whole body in frame, from a fixed camera: 0.5 seconds–20 minutes, up to 500 MB each. Trim anything else in Photos first."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "1 人の全身が映った、固定カメラの動画に向いています。1 本あたり 0.5〜180 秒、最大 500 MB。関係のない部分は先に「写真」でトリミングしてください。"
+            "value": "1 人の全身が映った、固定カメラの動画に向いています。1 本あたり 0.5 秒〜20 分、最大 500 MB。関係のない部分は先に「写真」でトリミングしてください。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "한 명의 전신이 나오고 카메라가 고정된 영상에 맞습니다. 영상 하나당 0.5–180초, 최대 500MB입니다. 관계없는 부분은 먼저 사진 앱에서 잘라 주세요."
+            "value": "한 명의 전신이 나오고 카메라가 고정된 영상에 맞습니다. 영상 하나당 0.5초–20분, 최대 500MB입니다. 관계없는 부분은 먼저 사진 앱에서 잘라 주세요."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "适合单人、全身入镜、固定机位的视频；单段 0.5–180 秒，最大 500 MB。建议先在相册里裁掉无关片段。"
+            "value": "适合单人、全身入镜、固定机位的视频；单段 0.5 秒–20 分钟，最大 500 MB。建议先在相册里裁掉无关片段。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "適合單人、全身入鏡、固定機位的影片；單段 0.5–180 秒，最大 500 MB。建議先在「照片」裡裁掉無關的片段。"
+            "value": "適合單人、全身入鏡、固定機位的影片；單段 0.5 秒–20 分鐘，最大 500 MB。建議先在「照片」裡裁掉無關的片段。"
           }
         }
       }

@@ -169,7 +169,7 @@ struct ImportView: View {
                 }.disabled(model.importing)
                 if model.importing { ProgressView() }
                 DisclosureGroup("视频要求") {
-                    Text("单人全身 · 固定机位 · 最长 3 分钟")
+                    Text("单人全身 · 固定机位 · 最长 20 分钟")
                         .font(.subheadline).foregroundStyle(BB.muted)
                         .frame(maxWidth: .infinity, alignment: .leading).padding(.top, 8)
                 }.font(.subheadline)
