@@ -11,8 +11,10 @@ struct GymManifest: Decodable, Equatable, Sendable {
     struct Venue: Decodable, Equatable, Sendable {
         var id: String
         var files: [String]
+        var catFiles: [String]?
     }
     var venues: [Venue] = []
+    var catCode: String?
     // The original venue remains free, even if a future pack changes its default.
     static let freeVenueID = "banana-kerry"
     static func requiresMembership(venueID: String) -> Bool { venueID != freeVenueID }
@@ -21,12 +23,14 @@ struct GymManifest: Decodable, Equatable, Sendable {
         let query = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
         for item in query {
             guard let value = item.value, !value.isEmpty else { continue }
+            if item.name == "species", value == "cat" { return true }
             if item.name == "venue", Self.requiresMembership(venueID: value) { return true }
             if ["route", "wall"].contains(item.name), value.contains("/"),
                Self.requiresMembership(venueID: String(value.split(separator: "/", omittingEmptySubsequences: false)[0])) { return true }
         }
         let path = url.standardized.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-        return venues.contains { Self.requiresMembership(venueID: $0.id) && $0.files.contains(path) }
+        return path == catCode || path == "cat.js" || path.hasPrefix("catplans.")
+            || venues.contains { ($0.catFiles ?? []).contains(path) || (Self.requiresMembership(venueID: $0.id) && $0.files.contains(path)) }
     }
     static let supportedSchema = 1
     var schema: Int
@@ -64,6 +68,7 @@ struct GymManifest: Decodable, Equatable, Sendable {
             return value
         }
         venues = try first([Venue].self, "venues") ?? []
+        catCode = try first(String.self, "catCode")
         schema = try first(Int.self, "schema", "schemaVersion", "schema_version") ?? 1
         packVersion = try required(first(String.self, "packVersion", "pack_version", "version"), "packVersion")
         generatedAt = try required(first(String.self, "generatedAt", "generated_at"), "generatedAt")
@@ -208,6 +213,7 @@ enum GymMessage: Equatable, Sendable {
     case ready
     case hintSeen
     case openSettings
+    case requestCat(preset: Int, strict: Bool)
     case routeSelected(GymRoute?)
     case error(String)
 
@@ -217,6 +223,7 @@ enum GymMessage: Equatable, Sendable {
         case "ready": self = .ready
         case "hintSeen": self = .hintSeen
         case "openSettings": self = .openSettings
+        case "requestCat": self = .requestCat(preset: (body["preset"] as? Int) == 1 ? 1 : 0, strict: body["strict"] as? Bool ?? false)
         case "routeSelected":
             if let id = body["id"] as? String, !id.isEmpty {
                 self = .routeSelected(GymRoute(id: String(id.prefix(120)), name: String((body["name"] as? String ?? id).prefix(120))))

@@ -69,6 +69,34 @@ final class GymPackTests: XCTestCase {
         XCTAssertEqual(revoked.response?.statusCode, 403)
     }
 
+    func testCatGateCoversManifestAssetsURLsAndRevocation() throws {
+        let assets = ["index.html", "cat.js", "catplans.0.js", "data/custom-cat.js", "data/custom-plans.js"]
+        let json: [String: Any] = ["schema": 1, "packVersion": "1.8.0", "generatedAt": "2026-11-21", "gymName": "Fixture", "routeCount": 1,
+            "catCode": "data/custom-cat.js", "venues": [["id": "banana-kerry", "files": ["index.html"], "catFiles": ["data/custom-plans.js"]]],
+            "files": assets.map { ["path": $0, "sha256": "aa"] }]
+        let pack = try GymPack(directory: writePack(manifest: String(decoding: JSONSerialization.data(withJSONObject: json), as: UTF8.self), files: assets))
+        var member = false
+        let handler = GymSchemeHandler(pack: pack, isMember: { member })
+        let web = WKWebView()
+        for allowed in [false, true, false] {
+            member = allowed
+            for path in assets.dropFirst() + ["index.html?species=cat", "data/%63ustom-cat.js"] {
+                let task = SchemeTask("gympack://local/" + path)
+                handler.webView(web, start: task)
+                XCTAssertEqual(task.response?.statusCode, allowed ? 200 : 403, path)
+            }
+            let human = SchemeTask("gympack://local/index.html?species=human")
+            handler.webView(web, start: human)
+            XCTAssertEqual(human.response?.statusCode, 200)
+        }
+        let session = GymSession(status: .ready(pack))
+        session.requestCat(preset: 1, strict: true)
+        XCTAssertTrue(session.showingMembership)
+        XCTAssertEqual(session.pendingCat?.preset, 1)
+        session.cancelMembershipRequest()
+        XCTAssertNil(session.pendingCat)
+    }
+
     func testCancelledPaywallDoesNotOpenPremiumVenue() throws {
         let session = GymSession(status: .ready(try multiVenuePack()))
         let premium = URL(string: "gympack://local/index.html?venue=dome-xuhui")!

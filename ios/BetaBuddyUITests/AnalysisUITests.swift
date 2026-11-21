@@ -18,11 +18,17 @@ final class AnalysisUITests: XCTestCase {
         app.launch()
         XCTAssertTrue(app.buttons["importClimb"].waitForExistence(timeout: 10))
         app.buttons["importClimb"].tap()
-        let save = app.buttons["startAnalysis"]
+        let title = "Analysis-" + UUID().uuidString.prefix(6)
+        app.textFields["climbTitle"].tap()
+        app.textFields["climbTitle"].typeText(String(title))
+        let save = app.buttons["saveClimb"]
         XCTAssertTrue(save.waitForExistence(timeout: 5))
         XCTAssertTrue(save.wait(for: \.isEnabled, toEqual: true, timeout: 20))
         if !save.isHittable { app.swipeUp() }
         save.tap()
+        XCTAssertTrue(app.buttons["importClimb"].waitForExistence(timeout: 20))
+        XCTAssertTrue(app.staticTexts[String(title)].waitForExistence(timeout: 5))
+        app.staticTexts[String(title)].firstMatch.tap()
 
         let analyse = app.buttons["analyseClimb"]
         guard analyse.waitForExistence(timeout: 20) else {
@@ -73,7 +79,9 @@ final class AnalysisUITests: XCTestCase {
     private func delete(_ app: XCUIApplication) {
         app.buttons["更多操作"].tap()
         app.buttons["deleteClimb"].tap()
-        app.buttons["删除这一趟"].firstMatch.tap()
+        let confirm = app.sheets.buttons["删除这一趟"]
+        XCTAssertTrue(confirm.waitForExistence(timeout: 5))
+        confirm.tap()
     }
 
     private func keep(_ app: XCUIApplication, _ name: String) {

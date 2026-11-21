@@ -7519,6 +7519,142 @@
           }
         }
       }
+    },
+    "解锁更多岩馆、猫攀爬和终生会员标识。": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "解锁更多岩馆、猫攀爬和终生会员标识。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unlock more gyms, cat climbing and a lifetime member badge."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更多岩館、貓攀爬與終生會員標識。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "追加のジム、猫のクライミング、永久会員バッジを利用できます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "더 많은 암장, 고양이 클라이밍과 평생 회원 배지를 이용하세요."
+          }
+        }
+      }
+    },
+    "香蕉嘉里的人物攀爬与攀爬册免费使用；更多岩馆和猫攀爬需终生会员解锁。": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "香蕉嘉里的人物攀爬与攀爬册免费使用；更多岩馆和猫攀爬需终生会员解锁。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Human climbing at BANANA+ Kerry and Logbook are free. More gyms and cat climbing require lifetime membership."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "香蕉嘉里的人物攀爬與攀爬冊免費使用；更多岩館和貓攀爬需終生會員解鎖。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BANANA+ ケリーでの人のクライミングとログブックは無料です。追加のジムと猫のクライミングは永久会員向けです。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BANANA+ 케리의 사람 클라이밍과 로그북은 무료입니다. 더 많은 암장과 고양이 클라이밍은 평생 회원 기능입니다."
+          }
+        }
+      }
+    },
+    "让猫来爬": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "让猫来爬"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Let a cat climb"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "讓貓來爬"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "猫のクライミング"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "고양이 클라이밍"
+          }
+        }
+      }
+    },
+    "两种猫、两种岩点模式，观看猫的攀爬动作回放。已有会员无需再次购买。": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "两种猫、两种岩点模式，观看猫的攀爬动作回放。已有会员无需再次购买。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Watch cat climbing replays with two cats and two hold modes. Existing members get access at no extra cost."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "兩種貓、兩種岩點模式，觀看貓的攀爬動作回放。已有會員無需再次購買。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2種類の猫と2種類のホールドモードで、猫のクライミングを再生できます。既存の会員は追加購入不要です。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "고양이 2종과 홀드 모드 2가지로 고양이의 클라이밍을 재생합니다. 기존 회원은 추가 구매 없이 이용할 수 있습니다."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

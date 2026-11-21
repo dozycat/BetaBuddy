@@ -1,8 +1,8 @@
 import XCTest
 
 final class NavigationTests: XCTestCase {
-    func testBothEntriesInSimplifiedChinese() { walk(language:"zh-Hans", locale:"zh_CN", gym:"岩馆", logbook:"攀爬册", settings:"设置与关于", done:"完成") }
-    func testBothEntriesInEnglish() { walk(language:"en", locale:"en_US", gym:"Gym", logbook:"Logbook", settings:"Settings and About", done:"Done") }
+    func testBothEntriesInSimplifiedChinese() { walk(language:"zh-Hans", locale:"zh_CN", gym:"岩馆", logbook:"攀爬册", settings:"设置与关于", done:"取消") }
+    func testBothEntriesInEnglish() { walk(language:"en", locale:"en_US", gym:"Gym", logbook:"Logbook", settings:"Settings and About", done:"Cancel") }
 
     func testImportDefaultsToSavingWithEditableTime() {
         let app = launch("en", "en_US", reset: true)
@@ -12,7 +12,9 @@ final class NavigationTests: XCTestCase {
         let toggle = app.switches["analyzeAfterSaving"]
         if !toggle.isHittable { app.swipeUp() }
         XCTAssertEqual(toggle.value as? String, "0")
-        XCTAssertEqual(app.buttons["startAnalysis"].label, "Save this climb")
+        XCTAssertEqual(app.buttons["saveClimb"].label, "Save")
+        XCTAssertFalse(app.buttons["importDone"].exists)
+        XCTAssertFalse(app.buttons["startAnalysis"].exists)
         let screenshot = XCTAttachment(screenshot: app.screenshot())
         screenshot.name = "Import with editable time and optional analysis"
         screenshot.lifetime = .keepAlways
@@ -29,7 +31,7 @@ final class NavigationTests: XCTestCase {
         details.tap()
         XCTAssertTrue(app.staticTexts["Lifetime member badge in Logbook"].waitForExistence(timeout:5))
         XCTAssertTrue(app.buttons["buyLifetime"].exists || app.buttons["retryMembershipProduct"].exists)
-        XCTAssertTrue(app.staticTexts["Gym and Logbook remain free to use; membership is optional."].exists)
+        XCTAssertTrue(app.staticTexts["Human climbing at BANANA+ Kerry and Logbook are free. More gyms and cat climbing require lifetime membership."].exists)
         XCTAssertTrue(app.buttons["restoreLifetime"].exists)
         let offer = XCTAttachment(screenshot: app.screenshot())
         offer.name = "Membership offer"
@@ -70,9 +72,9 @@ final class NavigationTests: XCTestCase {
         XCTAssertTrue(app.buttons["importClimb"].waitForExistence(timeout:5))
         app.buttons["importClimb"].tap()
         XCTAssertTrue(app.textFields["climbTitle"].waitForExistence(timeout:5))
-        XCTAssertFalse(app.buttons["startAnalysis"].isEnabled)
-        XCTAssertEqual(app.buttons["importDone"].label,done)
-        app.buttons["importDone"].tap()
+        XCTAssertFalse(app.buttons["saveClimb"].isEnabled)
+        XCTAssertEqual(app.buttons["importCancel"].label,done)
+        app.buttons["importCancel"].tap()
         // A single settings entry stays in the bottom bar.
         XCTAssertTrue(app.buttons["settings"].waitForExistence(timeout:5))
         app.buttons["settings"].tap()

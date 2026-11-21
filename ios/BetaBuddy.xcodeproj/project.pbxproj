@@ -47,6 +47,7 @@
 		ADB7801DC2438A7B6D4E7884 /* CoreMedia.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 95F7B89B57416C9C6E6F5B54 /* CoreMedia.framework */; };
 		BFF41156BA3A9A81EE253DAF /* MediaPipeTasksVision.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2EF79A2082843E4FAA12EB15 /* MediaPipeTasksVision.xcframework */; };
 		C10DC5618015D8E01BDF6172 /* AnalysisUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02A20D9113E8B8D5CE2AA7AF /* AnalysisUITests.swift */; };
+		C1251B80648D98A260A3801C /* ImportSaveUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E77E582DB0FAEFA48FF81EE2 /* ImportSaveUITests.swift */; };
 		C34B0F291B88E53C70AB0D81 /* MembershipStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F1A0F0CEA9DD60D3F574A78 /* MembershipStore.swift */; };
 		C76EB6C73ABAFCC5FBFD3A50 /* AnalysisView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 494540B4B6EC6FBF8A07CD7D /* AnalysisView.swift */; };
 		CA64D940DD5A8D4DD526465A /* Localization.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BC315278D0CDD9A78988A5F /* Localization.swift */; };
@@ -61,6 +62,7 @@
 		F8255E49A19A07759A685565 /* GymDirectoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04D26467BEEDD8CB1AE638D9 /* GymDirectoryTests.swift */; };
 		F912FE304C3B66C059B51027 /* ClimbStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C4FB4CECDEE3100CF22FF22 /* ClimbStoreTests.swift */; };
 		FA9F59E066ECB94076ACACAE /* Lifetime.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 445811D9319624B389D3A244 /* Lifetime.storekit */; };
+		FC3C142266B4F1FE1DADA9A0 /* CatUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C614D6B39B02159288ECC886 /* CatUITests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -129,9 +131,11 @@
 		C0A7C7799F417F30A48923EA /* PrivacyPolicy.en.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = PrivacyPolicy.en.txt; sourceTree = "<group>"; };
 		C0D97FA407E7F0FF4D6FEB87 /* BetaBuddyTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = BetaBuddyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		C2073A4BFD1C596095049FD6 /* ClimbStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClimbStore.swift; sourceTree = "<group>"; };
+		C614D6B39B02159288ECC886 /* CatUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatUITests.swift; sourceTree = "<group>"; };
 		D223147C2D7F097ECD8149E6 /* PoseMath.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoseMath.swift; sourceTree = "<group>"; };
 		DBB55650FA0E8706EEAE41DD /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
 		E1A3BE34FB4FA4B89AE39B85 /* AlbumViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlbumViews.swift; sourceTree = "<group>"; };
+		E77E582DB0FAEFA48FF81EE2 /* ImportSaveUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportSaveUITests.swift; sourceTree = "<group>"; };
 		ECA2166BDB77F73F38151758 /* CoreVideo.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreVideo.framework; path = System/Library/Frameworks/CoreVideo.framework; sourceTree = SDKROOT; };
 		ECCFE48838B717B182EE97DE /* VideoAnalyzerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoAnalyzerTests.swift; sourceTree = "<group>"; };
 		F16FB9A05EB0351A813E6732 /* NavigationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationTests.swift; sourceTree = "<group>"; };
@@ -303,6 +307,8 @@
 			children = (
 				2109D140B32372930A88FB14 /* AlbumUITests.swift */,
 				02A20D9113E8B8D5CE2AA7AF /* AnalysisUITests.swift */,
+				C614D6B39B02159288ECC886 /* CatUITests.swift */,
+				E77E582DB0FAEFA48FF81EE2 /* ImportSaveUITests.swift */,
 				F16FB9A05EB0351A813E6732 /* NavigationTests.swift */,
 			);
 			path = BetaBuddyUITests;
@@ -535,6 +541,8 @@
 			files = (
 				CD91C73BF28935A911C1AE46 /* AlbumUITests.swift in Sources */,
 				C10DC5618015D8E01BDF6172 /* AnalysisUITests.swift in Sources */,
+				FC3C142266B4F1FE1DADA9A0 /* CatUITests.swift in Sources */,
+				C1251B80648D98A260A3801C /* ImportSaveUITests.swift in Sources */,
 				DEEE5CE8148AAEC0D80107C9 /* NavigationTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -578,7 +586,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_CXX_LANGUAGE_STANDARD = "c++17";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 17;
+				CURRENT_PROJECT_VERSION = 18;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
@@ -598,7 +606,7 @@
 					"@executable_path/Frameworks",
 				);
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MARKETING_VERSION = 1.5.0;
+				MARKETING_VERSION = 1.6.0;
 				OTHER_LDFLAGS = "$(inherited) -ObjC";
 				"OTHER_LDFLAGS[sdk=iphoneos*]" = "$(inherited) -force_load $(PROJECT_DIR)/Vendor/LocalGraph/device.a";
 				"OTHER_LDFLAGS[sdk=iphonesimulator*]" = "$(inherited) -force_load $(PROJECT_DIR)/Vendor/LocalGraph/simulator.a";
@@ -755,7 +763,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_CXX_LANGUAGE_STANDARD = "c++17";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 17;
+				CURRENT_PROJECT_VERSION = 18;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
@@ -775,7 +783,7 @@
 					"@executable_path/Frameworks",
 				);
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MARKETING_VERSION = 1.5.0;
+				MARKETING_VERSION = 1.6.0;
 				OTHER_LDFLAGS = "$(inherited) -ObjC";
 				"OTHER_LDFLAGS[sdk=iphoneos*]" = "$(inherited) -force_load $(PROJECT_DIR)/Vendor/LocalGraph/device.a";
 				"OTHER_LDFLAGS[sdk=iphonesimulator*]" = "$(inherited) -force_load $(PROJECT_DIR)/Vendor/LocalGraph/simulator.a";

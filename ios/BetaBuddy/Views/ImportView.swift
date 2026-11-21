@@ -91,27 +91,28 @@ struct ImportView: View {
     @State private var quality = AnalysisQuality.balanced
     var body: some View {
         NavigationStack {
-            Group {
-                if let saved = model.saved { ReviewView(climb:saved) }
-                else {
-                    PaperPage {
-                        if model.busy { processing }
-                        else { selection }
-                        if let error = model.error {
-                            Label { Text(verbatim:error) } icon: { Image(systemName:"exclamationmark.circle") }.font(.subheadline).foregroundStyle(.red)
-                                .accessibilityIdentifier("importError")
-                        }
-                    }
+            PaperPage {
+                if model.busy { processing } else { selection }
+                if let error = model.error {
+                    Label { Text(verbatim:error) } icon: { Image(systemName:"exclamationmark.circle") }
+                        .font(.subheadline).foregroundStyle(.red).accessibilityIdentifier("importError")
                 }
             }
-            .navigationTitle(model.saved == nil ? Text("记录攀爬") : Text("这一趟已保存"))
+            .navigationTitle("记录攀爬")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement:.topBarTrailing) {
-                    Button("完成") { dismiss() }.disabled(model.busy || model.importing).accessibilityIdentifier("importDone")
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("取消") { dismiss() }.disabled(model.busy || model.importing)
+                        .accessibilityIdentifier("importCancel")
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("保存") { save() }
+                        .disabled(model.selectedURL == nil || model.busy || model.importing || model.readingDate)
+                        .accessibilityIdentifier("saveClimb")
                 }
             }
-        }.interactiveDismissDisabled(model.busy || model.importing)
+        }.interactiveDismissDisabled(model.busy || model.importing || model.selectedURL != nil)
+            .onChange(of: model.saved?.id) { _, id in if id != nil { dismiss() } }
             .onDisappear { model.clean() }
             #if DEBUG
             // `-debugImportVideo <path>` on the launch command line selects a video without the system picker, for tests.
@@ -219,10 +220,11 @@ struct ImportView: View {
                     }.padding(.top, 12)
                 }
             }
-            BigButton(title:"保存这一趟",icon:"checkmark") { model.run(store:store,title:title,grade:grade,sent:sent,note:note,quality:quality,gymId:gymId,gymName:gymName,climbedAt:model.climbedAt,folderId:folderId,analyze:analyze) }
-                .disabled(model.selectedURL == nil || model.importing || model.readingDate).opacity(model.selectedURL == nil ? 0.4 : 1)
-                .accessibilityIdentifier("startAnalysis")
+
         }
+    }
+    private func save() {
+        model.run(store:store,title:title,grade:grade,sent:sent,note:note,quality:quality,gymId:gymId,gymName:gymName,climbedAt:model.climbedAt,folderId:folderId,analyze:analyze)
     }
     @ViewBuilder
     private func sourceButtons(expanded: Bool) -> some View {

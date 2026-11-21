@@ -38,6 +38,68 @@ final class MembershipTests: XCTestCase {
         XCTAssertFalse(reopened.isMember)
     }
 
+    func testCatPurchaseRestoreLanguageAndRefundWithBundledPack() async throws {
+        guard let pack = GymPack.current, pack.manifest.catCode != nil else { throw XCTSkip("Install the cat pack") }
+        let storeKit = try SKTestSession(contentsOf: XCTUnwrap(Bundle(for: Self.self).url(forResource: "Lifetime", withExtension: "storekit")))
+        storeKit.disableDialogs = true
+        storeKit.clearTransactions()
+        defer { storeKit.clearTransactions() }
+        let membership = MembershipStore()
+        await membership.load()
+        let gym = GymSession(status: .ready(pack))
+        let observer = membership.$isMember.sink { gym.updateMembership($0) }
+        defer { observer.cancel(); gym.webView?.configuration.userContentController.removeScriptMessageHandler(forName: GymSession.handlerName) }
+        gym.start()
+        func state() async -> [String: Any] {
+            (try? await gym.webView?.evaluateJavaScript("window.BetaBuddyGym?.state()") as? [String: Any]) ?? [:]
+        }
+        try await waitUntil { await state()["ready"] as? Bool == true }
+        let web = try XCTUnwrap(gym.webView)
+        _ = try await web.evaluateJavaScript("document.querySelector('#species [data-sp=cat]').click()")
+        try await waitUntil { gym.showingMembership }
+        var value = await state()
+        XCTAssertEqual(value["species"] as? String, "human")
+        let unloaded = try await web.evaluateJavaScript("!document.querySelector('script[src*=catplans]')") as? Bool
+        XCTAssertEqual(unloaded, true)
+        gym.cancelMembershipRequest(); gym.showingMembership = false
+        _ = try await web.evaluateJavaScript("BetaBuddyGym.debug({route:window.GYM_VENUES[0].routeIds[0],species:'cat',catp:1,catstrict:'1'})")
+        try await waitUntil { gym.showingMembership }
+        value = await state()
+        XCTAssertEqual(value["species"] as? String, "human")
+        gym.cancelMembershipRequest(); gym.showingMembership = false
+        _ = try await web.evaluateJavaScript("BetaBuddyGym.openRoute(window.GYM_VENUES[0].routeIds[0]); BetaBuddyGym.setSpecies('cat',{p:1,strict:true})")
+        try await waitUntil { gym.pendingCat?.preset == 1 }
+        XCTAssertEqual(gym.pendingCat?.strict, true)
+        await membership.purchase()
+        try await waitUntil { (await state()["cat"] as? [String: Any])?["loaded"] as? Bool == true }
+        value = await state()
+        XCTAssertEqual(value["species"] as? String, "cat")
+        XCTAssertEqual((value["cat"] as? [String: Any])?["p"] as? Int, 1)
+        XCTAssertEqual((value["cat"] as? [String: Any])?["strict"] as? Bool, true)
+        XCTAssertFalse(gym.showingMembership)
+        gym.languageChanged()
+        try await waitUntil {
+            let current = await state()
+            return gym.webView?.url?.query?.contains("species=cat") == true && (current["cat"] as? [String: Any])?["loaded"] as? Bool == true
+        }
+        value = await state()
+        XCTAssertEqual((value["cat"] as? [String: Any])?["p"] as? Int, 1)
+        XCTAssertEqual((value["cat"] as? [String: Any])?["strict"] as? Bool, true)
+        _ = try await web.evaluateJavaScript("BetaBuddyGym.setSpecies('human'); BetaBuddyGym.setSpecies('cat',{p:0,strict:false})")
+        try await waitUntil { (await state()["cat"] as? [String: Any])?["p"] as? Int == 0 }
+        let restored = MembershipStore()
+        await restored.restore()
+        XCTAssertTrue(restored.isMember)
+        let transaction = try XCTUnwrap(storeKit.allTransactions().first)
+        try storeKit.refundTransaction(identifier: transaction.identifier)
+        try await waitUntil { !membership.isMember }
+        try await waitUntil { await state()["species"] as? String == "human" }
+        _ = try await web.evaluateJavaScript("BetaBuddyGym.setSpecies('cat')")
+        try await waitUntil { gym.showingMembership }
+        value = await state()
+        XCTAssertEqual(value["species"] as? String, "human")
+    }
+
     func testBundledVenueSwitchPurchaseAndRevocation() async throws {
         guard let pack = GymPack.current, pack.manifest.venues.count > 1 else {
             throw XCTSkip("Install a multi-venue pack for this integration test")

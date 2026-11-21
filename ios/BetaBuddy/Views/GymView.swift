@@ -71,29 +71,43 @@ final class GymSession: NSObject, ObservableObject, WKNavigationDelegate, WKScri
     @Published var showingMembership = false
     private(set) var isMember = false
     private(set) var pendingMemberURL: URL?
+    private(set) var pendingCat: (preset: Int, strict: Bool)?
     private var routeToRestore: String?
 
     func updateMembership(_ active: Bool) {
         guard isMember != active else { return }
         isMember = active
+        webView?.evaluateJavaScript("window.__betaBuddySetMembership?.(\(active));")
         if active, let url = pendingMemberURL {
-            pendingMemberURL = nil
+            pendingMemberURL = nil; pendingCat = nil
             showingMembership = false
             load(url)
-        } else if !active, let url = webView?.url, pack?.manifest.requiresMembership(for: url) == true {
-            selectedRoute = nil
-            routeToRestore = nil
-            if let pack { load(pack.entryURL(hintSeen: true, language: AppLanguage.current)) }
+        } else if active, let cat = pendingCat {
+            pendingCat = nil; showingMembership = false
+            webView?.evaluateJavaScript("window.BetaBuddyGym?.setSpecies('cat', {p: \(cat.preset), strict: \(cat.strict)});")
+        } else if !active, let pack, webView != nil {
+            // Reload to discard already-loaded cat code/plans as well as access to paid venues.
+            pendingCat = nil; pendingMemberURL = nil
+            selectedRoute = nil; routeToRestore = nil
+            load(pack.entryURL(hintSeen: true, language: AppLanguage.current))
         }
         decorateVenueList()
     }
 
-    func cancelMembershipRequest() { pendingMemberURL = nil }
+    func cancelMembershipRequest() { pendingMemberURL = nil; pendingCat = nil }
+
+    func requestCat(preset: Int, strict: Bool) {
+        guard !isMember else { return }
+        pendingMemberURL = nil
+        pendingCat = (preset == 1 ? 1 : 0, strict)
+        showingMembership = true
+    }
 
     @discardableResult
     func authorize(_ url: URL) -> Bool {
         guard let pack, pack.allows(url) else { return false }
         guard !isMember && pack.manifest.requiresMembership(for: url) else { return true }
+        pendingCat = nil
         pendingMemberURL = url
         showingMembership = true
         return false
@@ -106,6 +120,7 @@ final class GymSession: NSObject, ObservableObject, WKNavigationDelegate, WKScri
     }
 
     private func decorateVenueList() {
+        webView?.evaluateJavaScript("window.__betaBuddySetMembership?.(\(isMember));")
         let label = String(localized: "会员解锁", bundle: AppLanguage.bundle)
         let ids = pack?.manifest.venues.filter { GymManifest.requiresMembership(venueID: $0.id) }.map(\.id) ?? []
         guard let data = try? JSONSerialization.data(withJSONObject: ["ids": ids, "label": label, "member": isMember]),
@@ -164,6 +179,7 @@ final class GymSession: NSObject, ObservableObject, WKNavigationDelegate, WKScri
         configuration.setURLSchemeHandler(GymSchemeHandler(pack: pack, isMember: isMember), forURLScheme: GymPack.scheme)
         configuration.userContentController.add(rules)
         configuration.userContentController.add(handler, name: handlerName)
+        configuration.userContentController.addUserScript(WKUserScript(source: catMembershipScript(active: isMember()), injectionTime: .atDocumentEnd, forMainFrameOnly: true))
         let view = WKWebView(frame: .zero, configuration: configuration)
         view.navigationDelegate = delegate
         view.allowsBackForwardNavigationGestures = false
@@ -185,6 +201,44 @@ final class GymSession: NSObject, ObservableObject, WKNavigationDelegate, WKScri
         view.isInspectable = true
         #endif
         return view
+    }
+
+    /// Guard both the species selector and the combined route/species entry point.
+    /// The native resource handler is the independent entitlement check for the lazy assets.
+    static func catMembershipScript(active: Bool) -> String {
+        let label = String(localized: "会员解锁", bundle: AppLanguage.bundle)
+        let quoted = (try? JSONEncoder().encode(label)).flatMap { String(data: $0, encoding: .utf8) } ?? "\"Member\""
+        return """
+        (() => {
+          if (typeof window.setSpecies !== 'function') return;
+          let member = \(active);
+          const select = window.setSpecies;
+          const button = document.querySelector('#species [data-sp="cat"]');
+          const title = button?.textContent || '';
+          const decorate = () => {
+            if (button) { button.textContent = member ? title : title + ' 🔒';
+              button.setAttribute('aria-label', member ? title : title + ' · ' + \(quoted)); }
+          };
+          window.__betaBuddySetMembership = active => { member = active === true; decorate(); };
+          window.setSpecies = (species, options) => {
+            if (species === 'cat' && !member) {
+              window.webkit.messageHandlers.gym.postMessage({type:'requestCat', preset:options?.p === 1 ? 1 : 0, strict:options?.strict === true});
+              return false;
+            }
+            return select(species, options);
+          };
+          const open = window.openReq;
+          if (typeof open === 'function') window.openReq = (options, instant) => {
+            if (options?.species === 'cat' && !member) {
+              window.webkit.messageHandlers.gym.postMessage({type:'requestCat', preset:Number(options.catp) === 1 ? 1 : 0,
+                strict:options.catstrict === true || options.catstrict === 1 || options.catstrict === '1'});
+              return false;
+            }
+            return open(options, instant);
+          };
+          decorate();
+        })();
+        """
     }
 
     /// Only the pack's own origin may be navigated to, plus blank subframes the page makes itself.
@@ -218,9 +272,23 @@ final class GymSession: NSObject, ObservableObject, WKNavigationDelegate, WKScri
     /// The page takes its language from the entry URL, so a change means loading it again.
     /// The route that was open is opened again once the page is ready.
     func languageChanged() {
-        guard webView != nil else { if case .failed = phase { phase = .idle }; return }
-        routeToRestore = selectedRoute?.id
-        reload()
+        guard let webView, let pack else { if case .failed = phase { phase = .idle }; return }
+        let currentURL = webView.url
+        webView.evaluateJavaScript("window.BetaBuddyGym?.state()") { [weak self] value, _ in
+            guard let self, webView.url == currentURL else { return }
+            let state = value as? [String: Any]
+            var query: [URLQueryItem] = []
+            if let venue = state?["venue"] as? String { query.append(.init(name: "venue", value: venue)) }
+            if let route = state?["route"] as? String { query.append(.init(name: "route", value: route)) }
+            if self.isMember, state?["species"] as? String == "cat", let cat = state?["cat"] as? [String: Any] {
+                query += [.init(name: "species", value: "cat"),
+                          .init(name: "catp", value: String(cat["p"] as? Int ?? 0)),
+                          .init(name: "catstrict", value: cat["strict"] as? Bool == true ? "1" : "0")]
+            }
+            if state == nil { self.routeToRestore = self.selectedRoute?.id; self.reload(); return }
+            var components = URLComponents(); components.queryItems = query
+            self.load(pack.entryURL(hintSeen: true, language: AppLanguage.current, extraQuery: components.percentEncodedQuery))
+        }
     }
 
     func send(_ command: GymCommand) {
@@ -264,6 +332,7 @@ final class GymSession: NSObject, ObservableObject, WKNavigationDelegate, WKScri
             if let route = UserDefaults.standard.string(forKey: "gymOpenRoute") { send(.openRoute(route)) }
             #endif
         case .openSettings: settingsRequests += 1
+        case .requestCat(let preset, let strict): requestCat(preset: preset, strict: strict)
         case .hintSeen: UserDefaults.standard.set(true, forKey: Self.hintSeenKey)
         case .routeSelected(let route): selectedRoute = route
         case .error(let text):
