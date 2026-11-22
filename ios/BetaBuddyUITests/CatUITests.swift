@@ -16,7 +16,7 @@ final class CatUITests: XCTestCase {
         let app = XCUIApplication()
         for preset in 0...1 {
             app.launchArguments = ["-AppleLanguages", "(en)", "-AppleLocale", "en_US", "-resetLanguage", "YES", "-gymNoticeSeen", "YES",
-                                   "-gymQuery", "route=baishan-a01&species=cat&catp=\(preset)&catstrict=0&sheet=mini"]
+                                   "-gymQuery", "route=baishan-a01&species=cat&catp=\(preset)&catstrict=0&sheet=mini&hint=0"]
             app.launch()
             let page = app.webViews.firstMatch
             XCTAssertTrue(page.waitForExistence(timeout: 30))
