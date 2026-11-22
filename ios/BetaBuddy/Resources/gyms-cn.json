@@ -28,7 +28,7 @@
     "notes": [
       "timeproves 仅提供馆名、分店和概略行政区；未由 Hylonomus 补充门牌地址的条目，address 留空。",
       "抓取日期不等于资料核验日期。源数据包含 2026-08 的核验备注，但无全量更新承诺。",
-      "不采集评论、照片、联系人、价格或路线；不导入来源站点的估计坐标，不使用源中 AI 汇总的馆型与风格。坐标另由 OpenStreetMap 补充并标明精度，见 metadata.coordinates。",
+      "不采集评论、照片、联系人、价格或路线；不导入来源站点的估计坐标，不使用源中 AI 汇总的馆型与风格。坐标另由 OpenStreetMap 补充并标明精度（一部分只定位到来源写的最近地铁站），见 metadata.coordinates。",
       "未收录的岩馆可以手填；所有条目均未经本项目现场核实。"
     ],
     "omittedSourceIDs": [
@@ -99,13 +99,15 @@
       "counts": {
         "poi": 8,
         "address": 64,
-        "district": 266,
+        "station": 140,
+        "district": 126,
         "city": 4,
         "none": 0
       },
       "precision": {
         "poi": "岩馆本身在 OpenStreetMap 上的点位",
         "address": "地址或分店名里写明的建筑、商场或园区（跨度不超过 600 米）在 OpenStreetMap 上的位置，不是门牌点",
+        "station": "名录来源写的「最近地铁站」在 OpenStreetMap 上的位置，不是岩馆位置；与已知点位对比，多数相差一两公里以内，约八分之一相差三公里以上",
         "district": "所在区县的中心点（OpenStreetMap 的驻地或边界中心），不是岩馆位置",
         "city": "所在城市的中心点，不是岩馆位置"
       },
@@ -120,11 +122,17 @@
           "url": "https://www.openstreetmap.org/copyright",
           "license": "ODbL 1.0",
           "attribution": "© OpenStreetMap contributors"
+        },
+        {
+          "id": "timeproves",
+          "use": "只取每家馆的最近地铁站名，用来在 OpenStreetMap 上找站点；站名不写进条目",
+          "license": "见 metadata.sources"
         }
       ],
       "notes": [
         "坐标只来自 OpenStreetMap，本身就是 WGS-84，没有做坐标系转换；没有使用 GCJ-02 或 BD-09 的来源。",
-        "多数岩馆在 OpenStreetMap 上没有点位，只能落到区县或城市中心；这类坐标只能用来判断大致在哪个区，不能排同区内的远近。",
+        "多数岩馆在 OpenStreetMap 上没有点位：能对上最近地铁站的落在站点上，其余落到区县或城市中心。站点坐标可以粗排远近，区县和城市中心只能判断大致在哪个区。",
+        "最近地铁站是来源站点的说法，没有逐条核对，来源自己也标了不少「位置待核」；城里找不到这个站、同城有两个同名站、或站点不在岩馆所属区县时不用。",
         "点位未经现场核实；OpenStreetMap 在中国大陆的个别要素可能有几百米偏移或已经过时。"
       ]
     }
@@ -150,9 +158,9 @@
       "address": "",
       "district": "黄浦",
       "sourceURL": "https://timeproves.com/",
-      "lat": 31.23359,
-      "lon": 121.47986,
-      "coordPrecision": "district"
+      "lat": 31.2104,
+      "lon": 121.49502,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sh_5plus_nx",
@@ -186,9 +194,9 @@
       "address": "",
       "district": "长宁",
       "sourceURL": "https://timeproves.com/",
-      "lat": 31.22212,
-      "lon": 121.42009,
-      "coordPrecision": "district"
+      "lat": 31.22144,
+      "lon": 121.42701,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sh_bm_zsb",
@@ -198,9 +206,9 @@
       "address": "",
       "district": "普陀",
       "sourceURL": "https://timeproves.com/",
-      "lat": 31.25133,
-      "lon": 121.39123,
-      "coordPrecision": "district"
+      "lat": 31.24853,
+      "lon": 121.42708,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sh_bm_bg",
@@ -246,9 +254,9 @@
       "address": "",
       "district": "黄浦",
       "sourceURL": "https://timeproves.com/",
-      "lat": 31.23359,
-      "lon": 121.47986,
-      "coordPrecision": "district"
+      "lat": 31.21385,
+      "lon": 121.48148,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sh_dome_mh",
@@ -270,9 +278,9 @@
       "address": "",
       "district": "长宁",
       "sourceURL": "https://timeproves.com/",
-      "lat": 31.22212,
-      "lon": 121.42009,
-      "coordPrecision": "district"
+      "lat": 31.22144,
+      "lon": 121.42701,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sh_dome_wk",
@@ -282,9 +290,9 @@
       "address": "",
       "district": "徐汇",
       "sourceURL": "https://timeproves.com/",
-      "lat": 31.19009,
-      "lon": 121.43111,
-      "coordPrecision": "district"
+      "lat": 31.15656,
+      "lon": 121.42545,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sh_goat",
@@ -294,9 +302,9 @@
       "address": "",
       "district": "徐汇",
       "sourceURL": "https://timeproves.com/",
-      "lat": 31.19009,
-      "lon": 121.43111,
-      "coordPrecision": "district"
+      "lat": 31.19749,
+      "lon": 121.43237,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sh_goat_tp",
@@ -306,9 +314,9 @@
       "address": "",
       "district": "普陀",
       "sourceURL": "https://timeproves.com/",
-      "lat": 31.25133,
-      "lon": 121.39123,
-      "coordPrecision": "district"
+      "lat": 31.27071,
+      "lon": 121.38526,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sh_highfive",
@@ -318,9 +326,9 @@
       "address": "",
       "district": "静安",
       "sourceURL": "https://timeproves.com/",
-      "lat": 31.22952,
-      "lon": 121.44278,
-      "coordPrecision": "district"
+      "lat": 31.29453,
+      "lon": 121.44559,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sh_laputa",
@@ -330,9 +338,9 @@
       "address": "",
       "district": "长宁",
       "sourceURL": "https://timeproves.com/",
-      "lat": 31.22212,
-      "lon": 121.42009,
-      "coordPrecision": "district"
+      "lat": 31.22006,
+      "lon": 121.41156,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sh_nomoss",
@@ -354,9 +362,9 @@
       "address": "",
       "district": "普陀",
       "sourceURL": "https://timeproves.com/",
-      "lat": 31.25133,
-      "lon": 121.39123,
-      "coordPrecision": "district"
+      "lat": 31.23312,
+      "lon": 121.40722,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sh_ribbon",
@@ -378,9 +386,9 @@
       "address": "",
       "district": "普陀",
       "sourceURL": "https://timeproves.com/",
-      "lat": 31.25133,
-      "lon": 121.39123,
-      "coordPrecision": "district"
+      "lat": 31.25271,
+      "lon": 121.40265,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sh_rock_zt",
@@ -390,9 +398,9 @@
       "address": "",
       "district": "普陀",
       "sourceURL": "https://timeproves.com/",
-      "lat": 31.25133,
-      "lon": 121.39123,
-      "coordPrecision": "district"
+      "lat": 31.25643,
+      "lon": 121.43641,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sh_sizer",
@@ -402,9 +410,9 @@
       "address": "",
       "district": "浦东",
       "sourceURL": "https://timeproves.com/",
-      "lat": 31.22327,
-      "lon": 121.53978,
-      "coordPrecision": "district"
+      "lat": 31.16073,
+      "lon": 121.56746,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sh_star",
@@ -414,9 +422,9 @@
       "address": "",
       "district": "普陀",
       "sourceURL": "https://timeproves.com/",
-      "lat": 31.25133,
-      "lon": 121.39123,
-      "coordPrecision": "district"
+      "lat": 31.25271,
+      "lon": 121.40265,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sh_stonehaven",
@@ -438,9 +446,9 @@
       "address": "",
       "district": "杨浦",
       "sourceURL": "https://timeproves.com/",
-      "lat": 31.26153,
-      "lon": 121.52112,
-      "coordPrecision": "district"
+      "lat": 31.29974,
+      "lon": 121.51007,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sh_urock_yy",
@@ -450,9 +458,9 @@
       "address": "",
       "district": "松江",
       "sourceURL": "https://timeproves.com/",
-      "lat": 31.0344,
-      "lon": 121.22321,
-      "coordPrecision": "district"
+      "lat": 31.12041,
+      "lon": 121.25588,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sh_vmore_bwt",
@@ -462,9 +470,9 @@
       "address": "",
       "district": "虹口",
       "sourceURL": "https://timeproves.com/",
-      "lat": 31.26644,
-      "lon": 121.50078,
-      "coordPrecision": "district"
+      "lat": 31.25543,
+      "lon": 121.50236,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sh_vmore_gs",
@@ -474,9 +482,9 @@
       "address": "",
       "district": "浦东",
       "sourceURL": "https://timeproves.com/",
-      "lat": 31.22327,
-      "lon": 121.53978,
-      "coordPrecision": "district"
+      "lat": 31.21361,
+      "lon": 121.52366,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sh_viper",
@@ -498,9 +506,9 @@
       "address": "",
       "district": "浦东",
       "sourceURL": "https://timeproves.com/",
-      "lat": 31.22327,
-      "lon": 121.53978,
-      "coordPrecision": "district"
+      "lat": 31.21638,
+      "lon": 121.65187,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sh_ujia_ht",
@@ -510,9 +518,9 @@
       "address": "",
       "district": "浦东",
       "sourceURL": "https://timeproves.com/",
-      "lat": 31.22327,
-      "lon": 121.53978,
-      "coordPrecision": "district"
+      "lat": 31.03933,
+      "lon": 121.59205,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sh_urock",
@@ -533,9 +541,9 @@
         "timeproves:sh_urock",
         "hylonomus-1e5323d9fdfee0d2"
       ],
-      "lat": 31.22327,
-      "lon": 121.53978,
-      "coordPrecision": "district"
+      "lat": 31.26312,
+      "lon": 121.60722,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sh_kelai",
@@ -545,9 +553,9 @@
       "address": "",
       "district": "闵行",
       "sourceURL": "https://timeproves.com/",
-      "lat": 31.11477,
-      "lon": 121.37694,
-      "coordPrecision": "district"
+      "lat": 31.13286,
+      "lon": 121.39827,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sh_xiangshang",
@@ -568,9 +576,9 @@
         "timeproves:sh_xiangshang",
         "hylonomus-8e9ed18c8d8633cc"
       ],
-      "lat": 31.40739,
-      "lon": 121.48484,
-      "coordPrecision": "district"
+      "lat": 31.35206,
+      "lon": 121.46173,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sh_xiaoyan",
@@ -616,9 +624,9 @@
       "address": "",
       "district": "黄浦",
       "sourceURL": "https://timeproves.com/",
-      "lat": 31.23359,
-      "lon": 121.47986,
-      "coordPrecision": "district"
+      "lat": 31.21901,
+      "lon": 121.49406,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sh_dayan",
@@ -651,9 +659,9 @@
       "address": "",
       "district": "奉贤",
       "sourceURL": "https://timeproves.com/",
-      "lat": 30.92092,
-      "lon": 121.47055,
-      "coordPrecision": "district"
+      "lat": 30.93631,
+      "lon": 121.47731,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sh_shu",
@@ -686,9 +694,9 @@
       "address": "",
       "district": "普陀",
       "sourceURL": "https://timeproves.com/",
-      "lat": 31.25133,
-      "lon": 121.39123,
-      "coordPrecision": "district"
+      "lat": 31.24278,
+      "lon": 121.43392,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sh_jinfeng_jd",
@@ -698,9 +706,9 @@
       "address": "",
       "district": "嘉定",
       "sourceURL": "https://timeproves.com/",
-      "lat": 31.37776,
-      "lon": 121.26061,
-      "coordPrecision": "district"
+      "lat": 31.34728,
+      "lon": 121.24088,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sh_jinfeng",
@@ -710,9 +718,9 @@
       "address": "",
       "district": "闵行",
       "sourceURL": "https://timeproves.com/",
-      "lat": 31.11477,
-      "lon": 121.37694,
-      "coordPrecision": "district"
+      "lat": 31.13286,
+      "lon": 121.39827,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sh_jinfeng_xa",
@@ -722,9 +730,9 @@
       "address": "",
       "district": "徐汇",
       "sourceURL": "https://timeproves.com/",
-      "lat": 31.19009,
-      "lon": 121.43111,
-      "coordPrecision": "district"
+      "lat": 31.1695,
+      "lon": 121.45387,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sh_shanyi",
@@ -734,9 +742,9 @@
       "address": "",
       "district": "松江",
       "sourceURL": "https://timeproves.com/",
-      "lat": 31.0344,
-      "lon": 121.22321,
-      "coordPrecision": "district"
+      "lat": 31.03221,
+      "lon": 121.22626,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sh_ys_zk",
@@ -805,9 +813,9 @@
       "address": "",
       "district": "浦东",
       "sourceURL": "https://timeproves.com/",
-      "lat": 31.22327,
-      "lon": 121.53978,
-      "coordPrecision": "district"
+      "lat": 30.92595,
+      "lon": 121.90656,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sh_yanwu_mb",
@@ -817,9 +825,9 @@
       "address": "",
       "district": "浦东",
       "sourceURL": "https://timeproves.com/",
-      "lat": 31.22327,
-      "lon": 121.53978,
-      "coordPrecision": "district"
+      "lat": 31.18722,
+      "lon": 121.48932,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sh_yanwu_hp",
@@ -829,9 +837,9 @@
       "address": "",
       "district": "黄浦",
       "sourceURL": "https://timeproves.com/",
-      "lat": 31.23359,
-      "lon": 121.47986,
-      "coordPrecision": "district"
+      "lat": 31.20361,
+      "lon": 121.48511,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sh_yanding",
@@ -853,9 +861,9 @@
       "address": "",
       "district": "杨浦",
       "sourceURL": "https://timeproves.com/",
-      "lat": 31.26153,
-      "lon": 121.52112,
-      "coordPrecision": "district"
+      "lat": 31.28095,
+      "lon": 121.5241,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sh_wopan",
@@ -865,9 +873,9 @@
       "address": "",
       "district": "虹口",
       "sourceURL": "https://timeproves.com/",
-      "lat": 31.26644,
-      "lon": 121.50078,
-      "coordPrecision": "district"
+      "lat": 31.26299,
+      "lon": 121.49648,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sh_panwang_nx",
@@ -900,9 +908,9 @@
       "address": "",
       "district": "普陀",
       "sourceURL": "https://timeproves.com/",
-      "lat": 31.25133,
-      "lon": 121.39123,
-      "coordPrecision": "district"
+      "lat": 31.27341,
+      "lon": 121.37221,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sh_panjing_dt",
@@ -912,9 +920,9 @@
       "address": "",
       "district": "浦东",
       "sourceURL": "https://timeproves.com/",
-      "lat": 31.22327,
-      "lon": 121.53978,
-      "coordPrecision": "district"
+      "lat": 31.15546,
+      "lon": 121.47583,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sh_pj",
@@ -924,9 +932,9 @@
       "address": "",
       "district": "静安",
       "sourceURL": "https://timeproves.com/",
-      "lat": 31.22952,
-      "lon": 121.44278,
-      "coordPrecision": "district"
+      "lat": 31.23546,
+      "lon": 121.43815,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sh_tianyu",
@@ -936,9 +944,9 @@
       "address": "",
       "district": "黄浦",
       "sourceURL": "https://timeproves.com/",
-      "lat": 31.23359,
-      "lon": 121.47986,
-      "coordPrecision": "district"
+      "lat": 31.2344,
+      "lon": 121.47052,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sh_wujie_k88",
@@ -948,9 +956,9 @@
       "address": "",
       "district": "长宁",
       "sourceURL": "https://timeproves.com/",
-      "lat": 31.22212,
-      "lon": 121.42009,
-      "coordPrecision": "district"
+      "lat": 31.22006,
+      "lon": 121.41156,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sh_wujie_xh",
@@ -972,9 +980,9 @@
       "address": "",
       "district": "松江",
       "sourceURL": "https://timeproves.com/",
-      "lat": 31.0344,
-      "lon": 121.22321,
-      "coordPrecision": "district"
+      "lat": 31.13946,
+      "lon": 121.31516,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sh_jibi",
@@ -1007,9 +1015,9 @@
       "address": "",
       "district": "徐汇",
       "sourceURL": "https://timeproves.com/",
-      "lat": 31.19009,
-      "lon": 121.43111,
-      "coordPrecision": "district"
+      "lat": 31.1695,
+      "lon": 121.45387,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sh_cishan_bwt",
@@ -1031,9 +1039,9 @@
       "address": "",
       "district": "闵行",
       "sourceURL": "https://timeproves.com/",
-      "lat": 31.11477,
-      "lon": 121.37694,
-      "coordPrecision": "district"
+      "lat": 31.196,
+      "lon": 121.31373,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sh_dengtuo",
@@ -1043,9 +1051,9 @@
       "address": "",
       "district": "闵行",
       "sourceURL": "https://timeproves.com/",
-      "lat": 31.11477,
-      "lon": 121.37694,
-      "coordPrecision": "district"
+      "lat": 31.10014,
+      "lon": 121.38115,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sh_dengtuo_sj",
@@ -1055,9 +1063,9 @@
       "address": "",
       "district": "松江",
       "sourceURL": "https://timeproves.com/",
-      "lat": 31.0344,
-      "lon": 121.22321,
-      "coordPrecision": "district"
+      "lat": 31.00285,
+      "lon": 121.22447,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sh_hongpan",
@@ -1078,9 +1086,9 @@
         "timeproves:sh_hongpan",
         "hylonomus-12cc138dc02572cd"
       ],
-      "lat": 31.11477,
-      "lon": 121.37694,
-      "coordPrecision": "district"
+      "lat": 31.08631,
+      "lon": 121.50422,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sh_fyl",
@@ -1090,9 +1098,9 @@
       "address": "",
       "district": "嘉定",
       "sourceURL": "https://timeproves.com/",
-      "lat": 31.37776,
-      "lon": 121.26061,
-      "coordPrecision": "district"
+      "lat": 31.37905,
+      "lon": 121.22339,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sh_ss_yh",
@@ -1102,9 +1110,9 @@
       "address": "",
       "district": "静安",
       "sourceURL": "https://timeproves.com/",
-      "lat": 31.22952,
-      "lon": 121.44278,
-      "coordPrecision": "district"
+      "lat": 31.29453,
+      "lon": 121.44559,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sh_ss_ws",
@@ -1114,9 +1122,9 @@
       "address": "",
       "district": "静安",
       "sourceURL": "https://timeproves.com/",
-      "lat": 31.22952,
-      "lon": 121.44278,
-      "coordPrecision": "district"
+      "lat": 31.29453,
+      "lon": 121.44559,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sh_jinshan",
@@ -1126,9 +1134,9 @@
       "address": "",
       "district": "金山",
       "sourceURL": "https://timeproves.com/",
-      "lat": 30.74482,
-      "lon": 121.33726,
-      "coordPrecision": "district"
+      "lat": 30.73011,
+      "lon": 121.35806,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sh_banana_jl",
@@ -1138,9 +1146,9 @@
       "address": "",
       "district": "静安",
       "sourceURL": "https://timeproves.com/",
-      "lat": 31.22952,
-      "lon": 121.44278,
-      "coordPrecision": "district"
+      "lat": 31.25508,
+      "lon": 121.46435,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sh_banana_ya",
@@ -1150,9 +1158,9 @@
       "address": "",
       "district": "长宁",
       "sourceURL": "https://timeproves.com/",
-      "lat": 31.22212,
-      "lon": 121.42009,
-      "coordPrecision": "district"
+      "lat": 31.21142,
+      "lon": 121.41244,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sh_banana_jhq",
@@ -1306,9 +1314,9 @@
       "address": "",
       "district": "朝阳",
       "sourceURL": "https://timeproves.com/",
-      "lat": 39.92045,
-      "lon": 116.43691,
-      "coordPrecision": "district"
+      "lat": 39.96949,
+      "lon": 116.48404,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:cob_jxq",
@@ -1318,9 +1326,9 @@
       "address": "",
       "district": "朝阳",
       "sourceURL": "https://timeproves.com/",
-      "lat": 39.92045,
-      "lon": 116.43691,
-      "coordPrecision": "district"
+      "lat": 39.9764,
+      "lon": 116.38793,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:cog_sg",
@@ -1342,9 +1350,9 @@
       "address": "",
       "district": "朝阳",
       "sourceURL": "https://timeproves.com/",
-      "lat": 39.92045,
-      "lon": 116.43691,
-      "coordPrecision": "district"
+      "lat": 40.0192,
+      "lon": 116.46079,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:camp4_slt",
@@ -1354,9 +1362,9 @@
       "address": "",
       "district": "朝阳",
       "sourceURL": "https://timeproves.com/",
-      "lat": 39.92045,
-      "lon": 116.43691,
-      "coordPrecision": "district"
+      "lat": 39.9322,
+      "lon": 116.45561,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:camp4_jxq",
@@ -1390,9 +1398,9 @@
       "address": "",
       "district": "朝阳",
       "sourceURL": "https://timeproves.com/",
-      "lat": 39.92045,
-      "lon": 116.43691,
-      "coordPrecision": "district"
+      "lat": 39.97913,
+      "lon": 116.48503,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:mellow",
@@ -1414,9 +1422,9 @@
       "address": "",
       "district": "朝阳",
       "sourceURL": "https://timeproves.com/",
-      "lat": 39.92045,
-      "lon": 116.43691,
-      "coordPrecision": "district"
+      "lat": 39.87339,
+      "lon": 116.49541,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:yiqi_zgc",
@@ -1426,9 +1434,9 @@
       "address": "",
       "district": "海淀",
       "sourceURL": "https://timeproves.com/",
-      "lat": 39.95807,
-      "lon": 116.29241,
-      "coordPrecision": "district"
+      "lat": 39.98266,
+      "lon": 116.31038,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:yiqi",
@@ -1438,9 +1446,9 @@
       "address": "",
       "district": "东城",
       "sourceURL": "https://timeproves.com/",
-      "lat": 39.9269,
-      "lon": 116.41004,
-      "coordPrecision": "district"
+      "lat": 39.89229,
+      "lon": 116.42772,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:rr_lz",
@@ -1450,9 +1458,9 @@
       "address": "",
       "district": "丰台",
       "sourceURL": "https://timeproves.com/",
-      "lat": 39.85712,
-      "lon": 116.28042,
-      "coordPrecision": "district"
+      "lat": 39.86628,
+      "lon": 116.3256,
+      "coordPrecision": "station"
     },
     {
       "id": "hylonomus-c6fc232803157d11",
@@ -1474,9 +1482,9 @@
       "address": "",
       "district": "朝阳",
       "sourceURL": "https://timeproves.com/",
-      "lat": 39.92045,
-      "lon": 116.43691,
-      "coordPrecision": "district"
+      "lat": 39.96464,
+      "lon": 116.54136,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:jihe",
@@ -1509,9 +1517,9 @@
       "address": "",
       "district": "朝阳",
       "sourceURL": "https://timeproves.com/",
-      "lat": 39.92045,
-      "lon": 116.43691,
-      "coordPrecision": "district"
+      "lat": 39.98413,
+      "lon": 116.38758,
+      "coordPrecision": "station"
     },
     {
       "id": "hylonomus-c9fc6bd140de6aeb",
@@ -1533,9 +1541,9 @@
       "address": "",
       "district": "通州",
       "sourceURL": "https://timeproves.com/",
-      "lat": 39.90692,
-      "lon": 116.65169,
-      "coordPrecision": "district"
+      "lat": 39.90274,
+      "lon": 116.63141,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:ap_sjgy",
@@ -1557,9 +1565,9 @@
       "address": "",
       "district": "海淀",
       "sourceURL": "https://timeproves.com/",
-      "lat": 39.95807,
-      "lon": 116.29241,
-      "coordPrecision": "district"
+      "lat": 39.90622,
+      "lon": 116.26803,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:ap_by",
@@ -1569,9 +1577,9 @@
       "address": "",
       "district": "朝阳",
       "sourceURL": "https://timeproves.com/",
-      "lat": 39.92045,
-      "lon": 116.43691,
-      "coordPrecision": "district"
+      "lat": 40.04166,
+      "lon": 116.42819,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:ap_sjq",
@@ -1605,9 +1613,9 @@
       "address": "",
       "district": "房山",
       "sourceURL": "https://timeproves.com/",
-      "lat": 39.74672,
-      "lon": 116.13702,
-      "coordPrecision": "district"
+      "lat": 39.75938,
+      "lon": 116.18338,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:ap_jm",
@@ -1629,9 +1637,9 @@
       "address": "",
       "district": "昌平",
       "sourceURL": "https://timeproves.com/",
-      "lat": 40.21965,
-      "lon": 116.22509,
-      "coordPrecision": "district"
+      "lat": 40.06952,
+      "lon": 116.32976,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:ys_gz",
@@ -1641,9 +1649,9 @@
       "address": "",
       "district": "朝阳",
       "sourceURL": "https://timeproves.com/",
-      "lat": 39.92045,
-      "lon": 116.43691,
-      "coordPrecision": "district"
+      "lat": 39.90808,
+      "lon": 116.59317,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:ys_xsq",
@@ -1676,9 +1684,9 @@
       "address": "",
       "district": "朝阳",
       "sourceURL": "https://timeproves.com/",
-      "lat": 39.92045,
-      "lon": 116.43691,
-      "coordPrecision": "district"
+      "lat": 39.88401,
+      "lon": 116.49752,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:ritan",
@@ -1700,9 +1708,9 @@
       "address": "",
       "district": "东城",
       "sourceURL": "https://timeproves.com/",
-      "lat": 39.9269,
-      "lon": 116.41004,
-      "coordPrecision": "district"
+      "lat": 39.95739,
+      "lon": 116.41223,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:jishi",
@@ -1712,9 +1720,9 @@
       "address": "",
       "district": "房山",
       "sourceURL": "https://timeproves.com/",
-      "lat": 39.74672,
-      "lon": 116.13702,
-      "coordPrecision": "district"
+      "lat": 39.7219,
+      "lon": 116.1703,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:cishan_yz",
@@ -1724,9 +1732,9 @@
       "address": "",
       "district": "通州",
       "sourceURL": "https://timeproves.com/",
-      "lat": 39.90692,
-      "lon": 116.65169,
-      "coordPrecision": "district"
+      "lat": 39.78255,
+      "lon": 116.55644,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:haoshi_jl",
@@ -1748,9 +1756,9 @@
       "address": "",
       "district": "顺义",
       "sourceURL": "https://timeproves.com/",
-      "lat": 40.14875,
-      "lon": 116.65387,
-      "coordPrecision": "district"
+      "lat": 40.0689,
+      "lon": 116.54937,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:qy_fs",
@@ -1760,9 +1768,9 @@
       "address": "",
       "district": "房山",
       "sourceURL": "https://timeproves.com/",
-      "lat": 39.74672,
-      "lon": 116.13702,
-      "coordPrecision": "district"
+      "lat": 39.72846,
+      "lon": 116.17733,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:qy_txzckj",
@@ -1772,9 +1780,9 @@
       "address": "",
       "district": "海淀",
       "sourceURL": "https://timeproves.com/",
-      "lat": 39.95807,
-      "lon": 116.29241,
-      "coordPrecision": "district"
+      "lat": 40.05172,
+      "lon": 116.30018,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:qy_lh",
@@ -1807,9 +1815,9 @@
       "address": "",
       "district": "海淀",
       "sourceURL": "https://timeproves.com/",
-      "lat": 39.95807,
-      "lon": 116.29241,
-      "coordPrecision": "district"
+      "lat": 39.92839,
+      "lon": 116.24688,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:qspf_2",
@@ -1819,9 +1827,9 @@
       "address": "",
       "district": "海淀",
       "sourceURL": "https://timeproves.com/",
-      "lat": 39.95807,
-      "lon": 116.29241,
-      "coordPrecision": "district"
+      "lat": 40.03978,
+      "lon": 116.30868,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:qspf_1",
@@ -1831,9 +1839,9 @@
       "address": "",
       "district": "海淀",
       "sourceURL": "https://timeproves.com/",
-      "lat": 39.95807,
-      "lon": 116.29241,
-      "coordPrecision": "district"
+      "lat": 39.9563,
+      "lon": 116.31718,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:qingteng",
@@ -1843,9 +1851,9 @@
       "address": "",
       "district": "朝阳",
       "sourceURL": "https://timeproves.com/",
-      "lat": 39.92045,
-      "lon": 116.43691,
-      "coordPrecision": "district"
+      "lat": 39.99975,
+      "lon": 116.42506,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:wanyan",
@@ -1878,9 +1886,9 @@
       "address": "",
       "district": "东城",
       "sourceURL": "https://timeproves.com/",
-      "lat": 39.9269,
-      "lon": 116.41004,
-      "coordPrecision": "district"
+      "lat": 39.92307,
+      "lon": 116.42795,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:fm_jjm",
@@ -1890,9 +1898,9 @@
       "address": "",
       "district": "丰台",
       "sourceURL": "https://timeproves.com/",
-      "lat": 39.85712,
-      "lon": 116.28042,
-      "coordPrecision": "district"
+      "lat": 39.84317,
+      "lon": 116.32735,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:xj_shangdi",
@@ -1902,9 +1910,9 @@
       "address": "",
       "district": "海淀",
       "sourceURL": "https://timeproves.com/",
-      "lat": 39.95807,
-      "lon": 116.29241,
-      "coordPrecision": "district"
+      "lat": 40.03177,
+      "lon": 116.31408,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:xj_768",
@@ -1914,9 +1922,9 @@
       "address": "",
       "district": "海淀",
       "sourceURL": "https://timeproves.com/",
-      "lat": 39.95807,
-      "lon": 116.29241,
-      "coordPrecision": "district"
+      "lat": 39.9868,
+      "lon": 116.34725,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:mowang",
@@ -1926,9 +1934,9 @@
       "address": "",
       "district": "丰台",
       "sourceURL": "https://timeproves.com/",
-      "lat": 39.85712,
-      "lon": 116.28042,
-      "coordPrecision": "district"
+      "lat": 39.83089,
+      "lon": 116.29143,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:ap_hkgc",
@@ -1938,9 +1946,9 @@
       "address": "",
       "district": "大兴",
       "sourceURL": "https://timeproves.com/",
-      "lat": 39.72541,
-      "lon": 116.33544,
-      "coordPrecision": "district"
+      "lat": 39.78839,
+      "lon": 116.32268,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:heibao",
@@ -1962,9 +1970,9 @@
       "address": "",
       "district": "朝阳",
       "sourceURL": "https://timeproves.com/",
-      "lat": 39.92045,
-      "lon": 116.43691,
-      "coordPrecision": "district"
+      "lat": 39.89219,
+      "lon": 116.48135,
+      "coordPrecision": "station"
     },
     {
       "id": "hylonomus-d49d3b01293b75c8",
@@ -1998,9 +2006,9 @@
       "address": "",
       "district": "锦江",
       "sourceURL": "https://timeproves.com/",
-      "lat": 30.60134,
-      "lon": 104.11438,
-      "coordPrecision": "district"
+      "lat": 30.66312,
+      "lon": 104.08147,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:cd_qs_cy",
@@ -2105,9 +2113,9 @@
       "address": "",
       "district": "青羊",
       "sourceURL": "https://timeproves.com/",
-      "lat": 30.67687,
-      "lon": 104.06009,
-      "coordPrecision": "district"
+      "lat": 30.66945,
+      "lon": 104.06305,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:cd_qurui",
@@ -2165,9 +2173,9 @@
       "address": "",
       "district": "成华",
       "sourceURL": "https://timeproves.com/",
-      "lat": 30.66242,
-      "lon": 104.09905,
-      "coordPrecision": "district"
+      "lat": 30.69024,
+      "lon": 104.13092,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:cd_banana_cosmo",
@@ -2177,9 +2185,9 @@
       "address": "",
       "district": "锦江",
       "sourceURL": "https://timeproves.com/",
-      "lat": 30.60134,
-      "lon": 104.11438,
-      "coordPrecision": "district"
+      "lat": 30.65604,
+      "lon": 104.0769,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:cd_banana_icd",
@@ -2189,9 +2197,9 @@
       "address": "",
       "district": "锦江",
       "sourceURL": "https://timeproves.com/",
-      "lat": 30.60134,
-      "lon": 104.11438,
-      "coordPrecision": "district"
+      "lat": 30.63604,
+      "lon": 104.10964,
+      "coordPrecision": "station"
     },
     {
       "id": "hylonomus-8ee052b6c4a2e84f",
@@ -2393,9 +2401,9 @@
       "address": "",
       "district": "番禺",
       "sourceURL": "https://timeproves.com/",
-      "lat": 22.93873,
-      "lon": 113.37854,
-      "coordPrecision": "district"
+      "lat": 22.99618,
+      "lon": 113.3244,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:gz_sm",
@@ -2417,9 +2425,9 @@
       "address": "",
       "district": "海珠",
       "sourceURL": "https://timeproves.com/",
-      "lat": 23.086,
-      "lon": 113.31199,
-      "coordPrecision": "district"
+      "lat": 23.07053,
+      "lon": 113.28064,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:gz_shanningfu",
@@ -2477,9 +2485,9 @@
       "address": "",
       "district": "番禺",
       "sourceURL": "https://timeproves.com/",
-      "lat": 22.93873,
-      "lon": 113.37854,
-      "coordPrecision": "district"
+      "lat": 22.952,
+      "lon": 113.35631,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:gz_qingtian",
@@ -2489,9 +2497,9 @@
       "address": "",
       "district": "海珠",
       "sourceURL": "https://timeproves.com/",
-      "lat": 23.086,
-      "lon": 113.31199,
-      "coordPrecision": "district"
+      "lat": 23.09581,
+      "lon": 113.27659,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:gz_pysj",
@@ -2501,9 +2509,9 @@
       "address": "",
       "district": "白云",
       "sourceURL": "https://timeproves.com/",
-      "lat": 23.16063,
-      "lon": 113.26789,
-      "coordPrecision": "district"
+      "lat": 23.18427,
+      "lon": 113.26558,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:gz_pulan",
@@ -2513,9 +2521,9 @@
       "address": "",
       "district": "番禺",
       "sourceURL": "https://timeproves.com/",
-      "lat": 22.93873,
-      "lon": 113.37854,
-      "coordPrecision": "district"
+      "lat": 22.952,
+      "lon": 113.35631,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:gz_shilin",
@@ -2525,9 +2533,9 @@
       "address": "",
       "district": "黄埔",
       "sourceURL": "https://timeproves.com/",
-      "lat": 23.18294,
-      "lon": 113.47493,
-      "coordPrecision": "district"
+      "lat": 23.17504,
+      "lon": 113.49594,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:gz_wangzhe",
@@ -2607,9 +2615,9 @@
       "address": "",
       "district": "海珠",
       "sourceURL": "https://timeproves.com/",
-      "lat": 23.086,
-      "lon": 113.31199,
-      "coordPrecision": "district"
+      "lat": 23.10302,
+      "lon": 113.36316,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:gz_cjx_cx",
@@ -2654,9 +2662,9 @@
       "address": "",
       "district": "天河",
       "sourceURL": "https://timeproves.com/",
-      "lat": 23.12712,
-      "lon": 113.35642,
-      "coordPrecision": "district"
+      "lat": 23.11993,
+      "lon": 113.37303,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:gz_heimiao",
@@ -2678,9 +2686,9 @@
       "address": "",
       "district": "福田",
       "sourceURL": "https://timeproves.com/",
-      "lat": 22.52436,
-      "lon": 114.04989,
-      "coordPrecision": "district"
+      "lat": 22.53884,
+      "lon": 114.02266,
+      "coordPrecision": "station"
     },
     {
       "id": "hylonomus-f70b1bd59fad775e",
@@ -2702,9 +2710,9 @@
       "address": "",
       "district": "福田",
       "sourceURL": "https://timeproves.com/",
-      "lat": 22.52436,
-      "lon": 114.04989,
-      "coordPrecision": "district"
+      "lat": 22.51078,
+      "lon": 114.05107,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sz_bs_yh",
@@ -2714,9 +2722,9 @@
       "address": "",
       "district": "南山",
       "sourceURL": "https://timeproves.com/",
-      "lat": 22.53601,
-      "lon": 113.92562,
-      "coordPrecision": "district"
+      "lat": 22.52066,
+      "lon": 113.9385,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sz_bs_sk",
@@ -2726,9 +2734,9 @@
       "address": "",
       "district": "南山",
       "sourceURL": "https://timeproves.com/",
-      "lat": 22.53601,
-      "lon": 113.92562,
-      "coordPrecision": "district"
+      "lat": 22.50331,
+      "lon": 113.91704,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sz_nidu",
@@ -2738,9 +2746,9 @@
       "address": "",
       "district": "福田",
       "sourceURL": "https://timeproves.com/",
-      "lat": 22.52436,
-      "lon": 114.04989,
-      "coordPrecision": "district"
+      "lat": 22.54344,
+      "lon": 114.06427,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sz_zy_dy",
@@ -2750,9 +2758,9 @@
       "address": "",
       "district": "龙岗",
       "sourceURL": "https://timeproves.com/",
-      "lat": 22.72304,
-      "lon": 114.24266,
-      "coordPrecision": "district"
+      "lat": 22.6886,
+      "lon": 114.22282,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sz_zy_tads",
@@ -2762,9 +2770,9 @@
       "address": "",
       "district": "龙岗",
       "sourceURL": "https://timeproves.com/",
-      "lat": 22.72304,
-      "lon": 114.24266,
-      "coordPrecision": "district"
+      "lat": 22.71974,
+      "lon": 114.2498,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sz_px_sw",
@@ -2786,9 +2794,9 @@
       "address": "",
       "district": "南山",
       "sourceURL": "https://timeproves.com/",
-      "lat": 22.53601,
-      "lon": 113.92562,
-      "coordPrecision": "district"
+      "lat": 22.5837,
+      "lon": 113.94941,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sz_lt_sysc",
@@ -2810,9 +2818,9 @@
       "address": "",
       "district": "罗湖",
       "sourceURL": "https://timeproves.com/",
-      "lat": 22.55064,
-      "lon": 114.12614,
-      "coordPrecision": "district"
+      "lat": 22.55892,
+      "lon": 114.12476,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sz_lt_ftty",
@@ -2834,9 +2842,9 @@
       "address": "",
       "district": "罗湖",
       "sourceURL": "https://timeproves.com/",
-      "lat": 22.55064,
-      "lon": 114.12614,
-      "coordPrecision": "district"
+      "lat": 22.55892,
+      "lon": 114.12476,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sz_lt_cy",
@@ -2870,9 +2878,9 @@
       "address": "",
       "district": "南山",
       "sourceURL": "https://timeproves.com/",
-      "lat": 22.53601,
-      "lon": 113.92562,
-      "coordPrecision": "district"
+      "lat": 22.52066,
+      "lon": 113.9385,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:sz_banana_lz",
@@ -3110,9 +3118,9 @@
       "address": "",
       "district": "相城",
       "sourceURL": "https://timeproves.com/",
-      "lat": 31.37169,
-      "lon": 120.63816,
-      "coordPrecision": "district"
+      "lat": 31.42363,
+      "lon": 120.64062,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:su_xk_gl2",
@@ -3122,9 +3130,9 @@
       "address": "",
       "district": "吴中",
       "sourceURL": "https://timeproves.com/",
-      "lat": 31.26549,
-      "lon": 120.62794,
-      "coordPrecision": "district"
+      "lat": 31.25113,
+      "lon": 120.66957,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:su_xk_ml",
@@ -3206,9 +3214,9 @@
       "address": "",
       "district": "虎丘",
       "sourceURL": "https://timeproves.com/",
-      "lat": 31.33128,
-      "lon": 120.42909,
-      "coordPrecision": "district"
+      "lat": 31.29273,
+      "lon": 120.56524,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:su_kl_wfj",
@@ -3337,9 +3345,9 @@
       "address": "",
       "district": "余杭",
       "sourceURL": "https://timeproves.com/",
-      "lat": 30.27624,
-      "lon": 119.97465,
-      "coordPrecision": "district"
+      "lat": 30.26766,
+      "lon": 119.9614,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:hz_ascent",
@@ -3373,9 +3381,9 @@
       "address": "",
       "district": "余杭",
       "sourceURL": "https://timeproves.com/",
-      "lat": 30.27624,
-      "lon": 119.97465,
-      "coordPrecision": "district"
+      "lat": 30.3613,
+      "lon": 120.03741,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:hz_kx_wc",
@@ -3396,9 +3404,9 @@
         "timeproves:hz_kx_wc",
         "hylonomus-b5eff49f6a40c3d4"
       ],
-      "lat": 30.27624,
-      "lon": 119.97465,
-      "coordPrecision": "district"
+      "lat": 30.29878,
+      "lon": 120.04027,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:hz_yaobai",
@@ -3491,9 +3499,9 @@
       "address": "",
       "district": "拱墅",
       "sourceURL": "https://timeproves.com/",
-      "lat": 30.32135,
-      "lon": 120.13671,
-      "coordPrecision": "district"
+      "lat": 30.334,
+      "lon": 120.0828,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:hz_wp_bj",
@@ -3503,9 +3511,9 @@
       "address": "",
       "district": "滨江",
       "sourceURL": "https://timeproves.com/",
-      "lat": 30.21098,
-      "lon": 120.20723,
-      "coordPrecision": "district"
+      "lat": 30.18981,
+      "lon": 120.21618,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:hz_wp_xh",
@@ -3515,9 +3523,9 @@
       "address": "",
       "district": "西湖",
       "sourceURL": "https://timeproves.com/",
-      "lat": 30.2617,
-      "lon": 120.12566,
-      "coordPrecision": "district"
+      "lat": 30.28393,
+      "lon": 120.06526,
+      "coordPrecision": "station"
     },
     {
       "id": "hylonomus-f8563d2881989b21",
@@ -3587,9 +3595,9 @@
       "address": "",
       "district": "江岸",
       "sourceURL": "https://timeproves.com/",
-      "lat": 30.63561,
-      "lon": 114.27766,
-      "coordPrecision": "district"
+      "lat": 30.65476,
+      "lon": 114.27498,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:wh_mtc_wg",
@@ -3611,9 +3619,9 @@
       "address": "",
       "district": "东西湖",
       "sourceURL": "https://timeproves.com/",
-      "lat": 30.62083,
-      "lon": 114.13076,
-      "coordPrecision": "district"
+      "lat": 30.64174,
+      "lon": 114.1994,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:wh_wuyan",
@@ -3670,9 +3678,9 @@
       "address": "",
       "district": "汉阳",
       "sourceURL": "https://timeproves.com/",
-      "lat": 30.55667,
-      "lon": 114.21317,
-      "coordPrecision": "district"
+      "lat": 30.56458,
+      "lon": 114.20476,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:wh_xinqidian",
@@ -3706,9 +3714,9 @@
       "address": "",
       "district": "江夏",
       "sourceURL": "https://timeproves.com/",
-      "lat": 30.37805,
-      "lon": 114.31617,
-      "coordPrecision": "district"
+      "lat": 30.44095,
+      "lon": 114.43424,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:wh_hotdog",
@@ -3718,9 +3726,9 @@
       "address": "",
       "district": "洪山",
       "sourceURL": "https://timeproves.com/",
-      "lat": 30.50257,
-      "lon": 114.33826,
-      "coordPrecision": "district"
+      "lat": 30.50826,
+      "lon": 114.39291,
+      "coordPrecision": "station"
     },
     {
       "id": "hylonomus-68ccb53d9fa72ec5",
@@ -3742,9 +3750,9 @@
       "address": "",
       "district": "武昌",
       "sourceURL": "https://timeproves.com/",
-      "lat": 30.5567,
-      "lon": 114.31099,
-      "coordPrecision": "district"
+      "lat": 30.59296,
+      "lon": 114.32813,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:wh_banana_k11",
@@ -3754,9 +3762,9 @@
       "address": "",
       "district": "洪山",
       "sourceURL": "https://timeproves.com/",
-      "lat": 30.50257,
-      "lon": 114.33826,
-      "coordPrecision": "district"
+      "lat": 30.49946,
+      "lon": 114.40727,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:wh_banana_hf",
@@ -3766,9 +3774,9 @@
       "address": "",
       "district": "江汉",
       "sourceURL": "https://timeproves.com/",
-      "lat": 30.60404,
-      "lon": 114.26538,
-      "coordPrecision": "district"
+      "lat": 30.58801,
+      "lon": 114.25925,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:wh_banana_hl",
@@ -3814,9 +3822,9 @@
       "address": "",
       "district": "岳麓",
       "sourceURL": "https://timeproves.com/",
-      "lat": 28.23861,
-      "lon": 112.92593,
-      "coordPrecision": "district"
+      "lat": 28.2101,
+      "lon": 112.95021,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:cs_tbw",
@@ -3826,9 +3834,9 @@
       "address": "",
       "district": "岳麓",
       "sourceURL": "https://timeproves.com/",
-      "lat": 28.23861,
-      "lon": 112.92593,
-      "coordPrecision": "district"
+      "lat": 28.25191,
+      "lon": 112.85891,
+      "coordPrecision": "station"
     },
     {
       "id": "hylonomus-27d22e0340a65235",
@@ -3862,9 +3870,9 @@
       "address": "",
       "district": "天心",
       "sourceURL": "https://timeproves.com/",
-      "lat": 28.1171,
-      "lon": 112.9842,
-      "coordPrecision": "district"
+      "lat": 28.17719,
+      "lon": 112.97639,
+      "coordPrecision": "station"
     },
     {
       "id": "hylonomus-d24824550881ddb3",
@@ -3922,9 +3930,9 @@
       "address": "",
       "district": "岳麓",
       "sourceURL": "https://timeproves.com/",
-      "lat": 28.23861,
-      "lon": 112.92593,
-      "coordPrecision": "district"
+      "lat": 28.13193,
+      "lon": 112.93962,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:cs_dx_wy",
@@ -4138,9 +4146,9 @@
       "address": "",
       "district": "渝中",
       "sourceURL": "https://timeproves.com/",
-      "lat": 29.5556,
-      "lon": 106.56538,
-      "coordPrecision": "district"
+      "lat": 29.55275,
+      "lon": 106.51483,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:cq_huayan",
@@ -4186,9 +4194,9 @@
       "address": "",
       "district": "九龙坡",
       "sourceURL": "https://timeproves.com/",
-      "lat": 29.43604,
-      "lon": 106.36034,
-      "coordPrecision": "district"
+      "lat": 29.51105,
+      "lon": 106.51167,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:cq_ss_c33",
@@ -4317,9 +4325,9 @@
       "address": "",
       "district": "碑林",
       "sourceURL": "https://timeproves.com/",
-      "lat": 34.25845,
-      "lon": 108.93611,
-      "coordPrecision": "district"
+      "lat": 34.2514,
+      "lon": 108.95864,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:xa_banma",
@@ -4353,9 +4361,9 @@
       "address": "",
       "district": "碑林",
       "sourceURL": "https://timeproves.com/",
-      "lat": 34.25845,
-      "lon": 108.93611,
-      "coordPrecision": "district"
+      "lat": 34.2341,
+      "lon": 108.94213,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:xa_hd_dt",
@@ -4413,9 +4421,9 @@
       "address": "",
       "district": "雁塔",
       "sourceURL": "https://timeproves.com/",
-      "lat": 34.22407,
-      "lon": 108.94407,
-      "coordPrecision": "district"
+      "lat": 34.2241,
+      "lon": 108.92872,
+      "coordPrecision": "station"
     },
     {
       "id": "timeproves:xa_dt_dz",
@@ -4437,9 +4445,9 @@
       "address": "",
       "district": "新城",
       "sourceURL": "https://timeproves.com/",
-      "lat": 34.27033,
-      "lon": 108.95561,
-      "coordPrecision": "district"
+      "lat": 34.27141,
+      "lon": 108.95822,
+      "coordPrecision": "station"
     },
     {
       "id": "hylonomus-1e00704224045c09",
