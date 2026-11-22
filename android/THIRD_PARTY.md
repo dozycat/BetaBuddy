@@ -6,6 +6,8 @@ Android 版用到的第三方代码和文件。版本固定在 `gradle/libs.vers
 
 - **Pose Landmarker Full float16，版本 1** — Google MediaPipe 模型包，`app/src/main/assets/pose_landmarker_full.task`，与 `ios/BetaBuddy/Resources/` 里的是同一个文件：https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task 。SHA-256 `5134a3aad27a58b93da0088d431f366da362b44e3ccfbe3462b3827a839011b1`（`PoseModelTest` 校验）。权重未改动。
 
+- **岩馆目录里的坐标**（`app/src/main/assets/gyms-cn.json` 的 `lat`、`lon`、`coordPrecision`）— 取自 OpenStreetMap（经 Nominatim 和 Overpass API），© OpenStreetMap contributors，Open Database License 1.0：https://www.openstreetmap.org/copyright 。坐标字段适用 ODbL，不适用本项目的 MIT 许可；用到这些坐标的界面要标注 OpenStreetMap。馆名和地址来自目录的其他来源，见 `docs/gym-directory.md`。
+
 ## 只用于测试、不进安装包
 
 - `app/src/androidTest/assets/pose.jpg` — Google MediaPipe 的示例图，只用于设备测试。
