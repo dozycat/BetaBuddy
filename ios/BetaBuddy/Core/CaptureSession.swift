@@ -37,6 +37,10 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
     @Published private(set) var frameSize = CGSize(width: 9, height: 16)
     @Published private(set) var webView: WKWebView?
     @Published var notice: Notice?
+    /// The last tap on the picture found no hold there. Cleared by itself after a moment.
+    @Published private(set) var tapMissed = false
+    /// The user said the problem the page recognised is not the one they are climbing.
+    @Published private(set) var routeRejected = false
     @Published var gymId: String? { didSet { if gymId != oldValue { venueChanged() } } }
     @Published var gymName = "" { didSet { if gymName != oldValue { venueChanged() } } }
     @Published var grade = ungradedValue
@@ -57,8 +61,9 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
     private var watch: Task<Void, Never>?
     private var background: NSObjectProtocol?
     private(set) var metrics = CaptureMetrics()
+    private var firstAssessment: Date?
     /// Seconds between frames handed to the page while framing, and while recording.
-    var framingInterval = 1.0 / 3
+    var framingInterval = 0.5
     var recordingInterval = 1.0
     var maximumDuration = CaptureLimits.maximumDuration
     /// How often a running recording is checked for free space, heat and a failed writer.
@@ -110,6 +115,13 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
         background = NotificationCenter.default.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main) { [weak self] _ in
             Task { @MainActor in await self?.stop(.interrupted) }
         }
+        #if DEBUG
+        // `-debugCaptureAttitude "<pitch>,<roll>,<shake>"` stands in for the motion sensor the simulator lacks.
+        if let text = UserDefaults.standard.string(forKey: "debugCaptureAttitude") {
+            let parts = text.split(separator: ",").compactMap { Double($0.trimmingCharacters(in: .whitespaces)) }
+            if parts.count == 3 { pipeline.motion.fixed = CaptureFrameInfo(pitch: parts[0], roll: parts[1], shake: parts[2]) }
+        }
+        #endif
         loadPage()
         Task {
             do {
@@ -164,9 +176,14 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
 
     @discardableResult
     private func call(_ command: CaptureCommand) async -> Bool {
-        guard let webView else { return false }
+        await answer(command) as? Bool == true
+    }
+
+    /// What the page's function gave back; `false` when the page does not have it.
+    private func answer(_ command: CaptureCommand) async -> Any? {
+        guard let webView else { return nil }
         return await withCheckedContinuation { continuation in
-            webView.evaluateJavaScript(command.script) { value, _ in continuation.resume(returning: value as? Bool == true) }
+            webView.evaluateJavaScript(command.script) { value, _ in continuation.resume(returning: value) }
         }
     }
 
@@ -237,6 +254,8 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
             guard phase == .framing, begun?.id == captureID else { return }
             if page == .failed { page = .ready }
             self.assessment = assessment
+            metrics.assessments += 1
+            if let firstAssessment { metrics.assessmentSpan = Date().timeIntervalSince(firstAssessment) } else { firstAssessment = Date() }
         case .locked(let id, let plan, let summary):
             guard id.isEmpty || id == captureID else { return }
             self.summary = summary
@@ -264,19 +283,35 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
     func selectColor(_ key: String?) {
         guard phase == .framing else { return }
         color = key == color ? nil : key
+        routeRejected = false
         Task { await call(.setColor(color)) }
     }
 
-    /// The user says what the hold at this spot of the picture is. The page finds the hold.
+    /// The user says what the hold at this spot of the picture is. The page finds the hold; what
+    /// changed shows with its next reply. When it finds none there, the screen says so for a moment.
     func correct(at point: CGPoint, role: CaptureRole) {
         guard phase == .framing, page == .ready, color != nil else { return }
-        Task { await call(.tap(x: point.x, y: point.y, role: role)) }
+        Task {
+            let found = await answer(.tap(x: point.x, y: point.y, role: role))
+            // An empty answer is “no hold here”. A page that answers nothing at all gives the same; `false` means it has no `tap`.
+            guard let text = found as? String, text.isEmpty else { tapMissed = false; return }
+            tapMissed = true
+            try? await Task.sleep(for: .seconds(3))
+            tapMissed = false
+        }
     }
 
     func resetCorrections() {
         guard phase == .framing, page == .ready else { return }
         Task { await call(.resetTaps) }
     }
+
+    /// The problem the page recognised, unless the user has said it is not that one.
+    var recognised: CaptureAssessment.Route? { routeRejected ? nil : (summary?.route ?? assessment?.route) }
+
+    /// “Not this one”. The page has no call for it: the user marks start and finish by tapping, and
+    /// the problem is not stored with the record.
+    func rejectRoute() { routeRejected = true }
 
     /// The hint blocks: the user is asked before recording from this position.
     var needsConfirmation: Bool { page == .ready && assessment?.ok == false }
@@ -354,7 +389,8 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
             let thumbnail = try await analyzer.thumbnail(url: clip.url)
             let swatch = assessment?.palette.first { $0.key == color }
             let info = CaptureInfo(colorKey: color, colorRGB: swatch?.rgb ?? (summary?.color == color ? summary?.rgb : nil), summary: summary,
-                                   packVersion: pack == nil ? nil : pageVersion, analysisQueued: analysisAvailable ? true : nil)
+                                   packVersion: pack == nil ? nil : pageVersion, analysisQueued: analysisAvailable ? true : nil,
+                                   routeId: recognised?.id, routeName: recognised?.name)
             // One write: the clip, its thumbnail, the plan, what was chosen and the request for
             // analysis. Nothing is analysed until this has succeeded.
             let climb = try store.save(title: "", grade: grade, sent: false, note: "", stagedVideo: clip.url, thumbnail: thumbnail, analysis: playback,
@@ -388,6 +424,7 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
         assessment = nil
         plan = nil; summary = nil
         recordingStarted = nil
+        routeRejected = false
         phase = .framing
         pipeline.setFeeding(page != .unavailable && started, interval: framingInterval)
     }

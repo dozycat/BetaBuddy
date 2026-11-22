@@ -1,14 +1,58 @@
 import CoreLocation
 import Foundation
 
+/// What a directory entry's coordinates point at. Only the first three say where the gym is;
+/// a district or city centre is the same point for every gym in it and can be tens of kilometres off.
+enum CoordinatePrecision: String, CaseIterable, Sendable {
+    case poi, address, station, district, city
+    /// Good enough to rank gyms by distance.
+    var ranks: Bool { self == .poi || self == .address || self == .station }
+}
+
+extension DirectoryGym {
+    /// `nil` when the entry has none, or a value this build does not know: it then has no usable coordinate.
+    var precision: CoordinatePrecision? { coordPrecision.flatMap(CoordinatePrecision.init(rawValue:)) }
+    /// The entry's position when all three fields are there and make sense.
+    var coordinate: (latitude: Double, longitude: Double)? {
+        guard precision != nil, let lat, let lon, lat.isFinite, lon.isFinite, (-90...90).contains(lat), (-180...180).contains(lon),
+              lat != 0 || lon != 0 else { return nil }
+        return (lat, lon)
+    }
+}
+
 /// A gym from the offline directory with how far away it is.
 struct NearbyGym: Identifiable, Equatable {
+    enum Shown: Equatable {
+        /// The directory knows where this gym itself is.
+        case exact
+        /// Only the nearest station is known: shown rounded, as “about”.
+        case approximate
+        /// The phone's own position is too coarse for a number; the distance only orders the list.
+        case hidden
+    }
     var gym: DirectoryGym
     var meters: Double
-    /// The number is worth showing: the directory knows where this gym itself is, and the phone
-    /// knows where it is to better than a kilometre. Otherwise the distance only orders the list.
-    var showsDistance: Bool
+    var shown: Shown
     var id: String { gym.id }
+    /// The distance as it may be shown: as measured, or rounded to 100 m below a kilometre and to 0.5 km above.
+    var displayMeters: Double? {
+        switch shown {
+        case .exact: meters
+        case .approximate: meters < 1_000 ? max(100, (meters / 100).rounded() * 100) : (meters / 500).rounded() * 500
+        case .hidden: nil
+        }
+    }
+}
+
+/// What the capture screen offers when the phone's position is known.
+struct GymSuggestions: Equatable {
+    /// Nearest first; only gyms whose own position is known.
+    var ranked: [NearbyGym] = []
+    /// Other gyms of the city the phone seems to be in, without distances: for these the directory
+    /// only knows the district or the city, or nothing.
+    var sameCity: [DirectoryGym] = []
+    /// A gym close enough to be where the user is standing. Offered, never chosen for them.
+    var here: NearbyGym?
 }
 
 enum GymDistance {
@@ -16,6 +60,8 @@ enum GymDistance {
     static let reach: Double = 100_000
     /// A fix coarser than this cannot tell how far a gym is.
     static let usefulAccuracy: Double = 1_000
+    /// Closer than this, with a fix at least this good, a gym is taken to be the one the user is at.
+    static let arrival: Double = 300
 
     /// Great-circle distance in metres between two WGS-84 positions.
     static func meters(fromLatitude lat1: Double, longitude lon1: Double, toLatitude lat2: Double, longitude lon2: Double) -> Double {
@@ -26,19 +72,33 @@ enum GymDistance {
         return 2 * radius * asin(min(1, a.squareRoot()))
     }
 
-    /// Gyms that have coordinates, nearest first. Entries without usable coordinates are left out;
-    /// they stay reachable through the full directory.
-    static func nearby(_ gyms: [DirectoryGym], latitude: Double, longitude: Double, accuracy: Double, limit: Int = 6) -> [NearbyGym] {
-        guard latitude.isFinite, longitude.isFinite, (-90...90).contains(latitude), (-180...180).contains(longitude) else { return [] }
-        let located = gyms.compactMap { gym -> NearbyGym? in
-            guard let lat = gym.lat, let lon = gym.lon, lat.isFinite, lon.isFinite, (-90...90).contains(lat), (-180...180).contains(lon),
-                  lat != 0 || lon != 0 else { return nil }
-            let meters = meters(fromLatitude: latitude, longitude: longitude, toLatitude: lat, longitude: lon)
-            guard meters <= reach else { return nil }
-            let exact = gym.coordPrecision == "poi" || gym.coordPrecision == "address"
-            return NearbyGym(gym: gym, meters: meters, showsDistance: exact && accuracy >= 0 && accuracy <= usefulAccuracy)
+    static func suggestions(_ gyms: [DirectoryGym], latitude: Double, longitude: Double, accuracy: Double, limit: Int = 6, cityLimit: Int = 12) -> GymSuggestions {
+        guard latitude.isFinite, longitude.isFinite, (-90...90).contains(latitude), (-180...180).contains(longitude) else { return GymSuggestions() }
+        let precise = accuracy >= 0 && accuracy <= usefulAccuracy
+        // Every entry with a usable coordinate, however coarse, within reach.
+        let located = gyms.compactMap { gym -> (gym: DirectoryGym, meters: Double, precision: CoordinatePrecision)? in
+            guard let precision = gym.precision, let coordinate = gym.coordinate else { return nil }
+            let meters = meters(fromLatitude: latitude, longitude: longitude, toLatitude: coordinate.latitude, longitude: coordinate.longitude)
+            return meters <= reach ? (gym, meters, precision) : nil
+        }.sorted { $0.meters != $1.meters ? $0.meters < $1.meters : $0.gym.name < $1.gym.name }
+        let ranked = located.filter { $0.precision.ranks }.map { item in
+            NearbyGym(gym: item.gym, meters: item.meters, shown: !precise ? .hidden : item.precision == .station ? .approximate : .exact)
         }
-        return Array(located.sorted { $0.meters != $1.meters ? $0.meters < $1.meters : $0.gym.name < $1.gym.name }.prefix(limit))
+        var result = GymSuggestions(ranked: Array(ranked.prefix(limit)))
+        // The city is read off the nearest entry of any kind: a district centre is no good for a
+        // distance, but it does say which city this is.
+        if let nearest = located.first {
+            let shown = Set(result.ranked.map(\.gym.id))
+            let coarse = Dictionary(located.map { ($0.gym.id, $0.meters) }, uniquingKeysWith: min)
+            result.sameCity = Array(gyms.filter { $0.province == nearest.gym.province && $0.city == nearest.gym.city && !shown.contains($0.id) && $0.precision?.ranks != true }
+                .sorted {
+                    // Nearer districts first, entries without any coordinate last; never shown as a distance.
+                    let a = coarse[$0.id] ?? .infinity, b = coarse[$1.id] ?? .infinity
+                    return a != b ? a < b : $0.name < $1.name
+                }.prefix(cityLimit))
+        }
+        if let first = ranked.first, first.shown == .exact, first.meters < arrival, accuracy <= arrival { result.here = first }
+        return result
     }
 }
 
@@ -115,8 +175,9 @@ final class GymLocator: NSObject, ObservableObject, CLLocationManagerDelegate {
         Task { @MainActor in locating = false }
     }
 
-    func nearby(limit: Int = 6) -> [NearbyGym] {
-        guard let fix else { return [] }
-        return GymDistance.nearby(GymDirectory.bundled?.gyms ?? [], latitude: fix.latitude, longitude: fix.longitude, accuracy: fix.accuracy, limit: limit)
+    /// Empty without a position.
+    func suggestions() -> GymSuggestions {
+        guard let fix else { return GymSuggestions() }
+        return GymDistance.suggestions(GymDirectory.bundled?.gyms ?? [], latitude: fix.latitude, longitude: fix.longitude, accuracy: fix.accuracy)
     }
 }

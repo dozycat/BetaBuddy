@@ -52,7 +52,7 @@ PATH=/usr/bin:/bin:/usr/sbin:/sbin xcodebuild -exportArchive \
 
 1. Apps → 新建 iOS App：名称 BetaBuddy、简体中文、Bundle ID、唯一的 SKU。
 2. Pricing and Availability：App 保持免费，选择实际要发布的地区。1.2.0 起把终生会员非消耗型内购与新版 App 一同提交审核；美国价格为 $10，其他地区以 App Store Connect 的价格矩阵为准。
-3. App Privacy：按最终实现填写。应用不向开发者或合作方传输个人数据，对应「不收集数据」；每次提交前对照打包的 SDK、隐私清单和 Apple 的验证报告复核。
+3. App Privacy：按最终实现填写。应用不向开发者或合作方传输个人数据，对应「不收集数据」；每次提交前对照打包的 SDK、隐私清单和 Apple 的验证报告复核。带应用内相机的版本另见 [privacy-camera-location.md](privacy-camera-location.md)：相机和位置的用途说明、为什么隐私标签不变、审核备注里要写的话。
 4. 年龄分级、内容权利、出口加密问卷。
 5. Support URL 填 `https://betabuddy.dozycat.ai`，Privacy Policy URL 填 `https://betabuddy.dozycat.ai/privacy`。站点由 Cloudflare 静态 Worker 托管，源文件在 `services/support-site`；应用内的离线政策不能替代这两个网址。
 6. 审核联系人填真实的姓名和电话。

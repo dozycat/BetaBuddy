@@ -64,6 +64,10 @@ struct AboutView: View {
             Link("在线隐私政策", destination: URL(string: "https://betabuddy.dozycat.ai/privacy")!)
             Link("帮助与支持", destination: URL(string: "https://betabuddy.dozycat.ai")!)
             Link(destination: URL(string: "mailto:hi@dozycat.ai")!) { Text(verbatim:"hi@dozycat.ai") }
+            if GymDirectory.bundled?.hasCoordinates == true {
+                // Where the gym positions used to suggest nearby gyms come from.
+                Text(verbatim: GymDirectory.coordinateCredit).font(.caption).foregroundStyle(BB.muted).accessibilityIdentifier("coordinateCredit")
+            }
             Text(verbatim:"BETABUDDY / \(version)\nBuilt for the next attempt.").font(.system(size:12,design:.monospaced)).lineSpacing(6)
         }.navigationTitle("设置与关于").navigationBarTitleDisplayMode(.inline)
             .toolbar {

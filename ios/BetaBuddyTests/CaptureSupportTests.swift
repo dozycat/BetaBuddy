@@ -15,36 +15,73 @@ final class CaptureSupportTests: XCTestCase {
 
     func testDirectoryCoordinatesAreOptionalAndBadOnesDoNotBreakTheEntry() throws {
         let gyms = try directory().gyms
-        XCTAssertEqual(gyms.count, 7)
+        XCTAssertEqual(gyms.count, 9)
         let east = try XCTUnwrap(gyms.first { $0.id == "syn:east" })
-        XCTAssertEqual(east.lat, 30.0027); XCTAssertEqual(east.lon, 120.0); XCTAssertEqual(east.coordPrecision, "poi")
+        XCTAssertEqual(east.lat, 30.0018); XCTAssertEqual(east.lon, 120.0); XCTAssertEqual(east.precision, .poi)
+        XCTAssertEqual(east.coordinate?.latitude, 30.0018)
         let none = try XCTUnwrap(gyms.first { $0.id == "syn:nowhere" })
-        XCTAssertNil(none.lat); XCTAssertNil(none.lon); XCTAssertNil(none.coordPrecision)
+        XCTAssertNil(none.lat); XCTAssertNil(none.lon); XCTAssertNil(none.coordPrecision); XCTAssertNil(none.coordinate)
         let broken = try XCTUnwrap(gyms.first { $0.id == "syn:broken" })
         XCTAssertEqual(broken.name, "坐标写坏了的岩馆")
-        XCTAssertNil(broken.lat); XCTAssertNil(broken.lon); XCTAssertNil(broken.coordPrecision)
+        XCTAssertNil(broken.lat); XCTAssertNil(broken.lon); XCTAssertNil(broken.coordPrecision); XCTAssertNil(broken.coordinate)
+        // A precision this build has never heard of: the entry stays, its coordinate is not used.
+        let odd = try XCTUnwrap(gyms.first { $0.id == "syn:odd" })
+        XCTAssertEqual(odd.lat, 30.0001); XCTAssertNil(odd.precision); XCTAssertNil(odd.coordinate)
+        XCTAssertEqual(Set(CoordinatePrecision.allCases.map(\.rawValue)), ["poi", "address", "station", "district", "city"])
+        XCTAssertEqual(CoordinatePrecision.allCases.filter(\.ranks), [.poi, .address, .station])
+        XCTAssertTrue(try directory().hasCoordinates)
         // The directory in this repository decodes with or without the new fields.
         XCTAssertFalse(try XCTUnwrap(GymDirectory.bundled).gyms.isEmpty)
     }
 
-    func testNearbyGymsAreOrderedByDistanceAndOnlyExactOnesShowIt() throws {
+    func testOnlyGymsWhosePositionIsKnownAreRankedByDistance() throws {
         let gyms = try directory().gyms
         let here = StandInPack.origin
-        let near = GymDistance.nearby(gyms, latitude: here.latitude, longitude: here.longitude, accuracy: 30)
-        XCTAssertEqual(near.map(\.gym.id), ["syn:east", "syn:district", "syn:city", "syn:west"])       // 0.3, 1.1, 2.9 and 4.8 km; the far one, and those without usable coordinates, are left out.
-        XCTAssertEqual(near[0].meters, 300, accuracy: 5)
-        XCTAssertEqual(near.map(\.showsDistance), [true, false, false, true])                           // poi, district, city, address.
-        // With only an approximate position the order stays and no number is shown.
-        let coarse = GymDistance.nearby(gyms, latitude: here.latitude, longitude: here.longitude, accuracy: 5_000)
-        XCTAssertEqual(coarse.map(\.gym.id), near.map(\.gym.id))
-        XCTAssertFalse(coarse.contains(where: \.showsDistance))
-        XCTAssertEqual(GymDistance.nearby(gyms, latitude: here.latitude, longitude: here.longitude, accuracy: 30, limit: 2).map(\.gym.id), ["syn:east", "syn:district"])
+        let near = GymDistance.suggestions(gyms, latitude: here.latitude, longitude: here.longitude, accuracy: 30)
+        // 0.2, 1.3 and 4.8 km. A district or city centre is never ranked, however close it happens to be;
+        // nor is the entry whose precision is unknown, 11 m away on paper.
+        XCTAssertEqual(near.ranked.map(\.gym.id), ["syn:east", "syn:station", "syn:west"])
+        XCTAssertEqual(near.ranked[0].meters, 200, accuracy: 5)
+        XCTAssertEqual(near.ranked.map(\.shown), [.exact, .approximate, .exact])                  // poi, station, address.
+        XCTAssertEqual(near.ranked[0].displayMeters, near.ranked[0].meters)
+        XCTAssertEqual(near.ranked[1].displayMeters, 1_500)                                         // 1.28 km, to the nearest half kilometre.
+        XCTAssertTrue(try XCTUnwrap(CaptureText.distance(near.ranked[1])).contains(CaptureText.distance(1_500)))
+        XCTAssertNotEqual(CaptureText.distance(near.ranked[1]), CaptureText.distance(1_500))        // …and said to be approximate.
+        XCTAssertEqual(CaptureText.distance(near.ranked[0]), CaptureText.distance(near.ranked[0].meters))
+        // The rest of the same city follows without distances: nearer districts first, entries without a usable coordinate last.
+        XCTAssertEqual(near.sameCity.map(\.id), ["syn:district", "syn:city", "syn:broken", "syn:nowhere", "syn:odd"])
+        XCTAssertEqual(near.here?.gym.id, "syn:east")                                               // Close enough to be where the user is standing.
+
+        // Rounding of an approximate distance.
+        func approximate(_ meters: Double) -> Double? { NearbyGym(gym: gyms[0], meters: meters, shown: .approximate).displayMeters }
+        XCTAssertEqual(approximate(1_200), 1_000); XCTAssertEqual(approximate(1_260), 1_500); XCTAssertEqual(approximate(2_740), 2_500)
+        XCTAssertEqual(approximate(640), 600); XCTAssertEqual(approximate(20), 100)
+        XCTAssertNil(NearbyGym(gym: gyms[0], meters: 640, shown: .hidden).displayMeters)
+
+        // With only an approximate position the order stays, no number is shown and no gym is offered as “here”.
+        let coarse = GymDistance.suggestions(gyms, latitude: here.latitude, longitude: here.longitude, accuracy: 5_000)
+        XCTAssertEqual(coarse.ranked.map(\.gym.id), near.ranked.map(\.gym.id))
+        XCTAssertEqual(Set(coarse.ranked.map(\.shown)), [.hidden])
+        XCTAssertNil(coarse.ranked.first.flatMap { CaptureText.distance($0) })
+        XCTAssertNil(coarse.here)
+        XCTAssertEqual(coarse.sameCity.map(\.id), near.sameCity.map(\.id))
+        // A fix good to half a kilometre shows distances but does not claim to know which gym this is.
+        XCTAssertNil(GymDistance.suggestions(gyms, latitude: here.latitude, longitude: here.longitude, accuracy: 500).here)
+        // Nor is a gym offered when the nearest one is merely near, or only known by its station.
+        XCTAssertNil(GymDistance.suggestions(gyms, latitude: 29.997, longitude: 120.0, accuracy: 30).here)
+        XCTAssertNil(GymDistance.suggestions(gyms, latitude: 30.0115, longitude: 120.0005, accuracy: 30).here)
+
+        XCTAssertEqual(GymDistance.suggestions(gyms, latitude: here.latitude, longitude: here.longitude, accuracy: 30, limit: 2, cityLimit: 1).ranked.map(\.gym.id), ["syn:east", "syn:station"])
+        XCTAssertEqual(GymDistance.suggestions(gyms, latitude: here.latitude, longitude: here.longitude, accuracy: 30, limit: 2, cityLimit: 1).sameCity.map(\.id), ["syn:district"])
         // From the other side of town the order turns round.
-        XCTAssertEqual(GymDistance.nearby(gyms, latitude: 30.0, longitude: 119.94, accuracy: 30).first?.gym.id, "syn:west")
+        XCTAssertEqual(GymDistance.suggestions(gyms, latitude: 30.0, longitude: 119.94, accuracy: 30).ranked.first?.gym.id, "syn:west")
+        // Near the far gym, in another city: it is ranked, and nothing of the first city is listed.
+        let away = GymDistance.suggestions(gyms, latitude: 40.001, longitude: 116.0, accuracy: 30)
+        XCTAssertEqual(away.ranked.map(\.gym.id), ["syn:far"]); XCTAssertTrue(away.sameCity.isEmpty)
         // Somewhere with nothing within reach, and positions that are not positions.
-        XCTAssertTrue(GymDistance.nearby(gyms, latitude: 10, longitude: 10, accuracy: 30).isEmpty)
-        XCTAssertTrue(GymDistance.nearby(gyms, latitude: .nan, longitude: 120, accuracy: 30).isEmpty)
-        XCTAssertTrue(GymDistance.nearby(gyms, latitude: 95, longitude: 120, accuracy: 30).isEmpty)
+        XCTAssertEqual(GymDistance.suggestions(gyms, latitude: 10, longitude: 10, accuracy: 30), GymSuggestions())
+        XCTAssertEqual(GymDistance.suggestions(gyms, latitude: .nan, longitude: 120, accuracy: 30), GymSuggestions())
+        XCTAssertEqual(GymDistance.suggestions(gyms, latitude: 95, longitude: 120, accuracy: 30), GymSuggestions())
         XCTAssertEqual(GymDistance.meters(fromLatitude: 0, longitude: 0, toLatitude: 0, longitude: 1), 111_195, accuracy: 20)
         XCTAssertFalse(CaptureText.distance(320).isEmpty)
     }
@@ -238,9 +275,11 @@ final class CaptureSupportTests: XCTestCase {
         XCTAssertEqual(String(format: AppLanguage.bundle(for: "en").localizedString(forKey: "%@，%@", value: nil, table: nil), "The top is cut off", "step back a little"),
                        "The top is cut off — step back a little")
 
-        XCTAssertNotNil(CaptureText.colorName("yellow")); XCTAssertEqual(CaptureText.colorName("GREY"), CaptureText.colorName("gray"))
-        XCTAssertNil(CaptureText.colorName("teal-ish")); XCTAssertNil(CaptureText.colorName(nil))
+        // What a tap can mark, and the same as a guess.
         XCTAssertEqual(Set(CaptureRole.allCases.map(CaptureText.role)).count, 5)
+        for role in CaptureRole.allCases {
+            XCTAssertTrue(CaptureText.guess(role).hasPrefix(CaptureText.role(role))); XCTAssertNotEqual(CaptureText.guess(role), CaptureText.role(role))
+        }
         XCTAssertNil(CaptureText.stop(.user)); XCTAssertNil(CaptureText.stop(nil))
         for reason in [CaptureStop.limit, .storage, .interrupted, .overheated] { XCTAssertNotNil(CaptureText.stop(reason)) }
     }

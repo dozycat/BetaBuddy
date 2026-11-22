@@ -99,6 +99,7 @@ final class CaptureFlowTests: XCTestCase {
         await until("ready") { session.assessment?.ready == true }
         XCTAssertEqual(hints, ["too_dark", "cut_top", "lens_flare_2031", "settling", "ready"])
         XCTAssertFalse(session.needsConfirmation)
+        XCTAssertNil(session.recognised)
 
         session.selectColor("yellow")
         await until("holds of the chosen colour") { session.assessment?.holds.count == 6 }
@@ -107,6 +108,12 @@ final class CaptureFlowTests: XCTestCase {
         XCTAssertEqual(holds.first { $0.role == .finish }?.id, "y6")
         XCTAssertTrue(try XCTUnwrap(holds.first { $0.id == "y5" }).poly.isEmpty)    // No outline: its box is drawn.
         XCTAssertFalse(holds.contains(where: \.user))
+        // Start and finish are the page's guesses until the user marks them; the page keeps saying so, without blocking.
+        var judged = try XCTUnwrap(session.assessment)
+        XCTAssertFalse(judged.startConfirmed); XCTAssertFalse(judged.finishConfirmed)
+        XCTAssertEqual(judged.hint, .init(code: "start_unclear", blocking: false, move: nil)); XCTAssertTrue(judged.ready)
+        // The gym is one of the pack's venues, so the page may say which of its problems this is.
+        XCTAssertEqual(session.recognised, .init(id: StandInPack.venueID + "/yellow-01", confidence: 0.9, name: "合成线路 黄 1"))
 
         // The user says another hold is the finish, and that a blue one belongs to the problem.
         session.correct(at: CGPoint(x: 0.50, y: 0.60), role: .finish)
@@ -115,11 +122,20 @@ final class CaptureFlowTests: XCTestCase {
         await until("corrections") { session.assessment?.holds.first { $0.id == "y4" }?.role == .finish && session.assessment?.holds.contains { $0.id == "b3" } == true }
         holds = try XCTUnwrap(session.assessment).holds
         XCTAssertTrue(try XCTUnwrap(holds.first { $0.id == "y4" }).user)
+        XCTAssertEqual(holds.first { $0.id == "y6" }?.role, .hold)              // There is one finish.
         XCTAssertFalse(holds.contains { $0.id == "y3" })
+        XCTAssertTrue(try XCTUnwrap(session.assessment).finishConfirmed)
+        // A tap where there is no hold changes nothing and is said to have missed.
+        session.correct(at: CGPoint(x: 0.95, y: 0.04), role: .finish)
+        await until("the missed tap is noticed") { session.tapMissed }
+        XCTAssertEqual(session.assessment?.holds.first { $0.role == .finish }?.id, "y4")
         session.resetCorrections()
         await until("corrections cleared") { session.assessment?.holds.count == 6 && session.assessment?.holds.contains(where: \.user) == false }
         session.correct(at: CGPoint(x: 0.50, y: 0.60), role: .startHand)
-        await until("correction kept for the plan") { session.assessment?.holds.filter { $0.role == .startHand }.count == 3 }
+        await until("the marked start replaces the guessed one") { session.assessment?.holds.filter { $0.role == .startHand }.map(\.id) == ["y4"] }
+        judged = try XCTUnwrap(session.assessment)
+        XCTAssertTrue(judged.startConfirmed); XCTAssertFalse(judged.finishConfirmed)
+        await until("nothing left to say") { session.assessment?.hint == nil }
 
         session.startRecording()
         XCTAssertEqual(session.phase, .recording)
@@ -142,7 +158,10 @@ final class CaptureFlowTests: XCTestCase {
         XCTAssertEqual(capture.colorKey, "yellow"); XCTAssertEqual(capture.colorRGB, [226, 196, 40])
         XCTAssertEqual(capture.packVersion, StandInPack.version)
         XCTAssertEqual(capture.analysisQueued, true); XCTAssertTrue(capture.hasPlan)
-        XCTAssertEqual(capture.summary, CaptureSummary(color: "yellow", rgb: [226, 196, 40], holds: 6, startHands: 3, startFeet: 1, finish: true, ok: true, issues: []))
+        let route = CaptureAssessment.Route(id: StandInPack.venueID + "/yellow-01", confidence: 0.9, name: "合成线路 黄 1")
+        XCTAssertEqual(capture.summary, CaptureSummary(color: "yellow", rgb: [226, 196, 40], holds: 6, startHands: 1, startFeet: 1, finish: true, ok: true, issues: [], route: route))
+        XCTAssertEqual(capture.routeId, route.id); XCTAssertEqual(capture.routeName, route.name)       // Recognised and not rejected: kept with the record.
+        XCTAssertEqual(record.grade, "V4")                                                             // The grade is the one the user picked.
         let plan = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(try XCTUnwrap(reopened.capturePlan(for: record)).utf8)) as? [String: Any])
         XCTAssertEqual(plan["color"] as? String, "yellow")
         XCTAssertEqual((plan["meta"] as? [String: Any])?["venue"] as? String, StandInPack.venueID)
@@ -198,6 +217,7 @@ final class CaptureFlowTests: XCTestCase {
             guard case .saved(let id) = session.phase else { return XCTFail("not saved: \(session.phase)") }
             let record = try XCTUnwrap(store.climbs.first { $0.id == id })
             XCTAssertEqual(record.capture, CaptureInfo(analysisQueued: pack == nil ? nil : true))
+            XCTAssertNil(record.capture?.routeId)
             XCTAssertNil(store.capturePlan(for: record))
             XCTAssertEqual(record.pendingAnalysis, AnalysisQuality.balanced.rawValue)
             await session.close()
@@ -277,6 +297,28 @@ final class CaptureFlowTests: XCTestCase {
         XCTAssertTrue((try FileManager.default.contentsOfDirectory(atPath: NSTemporaryDirectory())).filter { $0.hasPrefix("betabuddy-capture-") }.isEmpty)
     }
 
+    func testARejectedProblemIsNotStoredAndTheScreenSaysNothingAboutItAgain() async throws {
+        let store = store()
+        let session = session(store, try pack(), try await wall())
+        session.gymName = StandInPack.directoryGymName
+        session.start()
+        await until("ready") { session.assessment?.ready == true }
+        session.selectColor("yellow")
+        await until("recognised") { session.recognised != nil }
+        session.rejectRoute()
+        XCTAssertNil(session.recognised); XCTAssertNotNil(session.assessment?.route)
+        session.startRecording()
+        try await Task.sleep(for: .seconds(1.3))
+        await session.stop(.user)
+        let record = try XCTUnwrap(store.climbs.first)
+        XCTAssertNil(record.capture?.routeId); XCTAssertNil(record.capture?.routeName)
+        XCTAssertNotNil(record.capture?.summary?.route)                 // What the page said stays in its summary.
+        // Another colour is another problem: the rejection does not carry over, and neither does it to the next take.
+        session.frameAgain()
+        XCTAssertFalse(session.routeRejected)
+        await session.close()
+    }
+
     func testAFailedSaveKeepsTheClipForAnotherTry() async throws {
         let store = store()
         let session = session(store, nil, try await wall())
@@ -337,13 +379,68 @@ final class CaptureFlowTests: XCTestCase {
         await session.close()
     }
 
+    /// The installed pack's own capture page, fed a real climbing clip in place of the camera. Neither is
+    /// in this repository, so this is skipped unless both are there:
+    ///
+    ///     TEST_RUNNER_BB_CAPTURE_CLIP=<clip> xcodebuild … test -only-testing:BetaBuddyTests/CaptureFlowTests/testInstalledCapturePageAnswersLocksAndItsPlanIsKept
+    ///
+    /// Here the web view is in no window at all, the least favourable case for a page that must keep answering.
+    func testInstalledCapturePageAnswersLocksAndItsPlanIsKept() async throws {
+        guard let clip = ProcessInfo.processInfo.environment["BB_CAPTURE_CLIP"], FileManager.default.fileExists(atPath: clip) else {
+            throw XCTSkip("Optional private climbing clip is not supplied")
+        }
+        guard let pack = GymPack.current, pack.supportsCapture else { throw XCTSkip("The installed build has no pack with a capture page") }
+        let store = store()
+        let session = CaptureSession(store: store, pack: pack, source: FileCaptureSource(url: URL(fileURLWithPath: clip)))
+        var codes: [String] = []
+        session.$assessment.sink { value in
+            guard let value else { return }
+            let code = (value.ready ? "ready" : value.ok ? "settling" : "blocked") + (value.hint.map { ":" + $0.code + ($0.move.map { "/" + $0 } ?? "") } ?? "")
+            if codes.last != code { codes.append(code) }
+        }.store(in: &watching)
+        session.start()
+        await until("the page to come up", within: 30) { session.page == .ready }
+        await until("twenty replies", within: 60) { session.metrics.assessments >= 20 }
+        let framing = session.metrics
+        XCTAssertGreaterThan(framing.assessmentsPerSecond, 1.5, framing.summary)          // Two frames a second go in; it keeps up.
+        let seen = try XCTUnwrap(session.assessment)
+        var report = ["framing: " + framing.summary, "states: " + codes.joined(separator: " → "),
+                      "palette: " + seen.palette.map { "\($0.key)×\($0.count)" }.joined(separator: " "), "person: " + seen.person]
+        if let colour = seen.palette.first?.key {
+            session.selectColor(colour)
+            await until("holds of the first colour", within: 15) { session.assessment?.color == colour && session.assessment?.holds.isEmpty == false }
+            let chosen = try XCTUnwrap(session.assessment)
+            report.append("first colour: \(chosen.holds.count) holds, \(chosen.holds.filter { !$0.poly.isEmpty }.count) with outlines, start hands \(chosen.startHands.count), feet \(chosen.startFeet.count), finish \(chosen.finish != nil), hint \(chosen.hint?.code ?? "none")")
+            // Mark the first hold as the start, the way a tap on the picture does.
+            let hold = chosen.holds[0]
+            session.correct(at: CGPoint(x: hold.box.midX, y: hold.box.midY), role: .startHand)
+            await until("the tap to show", within: 10) { session.assessment?.startConfirmed == true }
+            XCTAssertFalse(session.tapMissed)
+        }
+        let pressed = Date()
+        session.startRecording()
+        await until("the plan", within: 10) { session.summary != nil }
+        report.append(String(format: "lock answered after %.0f ms", Date().timeIntervalSince(pressed) * 1000))
+        try await Task.sleep(for: .seconds(2))
+        await session.stop(.user)
+        guard case .saved(let id) = session.phase else { return XCTFail("not saved: \(session.phase)") }
+        let record = try XCTUnwrap(store.climbs.first { $0.id == id })
+        let plan = try XCTUnwrap(store.capturePlan(for: record))
+        report.append("plan: \(plan.utf8.count) bytes; summary: \(String(describing: record.capture?.summary))")
+        XCTAssertGreaterThan(plan.utf8.count, 1_000)
+        XCTAssertEqual(record.capture?.packVersion, pack.manifest.packVersion)
+        let text = XCTAttachment(string: report.joined(separator: "\n")); text.name = "Installed capture page with a local clip"; text.lifetime = .keepAlways; add(text)
+        NSLog("CAPTURE-REAL %@", report.joined(separator: " | "))
+        await session.close()
+    }
+
     /// Not an assertion of speed: the simulator runs on the Mac's processor. It keeps the numbers
     /// with the test results so they can be compared from run to run.
     func testCostOfHandingOverFullSizeFrames() async throws {
         let store = store()
         let session = CaptureSession(store: store, pack: try pack(), source: FileCaptureSource(url: try await wall(seconds: 3, width: 1080, height: 1920, photo: try person())))
         session.start()
-        await until("thirty frames at three a second", within: 30) { session.metrics.frames >= 30 }
+        await until("thirty frames at two a second", within: 40) { session.metrics.frames >= 30 }
         let metrics = session.metrics
         XCTAssertEqual(session.frameSize, CGSize(width: 360, height: 640))          // 1080 × 1920 handed over with its short side at 360.
         XCTAssertLessThan(metrics.jpegBytes / metrics.frames, 120_000)

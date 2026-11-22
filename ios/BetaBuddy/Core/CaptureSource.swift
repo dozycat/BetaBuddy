@@ -66,11 +66,13 @@ final class CameraSource: NSObject, CaptureSource, AVCaptureVideoDataOutputSampl
                 } catch { continuation.resume(throwing: error) }
             }
         }
-        if let connection = preview.connection, connection.isVideoRotationAngleSupported(90) { connection.videoRotationAngle = 90 }
-        let center = NotificationCenter.default
-        guard observers.isEmpty else { return }
-        for name in [AVCaptureSession.wasInterruptedNotification, AVCaptureSession.runtimeErrorNotification] {
-            observers.append(center.addObserver(forName: name, object: session, queue: .main) { [weak self] _ in self?.onInterruption?() })
+        await MainActor.run {
+            // The preview is a layer: it is only touched on the main thread.
+            if let connection = preview.connection, connection.isVideoRotationAngleSupported(90) { connection.videoRotationAngle = 90 }
+            guard observers.isEmpty else { return }
+            for name in [AVCaptureSession.wasInterruptedNotification, AVCaptureSession.runtimeErrorNotification] {
+                observers.append(NotificationCenter.default.addObserver(forName: name, object: session, queue: .main) { [weak self] _ in self?.onInterruption?() })
+            }
         }
     }
 
@@ -294,6 +296,8 @@ final class CaptureMotionMonitor: @unchecked Sendable {
     private var gravity: (x: Double, y: Double, z: Double)?
     private var squares = 0.0
     private var samples = 0
+    /// Stands in for the sensor where there is none (the simulator); only ever set in Debug builds and tests.
+    var fixed: CaptureFrameInfo?
 
     func start() {
         guard manager.isDeviceMotionAvailable, !manager.isDeviceMotionActive else { return }
@@ -314,7 +318,7 @@ final class CaptureMotionMonitor: @unchecked Sendable {
     /// Attitude now and shake since the last call. All `nil` without a motion sensor.
     func take() -> CaptureFrameInfo {
         lock.lock(); defer { lock.unlock() }
-        guard let gravity else { return CaptureFrameInfo() }
+        guard let gravity else { return fixed ?? CaptureFrameInfo() }
         let shake = samples > 0 ? (squares / Double(samples)).squareRoot() : nil
         squares = 0; samples = 0
         return CaptureFrameInfo(pitch: CaptureMotion.pitch(gravity: gravity), roll: CaptureMotion.roll(gravity: gravity), shake: shake)
@@ -373,11 +377,15 @@ struct CaptureMetrics: Equatable, Sendable {
     var handOverSeconds = 0.0    // From the call into the page until it returns.
     var jpegBytes = 0
     var poseDropped = false
+    /// Replies from the page, and the time between the first and the last of them.
+    var assessments = 0
+    var assessmentSpan = 0.0
+    var assessmentsPerSecond: Double { assessments > 1 && assessmentSpan > 0 ? Double(assessments - 1) / assessmentSpan : 0 }
     func average(_ total: Double, over count: Int? = nil) -> Double { (count ?? frames) > 0 ? total / Double(count ?? frames) : 0 }
     var summary: String {
-        String(format: "frames %d, prepare %.1f ms, pose %.1f ms over %d (found %d%@), hand-over %.1f ms, jpeg %d B",
+        String(format: "frames %d, prepare %.1f ms, pose %.1f ms over %d (found %d%@), hand-over %.1f ms, jpeg %d B, %d replies at %.2f per second",
                frames, average(prepareSeconds) * 1000, average(poseSeconds, over: poseFrames) * 1000, poseFrames, posesFound,
-               poseDropped ? ", dropped" : "", average(handOverSeconds) * 1000, frames > 0 ? jpegBytes / frames : 0)
+               poseDropped ? ", dropped" : "", average(handOverSeconds) * 1000, frames > 0 ? jpegBytes / frames : 0, assessments, assessmentsPerSecond)
     }
 }
 
@@ -410,7 +418,7 @@ final class CapturePipeline: @unchecked Sendable {
     private var busy = false
     private var feeding = false
     private var wantsPose = true
-    private var interval = 1.0 / 3
+    private var interval = 0.5
     private var lastFed = -Double.infinity
     private var origin: Double?
     private var size: (width: Int, height: Int)?

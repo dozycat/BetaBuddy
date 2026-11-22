@@ -12,7 +12,7 @@ struct DirectoryGym: Decodable, Identifiable, Equatable {
     /// WGS-84 degrees, when the directory has them for this gym.
     let lat: Double?
     let lon: Double?
-    /// What the coordinates point at: `poi`, `address`, `district` or `city`.
+    /// What the coordinates point at: `poi`, `address`, `station`, `district` or `city`. See `CoordinatePrecision`.
     let coordPrecision: String?
     var location: String { [province, city, district ?? ""].filter { !$0.isEmpty }.joined(separator: " · ") }
 
@@ -50,6 +50,9 @@ struct GymDirectory: Decodable {
         guard let url, let data = try? Data(contentsOf: url) else { return nil }
         return try? JSONDecoder().decode(GymDirectory.self, from: data)
     }()
+    /// The directory carries positions for some gyms. They come from OpenStreetMap and are credited where they are used.
+    var hasCoordinates: Bool { gyms.contains { $0.coordinate != nil } }
+    static let coordinateCredit = "© OpenStreetMap contributors"
 }
 
 extension Climb {
@@ -108,6 +111,7 @@ struct GymPickerView: View {
                 VStack(alignment: .leading, spacing: 5) {
                     Text("公开资料整理，可能有遗漏或变动。")
                     if let directory = GymDirectory.bundled { Text("目录更新于 \(directory.updatedAt)") }
+                    if GymDirectory.bundled?.hasCoordinates == true { Text(verbatim: GymDirectory.coordinateCredit) }
                 }
             }
         }.navigationTitle("选择岩馆")

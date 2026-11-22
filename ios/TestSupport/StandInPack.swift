@@ -49,12 +49,14 @@ enum StandInPack {
     static let origin = (latitude: 30.0, longitude: 120.0)
     static let directory = """
     {"version":1,"updatedAt":"2026-01-01","gyms":[
-     {"id":"syn:east","name":"\(directoryGymName)","province":"合成省","city":"合成市","district":"东区","address":"东门路 1 号","sourceURL":"https://example.invalid/","lat":30.0027,"lon":120.0,"coordPrecision":"poi"},
+     {"id":"syn:east","name":"\(directoryGymName)","province":"合成省","city":"合成市","district":"东区","address":"东门路 1 号","sourceURL":"https://example.invalid/","lat":30.0018,"lon":120.0,"coordPrecision":"poi"},
+     {"id":"syn:station","name":"只知道最近车站的岩馆","province":"合成省","city":"合成市","district":"北区","address":"","sourceURL":"https://example.invalid/","lat":30.0115,"lon":120.0,"coordPrecision":"station"},
      {"id":"syn:west","name":"合成岩馆（西门）","province":"合成省","city":"合成市","district":"西区","address":"西门路 2 号","sourceURL":"https://example.invalid/","lat":30.0,"lon":119.95,"coordPrecision":"address"},
      {"id":"syn:district","name":"只知道在哪个区的岩馆","province":"合成省","city":"合成市","district":"南区","address":"","sourceURL":"https://example.invalid/","lat":29.99,"lon":120.0,"coordPrecision":"district"},
      {"id":"syn:city","name":"只知道在哪个市的岩馆","province":"合成省","city":"合成市","address":"","sourceURL":"https://example.invalid/","lat":30.02,"lon":120.02,"coordPrecision":"city"},
      {"id":"syn:far","name":"很远的岩馆","province":"远方省","city":"远方市","address":"","sourceURL":"https://example.invalid/","lat":40.0,"lon":116.0,"coordPrecision":"poi"},
      {"id":"syn:nowhere","name":"没有坐标的岩馆","province":"合成省","city":"合成市","address":"","sourceURL":"https://example.invalid/"},
+     {"id":"syn:odd","name":"精度写法不认识的岩馆","province":"合成省","city":"合成市","address":"","sourceURL":"https://example.invalid/","lat":30.0001,"lon":120.0,"coordPrecision":"planet"},
      {"id":"syn:broken","name":"坐标写坏了的岩馆","province":"合成省","city":"合成市","address":"","sourceURL":"https://example.invalid/","lat":"north","lon":null,"coordPrecision":7}
     ]}
     """

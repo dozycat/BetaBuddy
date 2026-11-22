@@ -53,34 +53,22 @@ enum CaptureText {
         return String(localized: "\(reason)，\(action)", bundle: AppLanguage.bundle)
     }
 
-    /// A name for the colour keys packs commonly use. Any other key has no name: the swatch itself is shown.
-    static func colorName(_ key: String?) -> String? {
-        let bundle = AppLanguage.bundle
-        switch key?.lowercased() {
-        case "red": return String(localized: "红色", bundle: bundle)
-        case "orange": return String(localized: "橙色", bundle: bundle)
-        case "yellow": return String(localized: "黄色", bundle: bundle)
-        case "green": return String(localized: "绿色", bundle: bundle)
-        case "blue": return String(localized: "蓝色", bundle: bundle)
-        case "purple": return String(localized: "紫色", bundle: bundle)
-        case "pink": return String(localized: "粉色", bundle: bundle)
-        case "black": return String(localized: "黑色", bundle: bundle)
-        case "white": return String(localized: "白色", bundle: bundle)
-        case "grey", "gray": return String(localized: "灰色", bundle: bundle)
-        case "brown": return String(localized: "棕色", bundle: bundle)
-        default: return nil
-        }
-    }
-
+    /// Short names for what a tap marks; also the badges on marked holds.
     static func role(_ role: CaptureRole) -> String {
         let bundle = AppLanguage.bundle
         switch role {
-        case .startHand: return String(localized: "起步手点", bundle: bundle)
-        case .startFoot: return String(localized: "起步脚点", bundle: bundle)
-        case .finish: return String(localized: "结束点", bundle: bundle)
-        case .hold: return String(localized: "这条线的岩点", bundle: bundle)
-        case .none: return String(localized: "不是这条线的", bundle: bundle)
+        case .startHand: return String(localized: "起步手", bundle: bundle)
+        case .startFoot: return String(localized: "起步脚", bundle: bundle)
+        case .finish: return String(localized: "结束", bundle: bundle)
+        case .hold: return String(localized: "算这条线", bundle: bundle)
+        case .none: return String(localized: "不算", bundle: bundle)
         }
+    }
+
+    /// The same for a role the page only guessed: with a question mark.
+    static func guess(_ role: CaptureRole) -> String {
+        let name = Self.role(role)
+        return String(localized: "\(name)？", bundle: AppLanguage.bundle)
     }
 
     /// Why a recording ended by itself; `nil` when the user stopped it.
@@ -106,5 +94,12 @@ enum CaptureText {
 
     static func distance(_ meters: Double) -> String {
         Measurement(value: meters, unit: UnitLength.meters).formatted(.measurement(width: .abbreviated, usage: .road).locale(AppLanguage.locale))
+    }
+
+    /// How far a suggested gym is, as far as that can honestly be said; `nil` when it cannot.
+    static func distance(_ gym: NearbyGym) -> String? {
+        guard let meters = gym.displayMeters else { return nil }
+        let text = distance(meters)
+        return gym.shown == .approximate ? String(localized: "约 \(text)", bundle: AppLanguage.bundle) : text
     }
 }

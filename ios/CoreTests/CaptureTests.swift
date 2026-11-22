@@ -50,6 +50,25 @@ final class CaptureTests: XCTestCase {
         XCTAssertEqual(value.startHands, ["h3"]); XCTAssertEqual(value.startFeet, ["h7"]); XCTAssertEqual(value.finish, "h12")
     }
 
+    func testARecognisedProblemAndWhoMarkedTheStart() throws {
+        var body = full
+        XCTAssertNil(try assessment(body).route)
+        XCTAssertFalse(try assessment(body).startConfirmed)        // h3 is the page's own guess…
+        XCTAssertFalse(try assessment(body).finishConfirmed)
+        body["route"] = ["id": "wall-07", "conf": 0.9, "name": "合成线路 7", "grade": "V3", "extra": true]
+        body["holds"] = [["id": "h3", "box": [0.4, 0.3, 0.1, 0.1], "role": "start_hand", "user": true], ["id": "h9", "box": [0.4, 0.1, 0.1, 0.1], "role": "finish", "user": true]]
+        let value = try assessment(body)
+        XCTAssertEqual(value.route, .init(id: "wall-07", confidence: 0.9, name: "合成线路 7", grade: "V3"))
+        XCTAssertTrue(value.startConfirmed); XCTAssertTrue(value.finishConfirmed)     // …until the user taps.
+        // Only an id is promised; without one there is no problem.
+        body["route"] = ["id": "wall-07"]
+        XCTAssertEqual(try assessment(body).route, .init(id: "wall-07"))
+        for junk in [["conf": 0.9], ["id": ""], "wall-07", NSNull()] as [Any] { body["route"] = junk; XCTAssertNil(try assessment(body).route) }
+        // The same in the summary that comes with the plan.
+        guard case .locked(_, _, let summary) = try XCTUnwrap(CaptureMessage(body: ["type": "captureLocked", "id": "A", "plan": "p", "summary": ["holds": 3, "route": ["id": "wall-07", "conf": 0.8]]])) else { return XCTFail() }
+        XCTAssertEqual(summary.route, .init(id: "wall-07", confidence: 0.8)); XCTAssertEqual(summary.holds, 3)
+    }
+
     func testAssessmentWithOnlyItsTypeIsReadCautiously() throws {
         let value = try assessment(["type": "captureAssessment"])
         XCTAssertTrue(value.ok)            // No issue blocks.
@@ -135,7 +154,7 @@ final class CaptureTests: XCTestCase {
 
         XCTAssertTrue(CaptureCommand.setColor("yellow").script.contains("setColor(\"yellow\")"))
         XCTAssertTrue(CaptureCommand.setColor(nil).script.contains("setColor(null)"))
-        XCTAssertTrue(CaptureCommand.tap(x: 0.41234567, y: 1.7, role: .startFoot).script.contains("tap(0.4123,1,\"start_foot\")"))
+        XCTAssertTrue(CaptureCommand.tap(x: 0.41234567, y: 1.7, role: .startFoot).script.contains("(window.BetaBuddyCapture.tap(0.4123,1,\"start_foot\") || '')"))
         XCTAssertTrue(CaptureCommand.tap(x: 0.5, y: 0.5, role: .none).script.contains("\"none\""))
         XCTAssertTrue(CaptureCommand.resetTaps.script.contains("resetTaps()"))
         XCTAssertTrue(CaptureCommand.lock.script.contains("lock()"))
@@ -158,7 +177,8 @@ final class CaptureTests: XCTestCase {
         XCTAssertEqual(try XCTUnwrap(CaptureMotion.pitch(gravity: (0, -cos(.pi / 6), sin(.pi / 6)))), 30, accuracy: 1e-9)
         // Screen up on a table: the camera looks straight down, and there is no roll to speak of.
         XCTAssertEqual(try XCTUnwrap(CaptureMotion.pitch(gravity: (0, 0, -1))), -90, accuracy: 1e-9)
-        XCTAssertNil(CaptureMotion.roll(gravity: (0, 0, -1)))
+        XCTAssertEqual(CaptureMotion.roll(gravity: (0, 0, -1)), 0)
+        XCTAssertNil(CaptureMotion.roll(gravity: (0, .nan, 0)))
         // Turned clockwise as seen on the screen: its right edge points down.
         XCTAssertEqual(try XCTUnwrap(CaptureMotion.roll(gravity: (sin(.pi / 18), -cos(.pi / 18), 0))), 10, accuracy: 1e-9)
         XCTAssertEqual(try XCTUnwrap(CaptureMotion.roll(gravity: (1, 0, 0))), 90, accuracy: 1e-9)
@@ -194,7 +214,7 @@ final class CaptureTests: XCTestCase {
         var record = climb()
         record.capture = CaptureInfo(colorKey: "yellow", colorRGB: [226, 196, 40],
                                      summary: CaptureSummary(color: "yellow", rgb: [226, 196, 40], holds: 9, startHands: 2, startFeet: 1, finish: true, ok: true, issues: []),
-                                     hasPlan: true, packVersion: "1.9.0", analysisQueued: true)
+                                     hasPlan: true, packVersion: "1.9.0", analysisQueued: true, routeId: "wall-07", routeName: "合成线路 7")
         let bytes = try JSONEncoder().encode(Archive(climbs: [record]))
         XCTAssertEqual(try JSONDecoder().decode(Archive.self, from: bytes).climbs[0].capture, record.capture)
         // A later build may add fields and leave optional ones out.

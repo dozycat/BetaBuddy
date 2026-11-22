@@ -9,7 +9,7 @@ English store copy for 1.4.0. The Simplified Chinese storefront also uses Englis
 - Keywords: climbing,bouldering,beta,gym,problem,send,video,review,pose,skeleton,logbook
 - Support URL: https://betabuddy.dozycat.ai
 - Privacy Policy URL: https://betabuddy.dozycat.ai/privacy
-- Privacy label: Data Not Collected
+- Privacy label: Data Not Collected (unchanged by the in-app camera and the optional location use; see [privacy-camera-location.md](privacy-camera-location.md))
 - Sign-in: none
 
 ## Promotional text

@@ -55,20 +55,22 @@ private struct CaptureOverlay: View {
                 for hold in holds {
                     let outline = path(hold)
                     let marked = hold.role != .hold
-                    context.stroke(outline, with: .color(.black.opacity(0.7)), style: StrokeStyle(lineWidth: marked ? 6 : 4.5, lineJoin: .round))
+                    // Thin for plain holds: a board can have a hundred of them, and the holds must stay visible.
+                    context.stroke(outline, with: .color(.black.opacity(0.65)), style: StrokeStyle(lineWidth: marked ? 5.5 : 3, lineJoin: .round))
                     context.stroke(outline, with: .color(color(hold.role)),
-                                   style: StrokeStyle(lineWidth: marked ? 3 : 2, lineJoin: .round, dash: hold.user ? [] : [6, 4]))
+                                   style: StrokeStyle(lineWidth: marked ? 3 : 1.5, lineJoin: .round, dash: hold.user ? [] : [5, 4]))
                 }
             }
             // Start and finish also carry a word: colour alone does not say which is which.
             ForEach(holds.filter { $0.role != .hold }) { hold in
                 HStack(spacing: 3) {
                     Image(systemName: symbol(hold.role)).font(.system(size: 9, weight: .bold))
-                    Text(verbatim: CaptureText.role(hold.role)).font(.system(size: 10, weight: .bold)).lineLimit(1)
+                    // A guess says so; what the user marked carries a tick.
+                    Text(verbatim: hold.user ? CaptureText.role(hold.role) : CaptureText.guess(hold.role)).font(.system(size: 10, weight: .bold)).lineLimit(1)
                     if hold.user { Image(systemName: "checkmark").font(.system(size: 8, weight: .black)) }
                 }
                 .padding(.horizontal, 6).padding(.vertical, 3)
-                .foregroundStyle(BB.ink).background(color(hold.role), in: Capsule())
+                .foregroundStyle(BB.ink).background(color(hold.role).opacity(hold.user ? 1 : 0.8), in: Capsule())
                 .fixedSize()
                 .position(x: min(max(hold.box.midX * size.width, 40), size.width - 40),
                           y: max(hold.box.minY * size.height - 13, 10))
@@ -89,26 +91,25 @@ private struct CaptureGymSheet: View {
         NavigationStack {
             List {
                 if locator.access == .allowed {
-                    let nearby = locator.nearby()
+                    let suggestions = locator.suggestions()
                     Section {
-                        ForEach(nearby) { item in
-                            Button { gymId = item.gym.id; gymName = item.gym.name; dismiss() } label: {
-                                HStack {
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text(verbatim: item.gym.name).foregroundStyle(BB.ink)
-                                        Text(verbatim: item.gym.location).font(.caption).foregroundStyle(BB.muted)
-                                    }
-                                    Spacer()
-                                    if item.showsDistance {
-                                        Text(verbatim: CaptureText.distance(item.meters)).font(.caption.monospacedDigit()).foregroundStyle(BB.muted)
-                                    }
-                                    if gymId == item.gym.id { Image(systemName: "checkmark").foregroundStyle(BB.ink) }
-                                }.padding(.vertical, 3)
-                            }.accessibilityIdentifier("nearbyGym-\(item.gym.id)")
+                        ForEach(suggestions.ranked) { item in
+                            row(item.gym, distance: CaptureText.distance(item)).accessibilityIdentifier("nearbyGym-\(item.gym.id)")
                         }
                         if locator.locating { ProgressView() }
-                        else if nearby.isEmpty { Text("附近没有找到目录里的岩馆。").foregroundStyle(BB.muted) }
-                    } header: { Text("离你近的") } footer: { Text("位置只在这台 iPhone 上用来给岩馆排序，不保存，也不离开设备。") }
+                        else if suggestions.ranked.isEmpty { Text("附近没有找到目录里的岩馆。").foregroundStyle(BB.muted) }
+                    } header: { Text("离你近的") } footer: {
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text("位置只在这台 iPhone 上用来给岩馆排序，不保存，也不离开设备。")
+                            if GymDirectory.bundled?.hasCoordinates == true { Text(verbatim: GymDirectory.coordinateCredit) }
+                        }
+                    }
+                    // Gyms the directory cannot place more exactly than their district or city: listed, never measured.
+                    if !suggestions.sameCity.isEmpty {
+                        Section {
+                            ForEach(suggestions.sameCity) { gym in row(gym, distance: nil).accessibilityIdentifier("cityGym-\(gym.id)") }
+                        } header: { Text("同城的岩馆") }
+                    }
                 } else if locator.access == .notAsked {
                     Section {
                         Button { locator.ask() } label: { Label("按距离找附近的岩馆", systemImage: "location") }
@@ -129,6 +130,20 @@ private struct CaptureGymSheet: View {
             .onChange(of: gymName) { _, _ in dismiss() }
         }.presentationDetents([.medium, .large])
     }
+
+    private func row(_ gym: DirectoryGym, distance: String?) -> some View {
+        Button { gymId = gym.id; gymName = gym.name; dismiss() } label: {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(verbatim: gym.name).foregroundStyle(BB.ink)
+                    Text(verbatim: gym.location).font(.caption).foregroundStyle(BB.muted)
+                }
+                Spacer()
+                if let distance { Text(verbatim: distance).font(.caption.monospacedDigit()).foregroundStyle(BB.muted) }
+                if gymId == gym.id { Image(systemName: "checkmark").foregroundStyle(BB.ink) }
+            }.padding(.vertical, 3)
+        }
+    }
 }
 
 struct CaptureView: View {
@@ -138,14 +153,19 @@ struct CaptureView: View {
     @StateObject private var locator = GymLocator()
     @State private var choosingGym = false
     @State private var confirming = false
-    @State private var tapped: CGPoint?
+    /// What a tap on the picture marks. Starts on the start holds: those are what the page gets wrong most.
+    @State private var tool = CaptureRole.startHand
     @State private var sent = false
     @State private var viewing: Climb?
+    /// The gym the user declined when it was offered as the one they are standing in.
+    @State private var declined: String?
     /// Leaves the camera for the photo library import.
     private let onImport: () -> Void
 
-    init(store: ClimbStore, pack: GymPack? = GymPack.current, source: CaptureSource = CaptureSession.makeSource(), onImport: @escaping () -> Void) {
-        _session = StateObject(wrappedValue: CaptureSession(store: store, pack: pack, source: source))
+    /// `source` is only asked for once, when the screen first appears: the view itself is rebuilt
+    /// whenever the album behind it changes, and a camera must not be set up each time.
+    init(store: ClimbStore, pack: GymPack? = GymPack.current, source: @escaping @autoclosure () -> CaptureSource = CaptureSession.makeSource(), onImport: @escaping () -> Void) {
+        _session = StateObject(wrappedValue: CaptureSession(store: store, pack: pack, source: source()))
         self.onImport = onImport
     }
 
@@ -154,22 +174,28 @@ struct CaptureView: View {
         return store.climbs.first { $0.id == id }
     }
     private var framing: Bool { session.phase == .framing && session.camera == .running }
+    /// A gym right where the phone is that is not the one selected. It is offered; the selection never changes by itself.
+    private var offered: NearbyGym? {
+        guard framing, let here = locator.suggestions().here, here.gym.id != session.gymId, here.gym.id != declined else { return nil }
+        return here
+    }
 
     var body: some View {
         ZStack {
+            // The capture page has nothing to show; it only has to stay alive and keep answering. It is
+            // kept in the window at full size, underneath everything, like a page nobody happens to see.
+            if let webView = session.webView {
+                GymWebView(webView: webView).allowsHitTesting(false).accessibilityHidden(true)
+            }
             BB.ink.ignoresSafeArea()
             VStack(spacing: 10) {
                 topBar
+                if let offered { offer(offered) }
                 picture
                 // Below the picture, not on it: the start of a problem is at the bottom of the wall.
                 if framing { colours }
                 bottomBar
             }.padding(.horizontal, 12).padding(.vertical, 8)
-            // The capture page has nothing to show; it only needs to be alive.
-            if let webView = session.webView {
-                GymWebView(webView: webView).frame(width: 1, height: 1).opacity(0.01)
-                    .allowsHitTesting(false).accessibilityHidden(true)
-            }
         }
         .foregroundStyle(BB.paper)
         .statusBarHidden(true)
@@ -179,6 +205,8 @@ struct CaptureView: View {
             locator.locateIfAllowed()
         }
         .onDisappear {
+            // Not when the analysis page or the gym list merely covers this screen.
+            guard viewing == nil, !choosingGym else { return }
             UIApplication.shared.isIdleTimerDisabled = false
             Task { await session.close() }
         }
@@ -190,13 +218,6 @@ struct CaptureView: View {
             Button("仍然开始录") { session.startRecording() }.accessibilityIdentifier("recordAnyway")
             Button("再调一下机位", role: .cancel) {}
         } message: { Text(verbatim: session.assessment?.hint.map(CaptureText.line) ?? "") }
-        .confirmationDialog("这个岩点是…", isPresented: Binding(get: { tapped != nil }, set: { if !$0 { tapped = nil } }), titleVisibility: .visible) {
-            ForEach(CaptureRole.allCases, id: \.self) { role in
-                Button { if let tapped { session.correct(at: tapped, role: role) } } label: { Text(verbatim: CaptureText.role(role)) }
-            }
-            Button("恢复自动识别") { session.resetCorrections() }
-            Button("取消", role: .cancel) {}
-        }
         .alert(Text(verbatim: session.notice.map(CaptureText.notice) ?? ""), isPresented: Binding(get: { session.notice != nil }, set: { if !$0 { session.notice = nil } })) {
             Button("知道了", role: .cancel) { session.notice = nil }
         }
@@ -250,6 +271,23 @@ struct CaptureView: View {
         }
     }
 
+    private func offer(_ here: NearbyGym) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "location.fill").font(.caption)
+            Text("离你最近：\(here.gym.name) · \(CaptureText.distance(here) ?? "")").font(.caption.bold())
+                .fixedSize(horizontal: false, vertical: true).frame(maxWidth: .infinity, alignment: .leading)
+            Button { session.gymId = here.gym.id; session.gymName = here.gym.name } label: {
+                Text("换成这家").font(.caption.bold()).padding(.horizontal, 12).frame(minHeight: 36)
+                    .foregroundStyle(BB.ink).background(BB.lime, in: Capsule())
+            }.buttonStyle(.plain).accessibilityIdentifier("useNearestGym")
+            Button { declined = here.gym.id } label: {
+                Image(systemName: "xmark").font(.caption.bold()).frame(width: 36, height: 36)
+            }.buttonStyle(.plain).accessibilityLabel(Text("不用了")).accessibilityIdentifier("declineNearestGym")
+        }
+        .padding(.leading, 12).padding(.trailing, 4).padding(.vertical, 4)
+        .background(.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 14))
+    }
+
     // MARK: Middle: the picture and what is drawn on it
 
     private var picture: some View {
@@ -267,13 +305,13 @@ struct CaptureView: View {
                         CaptureOverlay(holds: holds, size: size).opacity(session.phase == .recording ? 0.45 : 1)
                     }
                     if framing {
-                        // A tap on the picture says what the hold there is.
+                        // One tap marks the hold there as whatever is selected below the picture.
                         Color.clear.contentShape(Rectangle())
                             .gesture(SpatialTapGesture().onEnded { value in
                                 guard session.page == .ready, session.color != nil else { return }
-                                tapped = CGPoint(x: value.location.x / size.width, y: value.location.y / size.height)
+                                session.correct(at: CGPoint(x: value.location.x / size.width, y: value.location.y / size.height), role: tool)
                             })
-                            .accessibilityElement().accessibilityLabel(Text("这个岩点是…")).accessibilityIdentifier("capturePicture")
+                            .accessibilityElement().accessibilityLabel(Text(verbatim: CaptureText.role(tool))).accessibilityIdentifier("capturePicture")
                         VStack(spacing: 8) {
                             guidance
                             Spacer(minLength: 0)
@@ -316,13 +354,9 @@ struct CaptureView: View {
             if let assessment {
                 VStack(spacing: 6) {
                     if assessment.ready {
+                        // A remark that does not block is shown under the picture, see `colours`.
                         pill(icon: "checkmark.circle.fill", text: Text("机位可以，开始吧"), tone: .ready)
                             .accessibilityIdentifier("captureReady")
-                        // Nothing blocks, but the page still has something to say.
-                        if let hint = assessment.hint {
-                            pill(icon: "info.circle", text: Text(verbatim: CaptureText.line(hint)), tone: .plain)
-                                .accessibilityIdentifier("captureHint").accessibilityValue(Text(verbatim: hint.code))
-                        }
                     } else if let hint = assessment.hint {
                         pill(icon: hint.blocking ? "exclamationmark.triangle.fill" : "info.circle", text: Text(verbatim: CaptureText.line(hint)), tone: hint.blocking ? .blocked : .plain)
                             .accessibilityIdentifier("captureHint").accessibilityValue(Text(verbatim: hint.code))
@@ -368,37 +402,108 @@ struct CaptureView: View {
         .accessibilityIdentifier("captureQuality")
     }
 
-    /// Chips for the colours the page sees on the wall, and the reminder that what is drawn is a guess.
+    /// Under the picture: first the colours the page sees on the wall; once one is chosen, what a tap
+    /// on the picture marks. The start comes first because the page's own guess at it is the weakest.
     @ViewBuilder
     private var colours: some View {
-        if session.page == .ready, !session.palette.isEmpty {
+        if session.page == .ready, !session.palette.isEmpty || session.color != nil {
+            let assessment = session.assessment
             VStack(alignment: .leading, spacing: 6) {
-                Text(session.color == nil ? "选你要爬的颜色" : "虚线是自动认的，可能认错。点一下岩点可以改。")
-                    .font(.caption.bold()).fixedSize(horizontal: false, vertical: true)
-                    .accessibilityIdentifier("captureColourNote")
+                // Nothing blocks, but the page still has something to say. What it says about the start
+                // and the finish is already the business of the line below.
+                if let assessment, assessment.ready, let hint = assessment.hint, !["start_unclear", "finish_unclear"].contains(hint.code) {
+                    Label { Text(verbatim: CaptureText.line(hint)) } icon: { Image(systemName: "info.circle") }
+                        .font(.caption.bold()).foregroundStyle(BB.lime).fixedSize(horizontal: false, vertical: true)
+                        .accessibilityElement(children: .combine)
+                        .accessibilityIdentifier("captureHint").accessibilityValue(Text(verbatim: hint.code))
+                }
+                if session.color != nil, let route = session.recognised {
+                    HStack(spacing: 8) {
+                        Text("认出来像是：\([route.name ?? route.id, route.grade ?? ""].filter { !$0.isEmpty }.joined(separator: " · "))")
+                            .font(.caption.bold()).fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("captureRoute")
+                        Button { session.rejectRoute() } label: {
+                            Text("不是这条").font(.caption.bold()).padding(.horizontal, 10).frame(minHeight: 32).background(.white.opacity(0.14), in: Capsule())
+                        }.buttonStyle(.plain).accessibilityIdentifier("captureRejectRoute")
+                    }
+                }
+                prompt(assessment)
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
-                        ForEach(session.palette) { swatch in
-                            let selected = session.color == swatch.key
-                            Button { session.selectColor(swatch.key) } label: {
-                                HStack(spacing: 6) {
-                                    Circle().fill(Color(swatch.rgb)).frame(width: 22, height: 22)
-                                        .overlay(Circle().stroke(.white, lineWidth: 1.5))
-                                    if let name = CaptureText.colorName(swatch.key) { Text(verbatim: name).font(.caption.bold()) }
-                                    Text(verbatim: "\(swatch.count)").font(.caption.monospacedDigit())
-                                    if selected { Image(systemName: "checkmark").font(.caption2.bold()) }
-                                }
-                                .padding(.horizontal, 10).frame(minHeight: 44)
-                                .foregroundStyle(selected ? BB.ink : BB.paper)
-                                .background(selected ? BB.lime : .white.opacity(0.14), in: Capsule())
-                            }.buttonStyle(.plain)
-                                .accessibilityLabel(Text(verbatim: CaptureText.colorName(swatch.key) ?? swatch.key))
-                                .accessibilityAddTraits(selected ? [.isSelected] : [])
-                                .accessibilityIdentifier("captureColor-\(swatch.key)")
-                        }
+                        if let chosen = session.color { tools(chosen, assessment) } else { swatches }
                     }
                 }
             }
+        }
+    }
+
+    /// Where the user is in marking the problem, in words. A value for tests says which.
+    private func prompt(_ assessment: CaptureAssessment?) -> some View {
+        let stage = session.tapMissed ? "missed" : session.color == nil ? "colour" : assessment?.startConfirmed != true ? "start" : assessment?.finishConfirmed != true ? "finish" : "marked"
+        let text: Text = switch stage {
+        case "missed": Text("这里没有认出岩点。")
+        case "colour": Text("选你要爬的颜色")
+        case "start": Text("虚线是自动猜的，起步点常常猜错。点一下起步的手点。")
+        case "finish": Text("起步标好了。选“结束”，再点一下结束点。")
+        default: Text("起步和结束都标好了。其余虚线仍是自动猜的。")
+        }
+        return text.font(.caption.bold()).fixedSize(horizontal: false, vertical: true)
+            .accessibilityIdentifier("capturePrompt").accessibilityValue(Text(verbatim: stage))
+    }
+
+    /// Swatches only: the page's name for a colour is right too rarely to print.
+    @ViewBuilder
+    private var swatches: some View {
+        ForEach(Array(session.palette.enumerated()), id: \.element.key) { index, swatch in
+            Button { tool = .startHand; session.selectColor(swatch.key) } label: {
+                HStack(spacing: 6) {
+                    Circle().fill(Color(swatch.rgb)).frame(width: 26, height: 26).overlay(Circle().stroke(.white, lineWidth: 1.5))
+                    Text(verbatim: "\(swatch.count)").font(.caption.monospacedDigit())
+                }
+                .padding(.horizontal, 10).frame(minHeight: 44).background(.white.opacity(0.14), in: Capsule())
+            }.buttonStyle(.plain)
+                .accessibilityLabel(Text("颜色 \(index + 1)")).accessibilityValue(Text("\(swatch.count) 个岩点"))
+                .accessibilityIdentifier("captureColor-\(swatch.key)")
+        }
+    }
+
+    /// The chosen colour (tap it to choose again), then what a tap on the picture marks.
+    @ViewBuilder
+    private func tools(_ chosen: String, _ assessment: CaptureAssessment?) -> some View {
+        Button { session.selectColor(nil) } label: {
+            HStack(spacing: 5) {
+                Circle().fill(Color(session.palette.first { $0.key == chosen }?.rgb ?? [128, 128, 128])).frame(width: 26, height: 26)
+                    .overlay(Circle().stroke(.white, lineWidth: 1.5))
+                Image(systemName: "chevron.down").font(.caption2.bold())
+            }.padding(.horizontal, 10).frame(minHeight: 44).background(.white.opacity(0.14), in: Capsule())
+        }.buttonStyle(.plain).accessibilityLabel(Text("换颜色")).accessibilityIdentifier("captureChangeColour")
+        ForEach(CaptureRole.allCases, id: \.self) { role in
+            let selected = tool == role
+            Button { tool = role } label: {
+                HStack(spacing: 5) {
+                    Image(systemName: Self.symbol(role)).font(.caption.bold())
+                    Text(verbatim: CaptureText.role(role)).font(.caption.bold())
+                }
+                .padding(.horizontal, 12).frame(minHeight: 44)
+                .foregroundStyle(selected ? BB.ink : BB.paper)
+                .background(selected ? BB.lime : .white.opacity(0.14), in: Capsule())
+            }.buttonStyle(.plain).accessibilityAddTraits(selected ? [.isSelected] : [])
+                .accessibilityIdentifier("captureTool-\(role.rawValue)")
+        }
+        if assessment?.holds.contains(where: \.user) == true {
+            Button { session.resetCorrections() } label: {
+                Label("恢复自动识别", systemImage: "arrow.uturn.backward").font(.caption.bold())
+                    .padding(.horizontal, 12).frame(minHeight: 44).background(.white.opacity(0.14), in: Capsule())
+            }.buttonStyle(.plain).accessibilityIdentifier("captureResetMarks")
+        }
+    }
+
+    private static func symbol(_ role: CaptureRole) -> String {
+        switch role {
+        case .startHand: "hand.raised.fill"
+        case .startFoot: "shoeprints.fill"
+        case .finish: "flag.checkered"
+        case .hold: "plus.circle"
+        case .none: "minus.circle"
         }
     }
 
@@ -517,17 +622,15 @@ struct CaptureView: View {
     }
 }
 
-/// The colour chosen on the capture screen, as a swatch with its name when the key has one.
+/// The colour chosen on the capture screen, as the swatch the page reported. No name: the page's
+/// names for colours are not reliable enough to print.
 struct CaptureColourLabel: View {
     var capture: CaptureInfo?
     var body: some View {
-        if let capture, capture.colorKey != nil || capture.colorRGB != nil {
-            HStack(spacing: 6) {
-                Circle().fill(Color(capture.colorRGB ?? [128, 128, 128])).frame(width: 12, height: 12)
-                    .overlay(Circle().stroke(BB.ink.opacity(0.35), lineWidth: 1))
-                if let name = CaptureText.colorName(capture.colorKey) { Text(verbatim: name).font(.caption).foregroundStyle(BB.muted) }
-            }.accessibilityElement(children: .combine)
-                .accessibilityLabel(Text(verbatim: CaptureText.colorName(capture.colorKey) ?? capture.colorKey ?? ""))
+        if let rgb = capture?.colorRGB {
+            Circle().fill(Color(rgb)).frame(width: 12, height: 12)
+                .overlay(Circle().stroke(BB.ink.opacity(0.35), lineWidth: 1))
+                .accessibilityElement().accessibilityLabel(Text("拍摄时选的颜色"))
         }
     }
 }

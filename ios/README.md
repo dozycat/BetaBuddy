@@ -45,6 +45,19 @@ xcodebuild -project ios/BetaBuddy.xcodeproj -scheme BetaBuddy \
   CODE_SIGNING_ALLOWED=NO build
 ```
 
+模拟器没有相机。应用内相机的测试用一段画出来的墙（`TestSupport/SyntheticWallClip.swift` 现场生成）代替相机，用一个按固定脚本回话的替身页面（`TestSupport/capture-standin.html`）代替数据包的拍摄页面；替身什么也不识别，只用来走通应用这一侧。这些都只编进测试包。Debug 构建的启动参数：`-debugCaptureVideo <路径>` 用一段视频代替相机，`-debugGymPackRoot <目录>` 改用 `<目录>/GymPack` 里的数据包，`-debugGymDirectory <路径>` 换一份岩馆目录，`-debugLocation "<纬度>,<经度>"` 给一个位置（不弹系统询问），`-debugCaptureAttitude "<仰角>,<倾斜>,<晃动>"` 顶替模拟器没有的运动传感器。界面测试会把每个状态截图附在结果里；加上 `TEST_RUNNER_BB_SCREENSHOT_DIR=<目录>` 另存一份 PNG。
+
+要对着装好的数据包走一遍「拍 → 存 → 姿态识别 → 分析」，同样需要一段真实的攀爬视频来顶替相机：
+
+```sh
+TEST_RUNNER_BB_CAPTURE_CLIP=<视频> \
+  xcodebuild -project ios/BetaBuddy.xcodeproj -scheme BetaBuddy \
+  -destination 'platform=iOS Simulator,name=<模拟器>' -derivedDataPath ios/.derivedData \
+  test -only-testing:BetaBuddyUITests/CaptureUITests/testRecordingIsSavedThenAnalysedByTheInstalledPack
+```
+
+同一个环境变量也会放开 `BetaBuddyTests/CaptureFlowTests/testInstalledCapturePageAnswersLocksAndItsPlanIsKept`：不经过界面，直接把这段视频交给装好的拍摄页面，记下它每秒回几条、`lock()` 多久有回音、拍摄计划多大。
+
 「分析这一趟」的端到端测试需要一段真实的攀爬视频和装好的数据包，两样都不在仓库里，所以默认跳过。要跑的时候把视频路径交给测试进程（`<label>` 是数据包分析页面上「在视频里看这一刻」那个按钮的简体中文文字，可省略）：
 
 ```sh
@@ -58,7 +71,7 @@ TEST_RUNNER_BB_ANALYSIS_CLIP=<视频> TEST_RUNNER_BB_ANALYSIS_SEEK=<label> \
 
 ## 语言
 
-开发语言是简体中文（`project.yml` 的 `developmentLanguage: zh-Hans`），另有繁体中文、英语、日语、韩语。全部文字在 `BetaBuddy/Resources/Localizable.xcstrings`，相册权限说明在 `InfoPlist.xcstrings`；键是简体中文原文。XcodeGen 没有 `knownRegions` 选项，工程文件里只列出开发语言，其余语言由 String Catalog 在构建时生成对应的 `.lproj`，测试会确认五种语言都进了应用包。
+开发语言是简体中文（`project.yml` 的 `developmentLanguage: zh-Hans`），另有繁体中文、英语、日语、韩语。全部文字在 `BetaBuddy/Resources/Localizable.xcstrings`，相册、相机和位置的权限说明在 `InfoPlist.xcstrings`；键是简体中文原文。XcodeGen 没有 `knownRegions` 选项，工程文件里只列出开发语言，其余语言由 String Catalog 在构建时生成对应的 `.lproj`，测试会确认五种语言都进了应用包。
 
 界面语言由 `AppLanguage.current` 决定：应用内的选择（`UserDefaults` 的 `appLanguage`）优先，否则按系统的首选语言匹配，都不匹配用英语。文字不依赖进程启动时的语言：SwiftUI 的文字跟随根视图注入的 `\.locale`，非视图代码一律写 `String(localized: "…", bundle: AppLanguage.bundle)`，格式化用 `AppLanguage.locale`。这样在应用内切换语言不用重启。
 
@@ -93,12 +106,13 @@ xcrun simctl launch booted com.betabuddy.ios -AppleLanguages "(ja)"
 ## 目录
 
 - `BetaBuddy/App`：应用入口与两个入口（岩馆、攀爬册）的导航。
-- `BetaBuddy/Core`：数据结构、骨架连线、MediaPipe 推理与给分析页面抽画面、原子写入的本地存储（含分析结果文件），以及岩馆数据包的定位、清单读取、两个页面的消息解析和调用。
-- `BetaBuddy/Views`：设计系统、攀爬册、导入、回看、关于、岩馆页面容器、分析页面容器，以及存储值到界面文字的转换。
+- `BetaBuddy/Core`：数据结构、骨架连线、MediaPipe 推理与给分析页面抽画面、原子写入的本地存储（含分析结果文件和拍摄计划），以及岩馆数据包的定位、清单读取、三个页面的消息解析和调用；应用内相机的画面来源（相机，或 Debug 下的视频文件）、录像、给拍摄页面交帧、保存后的分析队列、按距离给岩馆排序。
+- `BetaBuddy/Views`：设计系统、攀爬册、拍摄、导入、回看、关于、岩馆页面容器、分析页面容器，以及存储值和拍摄页面的代码到界面文字的转换。
 - `BetaBuddy/Resources`：图标、姿态模型、`Localizable.xcstrings` 与 `InfoPlist.xcstrings`、隐私清单、三种语言的离线隐私政策、第三方许可。
-- `CoreTests`：可在 macOS 直接运行的姿态数据、旧存档兼容与筛选边界测试。
+- `CoreTests`：可在 macOS 直接运行的姿态数据、旧存档兼容、筛选边界，以及拍摄页面的消息解析与调用的测试。
+- `TestSupport`：两个测试包共用的合成素材：画出来的墙、合成数据包、拍摄页面和分析页面的替身、带坐标的合成岩馆目录。不进应用。
 - `BetaBuddyTests`：本地存储、模型打包、视频推理、数据包加载、分析页面的消息与调用、本地化完整性的测试。
-- `BetaBuddyUITests`：在简体中文和英语下各走一遍两个入口的冒烟测试，文件夹流程，以及需要本地视频才运行的「分析这一趟」端到端测试。
+- `BetaBuddyUITests`：在简体中文和英语下各走一遍两个入口的冒烟测试，文件夹流程，应用内相机从取景到保存的全程（合成素材），以及需要本地视频才运行的两个端到端测试。
 - `LocalMediaPipe`：SDK 指标上报工厂的本地空实现及其头文件依赖。
 - `scripts`：`bootstrap.sh`、`install-gym-pack.sh`、`prepare-local-graph.sh`、`generate-icon.swift`、`ExportOptions.plist`。
 - [THIRD_PARTY.md](THIRD_PARTY.md)：第三方 SDK、模型与素材的来源和校验值。

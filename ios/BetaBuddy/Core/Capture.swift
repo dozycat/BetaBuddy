@@ -42,6 +42,27 @@ struct CaptureAssessment: Equatable, Sendable {
         /// The role was set by the user with a tap.
         var user: Bool
     }
+    /// A problem of the pack's own that the page thinks this is. Only a newer page sends one, and
+    /// only for a gym the pack carries. A guess like everything else here.
+    struct Route: Codable, Equatable, Sendable {
+        var id: String
+        var confidence: Double?
+        /// Display name and grade text, when the page gives them; the app has no other way to learn them.
+        var name: String?
+        var grade: String?
+
+        init(id: String, confidence: Double? = nil, name: String? = nil, grade: String? = nil) {
+            self.id = id; self.confidence = confidence; self.name = name; self.grade = grade
+        }
+        init?(body: Any?) {
+            guard let body = body as? [String: Any], let id = body["id"] as? String, !id.isEmpty else { return nil }
+            func text(_ key: String) -> String? { (body[key] as? String).flatMap { $0.isEmpty ? nil : String($0.prefix(120)) } }
+            self.id = String(id.prefix(120))
+            confidence = CaptureAssessment.number(body["conf"])
+            name = text("name")
+            grade = text("grade")
+        }
+    }
     static let maximumHolds = 300
     static let maximumPolygonPoints = 96
 
@@ -62,6 +83,12 @@ struct CaptureAssessment: Equatable, Sendable {
     var startHands: [String]
     var startFeet: [String]
     var finish: String?
+    var route: Route?
+
+    /// The user has said where the problem starts, and where it ends. Until then both are the
+    /// page's guesses, and the start in particular is wrong more often than right.
+    var startConfirmed: Bool { holds.contains { $0.role == .startHand && $0.user } }
+    var finishConfirmed: Bool { holds.contains { $0.role == .finish && $0.user } }
 
     /// The camera position can be used and the picture has stopped moving.
     var ready: Bool { ok && steady }
@@ -117,6 +144,7 @@ struct CaptureAssessment: Equatable, Sendable {
         startHands = Self.ids(start?["hands"])
         startFeet = Self.ids(start?["feet"])
         finish = ((body["finish"] as? [String: Any])?["id"] as? String).flatMap { $0.isEmpty ? nil : String($0.prefix(40)) }
+        route = Route(body: body["route"])
     }
 
     private static func ids(_ value: Any?) -> [String] {
@@ -146,10 +174,13 @@ struct CaptureSummary: Codable, Equatable, Sendable {
     var finish: Bool = false
     var ok: Bool = false
     var issues: [String] = []
+    /// The pack's own problem the page took this for, if it said so.
+    var route: CaptureAssessment.Route?
 
-    init(color: String? = nil, rgb: [Int]? = nil, holds: Int = 0, startHands: Int = 0, startFeet: Int = 0, finish: Bool = false, ok: Bool = false, issues: [String] = []) {
+    init(color: String? = nil, rgb: [Int]? = nil, holds: Int = 0, startHands: Int = 0, startFeet: Int = 0, finish: Bool = false, ok: Bool = false, issues: [String] = [],
+         route: CaptureAssessment.Route? = nil) {
         self.color = color; self.rgb = rgb; self.holds = holds; self.startHands = startHands; self.startFeet = startFeet
-        self.finish = finish; self.ok = ok; self.issues = issues
+        self.finish = finish; self.ok = ok; self.issues = issues; self.route = route
     }
     init(body: [String: Any]) {
         color = (body["color"] as? String).flatMap { $0.isEmpty ? nil : String($0.prefix(40)) }
@@ -162,6 +193,7 @@ struct CaptureSummary: Codable, Equatable, Sendable {
         finish = body["finish"] as? Bool ?? false
         ok = body["ok"] as? Bool ?? false
         issues = (body["issues"] as? [Any] ?? []).prefix(32).compactMap { ($0 as? String).map { String($0.prefix(40)) } }
+        route = CaptureAssessment.Route(body: body["route"])
     }
 }
 
@@ -178,6 +210,9 @@ struct CaptureInfo: Codable, Equatable, Sendable {
     var packVersion: String?
     /// The analysis asked for when the clip was saved has not produced a result yet.
     var analysisQueued: Bool?
+    /// The pack's own problem the capture page recognised and the user did not reject: its id, and its name when the page gave one.
+    var routeId: String?
+    var routeName: String?
 }
 
 /// Capture page → app messages. They arrive on the same `gym` handler, from the capture page's own web view.
@@ -277,7 +312,10 @@ enum CaptureCommand: Sendable {
         case .resetTaps: ("resetTaps", [])
         case .lock: ("lock", [])
         }
-        return "window.BetaBuddyCapture && typeof window.BetaBuddyCapture.\(function) === 'function' ? (window.BetaBuddyCapture.\(function)(\(arguments.joined(separator: ","))), true) : false"
+        let call = "window.BetaBuddyCapture.\(function)(\(arguments.joined(separator: ",")))"
+        // `tap` answers with the id of the hold it found, or nothing; the other calls only say that they were made.
+        let made = function == "tap" ? "(\(call) || '')" : "(\(call), true)"
+        return "window.BetaBuddyCapture && typeof window.BetaBuddyCapture.\(function) === 'function' ? \(made) : false"
     }
 }
 
@@ -307,11 +345,12 @@ enum CaptureMotion {
         guard gravity.x.isFinite, gravity.y.isFinite, gravity.z.isFinite else { return nil }
         return asin(min(1, max(-1, gravity.z))) * 180 / .pi
     }
-    /// Rotation about the optical axis, degrees, clockwise positive as seen on the screen.
-    /// `nil` when the phone lies nearly flat: there is no “upright” to measure from.
+    /// Rotation about the optical axis, degrees, clockwise positive as seen on the screen. With the
+    /// phone lying nearly flat there is no “upright” to measure from: the answer is 0, and the pitch
+    /// says what is wrong.
     static func roll(gravity: (x: Double, y: Double, z: Double)) -> Double? {
-        guard gravity.x.isFinite, gravity.y.isFinite, gravity.z.isFinite,
-              (gravity.x * gravity.x + gravity.y * gravity.y).squareRoot() > 0.3 else { return nil }
+        guard gravity.x.isFinite, gravity.y.isFinite, gravity.z.isFinite else { return nil }
+        guard (gravity.x * gravity.x + gravity.y * gravity.y).squareRoot() > 0.3 else { return 0 }
         return atan2(gravity.x, -gravity.y) * 180 / .pi
     }
     /// The camera reports the field of view across the long side of its sensor. The frames are
