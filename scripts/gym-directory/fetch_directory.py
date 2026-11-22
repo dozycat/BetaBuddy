@@ -3,6 +3,7 @@
 
 Parses only JS data literals, never evaluates downloaded JavaScript. Requires
 Python 3.9+ and curl. Use --source-file to reproduce from a saved source response.
+Coordinates are added afterwards by geocode_directory from its cache.
 """
 import argparse
 import ast
@@ -13,6 +14,7 @@ import json
 from pathlib import Path
 import re
 import subprocess
+import geocode_directory
 import hylonomus
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -109,13 +111,21 @@ def validate(data):
         assert key not in identities, 'Duplicate entry: ' + str(key)
         identities.add(key)
         assert gym['sourceURL'].startswith('https://')
-        assert 'latitude' not in gym and 'longitude' not in gym, 'No estimated coordinates'
+        # A position is only allowed together with a label saying how coarse it is.
+        assert 'latitude' not in gym and 'longitude' not in gym, 'No unlabelled coordinates'
+        placed = [field for field in ('lat', 'lon', 'coordPrecision') if field in gym]
+        if placed:
+            assert len(placed) == 3 and gym['coordPrecision'] in geocode_directory.PRECISIONS, 'Coordinates need a precision: ' + gym['id']
+            assert all(isinstance(gym[field], (int, float)) and not isinstance(gym[field], bool) for field in ('lat', 'lon')), 'Coordinates must be numbers: ' + gym['id']
+            assert -90 <= gym['lat'] <= 90 and -180 <= gym['lon'] <= 180, 'Coordinates out of range: ' + gym['id']
     counts = collections.Counter(g['city'] for g in data['gyms'])
     metadata = data.get('metadata', {})
     if 'gymCount' in metadata:
         assert metadata['gymCount'] == len(data['gyms']), 'Stale gym count'
         assert metadata['cityCount'] == len(counts), 'Stale city count'
         assert metadata['provinceCount'] == len(set(g['province'] for g in data['gyms'])), 'Stale province count'
+    if 'coordinates' in metadata:
+        assert metadata['coordinates']['counts'] == geocode_directory.counts(data['gyms']), 'Stale precision counts'
     return counts
 
 
@@ -125,13 +135,14 @@ def main():
     parser.add_argument('--partner-file', type=Path, help='Saved Hylonomus HTML response')
     parser.add_argument('--retrieved-at', default=dt.datetime.now(dt.timezone(dt.timedelta(hours=8))).date().isoformat())
     parser.add_argument('--check', action='store_true', help='Validate packaged data without network or writes')
+    parser.add_argument('--coordinates', choices=('online', 'offline', 'skip'), default='online', help='online asks OpenStreetMap only for what the cache lacks; offline fails on a cache miss; skip writes no coordinates')
     args = parser.parse_args()
     outputs = [ROOT / 'data/gym-directory/gyms-cn.json', ROOT / 'ios/BetaBuddy/Resources/gyms-cn.json', ROOT / 'android/app/src/main/assets/gyms-cn.json']
     if args.check:
         raw = outputs[0].read_bytes()
         assert all(p.read_bytes() == raw for p in outputs), 'Packaged copies differ'
         cities = validate(json.loads(raw))
-        print(json.dumps({'gyms': sum(cities.values()), 'cities': len(cities), 'byCity': cities}, ensure_ascii=False, indent=2))
+        print(json.dumps({'gyms': sum(cities.values()), 'cities': len(cities), 'coordinates': geocode_directory.counts(json.loads(raw)['gyms']), 'byCity': cities}, ensure_ascii=False, indent=2))
         return
     raw = args.source_file.read_bytes() if args.source_file else subprocess.check_output(['curl', '--fail', '--location', '--silent', '--show-error', '--max-time', '45', SOURCE_URL])
     source = raw.decode('utf-8')
@@ -150,7 +161,7 @@ def main():
     data = {'version': 1, 'updatedAt': args.retrieved_at, 'metadata': {
         'coverage': 'partial', 'scope': '中国岩馆公开名录的已收录条目；非全国全量、非实时营业名单',
         'sources': [{'id': 'timeproves', 'name': '攀岩岩馆大全', 'url': PAGE_URL, 'dataURL': SOURCE_URL, 'retrievedAt': args.retrieved_at, 'sourceUpdatedAt': None, 'sha256': hashlib.sha256(raw).hexdigest(), 'license': '未发现开放数据许可证；源数据不适用本项目 MIT 许可'}],
-        'notes': ['timeproves 仅提供馆名、分店和概略行政区；未由 Hylonomus 补充门牌地址的条目，address 留空。', '抓取日期不等于资料核验日期。源数据包含 2026-08 的核验备注，但无全量更新承诺。', '不采集评论、照片、联系人、价格、路线或估计坐标；不使用源中 AI 汇总的馆型与风格。', '未收录的岩馆可以手填；所有条目均未经本项目现场核实。'],
+        'notes': ['timeproves 仅提供馆名、分店和概略行政区；未由 Hylonomus 补充门牌地址的条目，address 留空。', '抓取日期不等于资料核验日期。源数据包含 2026-08 的核验备注，但无全量更新承诺。', geocode_directory.NO_SOURCE_ESTIMATES, '未收录的岩馆可以手填；所有条目均未经本项目现场核实。'],
         'omittedSourceIDs': omitted,
     }, 'gyms': sorted(gyms, key=lambda g: (g['province'], g['city'], g['name'], g['id']))}
     partner_raw = args.partner_file.read_bytes() if args.partner_file else subprocess.check_output(['curl', '--fail', '--location', '--silent', '--show-error', '--max-time', '45', hylonomus.SOURCE_URL])
@@ -185,12 +196,16 @@ def main():
     data['metadata']['cityCount'] = len(cities)
     data['metadata']['provinceCount'] = len(set(g['province'] for g in data['gyms']))
     data['metadata']['cityCounts'] = dict(sorted(cities.items()))
-    payload = (json.dumps(data, ensure_ascii=False, indent=2) + '\n').encode()
-    for output in outputs:
-        output.parent.mkdir(parents=True, exist_ok=True)
-        temporary = output.with_suffix('.json.tmp')
-        temporary.write_bytes(payload)
-        temporary.replace(output)
+    if args.coordinates != 'skip':
+        cache = geocode_directory.Cache(geocode_directory.CACHE, offline=args.coordinates == 'offline', log=print)
+        try:
+            placed = geocode_directory.apply(data, cache)
+        finally:
+            cache.save()
+        cache.save(prune=True)
+        geocode_directory.write_matches(placed, data)
+        validate(data)
+    geocode_directory.write_copies(data, outputs)
     print('Wrote %d gyms in %d cities to %d copies' % (len(data['gyms']), len(cities), len(outputs)))
 
 
