@@ -5,6 +5,8 @@ struct JournalView: View {
     @EnvironmentObject private var membership: MembershipStore
     @State private var filter = 0
     @State private var importing = false
+    @State private var capturing = false
+    @State private var importAfterCapture = false
     @State private var search = ""
     @State private var albumFilter = JournalFilter()
     @State private var period = 0
@@ -48,14 +50,15 @@ struct JournalView: View {
                     }
                 }
                 ViewThatFits(in: .horizontal) {
-                    HStack(spacing: 16) {
+                    HStack(spacing: 10) {
                         Text("攀爬册").font(.largeTitle.bold()).fixedSize()
                         Spacer(minLength: 0)
                         importButton.fixedSize(horizontal: true, vertical: false)
+                        recordButton.fixedSize(horizontal: true, vertical: false)
                     }
                     VStack(alignment: .leading, spacing: 12) {
                         Text("攀爬册").font(.largeTitle.bold())
-                        importButton
+                        HStack(spacing: 10) { recordButton; importButton }
                     }
                 }
             }
@@ -121,10 +124,20 @@ struct JournalView: View {
                 if let selected = albumFilter.folderId, !folders.contains(where: { $0.id == selected }) { albumFilter.folderId = nil }
             }
             .sheet(isPresented: $importing) { ImportView() }
+            .fullScreenCover(isPresented: $capturing, onDismiss: {
+                if importAfterCapture { importAfterCapture = false; importing = true }
+            }) {
+                CaptureView(store: store) { importAfterCapture = true; capturing = false }
+            }
+    }
+    /// Recording with the in-app camera is the main way in; a clip shot elsewhere is imported.
+    private var recordButton: some View {
+        Button { capturing = true } label: { Label("拍一趟", systemImage: "video.fill") }
+            .buttonStyle(RouteButtonStyle()).accessibilityLabel(Text("打开相机拍一趟")).accessibilityIdentifier("recordClimb")
     }
     private var importButton: some View {
         Button { importing = true } label: { Label("导入", systemImage: "plus") }
-            .buttonStyle(RouteButtonStyle()).accessibilityLabel(Text("导入这一趟")).accessibilityIdentifier("importClimb")
+            .buttonStyle(RouteButtonStyle(tone: .paper)).accessibilityLabel(Text("导入这一趟")).accessibilityIdentifier("importClimb")
     }
     private func clearFilters() { filter = 0; search = ""; albumFilter = JournalFilter(); period = 0 }
     private var folderBar: some View {
@@ -175,9 +188,13 @@ struct ClimbRow: View {
                 Text(verbatim:"\(gradeText(climb.grade))  /  \(clockText(climb.analysis.duration))").font(.system(size:12,weight:.bold,design:.monospaced))
                 Text(climb.climbingDate,format:.dateTime.month().day()).font(.caption).foregroundStyle(BB.muted)
                 if !climb.shortGymName.isEmpty { Text(verbatim: climb.shortGymName).font(.caption).foregroundStyle(BB.muted).lineLimit(1) }
+                CaptureColourLabel(capture: climb.capture)
                 if climb.pendingAnalysis != nil {
                     Text(store.analysisProgress[climb.id] == nil ? "等待分析…" : "正在分析，可离开此页面。").font(.caption).foregroundStyle(BB.muted)
                     ProgressView(value: store.analysisProgress[climb.id] ?? 0)
+                }
+                else if climb.capture?.analysisQueued == true {
+                    Text("正在分析这一趟…").font(.caption).foregroundStyle(BB.muted)
                 }
                 if let message = store.analysisMessages[climb.id] { Text(verbatim: message).font(.caption).foregroundStyle(BB.muted) }
                 Text(climb.sent ? "✓ 已完攀" : "↗ 还在尝试").font(.caption.bold())

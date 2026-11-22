@@ -36,19 +36,26 @@ extension EnvironmentValues {
 @main
 struct BetaBuddyApp: App {
     @Environment(\.scenePhase) private var scenePhase
-    @StateObject private var store = ClimbStore()
+    @StateObject private var store: ClimbStore
+    @StateObject private var analysisQueue: AnalysisQueue
     @StateObject private var language = LanguageSettings()
     @StateObject private var membership = MembershipStore()
+    init() {
+        let store = ClimbStore()
+        _store = StateObject(wrappedValue: store)
+        _analysisQueue = StateObject(wrappedValue: AnalysisQueue(store: store))
+    }
     var body: some Scene {
         WindowGroup {
-            RootView().environmentObject(store).environmentObject(language).environmentObject(membership).tint(BB.ink).preferredColorScheme(.light)
+            RootView().environmentObject(store).environmentObject(analysisQueue).environmentObject(language).environmentObject(membership).tint(BB.ink).preferredColorScheme(.light)
                 .alert("暂时无法完成", isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) {
                     Button("知道了", role: .cancel) { store.error = nil }
                 } message: { Text(verbatim: store.error ?? "") }
                 .environment(\.locale, language.locale)
                 .task { store.resumeAnalysis(); await membership.refreshEntitlement() }
                 .onChange(of: scenePhase) { _, phase in
-                    if phase == .active { store.resumeAnalysis(); Task { await membership.load() } }
+                    if phase == .active { store.resumeAnalysis(); analysisQueue.setSuspended(false); Task { await membership.load() } }
+                    else if phase == .background { analysisQueue.setSuspended(true) }
                 }
         }
     }
@@ -80,6 +87,8 @@ struct RootView: View {
             }.padding(.top,12).padding(.bottom,6).background(BB.paper)
                 .overlay(alignment:.top) { Rectangle().fill(BB.line).frame(height:1) }
         }.background(BB.paper)
+            // Out of sight behind the paper: the page that analyses a recording after it has been saved.
+            .background(AnalysisQueueHost())
             .environment(\.openSettings, { settings = true })
             .sheet(isPresented:$settings) {
                 NavigationStack { AboutView() }.id(language.language).environment(\.locale, language.locale).tint(BB.ink)

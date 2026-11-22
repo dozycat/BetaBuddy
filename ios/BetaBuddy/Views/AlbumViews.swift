@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct DirectoryGym: Decodable, Identifiable {
+struct DirectoryGym: Decodable, Identifiable, Equatable {
     let id: String
     let name: String
     let province: String
@@ -9,14 +9,45 @@ struct DirectoryGym: Decodable, Identifiable {
     let sourceURL: String
     let district: String?
     let aliases: [String]?
+    /// WGS-84 degrees, when the directory has them for this gym.
+    let lat: Double?
+    let lon: Double?
+    /// What the coordinates point at: `poi`, `address`, `district` or `city`.
+    let coordPrecision: String?
     var location: String { [province, city, district ?? ""].filter { !$0.isEmpty }.joined(separator: " · ") }
+
+    private enum CodingKeys: String, CodingKey { case id, name, province, city, address, sourceURL, district, aliases, lat, lon, coordPrecision }
+    init(id: String, name: String, province: String = "", city: String = "", address: String = "", sourceURL: String = "", district: String? = nil,
+         aliases: [String]? = nil, lat: Double? = nil, lon: Double? = nil, coordPrecision: String? = nil) {
+        self.id = id; self.name = name; self.province = province; self.city = city; self.address = address; self.sourceURL = sourceURL
+        self.district = district; self.aliases = aliases; self.lat = lat; self.lon = lon; self.coordPrecision = coordPrecision
+    }
+    init(from decoder: Decoder) throws {
+        let box = try decoder.container(keyedBy: CodingKeys.self)
+        id = try box.decode(String.self, forKey: .id)
+        name = try box.decode(String.self, forKey: .name)
+        province = try box.decode(String.self, forKey: .province)
+        city = try box.decode(String.self, forKey: .city)
+        address = try box.decode(String.self, forKey: .address)
+        sourceURL = try box.decode(String.self, forKey: .sourceURL)
+        district = try box.decodeIfPresent(String.self, forKey: .district)
+        aliases = try box.decodeIfPresent([String].self, forKey: .aliases)
+        // Coordinates are an extra: an entry without them, or with ones that cannot be read, is still a gym.
+        lat = (try? box.decodeIfPresent(Double.self, forKey: .lat)) ?? nil
+        lon = (try? box.decodeIfPresent(Double.self, forKey: .lon)) ?? nil
+        coordPrecision = (try? box.decodeIfPresent(String.self, forKey: .coordPrecision)) ?? nil
+    }
 }
 struct GymDirectory: Decodable {
     let updatedAt: String
     let gyms: [DirectoryGym]
     static let bundled: GymDirectory? = {
-        guard let url = Bundle.main.url(forResource: "gyms-cn", withExtension: "json"),
-              let data = try? Data(contentsOf: url) else { return nil }
+        var url = Bundle.main.url(forResource: "gyms-cn", withExtension: "json")
+        #if DEBUG
+        // `-debugGymDirectory <path>` on the launch command line swaps in a synthetic directory, for tests.
+        if let path = UserDefaults.standard.string(forKey: "debugGymDirectory") { url = URL(fileURLWithPath: path) }
+        #endif
+        guard let url, let data = try? Data(contentsOf: url) else { return nil }
         return try? JSONDecoder().decode(GymDirectory.self, from: data)
     }()
 }

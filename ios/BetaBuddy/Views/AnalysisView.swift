@@ -3,7 +3,7 @@ import WebKit
 import os
 
 /// Keeps the web view's content controller from owning the session, so closing the page frees both.
-private final class WeakMessageHandler: NSObject, WKScriptMessageHandler {
+final class WeakMessageHandler: NSObject, WKScriptMessageHandler {
     weak var target: WKScriptMessageHandler?
     init(_ target: WKScriptMessageHandler) { self.target = target }
     func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
@@ -27,6 +27,10 @@ final class AnalysisSession: NSObject, ObservableObject, WKNavigationDelegate, W
     private var started = false
     private var pageReady = false
     private var feed: Task<Void, Never>?
+    /// Called once per load: `true` when the page handed back a result, `false` when it could not
+    /// analyse or never came up. Used when the analysis runs out of sight after a recording.
+    var onOutcome: ((Bool) -> Void)?
+    private var reported = false
     // Local system log only.
     private let log = Logger(subsystem: "com.betabuddy.ios", category: "analysis")
 
@@ -41,6 +45,7 @@ final class AnalysisSession: NSObject, ObservableObject, WKNavigationDelegate, W
         Task {
             guard let view = await GymSession.makeWebView(pack: pack, handler: WeakMessageHandler(self), delegate: self) else {
                 phase = .failed("")
+                report(false)
                 return
             }
             guard started else { return }
@@ -49,9 +54,16 @@ final class AnalysisSession: NSObject, ObservableObject, WKNavigationDelegate, W
         }
     }
 
+    private func report(_ succeeded: Bool) {
+        guard !reported else { return }
+        reported = true
+        onOutcome?(succeeded)
+    }
+
     func reload() {
         feed?.cancel()
         pageReady = false
+        reported = false
         guard let webView, let url = pack.analysisURL(language: AppLanguage.current) else { started = false; start(); return }
         phase = .loading
         webView.load(URLRequest(url: url))
@@ -85,8 +97,11 @@ final class AnalysisSession: NSObject, ObservableObject, WKNavigationDelegate, W
         do {
             let stills = try await VideoAnalyzer().stills(url: store.file(climb.videoName))
             try Task.checkCancellation()
-            guard await call(.begin(id: climb.id.uuidString, width: stills.width, height: stills.height, climber: store.analysisClimber)) else {
+            // A record made with the in-app camera brings the capture page's plan; any other has none.
+            guard await call(.begin(id: climb.id.uuidString, width: stills.width, height: stills.height, climber: store.analysisClimber,
+                                    capture: store.capturePlan(for: climb))) else {
                 phase = .failed("")
+                report(false)
                 return
             }
             phase = .shown
@@ -102,7 +117,7 @@ final class AnalysisSession: NSObject, ObservableObject, WKNavigationDelegate, W
             try Task.checkCancellation()
             await call(.run)
         } catch is CancellationError {
-        } catch { phase = .failed(error.localizedDescription) }
+        } catch { phase = .failed(error.localizedDescription); report(false) }
     }
 
     func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction) async -> WKNavigationActionPolicy {
@@ -113,11 +128,13 @@ final class AnalysisSession: NSObject, ObservableObject, WKNavigationDelegate, W
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
         feed?.cancel()
         phase = .failed("")
+        report(false)
     }
     private func fail(_ error: Error) {
         guard (error as NSError).code != NSURLErrorCancelled else { return }
         log.error("load failed: \(error.localizedDescription, privacy: .public)")
         phase = .failed(error.localizedDescription)
+        report(false)
     }
 
     func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
@@ -134,13 +151,15 @@ final class AnalysisSession: NSObject, ObservableObject, WKNavigationDelegate, W
             do { try store.saveAnalysisResult(json, for: climb.id) }
             catch { store.error = error.localizedDescription }
             if !climber.isEmpty { store.analysisClimber = climber }
+            report(store.analysisResults.contains(climb.id))
         case .seek(let time): seekRequest = time
         case .failed(let code):
             // The page is showing its own explanation; nothing is saved and the page stays open.
             log.info("page could not analyse: \(code, privacy: .public)")
+            report(false)
         case .pageError(let text):
             log.error("page error (\(self.pageReady ? "after" : "before", privacy: .public) ready): \(text, privacy: .public)")
-            if !pageReady { phase = .failed(text) }
+            if !pageReady { phase = .failed(text); report(false) }
         }
     }
 }

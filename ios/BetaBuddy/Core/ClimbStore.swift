@@ -14,9 +14,13 @@ final class ClimbStore: ObservableObject {
     private var activeAnalysis: UUID?
     private var backgroundTask: UIBackgroundTaskIdentifier = .invalid
     private var mayAnalyze = true
+    /// The capture screen is framing or recording; nothing is analysed meanwhile.
+    @Published private(set) var cameraOpen = false
     /// Records that have a saved result from the pack's analysis page (`<id>.analysis.json`).
     @Published private(set) var analysisResults: Set<UUID> = []
     static let analysisResultSuffix = ".analysis.json"
+    /// The capture page's plan for a record made with the in-app camera (`<id>.capture.json`), kept as the page gave it.
+    static let capturePlanSuffix = ".capture.json"
     static let analysisClimberKey = "analysisClimber"
     private let defaults: UserDefaults
 
@@ -52,15 +56,22 @@ final class ClimbStore: ObservableObject {
         archive = next
     }
 
-    func save(title: String, grade: String, sent: Bool, note: String, stagedVideo: URL, thumbnail: Data, analysis: PoseAnalysis, gymId: String? = nil, gymName: String? = nil, climbedAt: Date? = nil, folderId: UUID? = nil, pendingAnalysis: String? = nil) throws -> Climb {
+    /// `capture` and `capturePlan` come from the in-app camera. The clip, its thumbnail, the plan and
+    /// the record are all on disk when this returns; nothing is analysed here.
+    func save(title: String, grade: String, sent: Bool, note: String, stagedVideo: URL, thumbnail: Data, analysis: PoseAnalysis, gymId: String? = nil, gymName: String? = nil, climbedAt: Date? = nil, folderId: UUID? = nil, pendingAnalysis: String? = nil, capture: CaptureInfo? = nil, capturePlan: String? = nil) throws -> Climb {
         let id = UUID()
+        var capture = capture
+        capture?.hasPlan = capturePlan?.isEmpty == false
         let videoName = "\(id).\(stagedVideo.pathExtension.isEmpty ? "mov" : stagedVideo.pathExtension)"
         let thumbnailName = "\(id).jpg"
-        let climb = Climb(id: id, date: Date(), title: String(title.trimmingCharacters(in: .whitespacesAndNewlines).prefix(60)), grade: grade, sent: sent, note: String(note.prefix(1000)), videoName: videoName, thumbnailName: thumbnailName, analysis: analysis, gymId: gymId, gymName: cleanGymName(gymName), climbedAt: climbedAt, folderId: validFolder(folderId), pendingAnalysis: pendingAnalysis)
+        let climb = Climb(id: id, date: Date(), title: String(title.trimmingCharacters(in: .whitespacesAndNewlines).prefix(60)), grade: grade, sent: sent, note: String(note.prefix(1000)), videoName: videoName, thumbnailName: thumbnailName, analysis: analysis, gymId: gymId, gymName: cleanGymName(gymName), climbedAt: climbedAt, folderId: validFolder(folderId), pendingAnalysis: pendingAnalysis, capture: capture)
         do {
             try FileManager.default.moveItem(at: stagedVideo, to: file(videoName))
             try FileManager.default.setAttributes([.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication], ofItemAtPath: file(videoName).path)
             try thumbnail.write(to: file(thumbnailName), options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+            if capture?.hasPlan == true, let capturePlan {
+                try Data(capturePlan.utf8).write(to: capturePlanFile(id), options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+            }
             var next = archive
             next.climbs.append(climb)
             try persist(next)
@@ -70,6 +81,7 @@ final class ClimbStore: ObservableObject {
                 try? FileManager.default.moveItem(at: file(videoName), to: stagedVideo)
             }
             try? FileManager.default.removeItem(at: file(thumbnailName))
+            try? FileManager.default.removeItem(at: capturePlanFile(id))
             throw error
         }
     }
@@ -82,8 +94,46 @@ final class ClimbStore: ObservableObject {
         try? FileManager.default.removeItem(at: file(climb.videoName))
         try? FileManager.default.removeItem(at: file(climb.thumbnailName))
         try? FileManager.default.removeItem(at: analysisResultFile(climb.id))
+        try? FileManager.default.removeItem(at: capturePlanFile(climb.id))
         analysisResults.remove(climb.id)
     }
+
+    // MARK: Records made with the in-app camera
+
+    private func capturePlanFile(_ id: UUID) -> URL { file("\(id)" + Self.capturePlanSuffix) }
+
+    /// The capture page's plan exactly as it handed it over, for the analysis page. `nil` for imported clips.
+    func capturePlan(for climb: Climb) -> String? {
+        guard archive.climbs.first(where: { $0.id == climb.id })?.capture?.hasPlan == true else { return nil }
+        return try? String(contentsOf: capturePlanFile(climb.id), encoding: .utf8)
+    }
+
+    /// The page may hand over its plan, or a fuller one, after the clip has been saved.
+    func saveCapturePlan(_ plan: String, summary: CaptureSummary?, for id: UUID) throws {
+        var next = archive
+        guard !plan.isEmpty, let index = next.climbs.firstIndex(where: { $0.id == id }), next.climbs[index].capture != nil else { return }
+        guard canWrite else { throw CocoaError(.fileWriteNoPermission) }
+        try Data(plan.utf8).write(to: capturePlanFile(id), options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+        next.climbs[index].capture?.hasPlan = true
+        if let summary { next.climbs[index].capture?.summary = summary }
+        try persist(next)
+    }
+
+    /// Whether the analysis asked for when the clip was saved is still to be done.
+    func setAnalysisQueued(_ id: UUID, _ queued: Bool) throws {
+        var next = archive
+        guard let index = next.climbs.firstIndex(where: { $0.id == id }), next.climbs[index].capture != nil,
+              (next.climbs[index].capture?.analysisQueued ?? false) != queued else { return }
+        next.climbs[index].capture?.analysisQueued = queued ? true : nil
+        try persist(next)
+    }
+
+    /// The gym of the most recent record that has one: where the next recording most likely is.
+    var lastGym: (id: String?, name: String)? {
+        climbs.first(where: { !$0.gymKey.isEmpty }).map { ($0.gymId, $0.shortGymName) }
+    }
+
+    func setAnalysisMessage(_ text: String?, for id: UUID) { analysisMessages[id] = text }
 
     // MARK: Result of the pack's analysis page
 
@@ -193,7 +243,9 @@ final class ClimbStore: ObservableObject {
     }
 
     /// Called when the app becomes active, including after a process restart.
-    func resumeAnalysis() {
+    func resumeAnalysis(cameraClosed: Bool = false) {
+        if cameraClosed { cameraOpen = false }
+        guard !cameraOpen else { return }
         mayAnalyze = true
         startNextAnalysis()
     }
@@ -238,6 +290,13 @@ final class ClimbStore: ObservableObject {
         mayAnalyze = false
         analysisWork?.cancel()
         endBackgroundTime()
+    }
+
+    /// The camera is framing or recording: pose recognition gives way to it. Requests stay and
+    /// start again from the beginning once `resumeAnalysis(cameraClosed: true)` is called.
+    func pauseAnalysisForCamera() {
+        cameraOpen = true
+        pauseAnalysisForBackgroundExpiration()
     }
 
     private func endBackgroundTime() {

@@ -57,6 +57,8 @@ struct Climb: Codable, Identifiable, Sendable {
     var folderId: UUID? = nil
     /// Persisted before starting work, so interrupted analysis can restart on the next launch.
     var pendingAnalysis: String? = nil
+    /// Set for records made with the in-app camera: what was chosen and recognised while framing.
+    var capture: CaptureInfo? = nil
     var climbingDate: Date { climbedAt ?? date }
     var gymKey: String {
         if let id = gymId, !id.isEmpty { return "id:" + id }

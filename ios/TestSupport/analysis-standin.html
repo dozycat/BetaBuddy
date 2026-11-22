@@ -1,0 +1,24 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>analysis page stand-in</title>
+<!-- Test stand-in for a pack's analysis page: it analyses nothing and hands back what it was given. Not shipped. -->
+<script>
+(() => {
+  'use strict';
+  const post = message => { try { window.webkit.messageHandlers.gym.postMessage(message); } catch (error) {} };
+  let meta = null, frames = 0, poses = 0;
+  window.BetaBuddyAnalysis = {
+    begin(m) { meta = m; frames = 0; poses = 0; },
+    addFrame() { frames += 1; },
+    addPoses(list) { poses += (typeof list === 'string' ? JSON.parse(list) : list).length; },
+    run() {
+      if (!meta) return;
+      if (!poses) return post({ type: 'analysisError', code: 'no_poses', message: 'no poses' });
+      post({ type: 'analysisResult', id: meta.id, climber: { height: 170 },
+             json: JSON.stringify({ v: 1, standIn: true, w: meta.w, h: meta.h, frames, poses, capture: meta.capture === undefined ? null : meta.capture }) });
+    },
+    show() {}, setClimber() {}, state() { return { meta, frames, poses }; }
+  };
+  post({ type: 'analysisReady', packVersion: '0.0.0-standin' });
+})();
+</script>

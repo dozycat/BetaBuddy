@@ -81,6 +81,7 @@ struct SkeletonOverlay: View {
 
 struct ReviewView: View {
     @EnvironmentObject private var store: ClimbStore
+    @EnvironmentObject private var analysisQueue: AnalysisQueue
     @Environment(\.dismiss) private var dismiss
     @StateObject private var playback = Playback()
     @State private var skeleton = false
@@ -113,6 +114,7 @@ struct ReviewView: View {
                 if !current.displayGymName.isEmpty {
                     Text(verbatim: current.displayGymName).font(.caption).foregroundStyle(BB.muted)
                 }
+                CaptureColourLabel(capture: current.capture)
             }
             if let failure = playback.failure {
                 Label { Text(verbatim: failure) } icon: { Image(systemName: "exclamationmark.circle") }
@@ -284,7 +286,7 @@ struct ReviewView: View {
     }
     @ViewBuilder
     private func savedAnalysisButtons(expanded: Bool) -> some View {
-        Button { playback.pause(); analysing = true } label: { Text("看分析").frame(maxWidth: .infinity) }
+        Button { playback.pause(); analysisQueue.cancel(climb.id); analysing = true } label: { Text("看分析").frame(maxWidth: .infinity) }
             .buttonStyle(RouteButtonStyle()).accessibilityIdentifier("viewAnalysis")
         Button { store.discardAnalysisResult(current); startAnalysis() } label: {
             Text("重新分析").frame(maxWidth: expanded ? .infinity : nil)
@@ -293,6 +295,8 @@ struct ReviewView: View {
     /// Records without usable pose data go through pose recognition first, on the existing queue.
     private func startAnalysis() {
         playback.pause()
+        // Opening the page here does the work; the same record is not also analysed out of sight.
+        analysisQueue.cancel(climb.id)
         if current.analysis.hasWorldLandmarks { analysing = true; return }
         do { try store.requestAnalysis(current); openAfterPose = true }
         catch { store.error = error.localizedDescription }

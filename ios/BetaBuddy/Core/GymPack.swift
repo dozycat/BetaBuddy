@@ -12,6 +12,9 @@ struct GymManifest: Decodable, Equatable, Sendable {
         var id: String
         var files: [String]
         var catFiles: [String]?
+        /// The venue's own name and its names per language; only used to recognise a directory gym.
+        var name: String?
+        var names: [String: String]?
     }
     var venues: [Venue] = []
     var catCode: String?
@@ -132,7 +135,14 @@ struct GymPack: Equatable, Sendable {
         return (extra.isEmpty ? nil : url(known + [extra])) ?? url(known) ?? entryURL
     }
 
-    static let status: Status = status(in: Bundle.main.resourceURL)
+    static let status: Status = {
+        #if DEBUG
+        // `-debugGymPackRoot <directory>` on the launch command line uses the pack in `<directory>/GymPack`
+        // instead of the installed one, so tests can run against a synthetic pack.
+        if let root = UserDefaults.standard.string(forKey: "debugGymPackRoot") { return status(in: URL(fileURLWithPath: root, isDirectory: true)) }
+        #endif
+        return status(in: Bundle.main.resourceURL)
+    }()
     /// `nil` when this build has no usable pack.
     static var current: GymPack? { if case .ready(let pack) = status { pack } else { nil } }
 
@@ -274,6 +284,44 @@ extension GymPack {
     }
 }
 
+// MARK: - Capture page
+
+extension GymPack {
+    static let capturePage = "capture.html"
+    /// Whether this pack carries the capture page. Without it the camera still records and saves;
+    /// there is just no check of the camera position and nothing is recognised.
+    var supportsCapture: Bool { manifest.files.contains { $0.path == Self.capturePage } }
+    /// Loaded the same way as the entry page, from the same directory.
+    func captureURL(language: String) -> URL? {
+        guard supportsCapture else { return nil }
+        var parts = URLComponents()
+        parts.scheme = Self.scheme; parts.host = Self.host; parts.path = "/" + Self.capturePage
+        parts.queryItems = [URLQueryItem(name: "lang", value: language)]
+        return parts.url.flatMap { allows($0) ? $0 : nil }
+    }
+}
+
+extension GymManifest {
+    /// The pack's venue a gym from the offline directory stands for, or `nil` when it is not one
+    /// of them. The directory and the pack share no key, so this goes by name: a directory entry is
+    /// written “brand（branch）”, and it is taken to be a venue when exactly one venue's name carries
+    /// both parts. Anything less certain is left out; the capture page then works without a venue.
+    func venueID(forGymNamed name: String?) -> String? {
+        func plain(_ text: String) -> String {
+            String(text.lowercased().unicodeScalars.filter { CharacterSet.alphanumerics.contains($0) })
+        }
+        let parts = (name ?? "").split(whereSeparator: { "（）()".contains($0) }).map { plain(String($0)) }.filter { !$0.isEmpty }
+        guard !parts.isEmpty else { return nil }
+        let whole = parts.joined()
+        let matches = venues.filter { venue in
+            let known = ([venue.name ?? ""] + (venue.names ?? [:]).values).map(plain).filter { !$0.isEmpty }
+            // A brand alone says nothing about which branch it is.
+            return known.contains { candidate in candidate == whole || (parts.count >= 2 && parts.allSatisfy { candidate.contains($0) }) }
+        }
+        return matches.count == 1 ? matches[0].id : nil
+    }
+}
+
 /// Analysis page → app messages. They arrive on the same `gym` handler as `GymMessage`,
 /// from the analysis page's own web view. What the page computes is the pack's business:
 /// the app keeps the result as an opaque string and hands it back unchanged.
@@ -314,7 +362,8 @@ enum AnalysisMessage: Equatable, Sendable {
 
 /// App → analysis page calls on `window.BetaBuddyAnalysis`.
 enum AnalysisCommand: Sendable {
-    case begin(id: String, width: Int, height: Int, climber: [String: Double]?)
+    /// `capture` is the capture page's plan for a record made with the in-app camera, handed back as it was stored.
+    case begin(id: String, width: Int, height: Int, climber: [String: Double]?, capture: String? = nil)
     case addFrame(index: Int, time: Double, jpegBase64: String)
     case addPoses([PoseFrame])
     case run
@@ -327,6 +376,7 @@ enum AnalysisCommand: Sendable {
         var w: Int
         var h: Int
         var climber: [String: Double]?
+        var capture: String?
     }
     private struct Pose: Encodable {
         var t: Double
@@ -343,8 +393,8 @@ enum AnalysisCommand: Sendable {
 
     var script: String {
         let (function, arguments): (String, [String]) = switch self {
-        case .begin(let id, let width, let height, let climber):
-            ("begin", [Self.literal(Meta(id: id, w: width, h: height, climber: climber?.isEmpty == false ? climber : nil))])
+        case .begin(let id, let width, let height, let climber, let capture):
+            ("begin", [Self.literal(Meta(id: id, w: width, h: height, climber: climber?.isEmpty == false ? climber : nil, capture: capture?.isEmpty == false ? capture : nil))])
         case .addFrame(let index, let time, let jpegBase64):
             ("addFrame", [Self.literal(index), Self.literal(rounded4(time)), Self.literal(jpegBase64)])
         case .addPoses(let frames):

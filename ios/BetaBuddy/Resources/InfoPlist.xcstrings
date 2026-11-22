@@ -35,6 +35,76 @@
           }
         }
       }
+    },
+    "NSCameraUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Record your climb, check the camera position and save it on this iPhone. The picture and the recording do not leave the device."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "クライミングを撮影し、この iPhone 上でカメラ位置を確認して保存します。映像と録画がデバイスの外に出ることはありません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "등반을 촬영하고, 이 iPhone에서 카메라 위치를 확인해 저장합니다. 화면과 녹화본은 기기 밖으로 나가지 않습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拍下你的攀爬，在这台 iPhone 上检查机位并保存。画面和录像不会离开设备。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拍下你的攀爬，在這支 iPhone 上檢查機位並儲存。畫面和錄影不會離開裝置。"
+          }
+        }
+      }
+    },
+    "NSLocationWhenInUseUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suggest nearby gyms by distance. Your location is used only on this iPhone; it is not saved and does not leave the device."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "近くのジムを距離順におすすめします。位置情報はこの iPhone 上でのみ使い、保存せず、デバイスの外にも出ません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "가까운 암장을 거리순으로 추천합니다. 위치는 이 iPhone에서만 쓰이며, 저장하지 않고 기기 밖으로 나가지 않습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按距离推荐附近的岩馆。位置只在这台 iPhone 上使用，不保存，也不会离开设备。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按距離推薦附近的岩館。位置只在這支 iPhone 上使用，不儲存，也不會離開裝置。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
