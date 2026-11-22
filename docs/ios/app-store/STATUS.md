@@ -1,5 +1,7 @@
 # BetaBuddy 发布状态
 
+2026-11-22 19:58（中国时间）：**1.6.0 (18) 已通过 Xcode Organizer 成功上传至 App Store Connect**。归档分发记录显示 `uploadEvent.state=success`、`uploadedBuildNumber=18`、错误与警告均为空；ContentDelivery 日志确认 `UPLOAD SUCCEEDED with no errors`。尚未确认 Apple 处理完成，尚未关联商店版本或提交正式审核。上传期间 Mac 再次锁屏；Chrome 发布页刷新后仍显示 Apple 登录表单，已请用户指出已登录的窗口。正式发布未完成。
+
 2026-11-22：1.6.0 (18) 已完成猫攀爬会员限制、单一保存操作及 GymPack 1.8.0 接入。Mac 核心 10/10、iOS 单元/集成 52 项（1 项可选片段跳过）、导航/会员/保存及两种猫播放 UI 验证通过。签名归档已生成；CLI 上传失败（Failed to Use Accounts），尚未上传、尚未提交审核。等待 Mac 解锁及 App Store Connect 登录后，用 Xcode Organizer 上传并提交自动发布。详情见 [release-1.6.0.md](release-1.6.0.md)。
 
 2026-11-20 14:30（中国时间）：iOS **1.5.0 (17)** 与现有终生会员内购的权益说明更新已联合提交 App Store 正式审核，Connect 确认 `2 Items Submitted`，状态 **Waiting for Review**。发布方式为审核通过后自动发布、立即向全部用户供应更新；现有正式版仍为 **1.4.0 (16)**。提交 ID：`74d3b7ec-edfd-44a2-8d7e-2b4e300adff8`；[审核记录](https://appstoreconnect.apple.com/apps/6809249574/distribution/reviewsubmissions/details/74d3b7ec-edfd-44a2-8d7e-2b4e300adff8)。简体中文与英语（美国）的商店描述、更新说明和审核备注已保存；会员商品五种本地化继续使用英文，描述增加额外岩馆解锁，并上传新版真实模拟器会员界面截图。价格和销售地区未变。

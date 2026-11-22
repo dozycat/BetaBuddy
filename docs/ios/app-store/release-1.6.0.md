@@ -1,6 +1,6 @@
 # iOS 1.6.0 (18)
 
-状态：代码与模拟器验证完成、签名归档成功；CLI 上传失败，尚未上传或提交审核。数据包 GymPack 1.8.0（2026-11-21T02:45:33Z）。
+状态：2026-11-22 19:58（中国时间）已通过 Xcode Organizer 成功上传 1.6.0 (18)，尚未确认处理完成、尚未提交审核。数据包 GymPack 1.8.0（2026-11-21T02:45:33Z）。
 
 ## 此版本的新增内容（所有商店语言使用英文）
 
@@ -58,6 +58,8 @@ In Logbook, tap the import button, select a video, then tap Save at the top righ
 - 首轮保存测试在清理样例时误选删除按钮；改为定位确认弹窗后复跑通过，保存与持久化本身通过。
 - 最终代码单元 / 集成复跑：52 项，51 通过、1 项可选片段跳过。
 - 签名归档：本机忽略目录 `ios/build/1.6.0/BetaBuddy-1.6.0-18.xcarchive`。已核对版本 1.6.0 (18)、21 个资源哈希与签名，不含 StoreKit 测试配置。清单 SHA-256：`7ff665c2486c6cb64fedac3621e2d8a6553fa690dd7c21e796c894bc615f9051`。同目录保存两只猫、会员页及导入页的实测截图。
-- CLI 上传返回 `Failed to Use Accounts`，后续用 Xcode Organizer。Mac 锁屏、Chrome 的 App Store Connect 页面显示登录表单，已请用户解锁并登录。
+- CLI 上传返回 `Failed to Use Accounts`，改用 Xcode Organizer 后上传成功。Organizer 导入的归档位于 `~/Library/Developer/Xcode/Archives/2026-11-22/BetaBuddy-1.6.0-18.xcarchive`，其中分发记录确认上传成功、构建号 18、无错误与警告。
+- 本次上传日志目录：`/var/folders/16/km3px66504s57mqv1nclwc800000gn/T/BetaBuddy_2026-11-22_19-55-54.987.xcdistributionlogs`。`ContentDelivery.log` 确认 `UPLOAD SUCCEEDED with no errors`。
+- 上传期间 Mac 再次锁屏；Chrome 的发布页面刷新后仍显示登录表单，已请用户指出已登录窗口。待关联构建、保存各项商店与会员元数据、提交审核并启用自动发布。
 - 支持站点源文件与静态文件已更新，尚未部署；此工作树未安装 Wrangler。
 - 偶发镜头失控：用户确认无闪退、重启恢复；根因尚未确认，不宣称修复。
