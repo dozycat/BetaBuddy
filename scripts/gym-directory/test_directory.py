@@ -3,6 +3,7 @@
 Everything here is synthetic: no real venue, place name or map answer.
 """
 import json
+import subprocess
 import time
 import unittest
 import urllib.parse
@@ -46,7 +47,7 @@ class SourceParsingTests(unittest.TestCase):
 
     def test_rejects_stale_precision_counts(self):
         gym = dict(id='a', name='Test', province='Province', city='City', address='', sourceURL='https://example.org/', lat=1, lon=2, coordPrecision='city')
-        counts = {'poi': 0, 'address': 0, 'district': 0, 'city': 1, 'none': 0}
+        counts = {'poi': 0, 'address': 0, 'station': 0, 'district': 0, 'city': 1, 'none': 0}
         validate({'version': 1, 'metadata': {'coordinates': {'counts': counts}}, 'gyms': [gym]})
         with self.assertRaises(AssertionError):
             validate({'version': 1, 'metadata': {'coordinates': {'counts': dict(counts, city=0, poi=1)}}, 'gyms': [gym]})
@@ -76,12 +77,21 @@ class FakeMap:
             {'type': 'node', 'id': 8, 'lat': 9.95, 'lon': 19.95, 'tags': {'name': '连锁攀岩', 'leisure': 'sports_centre', 'sport': 'climbing'}},
             {'type': 'node', 'id': 9, 'lat': 10.11, 'lon': 20.11, 'tags': {'name': '石头人崖壁', 'natural': 'cliff', 'sport': 'climbing'}},
         ]
-        self.reverse = {('10.15000', '20.16000'): '石头路, 甲区, C市, P省, 某国', ('9.95000', '19.95000'): '某路, 乙区, C市, P省, 某国'}
+        self.stations = [
+            {'type': 'node', 'id': 20, 'lat': 9.93, 'lon': 19.94, 'tags': {'name': '河边', 'railway': 'station'}},
+            {'type': 'node', 'id': 21, 'lat': 9.931, 'lon': 19.941, 'tags': {'name': '河边', 'railway': 'station'}},
+            {'type': 'node', 'id': 22, 'lat': 10.13, 'lon': 20.14, 'tags': {'name': '双子站', 'railway': 'station'}},
+            {'type': 'node', 'id': 23, 'lat': 9.88, 'lon': 19.88, 'tags': {'name': '双子', 'railway': 'station'}},
+            {'type': 'node', 'id': 24, 'lat': 10.4, 'lon': 20.4, 'tags': {'name': '远郊', 'railway': 'station'}},
+            {'type': 'node', 'id': 25, 'lat': 10.11, 'lon': 20.12, 'tags': {'name': '邻区', 'railway': 'station'}},
+        ]
+        self.reverse = {('10.15000', '20.16000'): '石头路, 甲区, C市, P省, 某国', ('9.95000', '19.95000'): '某路, 乙区, C市, P省, 某国',
+                        ('9.93000', '19.94000'): '河边站, 乙区, C市, P省, 某国', ('10.40000', '20.40000'): '远郊站, 乙区, C市, P省, 某国', ('10.11000', '20.12000'): '邻区站, 甲区, C市, P省, 某国'}
 
     def __call__(self, url, data=None):
         self.calls.append(url)
         if data is not None:
-            return json.dumps({'elements': self.elements})
+            return json.dumps({'elements': self.stations if 'railway' in data else self.elements})
         query = urllib.parse.parse_qs(urllib.parse.urlparse(url).query)
         if '/reverse' in url:
             return json.dumps({'display_name': self.reverse[query['lat'][0], query['lon'][0]]})
@@ -93,10 +103,10 @@ def gym(identifier, name, district='', address='', city='C'):
 
 
 class CoordinateTests(unittest.TestCase):
-    def resolve(self, gyms):
+    def resolve(self, gyms, hints=None):
         fake = FakeMap()
         data = {'version': 1, 'metadata': {'notes': []}, 'gyms': gyms}
-        geo.apply(data, geo.Cache(None, pause=0, fetch=fake), log=lambda line: None)
+        geo.apply(data, geo.Cache(None, pause=0, fetch=fake), log=lambda line: None, hints=hints or {})
         return data, fake
 
     def test_each_gym_gets_the_finest_supported_precision(self):
@@ -113,8 +123,36 @@ class CoordinateTests(unittest.TestCase):
         self.assertEqual(placed['city'], ('city', 10.01, 20.02))
         self.assertEqual(placed['none'], (None, None, None))
         self.assertNotIn('lat', data['gyms'][-1])
-        self.assertEqual(data['metadata']['coordinates']['counts'], {'poi': 1, 'address': 2, 'district': 1, 'city': 1, 'none': 1})
+        self.assertEqual(data['metadata']['coordinates']['counts'], {'poi': 1, 'address': 2, 'station': 0, 'district': 1, 'city': 1, 'none': 1})
         self.assertEqual(data['metadata']['coordinates']['datum'], 'WGS-84')
+
+    def test_station_places_a_gym_only_when_it_is_unique_and_near_the_district(self):
+        hints = {'a': '河边', 'b': '双子', 'c': '不存在', 'd': '远郊', 'e': '河边', 'f': '河边', 'g': '邻区'}
+        data, fake = self.resolve([
+            gym('a', '没有线索攀岩', '乙'), gym('b', '同名两站攀岩', '乙'), gym('c', '查无此站攀岩', '乙'), gym('d', '站在远郊攀岩', '乙'),
+            gym('e', '示例攀岩（彩虹广场）', '甲'), gym('f', '区名不存在攀岩', '丙'), gym('g', '站在邻区攀岩', '乙'),
+        ], hints)
+        placed = {g['id']: (g['coordPrecision'], g['lat'], g['lon']) for g in data['gyms']}
+        self.assertEqual(placed['a'], ('station', 9.93, 19.94))
+        self.assertEqual(placed['b'], ('district', 9.9, 19.9))
+        self.assertEqual(placed['c'], ('district', 9.9, 19.9))
+        self.assertEqual(placed['d'], ('district', 9.9, 19.9))
+        self.assertEqual(placed['e'], ('address', 10.12, 20.13))
+        self.assertEqual(placed['f'], ('station', 9.93, 19.94))
+        self.assertEqual(placed['g'], ('district', 9.9, 19.9))
+        self.assertEqual(data['metadata']['coordinates']['counts'], {'poi': 0, 'address': 1, 'station': 2, 'district': 4, 'city': 0, 'none': 0})
+        asked = [call for call in fake.calls if 'interpreter' in call]
+        self.assertEqual(len(asked), 2)
+
+    def test_station_query_stays_inside_the_city_and_ignores_odd_names(self):
+        query = geo.station_query('relation/2', {'河边', '双子'})
+        self.assertIn('area(3600000002)', query)
+        self.assertIn('^(双子|河边)站?$', query)
+        data, fake = self.resolve([gym('a', '没有线索攀岩', '乙')], {'a': '河边"](area);node'})
+        self.assertEqual(data['gyms'][0]['coordPrecision'], 'district')
+        self.assertIsNone(geo.station_distance((9.93, 19.94), {'lat': 9.9, 'lon': 19.9, 'box': [9.8, 10.0, 19.8, 20.0]}))
+        self.assertIsNone(geo.station_distance((10.25, 19.9), {'lat': 9.9, 'lon': 19.9, 'box': [9.5, 10.3, 19.8, 20.0]}))
+        self.assertGreater(geo.station_distance((10.4, 20.4), {'lat': 9.9, 'lon': 19.9, 'box': [9.8, 10.0, 19.8, 20.0]}), 25000)
 
     def test_chain_branches_do_not_borrow_each_others_poi(self):
         data, _ = self.resolve([gym('a', '连锁攀岩（东门）', '乙'), gym('b', '连锁攀岩（西门）', '乙')])
@@ -134,8 +172,9 @@ class CoordinateTests(unittest.TestCase):
     def test_district_tagged_as_a_former_boundary_still_counts(self):
         fake = FakeMap()
         fake.search['甲区, C市'][0]['type'] = 'historic'
+        hints = None
         data = {'version': 1, 'metadata': {'notes': []}, 'gyms': [gym('a', '没有线索攀岩', '甲')]}
-        geo.apply(data, geo.Cache(None, pause=0, fetch=fake), log=lambda line: None)
+        geo.apply(data, geo.Cache(None, pause=0, fetch=fake), log=lambda line: None, hints=hints or {})
         self.assertEqual(data['gyms'][0]['coordPrecision'], 'district')
 
     def test_landmark_must_be_compact_unambiguous_and_in_the_district(self):
@@ -162,7 +201,7 @@ class CoordinateTests(unittest.TestCase):
         self.assertEqual(len(geo.problems([dict(inside, lat=14.0)], boxes)), 1)
         self.assertEqual(len(geo.problems([dict(inside, province='R省')], boxes)), 1)
         self.assertEqual(len(geo.problems([{k: v for k, v in inside.items() if k != 'coordPrecision'}], boxes)), 1)
-        self.assertEqual(geo.counts([inside, gym('b', 'B')]), {'poi': 1, 'address': 0, 'district': 0, 'city': 0, 'none': 1})
+        self.assertEqual(geo.counts([inside, gym('b', 'B')]), {'poi': 1, 'address': 0, 'station': 0, 'district': 0, 'city': 0, 'none': 1})
 
     def test_cache_answers_repeat_questions_and_offline_never_asks(self):
         fake = FakeMap()
@@ -198,10 +237,26 @@ class CoordinateTests(unittest.TestCase):
         cache.search('环形大楼')
         self.assertGreaterEqual(time.monotonic() - started, 0.05)
         gyms = [gym('mall', '示例攀岩（彩虹广场）', '甲')]
-        geo.apply({'version': 1, 'metadata': {'notes': []}, 'gyms': gyms}, cache, log=lambda line: None)
+        geo.apply({'version': 1, 'metadata': {'notes': []}, 'gyms': gyms}, cache, log=lambda line: None, hints={})
         asked = len(fake.calls)
-        geo.apply({'version': 1, 'metadata': {'notes': []}, 'gyms': gyms}, cache, log=lambda line: None)
+        geo.apply({'version': 1, 'metadata': {'notes': []}, 'gyms': gyms}, cache, log=lambda line: None, hints={})
         self.assertEqual(len(fake.calls), asked)
+
+    def test_busy_server_is_retried_then_reported(self):
+        fake, failures = FakeMap(), [2]
+
+        def flaky(url, data=None):
+            if failures[0]:
+                failures[0] -= 1
+                raise subprocess.CalledProcessError(22, 'curl')
+            return fake(url, data)
+
+        cache = geo.Cache(None, pause=0, fetch=flaky, backoff=0)
+        self.assertEqual(cache.search('彩虹广场')[0]['name'], '彩虹广场')
+        failures[0] = 9
+        with self.assertRaises(subprocess.CalledProcessError):
+            cache.search('环形大楼')
+        self.assertNotIn('nominatim|环形大楼', cache.entries)
 
     def test_queries_carry_only_names_and_a_generic_client(self):
         self.assertNotRegex(geo.USER_AGENT, r'@|https?:')

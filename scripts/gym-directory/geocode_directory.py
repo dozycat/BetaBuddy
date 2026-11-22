@@ -3,8 +3,9 @@
 
 Every gym gets the finest position this open, key-less source can support and a
 label saying how fine it is: the gym's own POI, the building named in its
-address or branch label, the centre of its district, or the centre of its city.
-Nothing is guessed below that: an unmatched gym keeps the coarser label.
+address or branch label, the metro station the directory source names as its
+nearest, the centre of its district, or the centre of its city. Nothing is
+guessed below that: an unmatched gym keeps the coarser label.
 
 Requests go to Nominatim (at most one per second) and Overpass with a generic
 User-Agent and carry only public gym names, address landmarks and administrative
@@ -30,11 +31,13 @@ DIRECTORY = ROOT / 'data/gym-directory/gyms-cn.json'
 COPIES = [DIRECTORY, ROOT / 'ios/BetaBuddy/Resources/gyms-cn.json', ROOT / 'android/app/src/main/assets/gyms-cn.json']
 CACHE = ROOT / 'data/gym-directory/geocode-cache.json'
 MATCHES = ROOT / 'data/gym-directory/coordinate-matches.json'
+# {gym id: nearest metro station as the directory source names it}; written by fetch_directory.py.
+STATIONS = ROOT / 'data/gym-directory/station-hints.json'
 NOMINATIM = 'https://nominatim.openstreetmap.org/search'
 OVERPASS = 'https://overpass-api.de/api/interpreter'
 # Generic client name on purpose: no project, person or contact details leave the machine.
 USER_AGENT = 'gym-directory-geocoder/1.0'
-PRECISIONS = ('poi', 'address', 'district', 'city')
+PRECISIONS = ('poi', 'address', 'station', 'district', 'city')
 OSM_LICENSE = 'ODbL 1.0'
 OSM_ATTRIBUTION = '© OpenStreetMap contributors'
 # One query for every climbing-tagged or climbing-named feature in the country.
@@ -46,6 +49,10 @@ OVERPASS_QUERY = (
 )
 # A landmark only places a gym if the gym is inside it, so it has to be compact.
 LANDMARK_MAX_SPAN_M = 600
+# Platforms of one interchange lie a few hundred metres apart; two stations of the same name do not.
+STATION_MAX_SPREAD_M = 1200
+# A station this far from the centre of the gym's district, and outside the district, is not believed.
+STATION_MAX_FROM_DISTRICT_M = 25000
 
 
 def distance_m(a, b):
@@ -58,8 +65,8 @@ def distance_m(a, b):
 class Cache:
     """Answers already received, keyed by the exact question that was asked."""
 
-    def __init__(self, path, offline=False, pause=1.1, fetch=None, log=None):
-        self.path, self.offline, self.pause = path, offline, pause
+    def __init__(self, path, offline=False, pause=1.1, fetch=None, log=None, backoff=10):
+        self.path, self.offline, self.pause, self.backoff = path, offline, pause, backoff
         self.fetch = fetch or self._curl
         self.log = log or (lambda message: None)
         self.entries = json.loads(path.read_text(encoding='utf-8'))['entries'] if path and path.exists() else {}
@@ -79,13 +86,21 @@ class Cache:
             return self.entries[key]['results']
         if self.offline:
             raise LookupError('Not in the cache and --offline was given: ' + key)
-        wait = self.pause - (time.monotonic() - self.last)
-        if wait > 0:
-            time.sleep(wait)
-        try:
-            raw = self.fetch(url, data)
-        finally:
-            self.last = time.monotonic()
+        for attempt in range(4):
+            wait = self.pause - (time.monotonic() - self.last)
+            if wait > 0:
+                time.sleep(wait)
+            try:
+                raw = self.fetch(url, data)
+                break
+            except subprocess.CalledProcessError:
+                # A busy public server: back off (10 s, 30 s, 90 s) rather than hammer it, then give up.
+                if attempt == 3:
+                    raise
+                self.log('  busy, retrying ' + key)
+                time.sleep(self.backoff * 3 ** attempt)
+            finally:
+                self.last = time.monotonic()
         self.asked += 1
         self.entries[key] = {'at': dt.date.today().isoformat(), 'results': trim(json.loads(raw))}
         self.log('  asked ' + key)
@@ -320,6 +335,27 @@ def pick_landmark(rows, query, city_name, district_name):
     return fits[0]
 
 
+def station_query(boundary, names):
+    """Every railway or metro station inside one city's boundary that carries one of the wanted names."""
+    kind, number = boundary.split('/')
+    area = {'relation': 3600000000, 'way': 2400000000}[kind] + int(number)
+    return '[out:json][timeout:90];area(%d)->.c;nwr["railway"~"^(station|halt)$"]["name"~"^(%s)站?$"](area.c);out center tags;' % (area, '|'.join(sorted(names)))
+
+
+def pick_station(elements, name):
+    """The station of that exact name, if the city has only one; platforms of one interchange count as one."""
+    fits = sorted((element for element in elements if element['name'] in (name, name + '站')), key=lambda element: element['osm'])
+    if not fits or any(distance_m((a['lat'], a['lon']), (fits[0]['lat'], fits[0]['lon'])) > STATION_MAX_SPREAD_M for a in fits):
+        return None
+    return fits[0]
+
+
+def station_distance(point, district):
+    """Metres from the district centre if the point is implausibly far from the district, else None."""
+    away = distance_m(point, (district['lat'], district['lon']))
+    return away if away > STATION_MAX_FROM_DISTRICT_M and not in_box(point, district['box'], 0.05) else None
+
+
 def poi_candidates(gym, elements, city):
     tokens = brand_tokens(gym)
     for element in elements:
@@ -331,7 +367,7 @@ def poi_candidates(gym, elements, city):
             yield element, shared
 
 
-def resolve(data, cache, log=print):
+def resolve(data, cache, log=print, hints=None):
     """Return ({gym id: match}, {province: box}); a match has precision, lat, lon, the OSM object and what was matched."""
     gyms = data['gyms']
     elements = cache.overpass(OVERPASS_QUERY)
@@ -349,6 +385,14 @@ def resolve(data, cache, log=print):
             names = DISTRICT_NAMES.get((city, label)) or ([label] if label.endswith(('区', '县', '市', '旗')) else [label + '区', label + '新区', label + '市', label + '县'])
             districts[province, city, label] = region(cache, names, place['name'], place['box'])
 
+    # One question per city: where are the stations the source names for its gyms?
+    hints = {gym_id: name for gym_id, name in (hints or {}).items() if re.fullmatch(r'[\u4e00-\u9fffA-Za-z0-9]+', name)}
+    wanted = collections.defaultdict(set)
+    for gym in gyms:
+        if gym['id'] in hints and cities[gym['province'], gym['city']]:
+            wanted[gym['province'], gym['city']].add(hints[gym['id']])
+    stations = {key: cache.overpass(station_query(cities[key]['boundary'], names)) for key, names in sorted(wanted.items())}
+
     matches, landmarks, coarse = {}, {}, {}
     for gym in gyms:
         place = cities[gym['province'], gym['city']]
@@ -360,12 +404,28 @@ def resolve(data, cache, log=print):
             matches[gym['id']] = {'precision': 'district', 'lat': district['lat'], 'lon': district['lon'], 'osm': district['osm'], 'matched': district['name']}
         else:
             matches[gym['id']] = {'precision': 'city', 'lat': place['lat'], 'lon': place['lon'], 'osm': place['osm'], 'matched': place['name']}
+        if gym['id'] in hints:
+            name = hints[gym['id']]
+            station = pick_station(stations[gym['province'], gym['city']], name)
+            away = station and district and station_distance((station['lat'], station['lon']), district)
+            if not station:
+                log('  skip    %s: station %s is missing or not unique in %s' % (gym['name'], name, place['name']))
+            elif district and stem(district['name']) not in cache.reverse(station['lat'], station['lon']):
+                # The source's "nearest station" is sometimes kilometres off; one outside the gym's own district is not trusted.
+                log('  skip    %s: station %s is not in %s' % (gym['name'], name, district['name']))
+            elif away:
+                log('  skip    %s: station %s is %.0f km from the centre of %s and outside it' % (gym['name'], name, away / 1000, district['name']))
+            else:
+                matches[gym['id']] = {'precision': 'station', 'lat': station['lat'], 'lon': station['lon'], 'osm': station['osm'], 'matched': station['name']}
         coarse[gym['id']] = matches[gym['id']]
         for query in landmark_queries(gym):
             row = pick_landmark(cache.search(query, place['box']), query, place['name'], district['name'] if district else '')
             if row:
                 landmarks[gym['id']] = row
                 matches[gym['id']] = {'precision': 'address', 'lat': row['lat'], 'lon': row['lon'], 'osm': row['osm'], 'matched': row['name'], 'query': query}
+                if coarse[gym['id']]['precision'] == 'station':
+                    apart = distance_m((row['lat'], row['lon']), (coarse[gym['id']]['lat'], coarse[gym['id']]['lon']))
+                    log('  %s    %s: %s is %.0f m from station %s' % ('note' if apart <= 3000 else 'far ', gym['name'], row['name'], apart, coarse[gym['id']]['matched']))
                 break
 
     # The gym's own POI. A brand with several branches in one city needs evidence for the branch.
@@ -393,7 +453,7 @@ def resolve(data, cache, log=print):
                 continue
             if landmark and not near and not on_road:
                 # Two answers for one gym and nothing to choose between them: keep neither.
-                log('  skip    %s: %s %s is %.0f m from %s; falling back to the district' % (gym['name'], element['osm'], element['name'], distance_m(point, (landmark['lat'], landmark['lon'])), landmark['name']))
+                log('  skip    %s: %s %s is %.0f m from %s; keeping neither' % (gym['name'], element['osm'], element['name'], distance_m(point, (landmark['lat'], landmark['lon'])), landmark['name']))
                 matches[gym['id']] = coarse[gym['id']]
                 continue
             claims[element['osm']].append((gym, element))
@@ -443,9 +503,11 @@ def counts(gyms):
     return {key: tally.get(key, 0) for key in PRECISIONS + ('none',)}
 
 
-def apply(data, cache, log=print):
+def apply(data, cache, log=print, hints=None):
     """Write lat / lon / coordPrecision into the directory in place and describe them in metadata."""
-    matches, boxes = resolve(data, cache, log)
+    if hints is None:
+        hints = json.loads(STATIONS.read_text(encoding='utf-8')) if STATIONS.exists() else {}
+    matches, boxes = resolve(data, cache, log, hints)
     for gym in data['gyms']:
         for field in ('lat', 'lon', 'coordPrecision'):
             gym.pop(field, None)
@@ -463,16 +525,20 @@ def apply(data, cache, log=print):
         'precision': {
             'poi': '岩馆本身在 OpenStreetMap 上的点位',
             'address': '地址或分店名里写明的建筑、商场或园区（跨度不超过 %d 米）在 OpenStreetMap 上的位置，不是门牌点' % LANDMARK_MAX_SPAN_M,
+            'station': '名录来源写的「最近地铁站」在 OpenStreetMap 上的位置，不是岩馆位置；与已知点位对比，多数相差一两公里以内，约八分之一相差三公里以上',
             'district': '所在区县的中心点（OpenStreetMap 的驻地或边界中心），不是岩馆位置',
             'city': '所在城市的中心点，不是岩馆位置',
         },
-        'sources': [{'id': 'osm', 'name': 'OpenStreetMap', 'via': ['Nominatim', 'Overpass API'], 'url': 'https://www.openstreetmap.org/copyright', 'license': OSM_LICENSE, 'attribution': OSM_ATTRIBUTION}],
-        'notes': ['坐标只来自 OpenStreetMap，本身就是 WGS-84，没有做坐标系转换；没有使用 GCJ-02 或 BD-09 的来源。', '多数岩馆在 OpenStreetMap 上没有点位，只能落到区县或城市中心；这类坐标只能用来判断大致在哪个区，不能排同区内的远近。', '点位未经现场核实；OpenStreetMap 在中国大陆的个别要素可能有几百米偏移或已经过时。'],
+        'sources': [
+            {'id': 'osm', 'name': 'OpenStreetMap', 'via': ['Nominatim', 'Overpass API'], 'url': 'https://www.openstreetmap.org/copyright', 'license': OSM_LICENSE, 'attribution': OSM_ATTRIBUTION},
+            {'id': 'timeproves', 'use': '只取每家馆的最近地铁站名，用来在 OpenStreetMap 上找站点；站名不写进条目', 'license': '见 metadata.sources'},
+        ],
+        'notes': ['坐标只来自 OpenStreetMap，本身就是 WGS-84，没有做坐标系转换；没有使用 GCJ-02 或 BD-09 的来源。', '多数岩馆在 OpenStreetMap 上没有点位：能对上最近地铁站的落在站点上，其余落到区县或城市中心。站点坐标可以粗排远近，区县和城市中心只能判断大致在哪个区。', '最近地铁站是来源站点的说法，没有逐条核对，来源自己也标了不少「位置待核」；城里找不到这个站、同城有两个同名站、或站点不在岩馆所属区县时不用。', '点位未经现场核实；OpenStreetMap 在中国大陆的个别要素可能有几百米偏移或已经过时。'],
     }
     return matches
 
 
-NO_SOURCE_ESTIMATES = '不采集评论、照片、联系人、价格或路线；不导入来源站点的估计坐标，不使用源中 AI 汇总的馆型与风格。坐标另由 OpenStreetMap 补充并标明精度，见 metadata.coordinates。'
+NO_SOURCE_ESTIMATES = '不采集评论、照片、联系人、价格或路线；不导入来源站点的估计坐标，不使用源中 AI 汇总的馆型与风格。坐标另由 OpenStreetMap 补充并标明精度（一部分只定位到来源写的最近地铁站），见 metadata.coordinates。'
 
 
 def write_matches(matches, data):

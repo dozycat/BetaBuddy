@@ -135,6 +135,7 @@ def main():
     parser.add_argument('--partner-file', type=Path, help='Saved Hylonomus HTML response')
     parser.add_argument('--retrieved-at', default=dt.datetime.now(dt.timezone(dt.timedelta(hours=8))).date().isoformat())
     parser.add_argument('--check', action='store_true', help='Validate packaged data without network or writes')
+    parser.add_argument('--station-hints', action='store_true', help='Only rewrite station-hints.json from the source the packaged snapshot was built from; the directory is not touched')
     parser.add_argument('--coordinates', choices=('online', 'offline', 'skip'), default='online', help='online asks OpenStreetMap only for what the cache lacks; offline fails on a cache miss; skip writes no coordinates')
     args = parser.parse_args()
     outputs = [ROOT / 'data/gym-directory/gyms-cn.json', ROOT / 'ios/BetaBuddy/Resources/gyms-cn.json', ROOT / 'android/app/src/main/assets/gyms-cn.json']
@@ -148,6 +149,7 @@ def main():
     source = raw.decode('utf-8')
     gyms = []
     omitted = []
+    stations = {}
     for variable, (province, city) in CITIES.items():
         for row in data_array(source, variable):
             # Source explicitly says this entry has no corroborating POI; do not ship it.
@@ -157,7 +159,17 @@ def main():
             name = row['brand'].strip()
             if row.get('branch', '').strip():
                 name += '（' + row['branch'].strip() + '）'
+            # Nearest metro station: a locating hint for geocode_directory, not a directory field.
+            if row.get('metro', '').strip():
+                stations['timeproves:' + row['id']] = row['metro'].strip()
             gyms.append({'id': 'timeproves:' + row['id'], 'name': name, 'province': province, 'city': city, 'address': '', 'district': row.get('district', ''), 'sourceURL': PAGE_URL})
+    if args.station_hints:
+        recorded = json.loads(outputs[0].read_text(encoding='utf-8'))['metadata']['sources'][0]['sha256']
+        assert hashlib.sha256(raw).hexdigest() == recorded, 'Source differs from the packaged snapshot; run a full refresh instead'
+    geocode_directory.STATIONS.write_text(json.dumps(dict(sorted(stations.items())), ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+    if args.station_hints:
+        print('Wrote %d station hints' % len(stations))
+        return
     data = {'version': 1, 'updatedAt': args.retrieved_at, 'metadata': {
         'coverage': 'partial', 'scope': '中国岩馆公开名录的已收录条目；非全国全量、非实时营业名单',
         'sources': [{'id': 'timeproves', 'name': '攀岩岩馆大全', 'url': PAGE_URL, 'dataURL': SOURCE_URL, 'retrievedAt': args.retrieved_at, 'sourceUpdatedAt': None, 'sha256': hashlib.sha256(raw).hexdigest(), 'license': '未发现开放数据许可证；源数据不适用本项目 MIT 许可'}],
