@@ -230,6 +230,19 @@ struct CaptureView: View {
         return first.shown == .exact ? .nearest(first) : .guess(first)
     }
 
+    // MARK: What the controls do. A debug build's autopilot goes through these same functions.
+
+    private func choose(_ gym: DirectoryGym) { session.gymId = gym.id; session.gymName = gym.name }
+    private func pick(colour key: String) { tool = .startHand; session.selectColor(key) }
+    /// One tap on the picture, in the picture's own 0–1 coordinates.
+    private func tapPicture(_ point: CGPoint) {
+        guard session.page == .ready, session.color != nil else { return }
+        session.correct(at: point, role: tool)
+    }
+    private func pressRecord() { if session.needsConfirmation { confirming = true } else { session.startRecording() } }
+    private func recordAnyway() { session.startRecording() }
+    private func pressStop() { Task { await session.stop(.user) } }
+
     #if DEBUG
     @State private var pictureFrame = CGRect.zero
 
@@ -238,6 +251,13 @@ struct CaptureView: View {
         screen
             .onPreferenceChange(CapturePictureFrame.self) { pictureFrame = $0 }
             .task { await snapshots() }
+            .task {
+                // `-debugCaptureAutopilot YES`: nobody is there to tap.
+                await CaptureAutopilot(session: session, store: store, screen: CaptureAutopilot.Screen(
+                    chooseGym: choose, pickColour: { pick(colour: $0) }, chooseTool: { tool = $0 }, tapPicture: tapPicture,
+                    pressRecord: pressRecord, asksToConfirm: { confirming }, recordAnyway: { confirming = false; recordAnyway() },
+                    pressStop: pressStop, shot: { snapshot(as: $0) })).run()
+            }
             .onAppear { session.diagnosticsExtra = { [locator] in ["location": locator.diagnostics] } }
             .onChange(of: locator.access) { session.mark("location", locator.diagnostics) }
             .onChange(of: locator.fix) { session.mark("location", locator.diagnostics) }
@@ -249,26 +269,30 @@ struct CaptureView: View {
         while !Task.isCancelled {
             try? await Task.sleep(for: .seconds(wait))
             wait = 3
-            guard !Task.isCancelled,
-                  let window = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }).flatMap(\.windows).first(where: \.isKeyWindow) else { continue }
-            // With the gym list or the analysis page on top there is no preview to look for.
-            let showsPreview = viewing == nil && !choosingGym && (session.camera == .running || session.camera == .starting)
-            let frame = session.diagnosticsFrame
-            guard let shot = CaptureSnapshot.take(window: window, picture: showsPreview ? pictureFrame : nil, frame: frame?.jpeg) else { continue }
-            let offer: String? = switch offered {
-            case .here(let gym): "here:\(gym.gym.id)"
-            case .nearest(let gym): "nearest:\(gym.gym.id)"
-            case .guess(let gym): "guess:\(gym.gym.id)"
-            case .ask: "ask"
-            case nil: nil
-            }
-            session.diagnosticsPreview(shot.image, source: shot.source.rawValue, fields: [
-                "picture": [pictureFrame.minX, pictureFrame.minY, pictureFrame.width, pictureFrame.height].map(Double.init),
-                "screen": [Double(window.bounds.width), Double(window.bounds.height)],
-                "pictureDark": shot.dark as Any, "frameAge": (shot.source == .composite ? frame?.age : nil) as Any,
-                "covered": !showsPreview, "offer": offer as Any, "tool": tool.rawValue,
-            ])
+            if !Task.isCancelled { snapshot() }
         }
+    }
+
+    /// The screen as it is now, as `preview-latest.png` and, for a moment worth keeping, under `name` as well.
+    private func snapshot(as name: String? = nil) {
+        guard let window = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }).flatMap(\.windows).first(where: \.isKeyWindow) else { return }
+        // With the gym list or the analysis page on top there is no preview to look for.
+        let showsPreview = viewing == nil && !choosingGym && (session.camera == .running || session.camera == .starting)
+        let frame = session.diagnosticsFrame
+        guard let shot = CaptureSnapshot.take(window: window, picture: showsPreview ? pictureFrame : nil, frame: frame?.jpeg) else { return }
+        let offer: String? = switch offered {
+        case .here(let gym): "here:\(gym.gym.id)"
+        case .nearest(let gym): "nearest:\(gym.gym.id)"
+        case .guess(let gym): "guess:\(gym.gym.id)"
+        case .ask: "ask"
+        case nil: nil
+        }
+        session.diagnosticsPreview(shot.image, source: shot.source.rawValue, fields: [
+            "picture": [pictureFrame.minX, pictureFrame.minY, pictureFrame.width, pictureFrame.height].map(Double.init),
+            "screen": [Double(window.bounds.width), Double(window.bounds.height)],
+            "pictureDark": shot.dark as Any, "frameAge": (shot.source == .composite ? frame?.age : nil) as Any,
+            "covered": !showsPreview, "offer": offer as Any, "tool": tool.rawValue,
+        ], alsoAs: name)
     }
     #else
     var body: some View { screen }
@@ -319,7 +343,7 @@ struct CaptureView: View {
             if let pack = GymPack.current, pack.supportsAnalysis { AnalysisView(pack: pack, climb: climb, store: store) { _ in viewing = nil } }
         }
         .confirmationDialog("从这个机位拍，多半分析不了", isPresented: $confirming, titleVisibility: .visible) {
-            Button("仍然开始录") { session.startRecording() }.accessibilityIdentifier("recordAnyway")
+            Button("仍然开始录") { recordAnyway() }.accessibilityIdentifier("recordAnyway")
             Button("再调一下机位", role: .cancel) {}
         } message: { Text(verbatim: session.assessment?.hint.map(CaptureText.line) ?? "") }
         .confirmationDialog("这一趟还没存进攀爬册", isPresented: $confirmingDiscard, titleVisibility: .visible) {
@@ -402,7 +426,7 @@ struct CaptureView: View {
                     else { Text("离你最近：\(gym.gym.name) · \(CaptureText.distance(gym) ?? "")") }
                 }.font(.caption.bold()).lineLimit(1).minimumScaleFactor(0.8).frame(maxWidth: .infinity, alignment: .leading)
                     .accessibilityIdentifier("gymOfferText")
-                Button { session.gymId = gym.gym.id; session.gymName = gym.gym.name } label: {
+                Button { choose(gym.gym) } label: {
                     // With a gym already selected this replaces it, and says so.
                     Group { if case .here = offer, !session.gymName.isEmpty { Text("换成这家") } else { Text("选这家") } }
                         .font(.caption.bold()).padding(.horizontal, 12).frame(minHeight: 28)
@@ -450,8 +474,7 @@ struct CaptureView: View {
                         // One tap marks the hold there as whatever is selected below the picture.
                         Color.clear.contentShape(Rectangle())
                             .gesture(SpatialTapGesture().onEnded { value in
-                                guard session.page == .ready, session.color != nil else { return }
-                                session.correct(at: CGPoint(x: value.location.x / size.width, y: value.location.y / size.height), role: tool)
+                                tapPicture(CGPoint(x: value.location.x / size.width, y: value.location.y / size.height))
                             })
                             .accessibilityElement().accessibilityLabel(Text(verbatim: CaptureText.role(tool))).accessibilityIdentifier("capturePicture")
                     } else if session.phase == .saving {
@@ -588,7 +611,7 @@ struct CaptureView: View {
     @ViewBuilder
     private var swatches: some View {
         ForEach(Array(session.palette.enumerated()), id: \.element.key) { index, swatch in
-            Button { tool = .startHand; session.selectColor(swatch.key) } label: {
+            Button { pick(colour: swatch.key) } label: {
                 HStack(spacing: 6) {
                     Circle().fill(Color(swatch.rgb)).frame(width: 24, height: 24).overlay(Circle().stroke(.white, lineWidth: 1.5))
                     Text(verbatim: "\(swatch.count)").font(.caption.monospacedDigit())
@@ -747,16 +770,14 @@ struct CaptureView: View {
                 Spacer(minLength: 0)
             }
             if session.phase == .recording {
-                Button { Task { await session.stop(.user) } } label: {
+                Button { pressStop() } label: {
                     ZStack {
                         Circle().stroke(BB.paper, lineWidth: 3.5).frame(width: 56, height: 56)
                         RoundedRectangle(cornerRadius: 6).fill(.red).frame(width: 24, height: 24)
                     }.contentShape(Circle())
                 }.buttonStyle(.plain).accessibilityLabel(Text("停止并保存")).accessibilityIdentifier("captureStop")
             } else {
-                Button {
-                    if session.needsConfirmation { confirming = true } else { session.startRecording() }
-                } label: {
+                Button { pressRecord() } label: {
                     ZStack {
                         Circle().stroke(session.assessment?.ready == true ? BB.lime : BB.paper, lineWidth: 3.5).frame(width: 56, height: 56)
                         Circle().fill(.red).frame(width: 44, height: 44)

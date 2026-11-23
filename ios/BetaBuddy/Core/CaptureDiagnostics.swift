@@ -112,10 +112,15 @@ final class CaptureDiagnostics: @unchecked Sendable {
 
     /// Something that happened. `event` is its name.
     func event(_ name: String, _ fields: [String: Any] = [:]) {
-        var fields = fields
-        fields["event"] = name
-        append(Self.line(kind: "event", fields))
+        var line = fields
+        line["event"] = name
+        append(Self.line(kind: "event", line))
+        // The autopilot follows what happens through the same lines.
+        guard let observer = Self.observer else { return }
+        if Thread.isMainThread { observer(name, fields) } else { DispatchQueue.main.async { observer(name, fields) } }
     }
+    /// Told of every event, on the main thread.
+    static var observer: ((String, [String: Any]) -> Void)?
 
     /// For what happens after the capture screen has gone: added to the latest session, or to a new one.
     static func event(_ name: String, _ fields: [String: Any] = [:]) {
@@ -125,9 +130,15 @@ final class CaptureDiagnostics: @unchecked Sendable {
     func write(_ data: Data, as name: String) {
         queue.async { [directory] in try? data.write(to: directory.appendingPathComponent(name), options: .atomic) }
     }
-    /// Encoded off the main thread.
-    func write(png image: UIImage, as name: String) {
-        queue.async { [directory] in try? image.pngData()?.write(to: directory.appendingPathComponent(name), options: .atomic) }
+    /// Encoded off the main thread, once, however many names it is kept under.
+    func write(png image: UIImage, as names: [String]) {
+        queue.async { [directory] in
+            guard let data = image.pngData() else { return }
+            for name in names { try? data.write(to: directory.appendingPathComponent(name), options: .atomic) }
+        }
+    }
+    func remove(_ names: [String]) {
+        queue.async { [directory] in for name in names { try? FileManager.default.removeItem(at: directory.appendingPathComponent(name)) } }
     }
 
     /// Waits until everything asked for so far is on disk.

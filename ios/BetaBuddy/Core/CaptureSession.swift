@@ -99,6 +99,10 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
     private var lastFrameJPEG: String?
     private var lastFrameWritten = Date.distantPast
     private var previewSource: String?
+    /// What the page answered to the latest tap; `serial` counts the taps answered.
+    private(set) var lastTap: (serial: Int, hold: String?, pageHasTap: Bool) = (0, nil, true)
+    /// Where `-debugCaptureAutopilot` has got to, for the numbers over the picture.
+    @Published var autopilotNote: String?
     /// Filled in by the screen: what it knows that the session does not (location access).
     var diagnosticsExtra: () -> [String: Any] = { [:] }
 
@@ -112,14 +116,14 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
     private var previewFields: [String: Any] = [:]
 
     /// The capture screen as drawn, from the screen itself; `source` says how the picture inside it was obtained.
-    func diagnosticsPreview(_ image: UIImage, source: String, fields: [String: Any]) {
-        diagnostics?.write(png: image, as: "preview-latest.png")
+    func diagnosticsPreview(_ image: UIImage, source: String, fields: [String: Any], alsoAs name: String? = nil) {
+        diagnostics?.write(png: image, as: ["preview-latest.png"] + (name.map { [$0] } ?? []))
         previewFields = fields.merging(["source": source, "pixels": [Int(image.size.width * image.scale), Int(image.size.height * image.scale)]]) { _, new in new }
         if previewSource != source { previewSource = source; mark("snapshot", previewFields) }
     }
 
     /// One line a second: everything the overlay shows, and the rest of the screen's state.
-    private func sampleFields() -> [String: Any] {
+    func sampleFields() -> [String: Any] {
         let now = Date()
         let replies = recentReplies.filter { now.timeIntervalSince($0) <= 4 }
         var fields: [String: Any] = [
@@ -183,6 +187,7 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
             if let route = assessment.route { lines.append("route \(route.id) \(number(route.confidence, "%.2f"))") }
         }
         if let previewSource { lines.append("snapshot \(previewSource)") }
+        if let autopilotNote { lines.append("autopilot \(autopilotNote)") }
         if phase == .recording, let recorder, let began = recordingStarted {
             let counts = recorder.counts
             lines.append(String(format: "rec %.0f s  frames %d  dropped %d  plan %@", now.timeIntervalSince(began), counts.frames, counts.dropped, plan.map { "\($0.utf8.count / 1024) KB" } ?? "–"))
@@ -201,6 +206,14 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
         if let last = store.lastGym { gymId = last.id; gymName = last.name }
     }
 
+    #if DEBUG
+    /// A path that does not start at the root is taken from the app's own container, so that a clip
+    /// copied into it on a phone can be named without knowing where the container is: `Documents/debug/clip.mp4`.
+    nonisolated static func debugVideo(_ path: String, home: String = NSHomeDirectory()) -> URL {
+        path.hasPrefix("/") ? URL(fileURLWithPath: path) : URL(fileURLWithPath: home, isDirectory: true).appendingPathComponent(path)
+    }
+    #endif
+
     /// The pack in use and where pictures come from. A Debug build can be pointed at a video file
     /// with `-debugCaptureVideo <path>`, which is how tests and the simulator get past having no camera.
     nonisolated static func makeSource() -> CaptureSource {
@@ -208,7 +221,7 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
         if let path = UserDefaults.standard.string(forKey: "debugCaptureVideo") {
             // `-debugCaptureFieldOfView <degrees>` says how wide the lens that shot the file was, when that is known.
             let fieldOfView = UserDefaults.standard.double(forKey: "debugCaptureFieldOfView")
-            return FileCaptureSource(url: URL(fileURLWithPath: path), horizontalFieldOfView: fieldOfView > 0 ? fieldOfView : nil)
+            return FileCaptureSource(url: debugVideo(path), horizontalFieldOfView: fieldOfView > 0 ? fieldOfView : nil)
         }
         #endif
         return CameraSource()
@@ -287,6 +300,10 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
         opened["source"] = "\(type(of: source))"
         opened["cameraAccess"] = AVCaptureDevice.authorizationStatus(for: .video).rawValue      // 0 not asked, 1 restricted, 2 denied, 3 allowed
         opened["gym"] = gymId as Any
+        if let path = UserDefaults.standard.string(forKey: "debugCaptureVideo") {
+            opened["debugVideo"] = path.hasPrefix("/") ? (path as NSString).lastPathComponent : path
+            opened["debugVideoFound"] = FileManager.default.fileExists(atPath: Self.debugVideo(path).path)
+        }
         diagnostics.event("open", opened)
         sampler = Task { [weak self] in
             while !Task.isCancelled {
@@ -551,7 +568,9 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
         Task {
             let found = await answer(.tap(x: point.x, y: point.y, role: role))
             #if DEBUG
-            mark("tap", ["x": Double(point.x), "y": Double(point.y), "role": role.rawValue, "hold": (found as? String).flatMap { $0.isEmpty ? nil : $0 } as Any, "pageHasTap": !(found is Bool)])
+            let hold = (found as? String).flatMap { $0.isEmpty ? nil : $0 }
+            lastTap = (lastTap.serial + 1, hold, !(found is Bool))
+            mark("tap", ["x": Double(point.x), "y": Double(point.y), "role": role.rawValue, "hold": hold as Any, "pageHasTap": !(found is Bool)])
             #endif
             // An empty answer is “no hold here”. A page that answers nothing at all gives the same; `false` means it has no `tap`.
             guard let text = found as? String, text.isEmpty else { tapMissed = false; return }

@@ -275,6 +275,23 @@ final class CaptureUITests: XCTestCase {
         app.buttons["captureClose"].tap()
     }
 
+    /// A debug build can go through the screen by itself when nobody can tap the phone: this test
+    /// touches nothing. With the gym given, the colour given, and no start known for that colour, it
+    /// marks start and finish, records, stops, and waits for what comes after saving.
+    @MainActor
+    func testAutopilotGoesFromColourToSavedWithoutATap() async throws {
+        let app = try await launch(language: "en", locale: "en_US", step: 3,
+                                   extra: ["-debugOpenCapture", "YES", "-debugCaptureAutopilot", "YES", "-debugCaptureGym", "syn:east", "-debugCaptureColour", "red",
+                                           "-debugCaptureSeconds", "4", "-debugCaptureOverlay", "YES"])
+        func note(_ text: String) -> XCUIElement { app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "autopilot " + text)).firstMatch }
+        XCTAssertTrue(note("recording").waitForExistence(timeout: 60), "it got as far as recording")
+        XCTAssertTrue(app.buttons["captureStop"].exists)
+        XCTAssertTrue(note("done").waitForExistence(timeout: 90), "and to the end")
+        // The saved sheet stays up, with the gym it selected by itself.
+        XCTAssertTrue(app.buttons["captureAgain"].exists || app.staticTexts["Saved to the logbook"].exists)
+        keep(app, "33-autopilot-done")
+    }
+
     /// A camera preview is left black in a snapshot of the view hierarchy. The picture a debug build
     /// leaves on disk then has the frame last handed to the capture page put under the outlines instead.
     @MainActor

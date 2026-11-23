@@ -107,6 +107,35 @@ final class CaptureDiagnosticsTests: XCTestCase {
         XCTAssertGreaterThan(numbers.count, 20)
     }
 
+    // MARK: The autopilot's choices
+
+    func testTheAutopilotTakesTheColourAskedForOrTheOneWithMostHolds() {
+        let palette = [CaptureAssessment.Swatch(key: "blue", rgb: [0, 0, 255], count: 5), .init(key: "yellow", rgb: [255, 255, 0], count: 9),
+                       .init(key: "red", rgb: [255, 0, 0], count: 9)]
+        XCTAssertEqual(CaptureAutopilot.colour(in: palette, wanted: nil), "yellow")        // The first of two equals.
+        XCTAssertEqual(CaptureAutopilot.colour(in: palette, wanted: ""), "yellow")
+        XCTAssertEqual(CaptureAutopilot.colour(in: palette, wanted: "blue"), "blue")
+        XCTAssertNil(CaptureAutopilot.colour(in: palette, wanted: "green"))                // Not there: it stops and says so.
+        XCTAssertNil(CaptureAutopilot.colour(in: [], wanted: nil))
+    }
+
+    func testTheAutopilotMarksTheLowestHoldAsStartAndTheHighestAsFinish() {
+        func hold(_ id: String, _ y: Double, width: Double = 0.1) -> CaptureAssessment.Hold {
+            .init(id: id, box: CGRect(x: 0.4, y: y, width: width, height: 0.05), poly: [], role: .hold, confidence: nil, user: false)
+        }
+        let marks = CaptureAutopilot.marks(in: [hold("middle", 0.5), hold("top", 0.1), hold("bottom", 0.8), hold("nothing", 0.95, width: 0)])
+        XCTAssertEqual(marks?.start.id, "bottom"); XCTAssertEqual(marks?.finish?.id, "top")
+        // One hold alone is a start and nothing else; no hold, nothing to tap.
+        let alone = CaptureAutopilot.marks(in: [hold("only", 0.5)])
+        XCTAssertEqual(alone?.start.id, "only"); XCTAssertNil(alone?.finish)
+        XCTAssertNil(CaptureAutopilot.marks(in: [hold("nothing", 0.5, width: 0)]))
+    }
+
+    func testAClipNamedFromTheContainerIsFoundWhereverTheContainerIs() {
+        XCTAssertEqual(CaptureSession.debugVideo("Documents/debug/clip.mp4", home: "/somewhere/container").path, "/somewhere/container/Documents/debug/clip.mp4")
+        XCTAssertEqual(CaptureSession.debugVideo("/elsewhere/clip.mp4", home: "/somewhere/container").path, "/elsewhere/clip.mp4")
+    }
+
     // MARK: The picture of the screen
 
     /// A stand-in for a snapshot of the hierarchy: a grey screen, and in `picture` either the black

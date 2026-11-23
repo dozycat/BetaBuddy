@@ -22,6 +22,7 @@
 		225D5175E806F176C257581D /* CaptureSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1CE7D0FEC8672F025FA47EF /* CaptureSource.swift */; };
 		2265E3C7D9224DFC825271CB /* CaptureDiagnosticsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29BC1E69A88277D3CB521B28 /* CaptureDiagnosticsTests.swift */; };
 		29995CB310C42FBE438B30A1 /* MediaPipeTasksCommon.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8E0CFE80A3BB99A8CDB5F11B /* MediaPipeTasksCommon.xcframework */; };
+		302E981BD303CE508AC1F25B /* CaptureAutopilot.swift in Sources */ = {isa = PBXBuildFile; fileRef = B44CCE50E59A467EDC0074F5 /* CaptureAutopilot.swift */; };
 		3051868C32F359501A4312D1 /* StandInPack.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCBC8222041AAD7969E6318C /* StandInPack.swift */; };
 		3055DB323A34FC37D2A7A210 /* GymPackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7318870BC8802A65E6F1001 /* GymPackTests.swift */; };
 		30B1D283BF6EB579C7D39EB5 /* analysis-standin.html in Resources */ = {isa = PBXBuildFile; fileRef = 37A4BD2EF5E3ED4388DFC009 /* analysis-standin.html */; };
@@ -164,6 +165,7 @@
 		A7318870BC8802A65E6F1001 /* GymPackTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GymPackTests.swift; sourceTree = "<group>"; };
 		B0649400930E39CFF60A087A /* PrivacyPolicy.zh-Hant.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "PrivacyPolicy.zh-Hant.txt"; sourceTree = "<group>"; };
 		B1CE7D0FEC8672F025FA47EF /* CaptureSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureSource.swift; sourceTree = "<group>"; };
+		B44CCE50E59A467EDC0074F5 /* CaptureAutopilot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureAutopilot.swift; sourceTree = "<group>"; };
 		B7F8A85AA8EA646D83C5623B /* PrivacyPolicy.zh-Hans.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "PrivacyPolicy.zh-Hans.txt"; sourceTree = "<group>"; };
 		BF9896D69073A417BB9B0B2F /* AppLanguage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLanguage.swift; sourceTree = "<group>"; };
 		C0A7C7799F417F30A48923EA /* PrivacyPolicy.en.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = PrivacyPolicy.en.txt; sourceTree = "<group>"; };
@@ -305,6 +307,7 @@
 				75D4C08308B1484B7470C545 /* AnalysisQueue.swift */,
 				BF9896D69073A417BB9B0B2F /* AppLanguage.swift */,
 				8B87183700FC707A88F7A1FE /* Capture.swift */,
+				B44CCE50E59A467EDC0074F5 /* CaptureAutopilot.swift */,
 				CB1FE3CE91016E84266DD392 /* CaptureDiagnostics.swift */,
 				23B1E2CAC6C284CABB0D7218 /* CaptureRecovery.swift */,
 				5B8BC2AF18E452C1C6CDAD7E /* CaptureSession.swift */,
@@ -609,6 +612,7 @@
 				000BAAC2430D42701BFF962E /* BetaBuddyApp.swift in Sources */,
 				182C46AC97C9E8377CBDD99B /* BrandMark.swift in Sources */,
 				0EECD6E16FB3FAE15E7C6119 /* Capture.swift in Sources */,
+				302E981BD303CE508AC1F25B /* CaptureAutopilot.swift in Sources */,
 				A625CD0F2C4E73A1A4A92E12 /* CaptureDiagnostics.swift in Sources */,
 				B58E7B4AB8D0408915EBEF28 /* CaptureRecovery.swift in Sources */,
 				83281BD84E6F11A5D5137F4D /* CaptureSession.swift in Sources */,
