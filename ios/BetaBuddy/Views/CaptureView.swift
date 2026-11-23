@@ -444,11 +444,15 @@ struct CaptureView: View {
 
     /// Where the user is in marking the problem, in words. A value for tests says which.
     private func prompt(_ assessment: CaptureAssessment?) -> some View {
-        let stage = session.tapMissed ? "missed" : session.color == nil ? "colour" : assessment?.startConfirmed != true ? "start" : assessment?.finishConfirmed != true ? "finish" : "marked"
+        // With a recognised problem the start and finish come from the pack's data, not from a guess at the picture.
+        let stage = session.tapMissed ? "missed" : session.color == nil ? "colour"
+            : assessment?.startConfirmed != true ? (session.recognised != nil ? "route" : "start")
+            : assessment?.finishConfirmed != true ? "finish" : "marked"
         let text: Text = switch stage {
         case "missed": Text("这里没有认出岩点。")
         case "colour": Text("选你要爬的颜色")
         case "start": Text("虚线是自动猜的，起步点常常猜错。点一下起步的手点。")
+        case "route": Text("起步和结束是按认出的这条线标的。不对的话，点一下岩点改。")
         case "finish": Text("起步标好了。选“结束”，再点一下结束点。")
         default: Text("起步和结束都标好了。其余虚线仍是自动猜的。")
         }

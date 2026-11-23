@@ -127,13 +127,15 @@ final class CaptureUITests: XCTestCase {
         // A colour: its holds are outlined, the guessed start and finish carry a question mark, and the
         // screen asks for the start first. Marking is one tap on the picture, with what it marks chosen below.
         app.buttons["captureColor-yellow"].tap()
-        XCTAssertEqual(prompt(app, "start").label, "虚线是自动猜的，起步点常常猜错。点一下起步的手点。")
+        XCTAssertTrue(app.buttons["captureTool-start_hand"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["captureTool-start_hand"].isSelected)
         // The gym is one of the synthetic pack's venues, so the stand-in names a problem; it is shown as a guess that can be turned down.
         let route = app.staticTexts["captureRoute"]
         XCTAssertTrue(route.waitForExistence(timeout: 5))
         XCTAssertEqual(route.label, "认出来像是：合成线路 黄 1 · V3")
         XCTAssertTrue(app.buttons["captureRejectRoute"].exists)
+        // With a recognised problem the start is not a guess at the picture, and the screen does not call it one.
+        XCTAssertEqual(prompt(app, "route").label, "起步和结束是按认出的这条线标的。不对的话，点一下岩点改。")
         // No grade picked yet: the problem's grade is filled in, and the screen says that it was.
         XCTAssertTrue(app.staticTexts["captureGradePrefilled"].waitForExistence(timeout: 5))
         XCTAssertEqual(app.buttons["captureGrade"].value as? String, "V3")
@@ -151,6 +153,11 @@ final class CaptureUITests: XCTestCase {
         app.buttons["captureGrade"].tap()
         XCTAssertTrue(app.buttons["V4"].waitForExistence(timeout: 5))
         app.buttons["V4"].tap()
+        // Turned down as well: nothing is recognised any more, and the start is a guess again.
+        app.buttons["captureRejectRoute"].tap()
+        XCTAssertEqual(prompt(app, "start").label, "虚线是自动猜的，起步点常常猜错。点一下起步的手点。")
+        XCTAssertFalse(app.staticTexts["captureRoute"].exists)
+        XCTAssertEqual(app.buttons["captureGrade"].value as? String, "V4")
 
         let picture = app.descendants(matching: .any)["capturePicture"]
         picture.coordinate(withNormalizedOffset: CGVector(dx: 0.30, dy: 0.80)).tap()

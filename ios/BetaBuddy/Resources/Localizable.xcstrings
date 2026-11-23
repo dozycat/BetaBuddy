@@ -11089,6 +11089,40 @@
           }
         }
       }
+    },
+    "起步和结束是按认出的这条线标的。不对的话，点一下岩点改。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start and finish are marked from the recognised problem. If they are wrong, tap a hold to change them."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スタートとゴールは認識した課題に合わせて付けています。違っていたら、ホールドをタップして直してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "스타트와 탑은 인식한 문제에 맞춰 표시했어요. 틀리면 홀드를 눌러 고쳐 주세요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "起步和结束是按认出的这条线标的。不对的话，点一下岩点改。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "起步和結束是按認出的這條路線標的。不對的話，點一下岩點改。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
