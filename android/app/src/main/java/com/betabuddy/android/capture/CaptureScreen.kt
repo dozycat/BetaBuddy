@@ -119,6 +119,7 @@ import com.betabuddy.android.journal.gradeValues
 import com.betabuddy.android.journal.text
 import com.betabuddy.android.review.AnalysisScreen
 import com.betabuddy.android.review.AnalysisSession
+import com.betabuddy.android.review.rememberMainScope
 import com.betabuddy.android.ui.common.BBIcons
 import com.betabuddy.android.ui.theme.BB
 import java.io.File
@@ -143,7 +144,7 @@ internal fun CaptureScreen(model: JournalViewModel, pack: GymPack?, onClose: () 
     val owner = LocalLifecycleOwner.current
     val language = AppLanguage.current()
     val debug = BuildConfig.DEBUG
-    val usedPack = (if (debug) CaptureDebug.pack else null) ?: pack
+    val usedPack = if (debug && CaptureDebug.noPack) null else (if (debug) CaptureDebug.pack else null) ?: pack
     val packFiles = if (debug) CaptureDebug.packFiles else null
     // Made once: the screen is recomposed whenever the logbook behind it changes, and a camera must not be set up each time.
     val session = remember {
@@ -151,7 +152,7 @@ internal fun CaptureScreen(model: JournalViewModel, pack: GymPack?, onClose: () 
         val source = if (video != null) FileCaptureSource(video, CaptureDebug.fieldOfView) else CameraSource(context)
         if (debug) CaptureDebug.lastSource = source
         CaptureSession(context, usedPack, source, language, defaultTitle = { context.getString(R.string.journal_default_title) }, packFiles = packFiles)
-            .also { if (debug) it.motion.fixed = CaptureDebug.attitude }
+            .also { if (debug) { it.motion.fixed = CaptureDebug.attitude; CaptureDebug.configure?.invoke(it) } }
     }
     val locator = remember { GymLocator(context, if (debug) CaptureDebug.location else null) }
     val bundled = directoryGyms()
@@ -281,7 +282,7 @@ internal fun CaptureScreen(model: JournalViewModel, pack: GymPack?, onClose: () 
     val viewed = viewing?.let { id -> climbs?.firstOrNull { it.id == id } }
     val analysisUrl = usedPack?.analysisUrl(language)
     if (viewed != null && usedPack != null && analysisUrl != null) {
-        val scope = rememberCoroutineScope()
+        val scope = rememberMainScope()
         val analysis = remember(viewed.id, analysisUrl) {
             AnalysisSession(
                 context = context, pack = usedPack, url = analysisUrl, climbId = viewed.id, video = model.videoFile(viewed), model = model, scope = scope,
@@ -554,7 +555,7 @@ private fun Quality(score: Double) {
     val value = stringResource(if (level >= 4) R.string.capture_quality_good else if (level >= 3) R.string.capture_quality_fair else R.string.capture_quality_poor)
     Row(
         Modifier.clip(CircleShape).background(Color.Black.copy(alpha = 0.55f)).padding(horizontal = 10.dp, vertical = 6.dp)
-            .clearAndSetSemantics { contentDescription = label; stateDescription = value }.testTag("captureQuality"),
+            .testTag("captureQuality").clearAndSetSemantics { contentDescription = label; stateDescription = value },
         horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(label, style = BB.Caption.copy(fontSize = 11.sp), fontWeight = FontWeight.Bold, color = BB.Paper)
@@ -615,7 +616,7 @@ private fun Colours(session: CaptureSession, tool: CaptureRole, onTool: (Capture
                     Row(
                         Modifier.defaultMinSize(minHeight = 48.dp).clip(CircleShape).background(Chip)
                             .clickable(role = Role.Button) { onTool(CaptureRole.START_HAND); session.selectColor(swatch.key) }.padding(horizontal = 10.dp)
-                            .clearAndSetSemantics { contentDescription = "$label, $count" }.testTag("captureColor-${swatch.key}"),
+                            .testTag("captureColor-${swatch.key}").clearAndSetSemantics { contentDescription = "$label, $count" },
                         horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Swatch(swatch.rgb, 26.dp, Color.White)
@@ -627,7 +628,7 @@ private fun Colours(session: CaptureSession, tool: CaptureRole, onTool: (Capture
                 val change = stringResource(R.string.capture_change_colour)
                 Row(
                     Modifier.defaultMinSize(minHeight = 48.dp).clip(CircleShape).background(Chip).clickable(role = Role.Button, onClickLabel = change) { session.selectColor(null) }
-                        .padding(horizontal = 10.dp).clearAndSetSemantics { contentDescription = change }.testTag("captureChangeColour"),
+                        .padding(horizontal = 10.dp).testTag("captureChangeColour").clearAndSetSemantics { contentDescription = change },
                     horizontalArrangement = Arrangement.spacedBy(5.dp), verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Swatch(session.palette.firstOrNull { it.key == chosen }?.rgb ?: listOf(128, 128, 128), 26.dp, Color.White)
@@ -671,7 +672,7 @@ internal fun Swatch(rgb: List<Int>, size: Dp, ring: Color, modifier: Modifier = 
 internal fun CaptureColourLabel(climb: Climb, modifier: Modifier = Modifier) {
     val rgb = climb.capture?.colorRGB ?: return
     val label = stringResource(R.string.capture_colour_label)
-    Swatch(rgb, 12.dp, BB.Ink.copy(alpha = 0.35f), modifier.clearAndSetSemantics { contentDescription = label }.testTag("captureColour"))
+    Swatch(rgb, 12.dp, BB.Ink.copy(alpha = 0.35f), modifier.testTag("captureColour").clearAndSetSemantics { contentDescription = label })
 }
 
 @Composable

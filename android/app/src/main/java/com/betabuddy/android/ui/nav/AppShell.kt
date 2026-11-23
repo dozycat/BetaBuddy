@@ -138,7 +138,7 @@ private fun HomeScreen(gym: GymSession, initialTab: Int, initialCapture: Boolean
                 .consumeWindowInsets(PaddingValues(bottom = with(LocalDensity.current) { barHeight.toDp() })),
         ) {
             // Underneath everything: the page that analyses camera records, when one is waiting.
-            AnalysisQueueHost(journal, (if (debug) CaptureDebug.pack else null) ?: gym.pack, if (debug) CaptureDebug.packFiles else null)
+            AnalysisQueueHost(journal, if (debug && CaptureDebug.noPack) null else (if (debug) CaptureDebug.pack else null) ?: gym.pack, if (debug) CaptureDebug.packFiles else null)
             // Always composed: the gym page keeps its scene and selection while the logbook is in front.
             GymScreen(session = gym, visible = tab == Tabs.GYM, onOpenSettings = onOpenSettings)
             if (tab == Tabs.JOURNAL) {

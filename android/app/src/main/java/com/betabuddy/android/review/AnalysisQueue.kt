@@ -13,7 +13,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -32,6 +31,9 @@ import com.betabuddy.android.journal.CameraGate
 import com.betabuddy.android.journal.JournalViewModel
 import com.betabuddy.android.journal.UiMessage
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -126,13 +128,24 @@ internal class AnalysisQueue(
 }
 
 /**
+ * A scope that is on the main thread whatever the composition runs on, and ends with the caller.
+ * The pages' web views may only be touched from the main thread.
+ */
+@Composable
+internal fun rememberMainScope(): CoroutineScope {
+    val scope = remember { CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate) }
+    DisposableEffect(scope) { onDispose { scope.cancel() } }
+    return scope
+}
+
+/**
  * Keeps the queue going while the app's home is on screen, and its page in the window, behind
  * everything and at full size, so its scripts run as on a visible page.
  */
 @Composable
 internal fun AnalysisQueueHost(model: JournalViewModel, pack: GymPack?, packFiles: PackWebView.Files? = null, modifier: Modifier = Modifier) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
+    val scope = rememberMainScope()
     val url = pack?.analysisUrl(AppLanguage.current())
     val queue = remember(pack, url) { AnalysisQueue(context, model, pack, url, scope, packFiles) }
     val climbs by model.climbs.collectAsState()

@@ -1,0 +1,126 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>capture page stand-in</title>
+<!--
+  Test stand-in for a pack's capture page. It recognises nothing: it answers every frame from a
+  fixed script and a made-up wall, so the app's side of the interface can be exercised. Not shipped.
+-->
+<script>
+(() => {
+  'use strict';
+  const post = message => { try { window.webkit.messageHandlers.gym.postMessage(message); } catch (error) {} };
+  const VERSION = '0.0.0-standin';
+  // Frames per scripted step. Tests that watch the screen write a larger number here.
+  const STEP = 5;
+  // A made-up wall. The synthetic test clip paints blobs at the same places.
+  const WALL = {
+    yellow: { rgb: [226, 196, 40], holds: [['y1', .30, .80], ['y2', .42, .78], ['y3', .36, .90], ['y4', .50, .60], ['y5', .40, .42], ['y6', .55, .22]] },
+    blue: { rgb: [40, 110, 220], holds: [['b1', .70, .82], ['b2', .78, .66], ['b3', .66, .50], ['b4', .80, .36], ['b5', .72, .18]] },
+    red: { rgb: [214, 52, 44], holds: [['r1', .15, .70], ['r2', .20, .50], ['r3', .12, .30]] }
+  };
+  const GUESS = { yellow: { y1: 'start_hand', y2: 'start_hand', y3: 'start_foot', y6: 'finish' }, blue: { b1: 'start_hand', b5: 'finish' }, red: {} };
+  let meta = null, frames = 0, color = null, taps = {}, locked = false, decoded = null, lastInfo = null;
+
+  const outline = (cx, cy) => [[-.035, 0], [-.02, -.02], [.02, -.02], [.035, 0], [.02, .02], [-.02, .02]].map(([dx, dy]) => [cx + dx, cy + dy]);
+  function lineHolds() {
+    if (!color) return [];
+    const guess = GUESS[color] || {};
+    // Once the user has marked a start hand or the finish, the stand-in's own guess at it is withdrawn.
+    const marked = Object.values(taps);
+    const out = [];
+    for (const [key, group] of Object.entries(WALL)) for (const [id, cx, cy] of group.holds) {
+      const user = taps[id];
+      if (user === 'none' || (key !== color && !user)) continue;
+      let role = user || guess[id] || 'hold';
+      if (!user && ((role === 'start_hand' && marked.includes('start_hand')) || (role === 'finish' && marked.includes('finish')))) role = 'hold';
+      const hold = { id, box: [cx - .035, cy - .02, .07, .04], role, conf: user ? 1 : role === 'finish' ? .6 : role === 'hold' ? .85 : .1, user: !!user };
+      if (id !== 'y5') hold.poly = outline(cx, cy);   // One hold comes without an outline, as the interface allows.
+      out.push(hold);
+    }
+    return out;
+  }
+  function issuesNow(holds) {
+    if (frames <= STEP) return [{ code: 'too_dark', severity: 'block' }];
+    if (frames <= 2 * STEP) return [{ code: 'cut_top', severity: 'block', move: 'back' }];
+    // A code and a move no app has heard of yet.
+    if (frames <= 3 * STEP) return [{ code: 'lens_flare_2031', severity: 'block', move: 'spin_around' }];
+    const out = [];
+    // The start is never taken as settled until the user has marked it.
+    if (color && !holds.some(hold => hold.role === 'start_hand' && hold.user)) out.push({ code: 'start_unclear', severity: 'warn' });
+    if (color && !holds.some(hold => hold.role === 'finish')) out.push({ code: 'finish_unclear', severity: 'warn' });
+    return out;
+  }
+  // With a venue of the pack and the yellow problem chosen, the stand-in “recognises” a problem.
+  const routeNow = () => meta && meta.venue && color === 'yellow' ? { id: meta.venue + '/yellow-01', conf: .9, name: '合成线路 黄 1' } : null;
+  function assess(t, info) {
+    const holds = lineHolds(), issues = issuesNow(holds);
+    const pose = info ? info.pose : undefined;
+    const seen = Array.isArray(pose) ? pose.filter(point => point[2] > .5).length : 0;
+    const finish = holds.find(hold => hold.role === 'finish');
+    const hint = issues[0] ? { code: issues[0].code } : null;
+    if (hint && issues[0].move) hint.move = issues[0].move;
+    const route = routeNow();
+    return {
+      type: 'captureAssessment', t, ...(route ? { route } : {}),
+      ok: !issues.some(issue => issue.severity === 'block'),
+      score: frames <= STEP ? .15 : frames <= 2 * STEP ? .45 : frames <= 3 * STEP ? .5 : issues.length ? .75 : .95,
+      steady: frames > 3 * STEP + 2,
+      issues, hint,
+      person: Array.isArray(pose) ? (seen >= 25 ? 'full' : 'partial') : 'unknown',
+      wall: { top: .05, bottom: .92, left: 0, right: 1 },
+      palette: Object.entries(WALL).map(([key, group]) => ({ key, rgb: group.rgb, count: group.holds.length })),
+      color, holds,
+      start: { hands: holds.filter(hold => hold.role === 'start_hand').map(hold => hold.id), feet: holds.filter(hold => hold.role === 'start_foot').map(hold => hold.id),
+               conf: holds.some(hold => hold.role === 'start_hand' && hold.user) ? 1 : .1 },
+      finish: finish ? { id: finish.id, conf: .6 } : null
+    };
+  }
+  window.BetaBuddyCapture = {
+    begin(m) { meta = m; frames = 0; color = null; taps = {}; locked = false; decoded = null; lastInfo = null; },
+    addFrame(t, jpegBase64, info) {
+      if (!meta) return;
+      // The picture is really decoded, so a frame that is not an upright JPEG of the announced size is noticed.
+      const image = new Image();
+      image.onload = () => {
+        decoded = { w: image.naturalWidth, h: image.naturalHeight };
+        if (decoded.w !== meta.w || decoded.h !== meta.h) return post({ type: 'captureError', code: 'size_mismatch', message: decoded.w + 'x' + decoded.h });
+        frames += 1; lastInfo = info || null;
+        if (!locked) post(assess(t, info));
+      };
+      image.onerror = () => post({ type: 'captureError', code: 'bad_frame', message: 'not a JPEG' });
+      image.src = 'data:image/jpeg;base64,' + jpegBase64;
+    },
+    setColor(key) { color = key && WALL[key] ? key : null; },
+    tap(x, y, role) {
+      let best = null, distance = .1;
+      for (const group of Object.values(WALL)) for (const [id, cx, cy] of group.holds) {
+        const d = Math.hypot(cx - x, cy - y);
+        if (d < distance) { best = id; distance = d; }
+      }
+      if (!best || !['start_hand', 'start_foot', 'finish', 'hold', 'none'].includes(role)) return null;
+      // There is one finish: marking another moves it.
+      if (role === 'finish') for (const id of Object.keys(taps)) if (taps[id] === 'finish') delete taps[id];
+      taps[best] = role;
+      return best;
+    },
+    resetTaps() { taps = {}; },
+    lock() {
+      locked = true;
+      const holds = lineHolds(), issues = issuesNow(holds);
+      post({
+        type: 'captureLocked', id: meta ? meta.id : '',
+        plan: JSON.stringify({ v: 1, standIn: true, meta, color, frames, holds: holds.map(hold => ({ id: hold.id, role: hold.role, user: hold.user })) }),
+        summary: {
+          color, rgb: color ? WALL[color].rgb : null, holds: holds.length,
+          start: { hands: holds.filter(hold => hold.role === 'start_hand').length, feet: holds.filter(hold => hold.role === 'start_foot').length },
+          finish: holds.some(hold => hold.role === 'finish'),
+          ok: !issues.some(issue => issue.severity === 'block'), issues: issues.map(issue => issue.code),
+          ...(routeNow() ? { route: routeNow() } : {})
+        }
+      });
+    },
+    state() { return { meta, frames, color, taps, locked, decoded, lastInfo }; }
+  };
+  post({ type: 'captureReady', packVersion: VERSION });
+})();
+</script>

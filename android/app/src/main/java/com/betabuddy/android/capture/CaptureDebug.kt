@@ -24,10 +24,14 @@ object CaptureDebug {
     @Volatile var packFiles: PackWebView.Files? = null
     /** A synthetic gym directory in place of the bundled one. */
     @Volatile var directory: List<DirectoryGym>? = null
+    /** Behave as a build without any pack, whatever is in the app's assets. */
+    @Volatile var noPack: Boolean = false
+    /** Called with each session the screen makes, before it starts: a test shortens its limits here. */
+    @Volatile var configure: ((CaptureSession) -> Unit)? = null
     /** The source the screen last made, so a test can interrupt it. */
     @Volatile var lastSource: CaptureSource? = null
 
     fun reset() {
-        video = null; fieldOfView = null; attitude = null; location = null; pack = null; packFiles = null; directory = null; lastSource = null
+        video = null; fieldOfView = null; attitude = null; location = null; pack = null; packFiles = null; directory = null; lastSource = null; noPack = false; configure = null
     }
 }
