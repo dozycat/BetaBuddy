@@ -142,6 +142,9 @@ class CaptureSession(
     /** The field of view last told to the page. */
     var lastFieldOfView: Double? by mutableStateOf<Double?>(null)
         private set
+    /** Which recorder wrote the last clip; for the log, the debug readout and tests. */
+    var lastRecorder: RecorderSwitch.Path? by mutableStateOf<RecorderSwitch.Path?>(null)
+        private set
     /** Debug builds: the last picture handed to the page is also written here, to be looked at. */
     var keepFrame: File? = null
     /** When the page last answered (or was last asked to start over). A page that has gone quiet must not leave an old judgement on the screen. */
@@ -617,7 +620,8 @@ class CaptureSession(
         }
         if (phase != Phase.Saving) return
         recording = null
-        Log.i(TAG, "recorded ${"%.1f".format(result.seconds)} s, end ${result.end}, stop $stopReason")
+        Log.i(TAG, "recorded ${"%.1f".format(result.seconds)} s by ${if (result.recorder == RecorderSwitch.Path.OWN) "the app's own recorder" else "the camera library's recorder"}, end ${result.end}, stop $stopReason")
+        lastRecorder = result.recorder
         val file = result.file
         if (file == null || result.seconds < CaptureLimits.MIN_SECONDS) {
             (file ?: recordingFile)?.let { it.delete(); CaptureSweep.noteFile(it).delete() }

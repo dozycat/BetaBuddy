@@ -530,6 +530,7 @@ private fun DebugReadout(session: CaptureSession) {
         "pitch ${number(info?.pitch)}  roll ${number(info?.roll)}  shake ${number(info?.shake, 3)}  pose ${if (info?.pose != null) "yes" else "no"}",
         "page ${session.page.name.lowercase()}  replies/s ${number(metrics.assessmentsPerSecond, 2)}  hand-over ${number(handOver)} ms",
         "issues ${session.assessment?.issues?.joinToString(",") { it.code + if (it.blocking) "!" else "" }?.ifEmpty { "none" } ?: "-"}",
+        "last clip by ${session.lastRecorder?.name?.lowercase() ?: "-"}",
     )
     Box(Modifier.fillMaxSize().padding(6.dp), contentAlignment = Alignment.BottomStart) {
         Text(

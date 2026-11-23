@@ -75,6 +75,7 @@ class CaptureScreenTest {
         scenario?.close()
         setLanguage(null)
         CaptureDebug.reset()
+        if (forgetRecorderChoice) context.getSharedPreferences("capture", android.content.Context.MODE_PRIVATE).edit().remove(CameraSource.KEY_OWN_RECORDER).commit()
         for (climb in store.climbs) if (climb.id !in before) runCatching { store.delete(climb) }
         clips.values.forEach { it.delete() }
         // A clip a failed test left undecided would be taken into the logbook at the next start.
@@ -85,6 +86,7 @@ class CaptureScreenTest {
         assertFalse("the camera gate is left open", CameraGate.open.value)
     }
 
+    private var forgetRecorderChoice = false
     private val clips = mutableMapOf<Boolean, File>()
     /** The drawn wall, with or without somebody standing in front of it. */
     private fun wall(person: Boolean): File = clips.getOrPut(person) {
@@ -661,6 +663,46 @@ class CaptureScreenTest {
         awaitGone("captureScreen")
     }
 
+    @Test fun aDeviceThatNeededTheAppsOwnRecorderRecordsWithItFromTheStart() {
+        assumeTrue(context.packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_CAMERA_ANY))
+        instrumentation.uiAutomation.grantRuntimePermission(context.packageName, Manifest.permission.CAMERA)
+        // As left behind by a recording on which the camera library's recorder wrote nothing.
+        val preferences = context.getSharedPreferences("capture", android.content.Context.MODE_PRIVATE)
+        val before = preferences.contains(CameraSource.KEY_OWN_RECORDER)
+        preferences.edit().putBoolean(CameraSource.KEY_OWN_RECORDER, true).commit()
+        forgetRecorderChoice = !before
+        CaptureDebug.noPack = true
+        launch()
+        await("captureNoChecks", 40)
+        rule.onNodeWithTag("captureRecord").performClick()
+        await("captureStop")
+        rule.waitUntil(30_000) { session().recordedSeconds >= 3.0 || session().notice != null }
+        assertNull("the app's own recorder wrote nothing", session().notice)
+        rule.onNodeWithTag("captureStop").performClick()
+        await("captureSaved", 40)
+        assertEquals(RecorderSwitch.Path.OWN, session().lastRecorder)
+        val saved = newClimbs().single()
+        val file = store.file(saved.videoName)
+        val info = VideoAnalyzer.probe(file)
+        assertTrue("${info.durationSeconds}", info.hasVideo && (info.durationSeconds ?: 0.0) >= 2.5)
+        // Upright, 16:9, a picture track only, and a frame rate worth the name.
+        assertTrue("${saved.analysis.aspectRatio}", Math.abs(saved.analysis.aspectRatio - 9.0 / 16) < 0.01)
+        val extractor = android.media.MediaExtractor().apply { setDataSource(file.path) }
+        val kinds = (0 until extractor.trackCount).map { extractor.getTrackFormat(it).getString(android.media.MediaFormat.KEY_MIME).orEmpty().substringBefore('/') }
+        extractor.selectTrack(0)
+        var samples = 0
+        while (extractor.sampleTime >= 0) { samples += 1; if (!extractor.advance()) break }
+        extractor.release()
+        assertEquals(listOf("video"), kinds)
+        val rate = samples / info.durationSeconds!!
+        android.util.Log.i("capture-test", "own recorder: ${info.width}x${info.height} rotation ${info.rotation}, ${"%.1f".format(info.durationSeconds)} s, $samples pictures, ${"%.1f".format(rate)} per second, ${file.length() / 1024} KB")
+        assertTrue("$rate pictures a second", rate >= 10.0)
+        // Pose recognition takes the clip like any other.
+        await("captureAnalysisMessage", 120)
+        rule.onNodeWithTag("captureDone").performClick()
+        awaitGone("captureScreen")
+    }
+
     @Test fun theDevicesOwnCameraStartsRecordsAndSaves() {
         // A smoke test of the camera library on whatever camera the device (or emulator scene) has; it says nothing about framing.
         assumeTrue(context.packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_CAMERA_ANY))
@@ -683,6 +725,9 @@ class CaptureScreenTest {
         val saved = newClimbs().single()
         val info = VideoAnalyzer.probe(store.file(saved.videoName))
         assertTrue(info.hasVideo && (info.durationSeconds ?: 0.0) >= 1.5)
+        // Whichever recorder wrote it (the camera library's, or the app's own where that one writes nothing).
+        android.util.Log.i("capture-test", "device camera clip written by ${session().lastRecorder}")
+        assertNotNull(session().lastRecorder)
         // The clip is upright and has a picture track only: no sound was recorded.
         val extractor = android.media.MediaExtractor().apply { setDataSource(store.file(saved.videoName).path) }
         val kinds = (0 until extractor.trackCount).map { extractor.getTrackFormat(it).getString(android.media.MediaFormat.KEY_MIME).orEmpty().substringBefore('/') }

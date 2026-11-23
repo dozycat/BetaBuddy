@@ -65,7 +65,7 @@ interface CaptureFrame {
 enum class ClipEnd { STOPPED, LIMIT, STORAGE, SOURCE, FAILED }
 
 /** [file] is null when nothing usable was written. */
-data class ClipResult(val file: File?, val seconds: Double, val end: ClipEnd)
+data class ClipResult(val file: File?, val seconds: Double, val end: ClipEnd, val recorder: RecorderSwitch.Path = RecorderSwitch.Path.LIBRARY)
 
 interface ClipRecording {
     /** Closes the clip with what has been written. The result arrives through the callback given at the start. */
@@ -137,6 +137,9 @@ class CameraSource(context: Context) : CaptureSource {
     private var stateObserver: Observer<CameraState>? = null
     private var stateSource: androidx.lifecycle.LiveData<CameraState>? = null
     private val planes = PlaneCopies()
+    private val preferences = this.context.getSharedPreferences("capture", Context.MODE_PRIVATE)
+    /** The recording the app's own recorder is writing right now, if it is the one recording. */
+    @Volatile private var active: Take? = null
     @Volatile private var sensor: Triple<Double, Double, Double>? = null
     @Volatile private var measured: Pair<Int, Int>? = null
 
@@ -181,11 +184,13 @@ class CameraSource(context: Context) : CaptureSource {
         val executor = Executors.newSingleThreadExecutor { task -> Thread(task, "capture-frames").apply { isDaemon = true } }
         analysis.setAnalyzer(executor) { image ->
             image.use {
+                // The app's own recorder, when it is the one recording, takes every picture, before anything else is done with it.
+                active?.offer(it)
                 val frame = CameraFrame(it, planes)
                 // The field of view is that of the pictures actually delivered: known once the first one is here.
                 if (measured?.first != frame.width || measured?.second != frame.height) {
                     measured = frame.width to frame.height
-                    // Which clock the camera stamps its pictures with: the recorder takes it to be the system's
+                    // Which clock the camera stamps its pictures with: the library's recorder takes it to be the system's
                     // uptime, and a camera that counts from somewhere else gives it nothing it will keep.
                     Log.i(TAG, "first frame ${frame.width}x${frame.height}: camera clock ${"%.1f".format(frame.time)} s, uptime ${"%.1f".format(android.os.SystemClock.uptimeMillis() / 1000.0)} s, since boot ${"%.1f".format(android.os.SystemClock.elapsedRealtimeNanos() / 1e9)} s")
                     horizontalFieldOfView = sensor?.let { (long, short, focal) -> CaptureMotion.streamFieldOfView(long, short, focal, maxOf(frame.width, frame.height), minOf(frame.width, frame.height)) }
@@ -194,18 +199,20 @@ class CameraSource(context: Context) : CaptureSource {
             }
         }
 
+        // A device whose camera the library's recorder could not record from does without it from the start.
+        val ownOnly = preferences.getBoolean(KEY_OWN_RECORDER, false)
         val camera = try {
             provider.unbindAll()
-            provider.bindToLifecycle(owner, selector, preview, analysis, video)
+            if (ownOnly) provider.bindToLifecycle(owner, selector, preview, analysis) else provider.bindToLifecycle(owner, selector, preview, analysis, video)
         } catch (error: Exception) {
-            // No camera that can do all three at once, or the camera could not be opened.
+            // No camera that can do all of it at once, or the camera could not be opened.
             Log.e(TAG, "camera cannot be bound", error)
             executor.shutdown()
             throw CaptureSourceException(CaptureSourceException.Reason.UNAVAILABLE)
         }
         this.provider = provider
         this.preview = preview
-        this.video = video
+        this.video = if (ownOnly) null else video
         frames = executor
         previewView?.let { preview.surfaceProvider = it.surfaceProvider }
         measured = null
@@ -227,6 +234,8 @@ class CameraSource(context: Context) : CaptureSource {
         stateObserver?.let { stateSource?.removeObserver(it) }
         stateObserver = null
         stateSource = null
+        // A clip the app's own recorder is writing is closed with what it has.
+        active?.let { take -> kotlin.concurrent.thread(name = "capture-close") { take.end(ClipEnd.SOURCE) } }
         runCatching { provider?.unbindAll() }
         provider = null
         preview = null
@@ -235,42 +244,166 @@ class CameraSource(context: Context) : CaptureSource {
         frames = null
     }
 
-    @SuppressLint("MissingPermission")   // No audio is enabled, so only the camera permission is involved; it was checked in start.
     override fun startRecording(file: File, maxSeconds: Double, onProgress: (Double) -> Unit, onFinished: (ClipResult) -> Unit): ClipRecording? {
-        val video = video ?: return null
-        var seconds = 0.0
-        val recording: Recording = try {
-            // `withAudioEnabled` is never called: the clip has a video track and nothing else.
-            video.output.prepareRecording(context, FileOutputOptions.Builder(file).setDurationLimitMillis((maxSeconds * 1000).toLong()).build())
-                .start(ContextCompat.getMainExecutor(context)) { event ->
-                    when (event) {
-                        is VideoRecordEvent.Status -> {
-                            seconds = event.recordingStats.recordedDurationNanos / 1e9
-                            onProgress(seconds)
-                        }
-                        is VideoRecordEvent.Finalize -> {
-                            seconds = maxOf(seconds, event.recordingStats.recordedDurationNanos / 1e9)
-                            val end = when (event.error) {
-                                VideoRecordEvent.Finalize.ERROR_NONE -> ClipEnd.STOPPED
-                                VideoRecordEvent.Finalize.ERROR_DURATION_LIMIT_REACHED, VideoRecordEvent.Finalize.ERROR_FILE_SIZE_LIMIT_REACHED -> ClipEnd.LIMIT
-                                VideoRecordEvent.Finalize.ERROR_INSUFFICIENT_STORAGE -> ClipEnd.STORAGE
-                                VideoRecordEvent.Finalize.ERROR_SOURCE_INACTIVE -> ClipEnd.SOURCE
-                                else -> ClipEnd.FAILED
+        if (provider == null) return null
+        val take = Take(file, maxSeconds, onProgress, onFinished, RecorderSwitch(remembered = video == null))
+        if (take.switch.path == RecorderSwitch.Path.OWN) take.startOwn() else if (!take.startLibrary()) return null
+        return take
+    }
+
+    /**
+     * One recording. The camera library's recorder writes it, unless it turns out to write nothing
+     * on this device (or did so before): then the app's own encoder does, from the pictures the
+     * frame thread receives, without anything changing for the screen above.
+     */
+    private inner class Take(
+        private val file: File, private val maxSeconds: Double,
+        private val onProgress: (Double) -> Unit, private val onFinished: (ClipResult) -> Unit, val switch: RecorderSwitch,
+    ) : ClipRecording {
+        private var library: Recording? = null
+        private var own: FrameRecorder? = null
+        private val part = File(file.path + ".part")
+        private val startedAt = android.os.SystemClock.elapsedRealtime()
+        @Volatile private var stopRequested = false
+        @Volatile private var ended = false
+        private var reported = 0.0
+        private val lock = Any()
+
+        @SuppressLint("MissingPermission")   // No audio is enabled, so only the camera permission is involved; it was checked in start.
+        fun startLibrary(): Boolean {
+            val video = video ?: return false
+            var seconds = 0.0
+            library = try {
+                // `withAudioEnabled` is never called: the clip has a video track and nothing else.
+                video.output.prepareRecording(context, FileOutputOptions.Builder(file).setDurationLimitMillis((maxSeconds * 1000).toLong()).build())
+                    .start(ContextCompat.getMainExecutor(context)) { event ->
+                        when (event) {
+                            is VideoRecordEvent.Status -> if (switch.path == RecorderSwitch.Path.LIBRARY) {
+                                seconds = event.recordingStats.recordedDurationNanos / 1e9
+                                if (seconds > 0) switch.libraryWrote()
+                                onProgress(seconds)
                             }
-                            // Of these, only the last kind leaves no file that can be played.
-                            val usable = end != ClipEnd.FAILED && file.isFile && file.length() > 0
-                            if (!usable) Log.e(TAG, "recording ended with error ${event.error}", event.cause)
-                            onFinished(ClipResult(if (usable) file else null, if (usable) seconds else 0.0, end))
+                            is VideoRecordEvent.Finalize -> {
+                                seconds = maxOf(seconds, event.recordingStats.recordedDurationNanos / 1e9)
+                                if (switch.path == RecorderSwitch.Path.OWN) {
+                                    // The clip is the app's own recorder's by now; what the library's left behind is not it.
+                                } else if (seconds <= 0.0 && switch.libraryEndedEmpty(stopRequested)) {
+                                    changeOver("the camera library's recorder ended without video (error ${event.error})")
+                                } else {
+                                    val end = when (event.error) {
+                                        VideoRecordEvent.Finalize.ERROR_NONE -> ClipEnd.STOPPED
+                                        VideoRecordEvent.Finalize.ERROR_DURATION_LIMIT_REACHED, VideoRecordEvent.Finalize.ERROR_FILE_SIZE_LIMIT_REACHED -> ClipEnd.LIMIT
+                                        VideoRecordEvent.Finalize.ERROR_INSUFFICIENT_STORAGE -> ClipEnd.STORAGE
+                                        VideoRecordEvent.Finalize.ERROR_SOURCE_INACTIVE -> ClipEnd.SOURCE
+                                        else -> ClipEnd.FAILED
+                                    }
+                                    // Of these, only the last kind leaves no file that can be played.
+                                    val usable = end != ClipEnd.FAILED && file.isFile && file.length() > 0
+                                    if (!usable) Log.e(TAG, "recording ended with error ${event.error}", event.cause)
+                                    ended = true
+                                    Log.i(TAG, "clip written by the camera library's recorder: ${"%.1f".format(seconds)} s")
+                                    onFinished(ClipResult(if (usable) file else null, if (usable) seconds else 0.0, end, RecorderSwitch.Path.LIBRARY))
+                                }
+                            }
+                            else -> Unit
                         }
-                        else -> Unit
                     }
+            } catch (error: Exception) {
+                Log.e(TAG, "the camera library's recorder could not start", error)
+                null
+            }
+            if (library == null) {
+                // It will not even start: the app's own recorder does the whole clip.
+                switch.libraryEndedEmpty(stopRequested = false)
+                startOwn()
+                return true
+            }
+            // The library's recorder gets a little while to write its first video. Nothing by then: the app's own takes over.
+            main.postDelayed({
+                if (!ended && !stopRequested && switch.shouldSwitch(android.os.SystemClock.elapsedRealtime() - startedAt)) {
+                    changeOver("the camera library's recorder wrote nothing in ${RecorderSwitch.GRACE_MILLIS / 1000} s")
                 }
-        } catch (error: Exception) {
-            Log.e(TAG, "recording could not start", error)
-            return null
+            }, RecorderSwitch.GRACE_MILLIS)
+            return true
         }
-        return object : ClipRecording {
-            override fun stop() { main.post { runCatching { recording.stop() } } }
+
+        private fun changeOver(why: String) {
+            Log.w(TAG, "switching to the app's own recorder: $why")
+            // Remembered for this device: the next recording starts on the app's own recorder.
+            preferences.edit().putBoolean(KEY_OWN_RECORDER, true).apply()
+            runCatching { library?.stop() }
+            startOwn()
+        }
+
+        /** From now on the frame thread hands this take every picture. */
+        fun startOwn() {
+            active = this
+        }
+
+        /** A picture from the camera, on the frame thread. */
+        fun offer(image: ImageProxy) {
+            var limit = false
+            var seconds: Double
+            synchronized(lock) {
+                if (ended) return
+                val crop = image.cropRect
+                val width = crop.width() and 1.inv()
+                val height = crop.height() and 1.inv()
+                val recorder = own ?: try {
+                    part.delete()
+                    FrameRecorder(part, width, height, image.imageInfo.rotationDegrees).also { own = it }
+                } catch (error: Exception) {
+                    Log.e(TAG, "the app's own recorder could not start", error)
+                    null
+                }
+                if (recorder == null) { seconds = 0.0 } else {
+                    val planes = image.planes
+                    seconds = recorder.append(
+                        FrameRecorder.Plane(planes[0].buffer, planes[0].rowStride, planes[0].pixelStride),
+                        FrameRecorder.Plane(planes[1].buffer, planes[1].rowStride, planes[1].pixelStride),
+                        FrameRecorder.Plane(planes[2].buffer, planes[2].rowStride, planes[2].pixelStride),
+                        crop, System.nanoTime(),   // the app's own clock, whatever the camera's says
+                    )
+                    limit = seconds >= maxSeconds
+                }
+                if (recorder == null) { /* closed below */ } else if (seconds - reported >= 0.25) {
+                    reported = seconds
+                    main.post { if (!ended) onProgress(seconds) }
+                }
+                if (recorder == null) limit = false
+            }
+            if (own == null) end(ClipEnd.FAILED) else if (limit) end(ClipEnd.LIMIT)
+        }
+
+        /** Closes the app's own recording with what it has, and says how it went. Once. */
+        fun end(how: ClipEnd) {
+            val recorder: FrameRecorder?
+            synchronized(lock) {
+                if (ended) return
+                ended = true
+                recorder = own
+            }
+            if (active === this) active = null
+            val playable = recorder?.finish() == true
+            val seconds = recorder?.seconds ?: 0.0
+            var written = false
+            if (playable) {
+                file.delete()
+                written = part.renameTo(file)
+            }
+            part.delete()
+            Log.i(TAG, "clip written by the app's own recorder: ${"%.1f".format(seconds)} s, ${recorder?.frames ?: 0} pictures${if (written) "" else ", nothing usable"}")
+            main.post { onFinished(ClipResult(if (written) file else null, if (written) seconds else 0.0, if (written) how else ClipEnd.FAILED, RecorderSwitch.Path.OWN)) }
+        }
+
+        override fun stop() {
+            stopRequested = true
+            if (switch.path == RecorderSwitch.Path.OWN) {
+                // Closing the file takes a moment: not on the main thread.
+                kotlin.concurrent.thread(name = "capture-close") { end(ClipEnd.STOPPED) }
+            } else {
+                main.post { runCatching { library?.stop() } }
+            }
         }
     }
 
@@ -323,7 +456,9 @@ class CameraSource(context: Context) : CaptureSource {
         }
     }
 
-    private companion object {
-        const val TAG = "capture"   // Local logcat only.
+    companion object {
+        private const val TAG = "capture"   // Local logcat only.
+        /** Set once the camera library's recorder was seen to write nothing on this device. */
+        const val KEY_OWN_RECORDER = "ownRecorder"
     }
 }
