@@ -109,6 +109,12 @@ data class CaptureRoute(
     val title: String get() = name?.takeIf { it.isNotBlank() } ?: nameZh?.takeIf { it.isNotBlank() } ?: id
 
     /**
+     * What is kept with a record: the id and the problem's own name. The name and grade the page
+     * gave in the interface language of the moment are not stored; they are looked up when shown.
+     */
+    fun stored(): CaptureRoute = CaptureRoute(id = id, confidence = confidence, nameZh = nameZh)
+
+    /**
      * The grade as one of the values the logbook uses (V0–V12), or null when the page's text is
      * anything else. Gyms write grades in their own ways; only this form is the same in every language.
      */
@@ -135,7 +141,10 @@ data class CaptureSummary(
     val ok: Boolean = false,
     val issues: List<String> = emptyList(),
     val route: CaptureRoute? = null,
-)
+) {
+    /** As it is written into the archive: without anything in an interface language. */
+    fun stored(): CaptureSummary = copy(route = route?.stored())
+}
 
 /**
  * What a record made with the in-app camera keeps about how it was framed. Imported records, and
@@ -156,6 +165,14 @@ data class CaptureInfo(
     /** The pack's own problem the capture page recognised and the user did not reject: its id, and its own name (not a translation) when the page gave one. */
     val routeId: String? = null,
     val routeName: String? = null,
+    /**
+     * What the analysis page said it did with the capture plan: true when it went by the plan's
+     * marks, false when it could not (then [planUnusedReason] says why, in the page's own code) and
+     * analysed as if there were none. Null until an analysis has said. Nothing may present the
+     * marks as used while this is not true.
+     */
+    val planUsed: Boolean? = null,
+    val planUnusedReason: String? = null,
 )
 
 @Serializable

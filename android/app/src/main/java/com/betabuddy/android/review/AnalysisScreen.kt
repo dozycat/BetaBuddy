@@ -43,6 +43,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.view.WindowCompat
 import com.betabuddy.android.R
+import com.betabuddy.android.journal.AnalysisDesk
 import com.betabuddy.android.ui.common.BBIcons
 import com.betabuddy.android.ui.common.BigButton
 import com.betabuddy.android.ui.common.ColorCard
@@ -58,8 +59,14 @@ import com.betabuddy.android.ui.theme.BB
 @Composable
 internal fun AnalysisScreen(session: AnalysisSession, onDone: () -> Unit) {
     DisposableEffect(session) {
+        // From here on this visit does the work for this record: the queue that analyses camera
+        // records out of sight stops its own run of it, so one record is never analysed twice at once.
+        AnalysisDesk.enter(session.climbId)
         session.open()
-        onDispose { session.close() }
+        onDispose {
+            session.close()
+            AnalysisDesk.leave(session.climbId)
+        }
     }
     Dialog(
         onDismissRequest = onDone,

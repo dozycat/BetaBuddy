@@ -1,6 +1,9 @@
 package com.betabuddy.android.capture
 
 import android.Manifest
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -26,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -51,6 +55,7 @@ internal fun CaptureGymSheet(
     onSelect: (String?, String) -> Unit, onClose: () -> Unit,
 ) {
     var all by remember { mutableStateOf(false) }
+    val context = LocalContext.current
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted -> locator.onPermissionResult(granted) }
     LaunchedEffect(Unit) { locator.locateIfAllowed() }
     if (all) {
@@ -66,18 +71,33 @@ internal fun CaptureGymSheet(
                 val note = stringResource(R.string.capture_gym_location_note)
                 when (locator.access) {
                     GymLocator.Access.ALLOWED -> {
-                        val suggestions = locator.suggestions(directory)
                         Header(stringResource(R.string.capture_gym_near))
-                        for (item in suggestions.ranked) GymRow(item.gym, captureDistance(item), item.gym.id == gymId, "nearbyGym-${item.gym.id}") { onSelect(item.gym.id, item.gym.name) }
-                        if (locator.locating) CircularProgressIndicator(color = BB.Ink, trackColor = BB.Line, strokeWidth = 2.dp, modifier = Modifier.padding(vertical = 8.dp).size(20.dp))
-                        else if (suggestions.ranked.isEmpty()) Text(stringResource(R.string.capture_gym_none_near), style = BB.Subheadline, color = BB.Muted, modifier = Modifier.padding(vertical = 8.dp))
-                        Text(note, style = BB.Caption, color = BB.Muted)
-                        // Where distances from the directory's coordinates are shown, their source is named.
-                        if (directory.any { it.coordinate != null }) Text(GymDirectory.COORDINATE_CREDIT, style = BB.Caption, color = BB.Muted, modifier = Modifier.testTag("coordinateCredit"))
-                        // Gyms the directory cannot place more exactly than their district or city: listed, never measured.
-                        if (suggestions.sameCity.isNotEmpty()) {
-                            Header(stringResource(R.string.capture_gym_same_city), Modifier.padding(top = 10.dp))
-                            for (gym in suggestions.sameCity) GymRow(gym, null, gym.id == gymId, "cityGym-${gym.id}") { onSelect(gym.id, gym.name) }
+                        // Waiting for a position, having none, and having one with no gym near it are three different things to be told.
+                        when {
+                            locator.locating -> Row(
+                                Modifier.padding(vertical = 8.dp).testTag("locationWaiting"),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                CircularProgressIndicator(color = BB.Ink, trackColor = BB.Line, strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
+                                Text(stringResource(R.string.capture_location_waiting), style = BB.Subheadline, color = BB.Muted)
+                            }
+                            locator.fix == null -> {
+                                Text(stringResource(R.string.capture_location_unavailable), style = BB.Subheadline, color = BB.Muted, modifier = Modifier.padding(top = 8.dp).testTag("locationUnavailable"))
+                                TextButton(onClick = { locator.retry() }, modifier = Modifier.testTag("locationRetry")) { Text(stringResource(R.string.capture_location_retry)) }
+                            }
+                            else -> {
+                                val suggestions = locator.suggestions(directory)
+                                for (item in suggestions.ranked) GymRow(item.gym, captureDistance(item), item.gym.id == gymId, "nearbyGym-${item.gym.id}") { onSelect(item.gym.id, item.gym.name) }
+                                if (suggestions.ranked.isEmpty()) Text(stringResource(R.string.capture_gym_none_near), style = BB.Subheadline, color = BB.Muted, modifier = Modifier.padding(vertical = 8.dp).testTag("noGymNear"))
+                                Text(note, style = BB.Caption, color = BB.Muted)
+                                // Where distances from the directory's coordinates are shown, their source is named.
+                                if (directory.any { it.coordinate != null }) Text(GymDirectory.COORDINATE_CREDIT, style = BB.Caption, color = BB.Muted, modifier = Modifier.testTag("coordinateCredit"))
+                                // Gyms the directory cannot place more exactly than their district or city: listed, never measured.
+                                if (suggestions.sameCity.isNotEmpty()) {
+                                    Header(stringResource(R.string.capture_gym_same_city), Modifier.padding(top = 10.dp))
+                                    for (gym in suggestions.sameCity) GymRow(gym, null, gym.id == gymId, "cityGym-${gym.id}") { onSelect(gym.id, gym.name) }
+                                }
+                            }
                         }
                     }
                     GymLocator.Access.NOT_ASKED -> {
@@ -91,7 +111,13 @@ internal fun CaptureGymSheet(
                         }
                         Text(note, style = BB.Caption, color = BB.Muted)
                     }
-                    GymLocator.Access.REFUSED -> Unit
+                    // Refused: said so, with where to change it.
+                    GymLocator.Access.REFUSED -> {
+                        Text(stringResource(R.string.capture_location_refused), style = BB.Subheadline, color = BB.Muted, modifier = Modifier.testTag("locationRefused"))
+                        TextButton(onClick = {
+                            runCatching { context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null))) }
+                        }) { Text(stringResource(R.string.capture_open_settings)) }
+                    }
                 }
                 Row(
                     Modifier.fillMaxWidth().padding(top = 10.dp).defaultMinSize(minHeight = 48.dp).clickable(role = Role.Button) { all = true }.testTag("allGyms"),

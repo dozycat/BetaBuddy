@@ -27,9 +27,13 @@ import com.betabuddy.android.journal.GymSuggestions
  * With approximate location the system reports a position a kilometre or two off, so on most
  * phones distances only order the list and are not shown as numbers (see [GymDistance.USEFUL_ACCURACY]).
  */
-class GymLocator(context: Context, private val debugFix: Fix? = null) {
+class GymLocator(context: Context, private val standIn: StandIn? = null) {
     enum class Access { NOT_ASKED, ALLOWED, REFUSED }
     data class Fix(val latitude: Double, val longitude: Double, val accuracy: Double)
+    /** A made-up state in place of the system's, for device tests and debug runs: nothing is asked, no location service is touched. */
+    data class StandIn(val access: Access = Access.ALLOWED, val fix: Fix? = null, val locating: Boolean = false)
+
+    private val debugFix: Fix? get() = standIn?.fix
 
     private val context = context.applicationContext
     private val preferences = this.context.getSharedPreferences("capture", Context.MODE_PRIVATE)
@@ -37,15 +41,17 @@ class GymLocator(context: Context, private val debugFix: Fix? = null) {
 
     var access: Access by mutableStateOf(currentAccess())
         private set
-    var fix: Fix? by mutableStateOf(debugFix)
+    var fix: Fix? by mutableStateOf(standIn?.fix)
         private set
-    var locating: Boolean by mutableStateOf(false)
+    /** A fix has been asked for and has not arrived yet. */
+    var locating: Boolean by mutableStateOf(standIn?.locating ?: false)
         private set
 
     private fun granted() = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
 
     private fun currentAccess(): Access = when {
-        debugFix != null || granted() -> Access.ALLOWED
+        standIn != null -> standIn.access
+        granted() -> Access.ALLOWED
         // The system does not say whether it has asked before; the app remembers a refusal itself.
         preferences.getBoolean(KEY_REFUSED, false) -> Access.REFUSED
         else -> Access.NOT_ASKED
@@ -53,6 +59,7 @@ class GymLocator(context: Context, private val debugFix: Fix? = null) {
 
     /** The user answered the system's question. */
     fun onPermissionResult(allowed: Boolean) {
+        if (standIn != null) return
         preferences.edit { putBoolean(KEY_REFUSED, !allowed) }
         access = currentAccess()
         if (allowed) locateIfAllowed()
@@ -62,7 +69,7 @@ class GymLocator(context: Context, private val debugFix: Fix? = null) {
     @SuppressLint("MissingPermission")   // Checked by `granted()`.
     fun locateIfAllowed() {
         access = currentAccess()
-        if (access != Access.ALLOWED || fix != null || locating || debugFix != null || !granted()) return
+        if (standIn != null || access != Access.ALLOWED || fix != null || locating || !granted()) return
         val manager = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager ?: return
         val enabled = runCatching { manager.getProviders(true) }.getOrDefault(emptyList())
         // The precise-only provider is of no use to approximate permission before Android 12.
@@ -98,6 +105,9 @@ class GymLocator(context: Context, private val debugFix: Fix? = null) {
             finish(null)
         }
     }
+
+    /** Asks again after a fix could not be had. */
+    fun retry() = locateIfAllowed()
 
     /** Empty without a position. */
     fun suggestions(directory: List<DirectoryGym>): GymSuggestions {

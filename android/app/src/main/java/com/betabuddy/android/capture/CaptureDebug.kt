@@ -19,6 +19,8 @@ object CaptureDebug {
     @Volatile var attitude: CaptureFrameInfo? = null
     /** A position fix, so that nothing is asked and no location service is needed. */
     @Volatile var location: GymLocator.Fix? = null
+    /** Any other state of the location (never asked, refused, waiting, no fix) in place of the system's. Wins over [location]. */
+    @Volatile var locationState: GymLocator.StandIn? = null
     /** A synthetic pack and where its files are, in place of the one in the app's assets. */
     @Volatile var pack: GymPack? = null
     @Volatile var packFiles: PackWebView.Files? = null
@@ -32,6 +34,6 @@ object CaptureDebug {
     @Volatile var lastSource: CaptureSource? = null
 
     fun reset() {
-        video = null; fieldOfView = null; attitude = null; location = null; pack = null; packFiles = null; directory = null; lastSource = null; noPack = false; configure = null
+        video = null; fieldOfView = null; attitude = null; location = null; locationState = null; pack = null; packFiles = null; directory = null; lastSource = null; noPack = false; configure = null
     }
 }

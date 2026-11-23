@@ -25,7 +25,11 @@ import java.io.InputStream
  * for the capture and analysis pages that answer from a script (the same two pages the iOS tests
  * use, see ios/TestSupport). No venue, route or algorithm is in it.
  */
-internal class StandInPack(testContext: Context, capture: Boolean = true, analysis: Boolean = true, step: Int = 5, directoryIds: Boolean = true) : PackWebView.Files {
+internal class StandInPack(
+    testContext: Context, capture: Boolean = true, analysis: Boolean = true, step: Int = 5, directoryIds: Boolean = true,
+    /** The capture page loads but never says it is ready, like one whose script did not come up. */
+    silent: Boolean = false,
+) : PackWebView.Files {
     private val pages = buildMap {
         put("index.html", "<!doctype html><meta charset=\"utf-8\"><title>synthetic pack</title><p>synthetic pack</p><script>window.BetaBuddyGym={openWall(){},openRoute(){},openVenue(){},state(){return {ready:true}}};try{window.webkit.messageHandlers.gym.postMessage({type:'ready',packVersion:'$VERSION',routeCount:0})}catch(e){}</script>")
         // A real pack's pages load their code from a file of its own, and so do these: the stand-in's
@@ -39,7 +43,9 @@ internal class StandInPack(testContext: Context, capture: Boolean = true, analys
             put(name.replace("-standin", ""), "<!doctype html><meta charset=\"utf-8\"><title>stand-in</title><script src=\"$script\"></script>")
         }
         // `step` is how many frames each scripted state of the capture stand-in lasts.
-        if (capture) page("capture-standin.html", "capture.js") { code -> code.replace("const STEP = 5;", "const STEP = $step;").also { check("const STEP = $step;" in it) } }
+        if (capture) page("capture-standin.html", "capture.js") { code ->
+            if (silent) "/* says nothing */" else code.replace("const STEP = 5;", "const STEP = $step;").also { check("const STEP = $step;" in it) }
+        }
         if (analysis) page("analysis-standin.html", "analysis.js")
     }
 

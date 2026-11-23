@@ -124,7 +124,7 @@ class CameraSource(context: Context) : CaptureSource {
     private val context = context.applicationContext
     override var onFrame: ((CaptureFrame) -> Unit)? = null
     override var onInterruption: (() -> Unit)? = null
-    override var horizontalFieldOfView: Double? = null
+    @Volatile override var horizontalFieldOfView: Double? = null
         private set
     override val needsCameraPermission: Boolean get() = true
 
@@ -137,6 +137,8 @@ class CameraSource(context: Context) : CaptureSource {
     private var stateObserver: Observer<CameraState>? = null
     private var stateSource: androidx.lifecycle.LiveData<CameraState>? = null
     private val planes = PlaneCopies()
+    @Volatile private var sensor: Triple<Double, Double, Double>? = null
+    @Volatile private var measured: Pair<Int, Int>? = null
 
     override fun createPreview(context: Context): View = PreviewView(context).apply {
         // The whole picture, never cropped: what is drawn over it is positioned against the full frame.
@@ -177,7 +179,17 @@ class CameraSource(context: Context) : CaptureSource {
             .build()
         val video = VideoCapture.withOutput(recorder)
         val executor = Executors.newSingleThreadExecutor { task -> Thread(task, "capture-frames").apply { isDaemon = true } }
-        analysis.setAnalyzer(executor) { image -> image.use { onFrame?.invoke(CameraFrame(it, planes)) } }
+        analysis.setAnalyzer(executor) { image ->
+            image.use {
+                val frame = CameraFrame(it, planes)
+                // The field of view is that of the pictures actually delivered: known once the first one is here.
+                if (measured?.first != frame.width || measured?.second != frame.height) {
+                    measured = frame.width to frame.height
+                    horizontalFieldOfView = sensor?.let { (long, short, focal) -> CaptureMotion.streamFieldOfView(long, short, focal, maxOf(frame.width, frame.height), minOf(frame.width, frame.height)) }
+                }
+                onFrame?.invoke(frame)
+            }
+        }
 
         val camera = try {
             provider.unbindAll()
@@ -193,7 +205,9 @@ class CameraSource(context: Context) : CaptureSource {
         this.video = video
         frames = executor
         previewView?.let { preview.surfaceProvider = it.surfaceProvider }
-        horizontalFieldOfView = backCameraFieldOfView()
+        measured = null
+        horizontalFieldOfView = null
+        sensor = sensorOf(camera.cameraInfo)
         val observer = Observer<CameraState> { state ->
             // Errors the camera will not get over by itself while this screen is up.
             when (state.error?.code) {
@@ -265,17 +279,31 @@ class CameraSource(context: Context) : CaptureSource {
     }
 
     /**
-     * From the sensor's size and the lens: the field of view across the sensor's long side, then
-     * across the short side of a 16:9 picture, which is the horizontal one once the frame is upright.
+     * The bound camera's light-sensitive area (the part of the sensor its pictures come from) and
+     * focal length, in millimetres: long side, short side, focal length. What field of view a
+     * stream has follows from these and from the stream's own shape, see [CaptureMotion.streamFieldOfView].
+     * Not checked against a real phone's pictures.
      */
-    private fun backCameraFieldOfView(): Double? = runCatching {
+    @androidx.annotation.OptIn(androidx.camera.camera2.interop.ExperimentalCamera2Interop::class)
+    private fun sensorOf(info: androidx.camera.core.CameraInfo): Triple<Double, Double, Double>? = runCatching {
         val manager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
-        val id = manager.cameraIdList.firstOrNull { manager.getCameraCharacteristics(it).get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_BACK } ?: return null
+        // The camera that was actually bound; where that cannot be told, the first one facing back.
+        val id = runCatching { androidx.camera.camera2.interop.Camera2CameraInfo.from(info).cameraId }.getOrNull()
+            ?: manager.cameraIdList.firstOrNull { manager.getCameraCharacteristics(it).get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_BACK }
+            ?: return null
         val characteristics = manager.getCameraCharacteristics(id)
-        val sensor = characteristics.get(CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE) ?: return null
+        val physical = characteristics.get(CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE) ?: return null
         val focal = characteristics.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS)?.firstOrNull() ?: return null
-        val long = CaptureMotion.fieldOfView(maxOf(sensor.width, sensor.height).toDouble(), focal.toDouble()) ?: return null
-        CaptureMotion.uprightFieldOfView(long, 16.0, 9.0)
+        var width = physical.width.toDouble()
+        var height = physical.height.toDouble()
+        // The physical size is that of the whole pixel array; pictures come from the active part of it.
+        val pixels = characteristics.get(CameraCharacteristics.SENSOR_INFO_PIXEL_ARRAY_SIZE)
+        val active = characteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE)
+        if (pixels != null && active != null && pixels.width > 0 && pixels.height > 0 && active.width() in 1..pixels.width && active.height() in 1..pixels.height) {
+            width *= active.width().toDouble() / pixels.width
+            height *= active.height().toDouble() / pixels.height
+        }
+        Triple(maxOf(width, height), minOf(width, height), focal.toDouble())
     }.getOrNull()
 
     private class CameraFrame(private val image: ImageProxy, private val copies: PlaneCopies) : CaptureFrame {

@@ -20,6 +20,19 @@ object CameraGate {
 }
 
 /**
+ * The records whose analysis page the user has open right now. One record is never analysed
+ * twice at once: the queue leaves these alone, and stops its own run of one the moment the user
+ * opens it (that visit does the work).
+ */
+object AnalysisDesk {
+    private val state = MutableStateFlow<Set<String>>(emptySet())
+    val open: StateFlow<Set<String>> = state.asStateFlow()
+
+    fun enter(id: String) { state.value = state.value + id }
+    fun leave(id: String) { state.value = state.value - id }
+}
+
+/**
  * Which record the pack's analysis page should work on next, for records that asked for it when
  * they were saved: the ones made with the in-app camera. Pose recognition comes first; a record
  * still waiting for it is left alone. Pure, so the order of things can be tested on a JVM.
@@ -36,7 +49,7 @@ object AnalysisQueuePolicy {
 
     /**
      * @param results ids of records that already have a saved analysis result
-     * @param settled ids not to try again in this run of the app
+     * @param settled ids not to try again in this run of the app, and ids the user has open
      * @param paused the camera is open, or the app is not in front
      * @param hasPage the pack in this build has an analysis page
      */

@@ -152,7 +152,16 @@ class ClimbStore(val root: File) {
         if (plan.isEmpty()) return
         if (!canWrite) throw IOException("The archive could not be read and is kept as it is")
         writeAtomically(capturePlanFile(id) ?: throw IOException("Unusable record id"), plan.toByteArray(Charsets.UTF_8))
-        val next = capture.copy(hasPlan = true, summary = summary ?: capture.summary)
+        val next = capture.copy(hasPlan = true, summary = summary?.stored() ?: capture.summary)
+        persist(state.value.copy(climbs = state.value.climbs.map { if (it.id == id) it.copy(capture = next) else it }))
+    }
+
+    /** What the analysis page said it did with this record's capture plan, kept with the record. */
+    @Synchronized
+    fun setPlanUse(id: String, used: Boolean, reason: String?) {
+        val capture = state.value.climbs.firstOrNull { it.id == id }?.capture ?: return
+        val next = capture.copy(planUsed = used, planUnusedReason = if (used) null else reason?.prefix(40))
+        if (next == capture) return
         persist(state.value.copy(climbs = state.value.climbs.map { if (it.id == id) it.copy(capture = next) else it }))
     }
 
@@ -165,9 +174,12 @@ class ClimbStore(val root: File) {
         persist(state.value.copy(climbs = state.value.climbs.map { if (it.id == id) it.copy(capture = next) else it }))
     }
 
-    /** The gym of the most recent record that has one: where the next recording most likely is. */
+    /**
+     * The gym of the record made most recently that has one: where the next recording most likely
+     * is. By when the record was made, not by the climbing date the user may have set on it.
+     */
     val lastGym: Pair<String?, String>?
-        get() = climbs.firstOrNull { !it.gymName.isNullOrBlank() }?.let { it.gymId to it.gymName.orEmpty() }
+        get() = state.value.climbs.filter { !it.gymName.isNullOrBlank() }.maxByOrNull { it.date }?.let { it.gymId to it.gymName.orEmpty() }
 
     // Result of the pack's analysis page. The text is the page's own format: kept and handed back as it is.
 

@@ -13,6 +13,8 @@ import androidx.lifecycle.LifecycleOwner
 import com.betabuddy.android.data.CaptureInfo
 import com.betabuddy.android.data.CaptureRoute
 import com.betabuddy.android.data.CaptureSummary
+import com.betabuddy.android.data.CaptureSweep
+import com.betabuddy.android.data.ClipNote
 import com.betabuddy.android.data.ClimbStore
 import com.betabuddy.android.data.PoseAnalysis
 import com.betabuddy.android.data.UNGRADED_VALUE
@@ -138,17 +140,30 @@ class CaptureSession(
     private var gymChosen = false
     private var stalled = false
     private var lastWatch = 0L
+    /** The capture session of the page that `lock` was sent to. A plan is only taken from that one. */
+    private var lockedId: String? = null
+    /** The page is gone for this visit (it never came up, or failed to load, or its renderer died), as opposed to merely quiet. */
+    private var pageDead = false
+    private var sourceStarted = false
+    private var lastHanded = 0L
+    private var alive: Job? = null
+    private var readyWait: Job? = null
 
     var metrics = CaptureMetrics()
         private set
     var quietLimitSeconds = 5.0
-    /** Seconds between frames handed to the page while framing, and while recording. */
+    /** Seconds between frames handed to the page while framing. None are handed over once recording has started: the page drops them. */
     var framingInterval = 0.5
-    var recordingInterval = 1.0
+    /** A page that has not said it is ready after this long is not waited for any more. */
+    var readyLimitMillis = 15_000L
+    /** No picture from the source for this long: the preview is frozen, and recording cannot be started from it. */
+    var frozenAfterMillis = 3_000L
     var maxSeconds = CaptureLimits.MAX_SECONDS
     var watchIntervalMillis = 3_000L
     /** A recording that has written nothing after this long is not going to: it is closed and the user is told, rather than left to climb in front of a camera that records nothing. */
     var stallLimitMillis = 6_000L
+    /** Runs just before a clip is written into the logbook; a test makes that fail here. */
+    var saveFault: (() -> Unit)? = null
     /** Free space in bytes where clips are written; replaced in tests. */
     var freeBytes: () -> Long? = { CapturePipeline.freeBytes(staging) }
     /** Lets a test see how the phone is held without sensors. */
@@ -170,12 +185,12 @@ class CaptureSession(
             scope.launch {
                 if (!started) return@launch
                 frameSize = width to height
-                if (camera == Camera.STARTING) camera = Camera.RUNNING   // Only now is there something to record.
             }
         }
         source.onFrame = pipeline::handle
-        source.onInterruption = { stop(CaptureStop.INTERRUPTED) }
+        source.onInterruption = ::interrupted
         loadPage()
+        watchSource()
         scope.launch {
             // The gym of the last record is where the next one most likely is; it is a default, never a choice made for the user.
             runCatching { store().lastGym }.getOrNull()?.let { (id, name) -> if (!gymChosen) { gymId = id; gymName = name } }
@@ -183,8 +198,9 @@ class CaptureSession(
                 staging.mkdirs()
                 source.start(owner)
                 if (!started) { source.stop(); return@launch }
+                sourceStarted = true
                 pipeline.motion.start()
-                pipeline.setFeeding(page != Page.UNAVAILABLE, framingInterval)
+                refeed()
             } catch (error: CaptureSourceException) {
                 camera = if (error.reason == CaptureSourceException.Reason.DENIED) Camera.DENIED else Camera.UNAVAILABLE
             } catch (error: Exception) {
@@ -201,13 +217,50 @@ class CaptureSession(
         scope.launch {
             try {
                 source.start(owner)
+                sourceStarted = true
                 pipeline.motion.start()
-                pipeline.setFeeding(page != Page.UNAVAILABLE, framingInterval)
+                refeed()
             } catch (error: CaptureSourceException) {
                 camera = if (error.reason == CaptureSourceException.Reason.DENIED) Camera.DENIED else Camera.UNAVAILABLE
             } catch (error: Exception) {
                 camera = Camera.UNAVAILABLE
             }
+        }
+    }
+
+    /**
+     * Frames are prepared for the page (scaled, encoded, looked at for a person) only while that is
+     * of use: while framing, for a page that is up, or one that has merely gone quiet and may answer again.
+     */
+    private fun refeed() {
+        pipeline.setFeeding(started && sourceStarted && phase == Phase.Framing && (page == Page.READY || (page == Page.FAILED && !pageDead)), framingInterval)
+    }
+
+    /**
+     * The camera counts as running only while pictures are arriving. When they stop (another app
+     * took the camera, an error, the app is in the background) the preview is a frozen picture and
+     * recording cannot be started from it; when they come back, it can again.
+     */
+    private fun watchSource() {
+        alive?.cancel()
+        alive = scope.launch {
+            while (isActive) {
+                delay(500)
+                if (!sourceStarted || (camera != Camera.RUNNING && camera != Camera.STARTING)) continue
+                val last = pipeline.lastFrameNanos
+                val age = if (last == 0L) Long.MAX_VALUE else (SystemClock.elapsedRealtimeNanos() - last) / 1_000_000
+                if (camera == Camera.STARTING && age < 1_000) camera = Camera.RUNNING   // Only now is there something to record.
+                else if (camera == Camera.RUNNING && age > frozenAfterMillis && phase != Phase.Recording && phase != Phase.Saving) camera = Camera.STARTING
+            }
+        }
+    }
+
+    /** The source stopped delivering by itself. A running recording is closed and saved; nothing new can be started until pictures arrive again. */
+    private fun interrupted() {
+        stop(CaptureStop.INTERRUPTED)
+        if (camera == Camera.RUNNING) {
+            pipeline.lastFrameNanos = 0L
+            camera = Camera.STARTING
         }
     }
 
@@ -220,6 +273,8 @@ class CaptureSession(
         if (phase == Phase.Recording) stop(CaptureStop.USER)
         started = false
         watch?.cancel()
+        alive?.cancel()
+        readyWait?.cancel()
         pipeline.setFeeding(false)
         pipeline.motion.stop()
         host?.dispose()
@@ -236,7 +291,8 @@ class CaptureSession(
         source.onInterruption = null
         source.stop()
         pipeline.close()
-        held?.file?.delete()
+        // A clip that could not be saved is not thrown away behind the user's back: it stays in the
+        // staging directory with its note, and is taken into the logbook when the app next starts.
         held = null
         CameraGate.set(false)
         AnalysisService.start(context)
@@ -252,12 +308,20 @@ class CaptureSession(
             PackWebView(context, pack, Listener(), packFiles)
         } catch (error: Exception) {
             Log.e(TAG, "web view unavailable", error)   // No usable system WebView on this device.
+            pageDead = true
             page = Page.FAILED
             return
         }
         host = created
         webView = created.view
         created.load(url)
+        // A page that never says it is ready is not waited for for ever: the screen says there are
+        // no checks, and nothing more is prepared for it.
+        readyWait?.cancel()
+        readyWait = scope.launch {
+            delay(readyLimitMillis)
+            if (page == Page.LOADING) pageFailed("not ready after ${readyLimitMillis / 1000} s")
+        }
     }
 
     private val venue: String? get() = pack?.manifest?.venueId(gymId, gymName)
@@ -268,13 +332,23 @@ class CaptureSession(
         gymId = id
         gymName = name
         val begun = begun ?: return
-        if (phase == Phase.Framing && begun.venue != venue) this.begun = null
+        if (phase == Phase.Framing && begun.venue != venue) {
+            // The page's judgement so far belongs to the other gym. It gets a new session with the next
+            // frame; until then nothing of the old one is shown, locked or stored.
+            captureId = newId()
+            this.begun = null
+            assessment = null
+            fillInGrade()
+        }
     }
 
     private fun hand(frame: CapturePipeline.Frame, done: () -> Unit) {
         val host = host
         if (!started || host == null || (page != Page.READY && page != Page.FAILED)) { done(); return }
         val now = SystemClock.elapsedRealtime()
+        // Frames had stopped (the app was in the background, the camera was taken): that pause is not the page's silence.
+        if (now - lastHanded > 2_000) lastReply = now
+        lastHanded = now
         val current = begun
         if (current == null || current.id != captureId || current.width != frame.width || current.height != frame.height) {
             if (phase != Phase.Framing) { done(); return }   // A locked judgement is not started over.
@@ -311,7 +385,10 @@ class CaptureSession(
                 is CaptureMessage.Ready -> {
                     pageVersion = message.packVersion.ifEmpty { pack?.manifest?.packVersion }
                     begun = null
+                    pageDead = false
+                    readyWait?.cancel()
                     page = Page.READY
+                    refeed()
                 }
                 is CaptureMessage.Assessment -> {
                     if (phase != Phase.Framing || begun?.id != captureId) return
@@ -324,7 +401,8 @@ class CaptureSession(
                     metrics = metrics.copy(assessments = metrics.assessments + 1, assessmentSpan = (now - firstAssessment) / 1000.0)
                 }
                 is CaptureMessage.Locked -> {
-                    if (message.id.isNotEmpty() && message.id != captureId) return
+                    // Only the reply to this take's own `lock`: never one of a session that was since replaced.
+                    if (lockedId != captureId || (message.id.isNotEmpty() && message.id != captureId)) return
                     summary = message.summary
                     message.plan?.let { plan = it }
                     // The page may answer, or answer again with a fuller plan, after the clip is in the logbook.
@@ -340,9 +418,9 @@ class CaptureSession(
                 is CaptureMessage.Failed -> Log.i(TAG, "capture page reported: ${message.code}")
                 is CaptureMessage.PageError -> {
                     Log.e(TAG, "capture page error (${if (page == Page.LOADING) "before" else "after"} ready): ${message.message}")
-                    if (page == Page.LOADING) page = Page.FAILED
+                    if (page == Page.LOADING) pageFailed("script error before ready")
                 }
-                null -> if (page == Page.LOADING && GymMessage.parse(json) is GymMessage.Error) page = Page.FAILED
+                null -> if (page == Page.LOADING && GymMessage.parse(json) is GymMessage.Error) pageFailed("error before ready")
             }
         }
 
@@ -358,9 +436,10 @@ class CaptureSession(
     /** The page is gone for this visit; frames are no longer prepared for it. */
     private fun pageFailed(text: String) {
         Log.e(TAG, "capture page: $text")
+        pageDead = true
         page = Page.FAILED
         assessment = null
-        pipeline.setFeeding(false)
+        refeed()
     }
 
     // What the user chooses
@@ -454,12 +533,21 @@ class CaptureSession(
         recording = started
         recordingFile = file
         recordingStartedMillis = began
+        // So that the clip still knows where it was shot if the app is closed before it is saved.
+        CaptureSweep.writeNote(file, ClipNote(gymId = gymId, gymName = gymName.ifEmpty { null }, grade = grade, startedMillis = began))
         plan = null; summary = null; stopReason = null; notice = null
         recordedSeconds = 0.0
         phase = Phase.Recording
-        // The judgement of this moment is what the analysis will be given. Frames keep going to the page at a slower pace.
-        pipeline.setFeeding(page == Page.READY, recordingInterval)
-        if (page == Page.READY) host?.evaluate(CaptureScript.lock())
+        // The judgement of this moment is what the analysis will be given, if it is a judgement of
+        // this gym: right after the gym was changed the page has not started over yet, and what it
+        // holds belongs to the other one. Then the clip is recorded without a plan.
+        lockedId = null
+        if (page == Page.READY && begun?.id == captureId) {
+            lockedId = captureId
+            host?.evaluate(CaptureScript.lock())
+        }
+        // Nothing more is prepared for the page: it drops every frame after `lock`.
+        refeed()
         watch?.cancel()
         val power = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
         val startedAt = SystemClock.elapsedRealtime()
@@ -515,7 +603,7 @@ class CaptureSession(
         Log.i(TAG, "recorded ${"%.1f".format(result.seconds)} s, end ${result.end}, stop $stopReason")
         val file = result.file
         if (file == null || result.seconds < CaptureLimits.MIN_SECONDS) {
-            (file ?: recordingFile)?.delete()
+            (file ?: recordingFile)?.let { it.delete(); CaptureSweep.noteFile(it).delete() }
             notice = if (stalled || (file == null && result.end == ClipEnd.FAILED)) Notice.RECORDER_FAILED else Notice.TOO_SHORT
             if (started) startFraming() else release()
             return
@@ -530,6 +618,7 @@ class CaptureSession(
         phase = Phase.Saving
         scope.launch {
             try {
+                saveFault?.invoke()
                 val analysis = withContext(Dispatchers.IO) {
                     val info = VideoAnalyzer.probe(clip.file)
                     val duration = info.durationSeconds
@@ -541,9 +630,10 @@ class CaptureSession(
                 val swatch = assessment?.palette?.firstOrNull { it.key == color }
                 val route = recognised
                 val info = CaptureInfo(
-                    colorKey = color, colorRGB = swatch?.rgb ?: summary?.rgb?.takeIf { summary?.color == color }, summary = summary,
+                    // Nothing in an interface language goes into the record: the problem is kept by id and its own name.
+                    colorKey = color, colorRGB = swatch?.rgb ?: summary?.rgb?.takeIf { summary?.color == color }, summary = summary?.stored(),
                     packVersion = if (pack == null) null else pageVersion, analysisQueued = if (analysisAvailable) true else null,
-                    routeId = route?.id, routeName = route?.nameZh ?: route?.name,
+                    routeId = route?.id, routeName = route?.nameZh,
                 )
                 // One write: the clip, its thumbnail, the plan, what was chosen and the request for
                 // analysis. Nothing is analysed until this has succeeded.
@@ -554,6 +644,7 @@ class CaptureSession(
                         gymId = gymId, gymName = gymName, climbedAtMillis = clip.startedMillis, pendingAnalysis = PENDING_QUALITY, capture = info, capturePlan = plan,
                     )
                 }
+                CaptureSweep.noteFile(clip.file).delete()
                 held = null
                 phase = Phase.Saved(climb.id)
                 if (started) {
@@ -565,7 +656,7 @@ class CaptureSession(
             } catch (error: Exception) {
                 Log.e(TAG, "clip not saved", error)
                 phase = Phase.SaveFailed(error.localizedMessage ?: error.javaClass.simpleName)
-                // The screen is gone and nobody can retry: the clip stays in the staging directory until the next launch clears it.
+                // The screen is gone and nobody can retry now: the clip stays in the staging directory, and the next launch takes it in.
                 if (!started) { held = null; release() }
             }
         }
@@ -573,14 +664,14 @@ class CaptureSession(
 
     /** Gives up a clip that could not be saved. */
     fun discardHeldClip() {
-        held?.file?.delete()
+        held?.file?.let { it.delete(); CaptureSweep.noteFile(it).delete() }
         held = null
         startFraming()
     }
 
     /** Back to framing for another attempt, with the same gym, grade and colour. */
     fun frameAgain() {
-        if (phase == Phase.Recording || phase == Phase.Saving) return
+        if (phase == Phase.Recording || phase == Phase.Saving || phase is Phase.SaveFailed) return
         startFraming()
     }
 
@@ -593,7 +684,7 @@ class CaptureSession(
         recordedSeconds = 0.0
         rejectedRoutes = emptySet()
         phase = Phase.Framing
-        pipeline.setFeeding(page != Page.UNAVAILABLE && started, framingInterval)
+        refeed()
     }
 
     private companion object {

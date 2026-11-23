@@ -207,8 +207,12 @@ class CapturePipeline(context: Context, val motion: CaptureMotionMonitor = Captu
         if (pose != null) wantsPose = pose
     }
 
+    /** When the source last delivered a picture, on the system's elapsed-time clock; 0 before the first. */
+    @Volatile var lastFrameNanos = 0L
+
     /** The source's frame callback. Everything a frame needs is done before this returns, while the frame is still valid. */
     fun handle(frame: CaptureFrame) {
+        lastFrameNanos = SystemClock.elapsedRealtimeNanos()
         val seconds = frame.time
         val feed: Boolean
         val wantsPose: Boolean

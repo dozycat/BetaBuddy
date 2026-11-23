@@ -393,6 +393,22 @@ object CaptureMotion {
         return Math.toDegrees(2 * atan(tan(Math.toRadians(sensorDegrees) / 2) * shortSide / longSide))
     }
 
+    /**
+     * Horizontal field of view, in degrees, of an upright picture [frameLong] × [frameShort] pixels
+     * taken from a sensor area [sensorLong] × [sensorShort] millimetres behind a lens of [focal]
+     * millimetres. A stream is the largest rectangle of its own shape that fits the sensor: a 16:9
+     * stream from a 4:3 sensor keeps the sensor's full length and loses height, a squarer one keeps
+     * the height. The upright picture's width is the stream's short side.
+     */
+    fun streamFieldOfView(sensorLong: Double, sensorShort: Double, focal: Double, frameLong: Int, frameShort: Int): Double? {
+        if (!(sensorLong > 0) || !(sensorShort > 0) || !(focal > 0) || frameLong <= 0 || frameShort <= 0) return null
+        val long = maxOf(sensorLong, sensorShort)
+        val short = minOf(sensorLong, sensorShort)
+        val shape = maxOf(frameLong, frameShort).toDouble() / minOf(frameLong, frameShort)
+        val usedShort = if (shape >= long / short) long / shape else short
+        return fieldOfView(usedShort, focal)
+    }
+
     /** Field of view in degrees across a sensor dimension of [millimetres] at this focal length. */
     fun fieldOfView(millimetres: Double, focalLength: Double): Double? {
         if (!(millimetres > 0) || !(focalLength > 0)) return null

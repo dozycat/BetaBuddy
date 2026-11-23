@@ -217,6 +217,28 @@ class CaptureTest {
         assertNull(CaptureMotion.uprightFieldOfView(0.5, 16.0, 9.0)); assertNull(CaptureMotion.uprightFieldOfView(180.0, 16.0, 9.0)); assertNull(CaptureMotion.uprightFieldOfView(60.0, 0.0, 9.0))
     }
 
+    @Test fun theFieldOfViewIsThatOfTheStreamDelivered() {
+        // A 4:3 sensor area 6.4 × 4.8 mm behind a 4.8 mm lens. A 16:9 stream keeps its length and loses height…
+        assertEquals(41.11, CaptureMotion.streamFieldOfView(6.4, 4.8, 4.8, 1280, 720)!!, 0.01)
+        assertEquals(41.11, CaptureMotion.streamFieldOfView(4.8, 6.4, 4.8, 720, 1280)!!, 0.01)   // whichever way round the sides are given
+        // …a 4:3 stream uses all of it, and the upright picture is then wider than a 16:9 one…
+        assertEquals(53.13, CaptureMotion.streamFieldOfView(6.4, 4.8, 4.8, 640, 480)!!, 0.01)
+        // …and a square one cannot be wider than the sensor is high.
+        assertEquals(53.13, CaptureMotion.streamFieldOfView(6.4, 4.8, 4.8, 480, 480)!!, 0.01)
+        // A 16:9 sensor area gives a 16:9 stream all of itself.
+        assertEquals(CaptureMotion.fieldOfView(3.6, 4.8)!!, CaptureMotion.streamFieldOfView(6.4, 3.6, 4.8, 1920, 1080)!!, 1e-9)
+        assertNull(CaptureMotion.streamFieldOfView(0.0, 4.8, 4.8, 1280, 720)); assertNull(CaptureMotion.streamFieldOfView(6.4, 4.8, 4.8, 0, 720))
+        assertNull(CaptureMotion.streamFieldOfView(6.4, 4.8, Double.NaN, 1280, 720))
+    }
+
+    @Test fun nothingInAnInterfaceLanguageIsKeptWithARecord() {
+        val route = com.betabuddy.android.data.CaptureRoute("r1", 0.9, name = "Synthetic Yellow 1", nameZh = "合成线路 黄 1", grade = "Purple tag 11–12", colour = "yellow", wall = "East")
+        assertEquals(com.betabuddy.android.data.CaptureRoute("r1", 0.9, nameZh = "合成线路 黄 1"), route.stored())
+        val summary = com.betabuddy.android.data.CaptureSummary(color = "yellow", holds = 6, route = route)
+        assertEquals(summary.copy(route = route.stored()), summary.stored())
+        assertNull(com.betabuddy.android.data.CaptureSummary().stored().route)
+    }
+
     @Test fun frameSizeForThePage() {
         assertEquals(360 to 640, CaptureLimits.frameSize(1080, 1920))
         assertEquals(360 to 640, CaptureLimits.frameSize(720, 1280))

@@ -77,6 +77,8 @@ class CaptureScreenTest {
         CaptureDebug.reset()
         for (climb in store.climbs) if (climb.id !in before) runCatching { store.delete(climb) }
         clips.values.forEach { it.delete() }
+        // A clip a failed test left undecided would be taken into the logbook at the next start.
+        JournalGraph.stagingDirectory(context).listFiles().orEmpty().filter { it.name.startsWith("betabuddy-capture-") }.forEach { it.delete() }
         // A clip still being closed when the screen went away is finished first; then the gate is let go.
         val deadline = System.currentTimeMillis() + 15_000
         while (CameraGate.open.value && System.currentTimeMillis() < deadline) Thread.sleep(100)
@@ -90,8 +92,8 @@ class CaptureScreenTest {
         SyntheticWallClip.make(File(context.cacheDir, "synthetic-wall-$person-${System.nanoTime()}.mp4"), photo = photo)
     }
 
-    private fun standIn(capture: Boolean = true, analysis: Boolean = true, step: Int = 5, directoryIds: Boolean = true) {
-        val pack = StandInPack(instrumentation.context, capture, analysis, step, directoryIds)
+    private fun standIn(capture: Boolean = true, analysis: Boolean = true, step: Int = 5, directoryIds: Boolean = true, silent: Boolean = false) {
+        val pack = StandInPack(instrumentation.context, capture, analysis, step, directoryIds, silent)
         CaptureDebug.pack = pack.pack
         CaptureDebug.packFiles = pack
     }
@@ -156,6 +158,10 @@ class CaptureScreenTest {
         // The page's verdicts arrive as codes; each is shown as this build's own sentence.
         awaitState("captureHint", "too_dark")
         assertEquals("画面太暗，换个亮一点的位置", text("captureHint"))
+        // The guidance sits above the picture, not on it: the top of the wall stays visible and tappable.
+        val pill = rule.onNodeWithTag("captureHint").fetchSemanticsNode().boundsInRoot
+        val picture = rule.onNodeWithTag("capturePicture").fetchSemanticsNode().boundsInRoot
+        assertTrue("$pill / $picture", pill.bottom <= picture.top + 1f)
         // A gym 200 m away is offered, not chosen.
         await("captureOffer")
         assertTrue(text("captureOffer"), text("captureOffer").contains(StandInPack.DIRECTORY_GYM))
@@ -366,6 +372,190 @@ class CaptureScreenTest {
         await("captureSaved", 30)
         assertEquals(context.getString(R.string.capture_stop_storage), text("captureStopReason"))
         assertEquals(1, newClimbs().size)
+    }
+
+    private fun stagedClips() = JournalGraph.stagingDirectory(context).listFiles().orEmpty().filter { it.name.startsWith("betabuddy-capture-") && it.extension == "mp4" }
+    private fun closeScreen() { rule.onNodeWithTag("captureClose").performClick(); awaitGone("captureScreen") }
+    private fun reopen() { rule.onNodeWithTag("captureClimb").performClick(); await("captureScreen") }
+
+    @Test fun aTapRightBeforeRecordingIsInThePlanAndAChangedGymIsNotLockedUnderTheOldOne() {
+        assumeTrue("needs a logbook without a gym in it", store.lastGym == null)
+        standIn(analysis = false, step = 1)
+        CaptureDebug.video = wall(person = false)
+        CaptureDebug.location = GymLocator.Fix(StandInPack.LATITUDE, StandInPack.LONGITUDE, 30.0)
+        launch()
+        // No gym selected yet and one right here: offered with its distance and where that comes from, to be chosen, not chosen.
+        awaitState("captureOffer", "here")
+        assertTrue(text("captureOffer"), text("captureOffer").contains(StandInPack.DIRECTORY_GYM) && text("captureOffer").contains("200 m"))
+        assertEquals("© OpenStreetMap contributors", text("captureOfferCredit"))
+        assertEquals(context.getString(R.string.capture_offer_choose), text("useNearestGym"))
+        assertEquals("", session().gymName)
+        rule.onNodeWithTag("useNearestGym").performClick()
+        awaitGone("captureOffer")
+        await("captureColor-yellow")
+        rule.onNodeWithTag("captureColor-yellow").performClick()
+        rule.waitUntil(20_000) { session().assessment?.holds?.size == 6 && session().assessment?.route != null }
+        val before = session().assessment!!
+        assertFalse(before.startConfirmed)
+        assertEquals(2, before.holds.count { it.role == CaptureRole.START_HAND })
+
+        // A tap, and Record in the same breath: no reply of the page's has shown the tap yet.
+        val handed = session().metrics.frames
+        instrumentation.runOnMainSync { session().correct(0.30, 0.80, CaptureRole.START_HAND); session().startRecording() }
+        await("captureStop")
+        assertTrue(exists("captureRecordingNote"))
+        rule.waitUntil(20_000) { session().recordedSeconds >= 1.5 }
+        rule.onNodeWithTag("captureStop").performClick()
+        await("captureSaved", 30)
+        // Nothing was prepared for the page after `lock`: it would only have been dropped.
+        assertTrue("${session().metrics.frames} after $handed", session().metrics.frames <= handed + 1)
+        val first = newClimbs().single()
+        // What was stored is the page's answer to `lock`, which had the tap in it.
+        val plan = Json.parseToJsonElement(store.capturePlan(first.id)!!).jsonObject
+        val y1 = plan.getValue("holds").jsonArray.map { it.jsonObject }.single { it.getValue("id").jsonPrimitive.content == "y1" }
+        assertEquals("start_hand", y1.getValue("role").jsonPrimitive.content); assertEquals("true", y1.getValue("user").jsonPrimitive.content)
+        assertEquals(1, first.capture!!.summary!!.startHands)     // the page's own second guess at a start hand was withdrawn
+        assertEquals(StandInPack.VENUE_ID, plan.getValue("meta").jsonObject.getValue("venue").jsonPrimitive.content)
+        // The problem is kept by id and its own name; what the page called it in this language, and its grade text, are not.
+        assertEquals("${StandInPack.VENUE_ID}/yellow-01", first.capture!!.routeId); assertEquals("合成线路 黄 1", first.capture!!.routeName)
+        val kept = first.capture!!.summary!!.route!!
+        assertNull(kept.name); assertNull(kept.grade); assertEquals("合成线路 黄 1", kept.nameZh)
+
+        // Another take. The gym is changed and Record pressed before the page has seen a frame for it:
+        // what the page holds belongs to the other gym, so this clip is recorded without a plan.
+        rule.onNodeWithTag("captureAgain").performClick()
+        rule.waitUntil(20_000) { session().assessment?.holds?.size == 6 }
+        instrumentation.runOnMainSync { session().selectGym("syn:west", "合成岩馆（西门）"); session().startRecording() }
+        await("captureStop")
+        rule.waitUntil(20_000) { session().recordedSeconds >= 1.5 }
+        rule.onNodeWithTag("captureStop").performClick()
+        rule.waitUntil(30_000) { newClimbs().size == 2 && exists("captureSaved") }
+        val second = newClimbs().first { it.id != first.id }
+        assertEquals("合成岩馆（西门）", second.gymName)
+        assertFalse(second.capture!!.hasPlan); assertNull(second.capture!!.summary); assertNull(store.capturePlan(second.id)); assertNull(second.capture!!.routeId)
+        closeScreen()
+    }
+
+    @Test fun aPageThatNeverComesUpAndACameraThatStopsAreSaidAndRecordWaits() {
+        standIn(analysis = false, silent = true)
+        CaptureDebug.video = wall(person = false)
+        val configure = CaptureDebug.configure
+        CaptureDebug.configure = { session -> configure?.invoke(session); session.readyLimitMillis = 2_000 }
+        launch()
+        // The page loaded but never said it was ready: after a while the screen stops waiting, and nothing was prepared for it.
+        await("captureNoChecks", 30)
+        assertEquals(context.getString(R.string.capture_checks_failed), text("captureNoChecks"))
+        assertEquals(0, session().metrics.frames)
+        assertEquals(CaptureSession.Camera.RUNNING, session().camera)
+        // The pictures stop while framing: the preview is a frozen picture now, and recording cannot be started from it.
+        (CaptureDebug.lastSource as FileCaptureSource).interrupt()
+        rule.waitUntil(10_000) { session().camera != CaptureSession.Camera.RUNNING }
+        awaitGone("captureNoChecks")
+        rule.onNodeWithTag("captureRecord").performClick()
+        rule.waitForIdle()
+        assertEquals(CaptureSession.Phase.Framing, session().phase)
+        assertFalse(exists("captureStop"))
+        closeScreen()
+    }
+
+    @Test fun aClipThatCouldNotBeSavedStaysUntilTheUserDecides() {
+        CaptureDebug.noPack = true
+        CaptureDebug.video = wall(person = false)
+        val configure = CaptureDebug.configure
+        CaptureDebug.configure = { session -> configure?.invoke(session); session.saveFault = { throw java.io.IOException("synthetic failure") } }
+        launch()
+        await("captureNoChecks")
+        rule.onNodeWithTag("captureRecord").performClick()
+        await("captureStop")
+        rule.waitUntil(20_000) { session().recordedSeconds >= 1.5 }
+        rule.onNodeWithTag("captureStop").performClick()
+        await("captureSaveFailed", 30)
+        shot("42-save-failed")
+        assertTrue(newClimbs().isEmpty())
+        assertEquals(1, stagedClips().size)
+        // The screen cannot be left with the clip undecided: closing does nothing, the clip stays.
+        rule.onNodeWithTag("captureClose").performClick()
+        rule.waitForIdle()
+        assertTrue(exists("captureScreen") && exists("captureSaveRetry") && exists("captureSaveDiscard"))
+        assertEquals(1, stagedClips().size)
+        instrumentation.runOnMainSync { session().saveFault = null }
+        rule.onNodeWithTag("captureSaveRetry").performClick()
+        await("captureSaved", 30)
+        assertEquals(1, newClimbs().size)
+        assertTrue(stagedClips().isEmpty())
+        assertTrue(JournalGraph.stagingDirectory(context).listFiles().orEmpty().none { it.name.endsWith(".json") })
+        closeScreen()
+    }
+
+    @Test fun thePositionIsSaidAsItIsAndANearestGymIsOnlyEverPutForward() {
+        assumeTrue("needs a logbook without a gym in it", store.lastGym == null)
+        CaptureDebug.noPack = true
+        CaptureDebug.video = wall(person = false)
+        fun openSheet() { rule.onNodeWithTag("captureGym").performClick(); await("captureGymSheet") }
+        fun closeSheet() { instrumentation.uiAutomation.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK); awaitGone("captureGymSheet") }
+
+        // Refused: said so, with where to change it. Nothing about gyms nearby, which nobody looked for.
+        CaptureDebug.locationState = GymLocator.StandIn(GymLocator.Access.REFUSED)
+        launch()
+        await("captureNoChecks")
+        assertFalse(exists("captureOffer") || exists("captureAskLocation"))
+        openSheet()
+        assertEquals(context.getString(R.string.capture_location_refused), text("locationRefused"))
+        assertFalse(exists("noGymNear") || exists("askLocation") || exists("coordinateCredit"))
+        assertTrue(exists("allGyms"))
+        closeSheet(); closeScreen()
+
+        // Waiting for a position.
+        CaptureDebug.locationState = GymLocator.StandIn(GymLocator.Access.ALLOWED, fix = null, locating = true)
+        reopen(); await("captureNoChecks")
+        assertFalse(exists("captureOffer") || exists("captureAskLocation"))
+        openSheet()
+        assertTrue(text("locationWaiting").contains(context.getString(R.string.capture_location_waiting)))
+        assertFalse(exists("noGymNear") || exists("locationUnavailable"))
+        closeSheet(); closeScreen()
+
+        // Allowed, but no position could be had.
+        CaptureDebug.locationState = GymLocator.StandIn(GymLocator.Access.ALLOWED, fix = null, locating = false)
+        reopen(); await("captureNoChecks")
+        openSheet()
+        assertEquals(context.getString(R.string.capture_location_unavailable), text("locationUnavailable"))
+        assertTrue(exists("locationRetry"))
+        assertFalse(exists("noGymNear") || exists("locationWaiting"))
+        shot("52-gym-sheet-no-position")
+        closeSheet(); closeScreen()
+
+        // A position, and no gym of the directory anywhere near it: only now is that what is said.
+        CaptureDebug.locationState = GymLocator.StandIn(fix = GymLocator.Fix(10.0, 10.0, 30.0))
+        reopen(); await("captureNoChecks")
+        assertFalse(exists("captureOffer"))
+        openSheet()
+        assertEquals(context.getString(R.string.capture_gym_none_near), text("noGymNear"))
+        closeSheet(); closeScreen()
+
+        // Never asked: one tap away, on the screen itself and in the sheet. (The system's own question is not pressed here.)
+        CaptureDebug.locationState = GymLocator.StandIn(GymLocator.Access.NOT_ASKED)
+        reopen(); await("captureNoChecks")
+        assertEquals(context.getString(R.string.capture_gym_ask_location), text("captureAskLocation"))
+        shot("53-ask-location")
+        openSheet()
+        assertTrue(exists("askLocation"))
+        closeSheet()
+        rule.onNodeWithTag("declineAskLocation").performClick()
+        awaitGone("captureAskLocation")
+        closeScreen()
+
+        // A coarse position (what approximate location gives): the nearest gym is put forward as a guess, without a distance.
+        CaptureDebug.locationState = GymLocator.StandIn(fix = GymLocator.Fix(StandInPack.LATITUDE, StandInPack.LONGITUDE, 2_000.0))
+        reopen(); await("captureNoChecks")
+        awaitState("captureOffer", "guess")
+        assertEquals(context.getString(R.string.capture_offer_guess, StandInPack.DIRECTORY_GYM), text("captureOffer"))
+        assertFalse(exists("captureOfferCredit"))
+        assertEquals("", session().gymName)
+        shot("54-gym-guess")
+        rule.onNodeWithTag("useNearestGym").performClick()
+        awaitGone("captureOffer")
+        assertEquals(StandInPack.DIRECTORY_GYM, session().gymName)
+        closeScreen()
     }
 
     @Test fun gymsAreSuggestedByDistanceAsFarAsTheDirectoryKnows() {

@@ -40,7 +40,7 @@ internal class AnalysisSession(
     private val context: Context,
     private val pack: GymPack,
     private val url: String,
-    private val climbId: String,
+    internal val climbId: String,
     private val video: File,
     private val model: JournalViewModel,
     private val scope: CoroutineScope,
@@ -128,7 +128,7 @@ internal class AnalysisSession(
                 // After showing a saved result the page no longer names the record; it is still this one.
                 is AnalysisMessage.Result -> if (message.id.isEmpty() || message.id == climbId) {
                     scope.launch {
-                        val saved = saving.withLock { model.saveAnalysisResult(climbId, message.json, message.climber) }
+                        val saved = saving.withLock { model.saveAnalysisResult(climbId, message.json, message.climber, message.capture?.used, message.capture?.reason) }
                             .onFailure { Log.e(TAG, "result not saved", it) }
                         onOutcome?.invoke(saved.isSuccess)
                     }

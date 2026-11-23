@@ -109,6 +109,7 @@ import com.betabuddy.android.data.clockText
 import com.betabuddy.android.gym.GymPack
 import com.betabuddy.android.i18n.AppLanguage
 import com.betabuddy.android.journal.FilledButton
+import com.betabuddy.android.journal.GymDirectory
 import com.betabuddy.android.journal.JournalViewModel
 import com.betabuddy.android.journal.NearbyGym
 import com.betabuddy.android.journal.OutlineButton
@@ -157,7 +158,7 @@ internal fun CaptureScreen(model: JournalViewModel, pack: GymPack?, onClose: () 
         CaptureSession(context, usedPack, source, language, defaultTitle = { defaultTitle.value }, packFiles = packFiles)
             .also { if (debug) { it.motion.fixed = CaptureDebug.attitude; CaptureDebug.configure?.invoke(it) } }
     }
-    val locator = remember { GymLocator(context, if (debug) CaptureDebug.location else null) }
+    val locator = remember { GymLocator(context, if (debug) CaptureDebug.locationState ?: CaptureDebug.location?.let { GymLocator.StandIn(fix = it) } else null) }
     val bundled = directoryGyms()
     val directory = (if (debug) CaptureDebug.directory else null) ?: bundled
     val climbs by model.climbs.collectAsState()
@@ -172,6 +173,7 @@ internal fun CaptureScreen(model: JournalViewModel, pack: GymPack?, onClose: () 
     var askedCamera by rememberSaveable { mutableStateOf(false) }
 
     val cameraPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted -> if (granted) session.retry(owner) }
+    val locationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted -> locator.onPermissionResult(granted) }
     LaunchedEffect(session) {
         session.start(owner)
         locator.locateIfAllowed()
@@ -201,11 +203,26 @@ internal fun CaptureScreen(model: JournalViewModel, pack: GymPack?, onClose: () 
     }
 
     val phase = session.phase
-    val busy = phase == CaptureSession.Phase.Recording || phase == CaptureSession.Phase.Saving
+    // While a clip is being recorded or written, and while one that could not be written is still
+    // waiting for the user's word (save again, or give it up), the screen is not left.
+    val busy = phase == CaptureSession.Phase.Recording || phase == CaptureSession.Phase.Saving || phase is CaptureSession.Phase.SaveFailed
     val framing = phase == CaptureSession.Phase.Framing && session.camera == CaptureSession.Camera.RUNNING
     val saved = (phase as? CaptureSession.Phase.Saved)?.let { state -> climbs?.firstOrNull { it.id == state.id } }
-    // A gym right where the phone is that is not the one selected. It is offered; the selection never changes by itself.
-    val offered = if (framing) locator.suggestions(directory).here?.takeIf { it.gym.id != session.gymId && it.gym.id != declined } else null
+    // What is offered about the gym, above the picture. Nothing here ever selects one by itself.
+    val suggestions = if (framing) locator.suggestions(directory) else null
+    val here = suggestions?.here
+    val nearest = suggestions?.ranked?.firstOrNull()
+    val offer: GymOffer? = when {
+        !framing -> null
+        // A gym right where the phone is that is not the one selected.
+        here != null && here.gym.id != session.gymId && here.gym.id != declined -> GymOffer.Here(here, replaces = session.gymName.isNotEmpty())
+        session.gymName.isNotEmpty() || declined == ASK -> null
+        // No gym chosen yet. The nearest one the directory can place is put forward as a guess: its
+        // position, or the phone's, is too coarse to say more.
+        nearest != null && nearest.gym.id != declined -> GymOffer.Guess(nearest)
+        locator.access == GymLocator.Access.NOT_ASKED -> GymOffer.Ask
+        else -> null
+    }
 
     Dialog(
         onDismissRequest = { if (!busy) onClose() },
@@ -244,15 +261,26 @@ internal fun CaptureScreen(model: JournalViewModel, pack: GymPack?, onClose: () 
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 TopBar(session, busy, onClose = onClose, onChooseGym = { choosingGym = true })
-                offered?.let { here ->
-                    Offer(here, onUse = { session.selectGym(here.gym.id, here.gym.name) }, onDecline = { declined = here.gym.id })
+                when (offer) {
+                    is GymOffer.Here -> Offer(offer.gym, guess = false, replaces = offer.replaces, onUse = { session.selectGym(offer.gym.gym.id, offer.gym.gym.name) }, onDecline = { declined = offer.gym.gym.id })
+                    is GymOffer.Guess -> Offer(offer.gym, guess = true, replaces = false, onUse = { session.selectGym(offer.gym.gym.id, offer.gym.gym.name) }, onDecline = { declined = offer.gym.gym.id })
+                    GymOffer.Ask -> AskLocation(onAsk = { locationPermission.launch(Manifest.permission.ACCESS_COARSE_LOCATION) }, onDecline = { declined = ASK })
+                    null -> Unit
                 }
+                // Above the picture, not on it: the finish of a problem is at the top of the wall, and a tap there must reach it.
+                if (framing) Guidance(session)
                 Picture(
                     session, framing, tool, saved, model, Modifier.weight(1f).fillMaxWidth(),
                     onImport = onImport, onClose = onClose, onViewAnalysis = { viewing = it },
                 )
                 // Below the picture, not on it: the start of a problem is at the bottom of the wall.
                 if (framing) Colours(session, tool) { tool = it }
+                if (phase == CaptureSession.Phase.Recording) {
+                    Text(
+                        stringResource(R.string.capture_recording_note), style = BB.Subheadline, fontWeight = FontWeight.Bold, color = BB.Ink,
+                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(BB.Paper).padding(horizontal = 14.dp, vertical = 10.dp).testTag("captureRecordingNote"),
+                    )
+                }
                 BottomBar(session, framing) { if (session.needsConfirmation) confirming = true else session.startRecording() }
             }
         }
@@ -357,28 +385,66 @@ private fun TopBar(session: CaptureSession, busy: Boolean, onClose: () -> Unit, 
     }
 }
 
+/** What the screen puts forward about the gym. */
+private sealed interface GymOffer {
+    /** A gym whose own position is known, within a few hundred metres. [replaces]: another gym is selected now. */
+    data class Here(val gym: NearbyGym, val replaces: Boolean) : GymOffer
+    /** The nearest gym the directory can place, when none is selected: a guess. */
+    data class Guess(val gym: NearbyGym) : GymOffer
+    /** No gym selected and the position never asked for: one tap asks. */
+    data object Ask : GymOffer
+}
+
+private const val ASK = "\u0000ask"
+
 @Composable
-private fun Offer(here: NearbyGym, onUse: () -> Unit, onDecline: () -> Unit) {
+private fun Offer(gym: NearbyGym, guess: Boolean, replaces: Boolean, onUse: () -> Unit, onDecline: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Chip).padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(BBIcons.Pin, contentDescription = null, tint = BB.Paper, modifier = Modifier.size(14.dp))
-        Text(
-            stringResource(R.string.capture_offer, here.gym.name, captureDistance(here).orEmpty()), style = BB.Caption, fontWeight = FontWeight.Bold, color = BB.Paper,
-            modifier = Modifier.weight(1f).testTag("captureOffer"),
-        )
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                if (guess) stringResource(R.string.capture_offer_guess, gym.gym.name) else stringResource(R.string.capture_offer, gym.gym.name, captureDistance(gym).orEmpty()),
+                style = BB.Caption, fontWeight = FontWeight.Bold, color = BB.Paper,
+                modifier = Modifier.semantics { stateDescription = if (guess) "guess" else "here" }.testTag("captureOffer"),
+            )
+            // A distance worked out from the directory's coordinates names where they come from.
+            if (!guess) Text(GymDirectory.COORDINATE_CREDIT, style = BB.Caption.copy(fontSize = 10.sp, lineHeight = 12.sp), color = BB.Paper.copy(alpha = 0.7f), modifier = Modifier.testTag("captureOfferCredit"))
+        }
         Box(
             Modifier.defaultMinSize(minHeight = 48.dp).clip(CircleShape).clickable(role = Role.Button, onClick = onUse).testTag("useNearestGym"),
             contentAlignment = Alignment.Center,
         ) {
             Text(
-                stringResource(R.string.capture_offer_use), style = BB.Caption, fontWeight = FontWeight.Bold, color = BB.Ink,
+                stringResource(if (replaces) R.string.capture_offer_use else R.string.capture_offer_choose), style = BB.Caption, fontWeight = FontWeight.Bold, color = BB.Ink,
                 modifier = Modifier.clip(CircleShape).background(BB.Lime).padding(horizontal = 12.dp, vertical = 10.dp),
             )
         }
         val decline = stringResource(R.string.capture_offer_decline)
         Box(Modifier.size(48.dp).clip(CircleShape).clickable(role = Role.Button, onClickLabel = decline, onClick = onDecline).testTag("declineNearestGym"), contentAlignment = Alignment.Center) {
+            Icon(BBIcons.Close, contentDescription = decline, tint = BB.Paper, modifier = Modifier.size(14.dp))
+        }
+    }
+}
+
+/** No gym chosen and the position never asked for: one tap brings up the system's question. */
+@Composable
+private fun AskLocation(onAsk: () -> Unit, onDecline: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Chip).padding(start = 12.dp, end = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Row(
+            Modifier.weight(1f).defaultMinSize(minHeight = 48.dp).clickable(role = Role.Button, onClick = onAsk).testTag("captureAskLocation"),
+            horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(BBIcons.Pin, contentDescription = null, tint = BB.Paper, modifier = Modifier.size(14.dp))
+            Text(stringResource(R.string.capture_gym_ask_location), style = BB.Caption, fontWeight = FontWeight.Bold, color = BB.Paper)
+        }
+        val decline = stringResource(R.string.capture_offer_decline)
+        Box(Modifier.size(48.dp).clip(CircleShape).clickable(role = Role.Button, onClickLabel = decline, onClick = onDecline).testTag("declineAskLocation"), contentAlignment = Alignment.Center) {
             Icon(BBIcons.Close, contentDescription = decline, tint = BB.Paper, modifier = Modifier.size(14.dp))
         }
     }
@@ -423,13 +489,6 @@ private fun Picture(
                                     .pointerInput(tool) {
                                         detectTapGestures { offset -> session.correct((offset.x / size.width).toDouble(), (offset.y / size.height).toDouble(), tool) }
                                     },
-                            )
-                            Box(Modifier.fillMaxSize().padding(10.dp), contentAlignment = Alignment.TopStart) { Guidance(session) }
-                        }
-                        phase == CaptureSession.Phase.Recording -> Box(Modifier.fillMaxSize().padding(10.dp), contentAlignment = Alignment.BottomCenter) {
-                            Text(
-                                stringResource(R.string.capture_recording_note), style = BB.Subheadline, fontWeight = FontWeight.Bold, color = BB.Ink,
-                                modifier = Modifier.clip(RoundedCornerShape(14.dp)).background(BB.Paper).padding(horizontal = 14.dp, vertical = 10.dp),
                             )
                         }
                         phase == CaptureSession.Phase.Saving -> Column(

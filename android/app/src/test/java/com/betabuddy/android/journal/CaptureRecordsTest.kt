@@ -97,6 +97,27 @@ class CaptureRecordsTest {
         assertFalse(file.exists())
     }
 
+    @Test fun whatTheAnalysisDidWithThePlanIsKeptAsThePageSaidIt() {
+        fun result(extra: String) = com.betabuddy.android.review.AnalysisMessage.parse("""{"type":"analysisResult","id":"A","json":"{}"$extra}""") as com.betabuddy.android.review.AnalysisMessage.Result
+        assertNull(result("").capture)                                                     // an older page says nothing
+        assertEquals(com.betabuddy.android.review.AnalysisMessage.PlanUse(true, null), result(""","capture":{"used":true,"start":["a"],"finish":"b"}""").capture)
+        assertEquals(com.betabuddy.android.review.AnalysisMessage.PlanUse(false, "mismatch"), result(""","capture":{"used":false,"reason":"mismatch"}""").capture)
+        assertEquals(com.betabuddy.android.review.AnalysisMessage.PlanUse(false, null), result(""","capture":{"used":false,"reason":7}""").capture)
+        // Anything that does not plainly say "used" is not taken as used.
+        for (odd in listOf(""","capture":{"used":"yes"}""", ""","capture":{}""", ""","capture":true""", ""","capture":null""")) assertNull(odd, result(odd).capture)
+
+        val climb = save()
+        assertNull(climb.capture?.planUsed)
+        store.setPlanUse(climb.id, false, "mismatch")
+        assertEquals(false, ClimbStore(root).climbs.single().capture?.planUsed); assertEquals("mismatch", store.climbs.single().capture?.planUnusedReason)
+        store.setPlanUse(climb.id, true, "ignored")
+        assertEquals(true, store.climbs.single().capture?.planUsed); assertNull(store.climbs.single().capture?.planUnusedReason)
+        // An imported record has no plan to have used.
+        val imported = save(plan = null, capture = null, pending = null)
+        store.setPlanUse(imported.id, true, null)
+        assertNull(store.climbs.first { it.id == imported.id }.capture)
+    }
+
     @Test fun theQueuedRequestIsClearedOnce() {
         val climb = save()
         store.setAnalysisQueued(climb.id, false)
@@ -106,12 +127,90 @@ class CaptureRecordsTest {
         assertEquals(true, store.climbs.single().capture?.analysisQueued)
     }
 
-    @Test fun theLastGymIsTheDefaultForTheNextRecording() {
+    @Test fun theDefaultGymIsThatOfTheRecordMadeLast() {
         assertNull(store.lastGym)
-        save(gym = "合成岩馆（东门）", at = 1_000_000L)
-        save(gym = null, at = 3_000_000L)                 // the most recent record has no gym: the one before it counts
-        save(gym = "合成岩馆（西门）", at = 2_000_000L)
+        fun made(gym: String?, createdAt: Long, climbedAt: Long?) =
+            store.save("", "Today", "V3", false, "", clip(), byteArrayOf(1), empty, nowMillis = createdAt, gymId = gym?.let { "id:$it" }, gymName = gym, climbedAtMillis = climbedAt)
+        made("合成岩馆（东门）", createdAt = 1_000_000L, climbedAt = 9_000_000L)   // an old clip imported early, dated late by hand
+        made("合成岩馆（西门）", createdAt = 2_000_000L, climbedAt = 500_000L)     // made later, though the climb itself was earlier
+        made(null, createdAt = 3_000_000L, climbedAt = null)                       // the newest record has no gym: the one before it counts
         assertEquals("id:合成岩馆（西门）" to "合成岩馆（西门）", store.lastGym)
+    }
+
+    @Test fun aLatePlanKeepsNothingInAnInterfaceLanguageEither() {
+        val climb = save(plan = null)
+        store.saveCapturePlan(climb.id, plan, CaptureSummary(holds = 3, route = CaptureRoute("r1", 0.9, name = "Synthetic 1", nameZh = "合成线路 1", grade = "Tag 5")))
+        assertEquals(CaptureRoute("r1", 0.9, nameZh = "合成线路 1"), store.climbs.single().capture?.summary?.route)
+    }
+
+    // What the camera left in the staging directory when the app last went away
+
+    private val staging get() = File(root, "staging").apply { mkdirs() }
+    private fun leftover(name: String, bytes: Int = 64, note: String? = null) = File(staging, name).apply {
+        writeBytes(ByteArray(bytes) { 1 })
+        if (note != null) com.betabuddy.android.data.CaptureSweep.noteFile(this).writeText(note)
+    }
+    /** A stand-in for looking inside a file: these synthetic ones are "playable" by size alone. */
+    private fun sweep() = com.betabuddy.android.data.CaptureSweep.sweep(
+        staging, store, "Today",
+        facts = { file -> if (file.length() >= 50) com.betabuddy.android.data.CaptureSweep.Facts(file.length() / 100.0, 9.0 / 16) else null },
+        thumbnail = { byteArrayOf(7) },
+    )
+
+    @Test fun aClipTheCameraFinishedButNeverSavedIsTakenIntoTheLogbook() {
+        val clip = leftover("betabuddy-capture-AAA.mp4", bytes = 420, note = """{"gymId":"syn:east","gymName":"合成岩馆（东门）","grade":"V4","startedMillis":1700000000000,"later":true}""")
+        val outcome = sweep()
+        val climb = outcome.adopted.single()
+        assertEquals(climb.id, store.climbs.single().id)
+        assertEquals("V4", climb.grade); assertEquals("syn:east", climb.gymId); assertEquals("合成岩馆（东门）", climb.gymName)
+        assertEquals(1_700_000_000_000L, climb.climbedAtMillis)
+        assertEquals(4.2, climb.analysis.duration, 1e-9)
+        assertEquals("balanced", climb.pendingAnalysis)             // pose recognition is asked for, like for any record of the camera's
+        assertEquals(CaptureInfo(), climb.capture)                  // …but there is no plan and no colour to go with it
+        assertTrue(store.file(climb.videoName).isFile && store.file(climb.videoName).length() == 420L)
+        assertFalse(clip.exists())
+        assertTrue(staging.listFiles()!!.isEmpty())                 // the note went with it
+        assertTrue(ClimbStore(root).climbs.single().id == climb.id) // and it is on disk
+    }
+
+    @Test fun aClipWithoutItsNoteIsStillTakenIn() {
+        val clip = leftover("betabuddy-capture-BBB.mp4", bytes = 300)
+        clip.setLastModified(1_700_000_010_000L)
+        val climb = sweep().adopted.single()
+        assertEquals(com.betabuddy.android.data.UNGRADED_VALUE, climb.grade); assertNull(climb.gymName)
+        assertEquals(1_700_000_010_000L - 3_000L, climb.climbedAtMillis)   // it began its own length before it was last written
+    }
+
+    @Test fun whatCannotBePlayedAndWhatAnImportLeftBehindAreRemoved() {
+        leftover("betabuddy-capture-CUT.mp4", bytes = 40, note = """{"grade":"V1"}""")   // the recorder was cut off before it closed the file
+        leftover("betabuddy-capture-TINY.mp4", bytes = 90)                               // closed, but under a second
+        leftover("betabuddy-1234.mp4", bytes = 500)                                      // an import that did not finish
+        leftover("betabuddy-capture-GONE.mp4.json", bytes = 10)                          // a note whose clip is gone
+        val outcome = sweep()
+        assertTrue(outcome.adopted.isEmpty())
+        assertEquals(setOf("betabuddy-capture-CUT.mp4", "betabuddy-capture-TINY.mp4", "betabuddy-1234.mp4"), outcome.removed.toSet())
+        assertTrue(staging.listFiles()!!.isEmpty())
+        assertTrue(store.climbs.isEmpty())
+    }
+
+    @Test fun aClipWaitsForTheNextStartWhenTheLogbookCannotBeWritten() {
+        File(root, ClimbStore.INDEX_NAME).writeText("not an archive")
+        val unreadable = ClimbStore(root)
+        val clip = leftover("betabuddy-capture-DDD.mp4", bytes = 300, note = """{"grade":"V2"}""")
+        val outcome = com.betabuddy.android.data.CaptureSweep.sweep(staging, unreadable, "Today", facts = { com.betabuddy.android.data.CaptureSweep.Facts(3.0, 0.5) }, thumbnail = { null })
+        assertEquals(listOf("betabuddy-capture-DDD.mp4"), outcome.kept)
+        assertTrue(clip.isFile && com.betabuddy.android.data.CaptureSweep.noteFile(clip).isFile)
+    }
+
+    @Test fun oneRecordIsNeverAnalysedTwiceAtOnce() {
+        val climb = save()
+        store.replaceAnalysis(climb, posed(world = true))
+        // The user has its analysis page open: the queue leaves it alone.
+        assertTrue(AnalysisDesk.open.value.isEmpty())
+        AnalysisDesk.enter(climb.id)
+        assertEquals(AnalysisQueuePolicy.Step.Wait, next(store.climbs, settled = AnalysisDesk.open.value))
+        AnalysisDesk.leave(climb.id)
+        assertTrue(next(store.climbs, settled = AnalysisDesk.open.value) is AnalysisQueuePolicy.Step.Run)
     }
 
     @Test fun anArchiveWrittenBeforeTheCameraExistedStillReads() {

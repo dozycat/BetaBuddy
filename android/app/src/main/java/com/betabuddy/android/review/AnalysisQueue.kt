@@ -26,6 +26,7 @@ import com.betabuddy.android.data.Climb
 import com.betabuddy.android.gym.GymPack
 import com.betabuddy.android.gym.PackWebView
 import com.betabuddy.android.i18n.AppLanguage
+import com.betabuddy.android.journal.AnalysisDesk
 import com.betabuddy.android.journal.AnalysisQueuePolicy
 import com.betabuddy.android.journal.CameraGate
 import com.betabuddy.android.journal.JournalViewModel
@@ -70,10 +71,12 @@ internal class AnalysisQueue(
     var patienceMillis = 600_000L
 
     /** Looks at what there is to do. Called whenever the records, the results, the camera or the foreground change. */
-    fun advance(climbs: List<Climb>, results: Set<String>, paused: Boolean) {
+    fun advance(climbs: List<Climb>, results: Set<String>, paused: Boolean, open: Set<String> = emptySet()) {
         if (paused) { halt(); return }
+        // The user has opened the page for the record being worked on: that visit does the work.
+        running?.let { if (it in open) cancel(it) }
         if (session != null) return
-        when (val step = AnalysisQueuePolicy.next(climbs, results, settled, paused = false, hasPage = pack != null && url != null)) {
+        when (val step = AnalysisQueuePolicy.next(climbs, results, settled + open, paused = false, hasPage = pack != null && url != null)) {
             AnalysisQueuePolicy.Step.Wait -> Unit
             is AnalysisQueuePolicy.Step.Settle -> {
                 settled += step.id
@@ -159,8 +162,9 @@ internal fun AnalysisQueueHost(model: JournalViewModel, pack: GymPack?, packFile
         onDispose { owner.lifecycle.removeObserver(observer); queue.halt() }
     }
     // `running` is read so that the next record is looked at when one is done.
-    LaunchedEffect(queue, climbs, results, cameraOpen, foreground, queue.running) {
-        climbs?.let { queue.advance(it, results, paused = cameraOpen || !foreground) }
+    val open by AnalysisDesk.open.collectAsState()
+    LaunchedEffect(queue, climbs, results, cameraOpen, foreground, queue.running, open) {
+        climbs?.let { queue.advance(it, results, paused = cameraOpen || !foreground, open = open) }
     }
     queue.webView?.let { webView ->
         key(webView) {
