@@ -2,6 +2,44 @@
 
 做过什么、范围到哪、还有什么没做。下面按时间保留每次验证的事实；这一节是现在的结论。
 
+## 2026-11-23（真机取证）· Debug 构建把拍摄界面看到的留在磁盘上（未发布）
+
+真机上看不到屏幕、系统日志也取不出来，所以 Debug 构建在拍摄界面打开期间把它看到的和做过的写进应用容器的 `Documents/capture-diagnostics/`，用 `devicectl` 把这个目录取出来就能看。不需要启动参数；Release 构建里没有这些代码（未签名的 Release 构建的可执行文件里搜不到这些文件名）；什么都不发到网络上；位置只记权限状态和精度档，不记坐标。
+
+| 文件 | 内容 |
+| --- | --- |
+| `session-<年月日-时分秒>.jsonl` | 每次打开拍摄界面一个文件，每行一个 JSON 对象，都有 `t`（ISO 8601，带毫秒）和 `kind`（`sample` 或 `event`）|
+| `frame-latest.jpg` | 最近一次交给拍摄页面的那张图（已经转正、缩小过的 JPEG），约每 2 秒重写 |
+| `frame-at-lock.jpg` | 按下录像那一刻的那一张 |
+| `preview-latest.png` | 拍摄界面本身的样子，约每 3 秒重写（每点 2 像素）|
+| `log.txt` | 写进系统日志的 `capture`、`analysis` 两类的那些行，每行前面是时间和类别；超过 2 MB 留后一半 |
+
+整个目录超过 30 MB 时从最旧的 `session-*` 删起。
+
+**`sample` 行**（每秒一行）：`phase`、`camera`、`page`、`pack`、`fovH`、`frame`（交给页面的宽高）、`source`（相机给的宽高）、`pitch`、`roll`、`shake`、`repliesPerSecond`、`replies`、`handOverMs`、`prepareMs`、`poseMs`、`posesFound`、`poseFrames`、`poseDropped`、`jpegKB`、`framesHanded`、`ok`、`steady`、`score`、`ready`、`person`、`issues`（每项 `code`、`severity`、`move`）、`hint`（`code`、`move`）、`palette`（每项 `key`、`rgb`、`n`）、`color`、`holds`、`holdsWithOutline`、`start`（`hands`、`feet`、`conf`、`tapped`）、`finish`（`id`、`conf`、`tapped`）、`route`（`id`、`conf`）、`gym`、`venue`、`grade`、`gradePrefilled`、`location`（`auth`、`accuracy`：`none` / `≤100m` / `≤1km` / `>1km`、`locating`、`failed`、`status`、`precise`）、`thermal`、`notice`、`debugOverlay`、`preview`（`source`、`picture`：画面在屏幕上的位置和大小、`screen`、`pixels`、`pictureDark`、`frameAge`、`covered`、`offer`、`tool`），录像中多一个 `recording`（`seconds`、`frames`、`dropped`）。没有的值写 `null`。
+
+**`event` 行**（`event` 是名字）：`open`（机型、系统、应用版本、数据包版本、相机权限状态 `cameraAccess`）、`sourceStarted` / `sourceError`（相机权限的结果；`details` 里是相机的格式、预设、帧和预览各自的旋转与镜像、预览的填充方式和位置）、`frames`（第一帧到了）、`sourceInterruption`、`stall`、`captureReady`、`begin`、`loadingTimeout`、`quiet`（页面 5 秒没回话）、`pageFailed`、`pageError`、`captureError`（`code`、`message`）、`location`（位置权限或定位结果变了）、`setColor`、`tap`（`x`、`y` 是 0–1 的画面坐标，`role`，`hold` 是页面回的岩点编号）、`resetTaps`、`rejectRoute`、`pickGrade`、`recordStart`（`lockSent`、`codec`）、`captureLocked`（`ms`、`planBytes`、`summary`）、`recordStop`（`reason`、`seconds`、`frames`、`dropped`、`bytes`）、`save`（`record` 或 `error`）、`snapshot`（界面图片换了来源时）、`close`。拍摄界面关掉以后，这条相机记录后面的事接着写进同一个文件：`pose`（`record`、`frames`、`framesWithPerson`、`seconds` 或 `error`）、`analysis`（`record`、`status`：`begin` / `result` / `failed` / `pageError` / `loadFailed` / `processEnded`…，`poseFrames`、`code`、`message`，以及页面给的 `capture`：`used`、`reason`、`start`、`finish`、`shift`）、`analysisQueue`（`outcome`）。
+
+**界面图片是哪来的**：先对整个窗口的视图层级拍一张。相机的预览层在这种图里是一块黑的；发现画面那一块是黑的时候，就把最近交给页面的那张图按同一个位置和大小垫在下面，界面画在预览上面的东西（描边、标签、卡片、调试数字）原样留在上面，`preview.source` 写 `composite`，`frameAge` 是那张图有多旧（录像期间不再给页面交图，所以录像中这张图停在按下录像的那一刻）。预览自己能拍出来时写 `hierarchy`；黑的又没有图可垫时写 `hierarchy-no-picture`。**`composite` 证明不了预览层本身和交给页面的图对得上**——它只说明描边相对于交出去的图在哪；预览的旋转、镜像、填充方式看 `sourceStarted` / `frames` 事件里的 `details`。
+
+### 验证
+
+环境：Xcode 27.2、iOS 18.5 Simulator（iPhone 16）、Apple M5 Pro 的 Mac，替身页面和画出来的墙，**没有真机**。
+
+| 检查 | 结果 |
+| --- | --- |
+| 写文件的单元测试（合成数据）| 6/6 通过：一行的格式（缺的值和非数字写成 `null`）、每次打开一个文件、超过上限从最旧的删起且不删正在写的和图片、日志超限留后一半的整行、黑的预览认得出来、图垫在描边下面而界面其余部分不动 |
+| 模拟器单元 / 集成测试 | 83 项，81 通过，2 项按设计跳过 |
+| UI：应用内相机 9 项 | 7 通过，2 项按设计跳过（要真实片段的）|
+| Mac 核心测试 | 21/21 通过 |
+| iPhone 构建（未签名）| Debug 和 Release 都通过 |
+
+从模拟器的应用容器里把目录读回来看过：`session-*.jsonl` 每秒一行，事件有 `open`、`begin`、`setColor`、`tap`（回了岩点编号）、`rejectRoute`、`recordStart`、`captureLocked`（24.6 毫秒、401 字节的计划）、`recordStop`（4.5 秒、137 帧、0 丢帧）、`save`、`close`、`pose`、`analysisQueue`；`frame-latest.jpg`、`frame-at-lock.jpg` 是 360×640。`preview-latest.png`（786×1704）和同一状态下界面测试截的屏对过：各行、画面的位置、红色岩点上的虚线、调试数字都一样（系统画的主屏幕指示条不在里面）。模拟器里顶替相机的那一层自己能拍出来，所以是 `hierarchy`；另加了启动参数 `-debugCaptureHidePreview YES` 让它留黑、像真机的预览层那样，这时写的是 `composite`，看过：墙的图在下面，黄色岩点的虚线和「起步手？」「结束点？」的标签落在对应的岩点上，调试数字的底板被当成黑色去掉了、字还在。
+
+又用装着的数据包 1.9.3 和那段不在仓库里的真实片段跑了一次「存 → 姿态识别 → 后台分析」（通过 1/1），读回来的文件里：`captureLocked` 63.9 毫秒、计划 77 KB；`recordStop` 14.2 秒、428 帧、0 丢帧；`pose` 142 帧、都有人；`analysis` 两行，`status` 先是 `begin`（60 张图、计划 77 KB），再是 `result`，带着页面给的 `capture`：`used true`，`start`、`finish` 都是 `video`，`shift` 是 `dx 0`、`dy 0`、`rot 0`、`scale 1`；`analysisQueue` 是 `succeeded`。`log.txt` 里有对应的 `capture`、`analysis` 各行。
+
+没有做的：真机上预览层在视图层级图里是不是黑的没有看到（按 `composite` 准备了，两种情况文件里都会写明）；`location` 事件只在权限或定位结果变化时写，模拟器里用的是顶替的位置，没有触发过；相机权限被拒、页面报错、页面不回话这几种事件在模拟器里没有触发过，只是接在了原来记日志的那些地方。
+
 ## 2026-11-23（最后一轮）· 数据包 1.9.3（未发布）
 
 **这一节是最后的数字，用的是数据包 1.9.3**（2026-11-23T05:28:28Z 生成）。环境同前：Xcode 27.2、iOS 18.5 Simulator（iPhone 16）、Apple M5 Pro 的 Mac，没有真机。下面各节的数字是在 1.8.0–1.9.2 上得到的，各节自己写着。
@@ -60,7 +98,7 @@ Debug 构建加了启动参数 `-debugFailSaves <n>`。界面测试让接下来�
 
 ### 第一次在真机上跑：按这个顺序看
 
-用 Debug 构建装到手机上。长按画面上方那一行提示（约 1 秒）会在画面左上角叠一块调试数字，再长按收起；全程录一段屏幕，下面每一项都能从录屏里核对。
+用 Debug 构建装到手机上。长按画面上方那一行提示（约 1 秒）会在画面左上角叠一块调试数字，再长按收起；全程录一段屏幕，下面每一项都能从录屏里核对。不看屏幕也行：Debug 构建把同样的数字每秒一行写进应用容器的 `Documents/capture-diagnostics/`（见最上面「真机取证」一节），事后把这个目录取出来看。
 
 1. **权限**：第一次点「拍一趟」出现相机权限的询问，文字是「拍下你的攀爬…」，没有麦克风的询问。拒绝后看到「没有相机权限」和「打开系统设置」。
 2. **预览**：画面是正的（不是横着、不是倒着）、没有左右镜像（墙上的字是正的）、不裁边。
