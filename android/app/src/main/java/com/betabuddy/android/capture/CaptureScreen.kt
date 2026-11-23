@@ -412,7 +412,8 @@ private fun Offer(gym: NearbyGym, guess: Boolean, replaces: Boolean, onUse: () -
         Column(Modifier.weight(1f)) {
             Text(
                 if (guess) stringResource(R.string.capture_offer_guess, gym.gym.name) else stringResource(R.string.capture_offer, gym.gym.name, captureDistance(gym).orEmpty()),
-                style = BB.Caption, fontWeight = FontWeight.Bold, color = BB.Paper, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                // On a narrow screen the name gives way in the middle; the distance at the end stays.
+                style = BB.Caption, fontWeight = FontWeight.Bold, color = BB.Paper, maxLines = 1, overflow = if (guess) TextOverflow.Ellipsis else TextOverflow.MiddleEllipsis,
                 modifier = Modifier.semantics { stateDescription = if (guess) "guess" else "here" }.testTag("captureOffer"),
             )
             // A distance worked out from the directory's coordinates names where they come from.

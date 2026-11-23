@@ -78,37 +78,50 @@ class GymLocator(context: Context, private val standIn: StandIn? = null) {
         val enabled = runCatching { manager.getProviders(true) }.getOrDefault(emptyList())
         // The satellite provider needs the precise permission before Android 12; from 12 on it answers approximate permission coarsely.
         val precise = has(Manifest.permission.ACCESS_FINE_LOCATION)
-        val wanted = listOfNotNull(
+        val asked = listOfNotNull(
             "fused".takeIf { Build.VERSION.SDK_INT >= 31 }, LocationManager.NETWORK_PROVIDER,
-            LocationManager.GPS_PROVIDER.takeIf { precise || Build.VERSION.SDK_INT >= 31 }, LocationManager.PASSIVE_PROVIDER,
-        )
-        val provider = wanted.firstOrNull { it in enabled } ?: return   // No position: the screen goes on with the last gym and the full directory.
+            LocationManager.GPS_PROVIDER.takeIf { precise || Build.VERSION.SDK_INT >= 31 },
+        ).filter { it in enabled }
+        // Which of them answers first differs from phone to phone (and indoors the satellites may not answer at all):
+        // each is asked once, and the first position that comes back is the one fix.
         locating = true
         var done = false
+        var pending = asked.size
+        val cancel = android.os.CancellationSignal()
         fun finish(location: Location?) {
             if (done) return
             done = true
             locating = false
-            val best = location ?: runCatching { manager.getLastKnownLocation(provider) }.getOrNull()
+            runCatching { cancel.cancel() }
+            // Nobody answered: what the system last knew, if anything, however it came by it.
+            val best = location ?: (asked + LocationManager.PASSIVE_PROVIDER).mapNotNull { provider -> runCatching { manager.getLastKnownLocation(provider) }.getOrNull() }.maxByOrNull { it.elapsedRealtimeNanos }
             if (best != null) fix = Fix(best.latitude, best.longitude, if (best.hasAccuracy()) best.accuracy.toDouble() else Double.MAX_VALUE)
         }
-        try {
-            if (Build.VERSION.SDK_INT >= 30) {
-                manager.getCurrentLocation(provider, null, ContextCompat.getMainExecutor(context)) { location -> finish(location) }
-            } else {
-                val listener = object : LocationListener {
-                    override fun onLocationChanged(location: Location) { manager.removeUpdates(this); finish(location) }
-                    @Deprecated("Deprecated in Java") override fun onStatusChanged(provider: String?, status: Int, extras: android.os.Bundle?) = Unit
-                    override fun onProviderEnabled(provider: String) = Unit
-                    override fun onProviderDisabled(provider: String) = Unit
-                }
-                @Suppress("DEPRECATION")
-                manager.requestSingleUpdate(provider, listener, Looper.getMainLooper())
-                main.postDelayed({ runCatching { manager.removeUpdates(listener) }; finish(null) }, TIMEOUT_MILLIS)
-            }
-        } catch (error: Exception) {
-            finish(null)
+        fun answered(location: Location?) {
+            pending -= 1
+            if (location != null || pending <= 0) finish(location)
         }
+        if (asked.isEmpty()) { finish(null); return }
+        for (provider in asked) {
+            try {
+                if (Build.VERSION.SDK_INT >= 30) {
+                    manager.getCurrentLocation(provider, cancel, ContextCompat.getMainExecutor(context)) { location -> answered(location) }
+                } else {
+                    val listener = object : LocationListener {
+                        override fun onLocationChanged(location: Location) { manager.removeUpdates(this); answered(location) }
+                        @Deprecated("Deprecated in Java") override fun onStatusChanged(provider: String?, status: Int, extras: android.os.Bundle?) = Unit
+                        override fun onProviderEnabled(provider: String) = Unit
+                        override fun onProviderDisabled(provider: String) = Unit
+                    }
+                    @Suppress("DEPRECATION")
+                    manager.requestSingleUpdate(provider, listener, Looper.getMainLooper())
+                    main.postDelayed({ runCatching { manager.removeUpdates(listener) } }, TIMEOUT_MILLIS)
+                }
+            } catch (error: Exception) {
+                answered(null)
+            }
+        }
+        main.postDelayed({ finish(null) }, TIMEOUT_MILLIS)
     }
 
     /** Asks again after a fix could not be had. */
