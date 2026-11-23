@@ -62,6 +62,8 @@ final class ClimbStore: ObservableObject {
         let id = UUID()
         var capture = capture
         capture?.hasPlan = capturePlan?.isEmpty == false
+        let summary = capture?.summary?.stored
+        capture?.summary = summary
         let videoName = "\(id).\(stagedVideo.pathExtension.isEmpty ? "mov" : stagedVideo.pathExtension)"
         let thumbnailName = "\(id).jpg"
         let climb = Climb(id: id, date: Date(), title: String(title.trimmingCharacters(in: .whitespacesAndNewlines).prefix(60)), grade: grade, sent: sent, note: String(note.prefix(1000)), videoName: videoName, thumbnailName: thumbnailName, analysis: analysis, gymId: gymId, gymName: cleanGymName(gymName), climbedAt: climbedAt, folderId: validFolder(folderId), pendingAnalysis: pendingAnalysis, capture: capture)
@@ -115,7 +117,7 @@ final class ClimbStore: ObservableObject {
         guard canWrite else { throw CocoaError(.fileWriteNoPermission) }
         try Data(plan.utf8).write(to: capturePlanFile(id), options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
         next.climbs[index].capture?.hasPlan = true
-        if let summary { next.climbs[index].capture?.summary = summary }
+        if let summary { next.climbs[index].capture?.summary = summary.stored }
         try persist(next)
     }
 
@@ -128,9 +130,10 @@ final class ClimbStore: ObservableObject {
         try persist(next)
     }
 
-    /// The gym of the most recent record that has one: where the next recording most likely is.
+    /// The gym of the record made most recently that has one (by when the record was made, not by
+    /// the climbing date the user may have set): where the next recording most likely is.
     var lastGym: (id: String?, name: String)? {
-        climbs.first(where: { !$0.gymKey.isEmpty }).map { ($0.gymId, $0.shortGymName) }
+        archive.climbs.filter { !$0.gymKey.isEmpty }.max { $0.date < $1.date }.map { ($0.gymId, $0.shortGymName) }
     }
 
     func setAnalysisMessage(_ text: String?, for id: UUID) { analysisMessages[id] = text }

@@ -23,9 +23,9 @@ final class CaptureFlowTests: XCTestCase {
         clips = []
     }
 
-    private func pack(capture: Bool = true, analysis: Bool = true, step: Int = 3, directoryIds: Bool = true) throws -> GymPack {
+    private func pack(capture: Bool = true, analysis: Bool = true, step: Int = 3, directoryIds: Bool = true, captureComesUp: Bool = true) throws -> GymPack {
         let directory = root.appendingPathComponent("pack-\(UUID())")
-        try StandInPack.write(to: directory, capture: capture, analysis: analysis, step: step, directoryIds: directoryIds)
+        try StandInPack.write(to: directory, capture: capture, analysis: analysis, step: step, directoryIds: directoryIds, captureComesUp: captureComesUp)
         return try GymPack(directory: directory.appendingPathComponent(GymPack.directoryName))
     }
     private func wall(seconds: Double = 2, width: Int = 360, height: Int = 640, photo: CGImage? = nil) async throws -> URL {
@@ -37,7 +37,6 @@ final class CaptureFlowTests: XCTestCase {
     private func session(_ store: ClimbStore, _ pack: GymPack?, _ clip: URL) -> CaptureSession {
         let session = CaptureSession(store: store, pack: pack, source: FileCaptureSource(url: clip, horizontalFieldOfView: 41.5))
         session.framingInterval = 0.04
-        session.recordingInterval = 0.2
         session.watchInterval = .milliseconds(100)
         return session
     }
@@ -141,12 +140,21 @@ final class CaptureFlowTests: XCTestCase {
         XCTAssertTrue(judged.startConfirmed); XCTAssertFalse(judged.finishConfirmed)
         await until("nothing left to say") { session.assessment?.hint == nil }
 
+        let handedOver = session.metrics.frames
         session.startRecording()
         XCTAssertEqual(session.phase, .recording)
         try await Task.sleep(for: .seconds(1.6))
         XCTAssertEqual(session.phase, .recording)
         XCTAssertNotNil(session.summary, "The page answered lock() with its plan")
         XCTAssertTrue(store.climbs.isEmpty)
+        // The page uses nothing after `lock`: no more frames are prepared for it while recording.
+        XCTAssertLessThanOrEqual(session.metrics.frames, handedOver + 1)
+        // While it is being recorded the clip lies in the store's own directory with what is known about it, in case the app does not live to save it.
+        let recording = CaptureRecovery.directory(in: store.root)
+        let lying = try FileManager.default.contentsOfDirectory(atPath: recording.path).sorted()
+        XCTAssertEqual(lying.map { ($0 as NSString).pathExtension }, ["json", "mov"])
+        let draft = try JSONDecoder().decode(CaptureDraft.self, from: Data(contentsOf: recording.appendingPathComponent(lying[0])))
+        XCTAssertEqual(draft.grade, "V4"); XCTAssertEqual(draft.gymId, "syn:east"); XCTAssertEqual(draft.info.colorKey, "yellow"); XCTAssertNotNil(draft.plan)
         await session.stop(.user)
 
         guard case .saved(let id) = session.phase else { return XCTFail("not saved: \(session.phase)") }
@@ -162,7 +170,10 @@ final class CaptureFlowTests: XCTestCase {
         XCTAssertEqual(capture.colorKey, "yellow"); XCTAssertEqual(capture.colorRGB, [226, 196, 40])
         XCTAssertEqual(capture.packVersion, StandInPack.version)
         XCTAssertEqual(capture.analysisQueued, true); XCTAssertTrue(capture.hasPlan)
-        XCTAssertEqual(capture.summary, CaptureSummary(color: "yellow", rgb: [226, 196, 40], holds: 6, startHands: 1, startFeet: 1, finish: true, ok: true, issues: [], route: recognised))
+        // In the album the problem keeps its id and its own name; the name and grade in the interface language are not written down.
+        XCTAssertEqual(capture.summary, CaptureSummary(color: "yellow", rgb: [226, 196, 40], holds: 6, startHands: 1, startFeet: 1, finish: true, ok: true, issues: [],
+                                                       route: .init(id: recognised.id, confidence: 0.9, nameZh: "合成线路 黄 1")))
+        XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath: recording.path).isEmpty)       // Nothing is left lying once it is in the album.
         XCTAssertEqual(capture.routeId, recognised.id); XCTAssertEqual(capture.routeName, "合成线路 黄 1")   // Recognised and not rejected: kept with the record, under its own name.
         XCTAssertEqual(record.grade, "V4")                                                             // The grade is the one the user picked.
         let plan = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(try XCTUnwrap(reopened.capturePlan(for: record)).utf8)) as? [String: Any])
@@ -188,7 +199,6 @@ final class CaptureFlowTests: XCTestCase {
         XCTAssertEqual(store.analysisMessages[id], AnalysisError.noPose.errorDescription)
         XCTAssertEqual(store.climbs.count, 1)
 
-        // After lock the page kept getting frames, more slowly, and judged nothing new.
         state = try await pageState(session)
         XCTAssertEqual(state["locked"] as? Bool, true)
         let print = XCTAttachment(string: session.metrics.summary); print.name = "Frame hand-over, 360x640 drawn wall, no person"; print.lifetime = .keepAlways; add(print)
@@ -297,7 +307,7 @@ final class CaptureFlowTests: XCTestCase {
         XCTAssertEqual(session.phase, .framing); XCTAssertEqual(session.notice, .tooShort)
         XCTAssertEqual(store.climbs.count, 4)
         await session.close()
-        XCTAssertTrue((try FileManager.default.contentsOfDirectory(atPath: NSTemporaryDirectory())).filter { $0.hasPrefix("betabuddy-capture-") }.isEmpty)
+        XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath: CaptureRecovery.directory(in: store.root).path).isEmpty)
     }
 
     func testRejectingAProblemMovesToTheNextCandidateAndItsGradeIsOnlyFilledInUntilTheUserPicks() async throws {
@@ -393,24 +403,182 @@ final class CaptureFlowTests: XCTestCase {
         await session.close()
     }
 
-    func testAFailedSaveKeepsTheClipForAnotherTry() async throws {
+    func testAFailedSaveKeepsTheClipForAnotherTryAndLeavingDoesNotThrowItAway() async throws {
         let store = store()
-        let session = session(store, nil, try await wall())
+        var session = session(store, nil, try await wall())
         session.start()
         await until("camera") { session.camera == .running }
+        session.pickGrade("V2")
+        session.gymName = "手填的岩馆"
         session.startRecording()
         try await Task.sleep(for: .seconds(1.3))
         // The album cannot be written.
-        try FileManager.default.removeItem(at: store.root)
-        try Data().write(to: store.root)
+        let index = store.root.appendingPathComponent("archive.json")
+        try FileManager.default.createDirectory(at: index, withIntermediateDirectories: true)
+        try Data().write(to: index.appendingPathComponent("in-the-way"))
         await session.stop(.user)
         guard case .saveFailed = session.phase else { return XCTFail("\(session.phase)") }
         XCTAssertTrue(store.climbs.isEmpty)
-        try FileManager.default.removeItem(at: store.root)
-        try FileManager.default.createDirectory(at: store.root, withIntermediateDirectories: true)
-        await session.save()
+        // Leaving the screen now keeps the clip where recordings lie…
+        await session.close()
+        let recording = CaptureRecovery.directory(in: store.root)
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: recording.path).filter { $0.hasSuffix(".mov") }.count, 1)
+        // …and the next launch takes it into the album with what was chosen.
+        try FileManager.default.removeItem(at: index)
+        let swept = await CaptureRecovery.sweep(store: store, analysisAvailable: false)
+        XCTAssertEqual(swept.adopted.count, 1)
+        let adopted = try XCTUnwrap(ClimbStore(root: store.root).climbs.first)
+        XCTAssertEqual(adopted.grade, "V2"); XCTAssertEqual(adopted.gymName, "手填的岩馆"); XCTAssertNotNil(adopted.capture)
+        XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath: recording.path).isEmpty)
+
+        // The same failure, saved again from the screen; and given up for good only when the user says so.
+        session = self.session(store, nil, try await wall())
+        session.start()
+        await until("camera") { session.camera == .running }
+        for retry in [true, false] {
+            session.startRecording()
+            try await Task.sleep(for: .seconds(1.3))
+            try FileManager.default.moveItem(at: index, to: store.root.appendingPathComponent("archive.kept"))
+            try FileManager.default.createDirectory(at: index, withIntermediateDirectories: true)
+            try Data().write(to: index.appendingPathComponent("in-the-way"))
+            await session.stop(.user)
+            guard case .saveFailed = session.phase else { return XCTFail("\(session.phase)") }
+            try FileManager.default.removeItem(at: index)
+            try FileManager.default.moveItem(at: store.root.appendingPathComponent("archive.kept"), to: index)
+            if retry {
+                await session.save()
+                guard case .saved = session.phase else { return XCTFail("\(session.phase)") }
+                session.frameAgain()
+            } else {
+                session.discardHeldClip()
+                XCTAssertEqual(session.phase, .framing)
+            }
+            XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath: recording.path).isEmpty)
+        }
+        XCTAssertEqual(ClimbStore(root: store.root).climbs.count, 2)
+        await session.close()
+    }
+
+    func testWhatAnEarlierRunLeftBehindIsAdoptedOrRemovedAtLaunch() async throws {
+        let store = store()
+        let recording = CaptureRecovery.directory(in: store.root)
+        // A clip that was closed properly, with its draft.
+        var clip = try CaptureRecovery.newClip(in: store.root)
+        try FileManager.default.moveItem(at: try await wall(seconds: 2), to: clip.movie)
+        let began = Date(timeIntervalSince1970: 1_700_000_000)
+        let info = CaptureInfo(colorKey: "blue", colorRGB: [1, 2, 3], summary: CaptureSummary(color: "blue", holds: 5, route: .init(id: "r1", name: "Localized", nameZh: "线", grade: "V2")), routeId: "r1", routeName: "线")
+        CaptureRecovery.write(CaptureDraft(started: began, gymId: "syn:east", gymName: "合成岩馆（东门）", grade: "V7", info: info, plan: "{\"v\":1}"), for: clip.movie)
+        // A clip whose writer never got to finish: the app was killed while recording.
+        clip = try CaptureRecovery.newClip(in: store.root)
+        let source = FileCaptureSource(url: try await wall(seconds: 2))
+        var recorder: ClipRecorder? = try ClipRecorder(url: clip.movie, width: 360, height: 640, settings: ClipRecorder.defaultSettings(width: 360, height: 640), fragmentSeconds: 0.5)
+        let unfinished = clip.movie
+        source.onFrame = { [recorder] buffer, time in recorder?.append(buffer, at: time) }
+        try await source.start()
+        try await Task.sleep(for: .seconds(3))
+        source.stop()
+        source.onFrame = nil
+        recorder = nil                                         // Never finished, never cancelled.
+        try await Task.sleep(for: .milliseconds(300))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: unfinished.path))
+        // Things that are not clips: a file that is not a movie, a clip too short to keep, a draft without a clip, and a leftover of older builds.
+        try Data("not a movie".utf8).write(to: recording.appendingPathComponent("garbage.mov"))
+        try FileManager.default.moveItem(at: try await wall(seconds: 0.4), to: recording.appendingPathComponent("short.mov"))
+        try Data("{}".utf8).write(to: recording.appendingPathComponent("orphan.json"))
+        let legacy = FileManager.default.temporaryDirectory.appendingPathComponent("betabuddy-capture-\(UUID()).mov")
+        try Data([0]).write(to: legacy)
+        let leftovers = try FileManager.default.contentsOfDirectory(atPath: NSTemporaryDirectory()).filter { $0.hasPrefix("betabuddy-capture-") }.count
+
+        let swept = await CaptureRecovery.sweep(store: store, analysisAvailable: true)
+        XCTAssertEqual(swept.adopted.count, 2, "The finished clip and the unfinished one")
+        XCTAssertEqual(swept.removed, 3 + leftovers)
+        XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath: recording.path).isEmpty)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: legacy.path))
+        let reopened = ClimbStore(root: store.root)
+        XCTAssertEqual(reopened.climbs.count, 2)
+        let withDraft = try XCTUnwrap(reopened.climbs.first { $0.grade == "V7" })
+        XCTAssertEqual(withDraft.gymId, "syn:east"); XCTAssertEqual(withDraft.climbedAt, began)
+        XCTAssertEqual(withDraft.capture?.colorKey, "blue"); XCTAssertEqual(withDraft.capture?.routeId, "r1"); XCTAssertEqual(withDraft.capture?.analysisQueued, true)
+        XCTAssertEqual(withDraft.capture?.summary?.route, .init(id: "r1", nameZh: "线"))            // Stored without the localized name and grade.
+        XCTAssertEqual(reopened.capturePlan(for: withDraft), "{\"v\":1}")
+        XCTAssertEqual(withDraft.pendingAnalysis, AnalysisQuality.balanced.rawValue)
+        XCTAssertGreaterThan(withDraft.analysis.duration, 1.5)
+        // The unfinished clip plays up to its last complete fragment; there was no draft, so it is a bare record.
+        let bare = try XCTUnwrap(reopened.climbs.first { $0.id != withDraft.id })
+        XCTAssertGreaterThanOrEqual(bare.analysis.duration, 1); XCTAssertLessThan(bare.analysis.duration, 3.5)
+        XCTAssertEqual(bare.grade, ungradedValue); XCTAssertEqual(bare.capture, CaptureInfo(analysisQueued: true))
+        XCTAssertNotNil(UIImage(contentsOfFile: store.file(bare.thumbnailName).path))
+        XCTAssertEqual(store.analysisMessages[bare.id], CaptureText.stop(.interrupted))
+        // A second sweep finds nothing; and none is made while the camera is in use.
+        let again = await CaptureRecovery.sweep(store: store, analysisAvailable: true)
+        XCTAssertTrue(again.adopted.isEmpty); XCTAssertEqual(again.removed, 0)
+        store.pauseAnalysisForCamera()
+        try Data("x".utf8).write(to: recording.appendingPathComponent("busy.mov"))
+        let busy = await CaptureRecovery.sweep(store: store, analysisAvailable: true)
+        XCTAssertEqual(busy.removed, 0); XCTAssertTrue(FileManager.default.fileExists(atPath: recording.appendingPathComponent("busy.mov").path))
+    }
+
+    func testAChangedGymIsNotLockedUnderTheOldGymsJudgement() async throws {
+        let store = store()
+        let session = session(store, try pack(), try await wall())
+        session.start()
+        await until("ready") { session.assessment?.ready == true }
+        session.selectColor("yellow")
+        await until("holds") { session.assessment?.holds.count == 6 }
+        // The gym changes and Record is pressed before the page has been told: what it has is a judgement for no gym at all.
+        session.gymId = "syn:east"; session.gymName = StandInPack.directoryGymName
+        session.startRecording()
+        try await Task.sleep(for: .seconds(1.3))
+        let state = try await pageState(session)
+        XCTAssertEqual(state["locked"] as? Bool, false)
+        XCTAssertNil(session.summary)
+        await session.stop(.user)
+        let record = try XCTUnwrap(store.climbs.first)
+        XCTAssertEqual(record.gymId, "syn:east")
+        XCTAssertEqual(record.capture?.hasPlan, false); XCTAssertNil(store.capturePlan(for: record)); XCTAssertNil(record.capture?.summary)
+        XCTAssertEqual(record.capture?.colorKey, "yellow")                    // What the user chose is still kept.
+        await session.close()
+    }
+
+    func testAStalledCameraIsNotRecordedFromAndAPauseDoesNotLookLikeABrokenPage() async throws {
+        let store = store()
+        let source = FileCaptureSource(url: try await wall())
+        let session = CaptureSession(store: store, pack: try pack(), source: source)
+        session.framingInterval = 0.04
+        session.quietLimit = 0.6
+        session.stallLimit = 0.5
+        var cameras: [CaptureSession.Camera] = [], pages: [CaptureSession.Page] = []
+        session.$camera.sink { if cameras.last != $0 { cameras.append($0) } }.store(in: &watching)
+        session.$page.sink { if pages.last != $0 { pages.append($0) } }.store(in: &watching)
+        session.start()
+        await until("ready") { session.assessment?.ready == true }
+        // The pictures stop without a word, as after a camera error. The preview is frozen: nothing to record from…
+        XCTAssertEqual(cameras, [.starting, .running])
+        source.stop()
+        // …the camera is no longer taken to be running (Record needs it to be), and the source is started again by itself.
+        await until("the stall to be noticed and frames to come back", within: 6) { cameras.count >= 4 && session.camera == .running }
+        XCTAssertEqual(cameras, [.starting, .running, .starting, .running])
+        // The pause was longer than the page is allowed to stay quiet, yet the page is not taken to be broken.
+        try await Task.sleep(for: .seconds(1))
+        XCTAssertFalse(pages.contains(.failed), "\(pages)")
+        XCTAssertNotNil(session.assessment)
+        await session.close()
+    }
+
+    func testAPageThatNeverComesUpIsGivenUpOn() async throws {
+        let store = store()
+        let session = session(store, try pack(captureComesUp: false), try await wall())
+        session.loadingLimit = .milliseconds(600)
+        session.start()
+        await until("camera") { session.camera == .running }
+        await until("the wait to end", within: 5) { session.page == .failed }
+        let handed = session.metrics.frames
+        XCTAssertEqual(handed, 0)                                  // Nothing was handed to a page that never said it was ready…
+        session.startRecording()                                   // …and recording works as without one.
+        try await Task.sleep(for: .seconds(1.3))
+        await session.stop(.user)
         guard case .saved = session.phase else { return XCTFail("\(session.phase)") }
-        XCTAssertEqual(ClimbStore(root: store.root).climbs.count, 1)
+        XCTAssertEqual(store.climbs.first?.capture?.hasPlan, false)
         await session.close()
     }
 

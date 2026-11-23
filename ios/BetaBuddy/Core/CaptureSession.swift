@@ -69,10 +69,15 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
     /// When the page last answered (or was last asked to start over). A page that has gone quiet
     /// must not leave an old judgement on the screen.
     private var lastReply: Date?
+    private var lastHandOver: Date?
     var quietLimit: TimeInterval = 5
-    /// Seconds between frames handed to the page while framing, and while recording.
+    /// How long the page may take to come up before the screen stops waiting for it.
+    var loadingLimit: Duration = .seconds(8)
+    /// Without a frame for this long the camera is taken to have stopped: recording is not offered and the source is started again.
+    var stallLimit: TimeInterval = 2
+    private var stallWatch: Task<Void, Never>?
+    /// Seconds between frames handed to the page while framing. Nothing is handed over once recording has started.
     var framingInterval = 0.5
-    var recordingInterval = 1.0
     var maximumDuration = CaptureLimits.maximumDuration
     /// How often a running recording is checked for free space, heat and a failed writer.
     var watchInterval: Duration = .seconds(3)
@@ -115,17 +120,38 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
             guard let self else { done(); return }
             self.hand(frame, done)
         }
-        pipeline.onFirstFrame = { [weak self] width, height in
+        pipeline.onFrames = { [weak self] width, height in
             Task { @MainActor [weak self] in
                 guard let self, self.started else { return }
-                self.frameSize = CGSize(width: width, height: height)
+                if self.camera != .running { self.frameSize = CGSize(width: width, height: height) }
                 self.camera = .running
+                // Frames are back after a pause (a call, the background): the page has had nothing to answer meanwhile.
+                if self.lastReply != nil { self.lastReply = Date() }
             }
         }
         source.onFrame = { [pipeline] buffer, time in pipeline.handle(buffer, time) }
         source.onInterruption = { [weak self] in Task { @MainActor in await self?.stop(.interrupted) } }
         background = NotificationCenter.default.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main) { [weak self] _ in
-            Task { @MainActor in await self?.stop(.interrupted) }
+            // Asked for here and now, before this returns: closing the clip must not depend on a task that has yet to start.
+            MainActor.assumeIsolated {
+                guard let self, self.phase == .recording else { return }
+                let task = UIApplication.shared.beginBackgroundTask(withName: "Close recording")
+                Task { @MainActor in
+                    await self.stop(.interrupted)
+                    if task != .invalid { UIApplication.shared.endBackgroundTask(task) }
+                }
+            }
+        }
+        stallWatch = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .milliseconds(500))
+                guard let self, !Task.isCancelled, self.started else { return }
+                // The preview has frozen (a camera error, or the pictures simply stopped): there is nothing to record.
+                guard self.camera == .running, self.phase == .framing, let age = self.pipeline.secondsSinceFrame, age > self.stallLimit else { continue }
+                self.camera = .starting
+                self.pipeline.announceNextFrame()
+                try? await self.source.start()
+            }
         }
         #if DEBUG
         // `-debugCaptureAttitude "<pitch>,<roll>,<shake>"` stands in for the motion sensor the simulator lacks.
@@ -153,6 +179,7 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
         guard started else { return }
         started = false
         watch?.cancel()
+        stallWatch?.cancel()
         if let background { NotificationCenter.default.removeObserver(background) }
         background = nil
         pipeline.setFeeding(false)
@@ -164,7 +191,8 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
         webView?.stopLoading()
         webView?.configuration.userContentController.removeScriptMessageHandler(forName: GymSession.handlerName)
         webView = nil
-        if let heldClip { try? FileManager.default.removeItem(at: heldClip.url) }
+        // A clip that could not be saved is not thrown away by leaving: it stays where recordings are
+        // written and is taken into the album the next time the app starts. Discarding is the user's own choice.
         heldClip = nil
         log.info("capture closed: \(self.metrics.summary, privacy: .public)")
         store.resumeAnalysis(cameraClosed: true)
@@ -183,6 +211,9 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
             guard started else { return }
             webView = view
             view.load(URLRequest(url: url))
+            // A page that never says it is ready is treated like one that is not there.
+            try? await Task.sleep(for: loadingLimit)
+            if started, page == .loading { pageFailed("no captureReady") }
         }
     }
 
@@ -212,6 +243,11 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
         let size = CGSize(width: frame.width, height: frame.height)
         if frameSize != size { frameSize = size }
         guard started, page == .ready || page == .failed, webView != nil else { done(); return }
+        // The page can only have gone quiet while it was being asked. After any pause in what it is
+        // given (a call, the background, a camera that stopped) its clock starts again.
+        let now = Date()
+        if let lastHandOver, now.timeIntervalSince(lastHandOver) > 1, lastReply != nil { lastReply = now }
+        lastHandOver = now
         Task {
             let venue = self.venue
             if begun?.id != captureID || begun?.width != frame.width || begun?.height != frame.height {
@@ -269,6 +305,7 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
             pageVersion = version.isEmpty ? pack?.manifest.packVersion : version
             begun = nil
             page = .ready
+            if phase == .framing { pipeline.setFeeding(started, interval: framingInterval) }   // Also when it came up late.
         case .assessment(let assessment):
             guard phase == .framing, begun?.id == captureID else { return }
             if page == .failed { page = .ready }
@@ -281,6 +318,7 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
             guard id.isEmpty || id == captureID else { return }
             self.summary = summary
             if let plan { self.plan = plan }
+            writeDraft()
             // The page may answer, or answer again with a fuller plan, after the clip is in the album.
             if case .saved(let climb) = phase, let plan {
                 do { try store.saveCapturePlan(plan, summary: summary, for: climb) }
@@ -368,9 +406,9 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
     func startRecording() {
         guard phase == .framing, camera == .running, let size = pipeline.frameSize else { return }
         if let free = freeBytes(), free < CaptureLimits.startingFreeBytes { notice = .lowStorage; return }
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent("betabuddy-capture-\(UUID()).mov")
         let began = Date()
-        guard let recorder = try? ClipRecorder(url: url, width: size.width, height: size.height,
+        guard let url = try? CaptureRecovery.newClip(in: store.root).movie,
+              let recorder = try? ClipRecorder(url: url, width: size.width, height: size.height,
                                                settings: source.writerSettings(width: size.width, height: size.height), date: began) else {
             notice = .recorderFailed
             return
@@ -385,10 +423,13 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
             Task { @MainActor [weak self] in await self?.stop(.limit) }
         }
         pipeline.setRecorder(recorder)
-        // The judgement of this moment is what the analysis will be given. Frames keep going to the
-        // page at a slower pace; it only uses them to see the wall without the climber.
-        pipeline.setFeeding(page == .ready, interval: recordingInterval)
-        if page == .ready { Task { await call(.lock) } }
+        // The judgement of this moment is what the analysis will be given. The page uses nothing
+        // that comes after `lock`, so no more frames are prepared for it and live pose stops.
+        pipeline.setFeeding(false)
+        // Only a judgement of this take, for the gym now chosen, is locked. Right after the gym was
+        // changed the page is still on the old one: then this take is recorded without a plan.
+        if page == .ready, let begun, begun.id == captureID, begun.venue == venue { Task { await call(.lock) } }
+        writeDraft()
         watch?.cancel()
         watch = Task { [weak self] in
             while !Task.isCancelled {
@@ -417,7 +458,7 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
         let result = await recorder.finish()
         log.info("recorded \(result.duration, format: .fixed(precision: 1)) s, \(result.frames) frames, \(result.dropped) dropped, stop: \(reason.rawValue, privacy: .public)")
         guard let url = result.url, result.duration >= CaptureLimits.minimumDuration else {
-            if let url = result.url { try? FileManager.default.removeItem(at: url) }
+            CaptureRecovery.remove(recorder.url)
             notice = result.url == nil && result.frames > 0 ? .recorderFailed : .tooShort
             startFraming()
             return
@@ -434,16 +475,14 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
             let analyzer = VideoAnalyzer()
             let playback = try await analyzer.videoSummary(url: clip.url)
             let thumbnail = try await analyzer.thumbnail(url: clip.url)
-            let swatch = assessment?.palette.first { $0.key == color }
-            let info = CaptureInfo(colorKey: color, colorRGB: swatch?.rgb ?? (summary?.color == color ? summary?.rgb : nil), summary: summary,
-                                   packVersion: pack == nil ? nil : pageVersion, analysisQueued: analysisAvailable ? true : nil,
-                                   routeId: recognised?.id, routeName: recognised?.nameZh ?? recognised?.name)
+            let info = makeInfo()
             // One write: the clip, its thumbnail, the plan, what was chosen and the request for
             // analysis. Nothing is analysed until this has succeeded.
             let climb = try store.save(title: "", grade: grade, sent: false, note: "", stagedVideo: clip.url, thumbnail: thumbnail, analysis: playback,
                                        gymId: gymId, gymName: gymName, climbedAt: clip.started, pendingAnalysis: AnalysisQuality.balanced.rawValue,
                                        capture: info, capturePlan: plan)
             heldClip = nil
+            try? FileManager.default.removeItem(at: CaptureRecovery.draftURL(for: clip.url))
             phase = .saved(climb.id)
             store.resumeAnalysis(cameraClosed: true)
         } catch {
@@ -451,9 +490,23 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
         }
     }
 
+    /// What is known about this take besides the clip itself.
+    private func makeInfo() -> CaptureInfo {
+        let swatch = assessment?.palette.first { $0.key == color }
+        return CaptureInfo(colorKey: color, colorRGB: swatch?.rgb ?? (summary?.color == color ? summary?.rgb : nil), summary: summary?.stored,
+                           packVersion: pack == nil ? nil : pageVersion, analysisQueued: analysisAvailable ? true : nil,
+                           routeId: recognised?.id, routeName: recognised?.nameZh)
+    }
+
+    /// Kept next to the clip while it is being recorded, so that it can become a record even if the app does not live to save it.
+    private func writeDraft() {
+        guard let movie = recorder?.url ?? heldClip?.url, let began = recordingStarted else { return }
+        CaptureRecovery.write(CaptureDraft(started: began, gymId: gymId, gymName: gymName, grade: grade, info: makeInfo(), plan: plan), for: movie)
+    }
+
     /// Gives up a clip that could not be saved.
     func discardHeldClip() {
-        if let heldClip { try? FileManager.default.removeItem(at: heldClip.url) }
+        if let heldClip { CaptureRecovery.remove(heldClip.url) }
         heldClip = nil
         startFraming()
     }

@@ -139,7 +139,13 @@ final class CaptureSupportTests: XCTestCase {
         XCTAssertEqual(record.pendingAnalysis, "balanced")
         XCTAssertEqual(reopened.capturePlan(for: record), plan)                       // Byte for byte.
         XCTAssertNil(reopened.capturePlan(for: imported)); XCTAssertNil(reopened.climbs.first { $0.id == imported.id }?.capture)
-        XCTAssertEqual(reopened.lastGym?.id, "syn:east")                               // The most recent record with a gym.
+        XCTAssertEqual(reopened.lastGym?.id, "syn:east")                               // The record made last that has a gym.
+        // “Last” is by when the record was made: one made now for a climb long ago is the last one.
+        let later = try reopened.save(title: "", grade: "V1", sent: false, note: "", stagedVideo: staged(), thumbnail: Data(), analysis: playback,
+                                      gymId: "syn:west", gymName: "合成岩馆（西门）", climbedAt: Date(timeIntervalSince1970: 1000))
+        XCTAssertEqual(ClimbStore(root: root).lastGym?.id, "syn:west")
+        try reopened.delete(later)
+        XCTAssertEqual(ClimbStore(root: root).lastGym?.id, "syn:east")
 
         // The plan reaches the analysis page as a JavaScript string literal, whatever is in it.
         let begin = AnalysisCommand.begin(id: record.id.uuidString, width: 1080, height: 1920, climber: nil, capture: reopened.capturePlan(for: record)).script
@@ -256,6 +262,18 @@ final class CaptureSupportTests: XCTestCase {
             let small = try XCTUnwrap(CapturePipeline.scaled(try twoTone(format, width: 180, height: 320), shortSide: 360, context: context))
             XCTAssertEqual(small.width, 180); XCTAssertEqual(small.height, 320)
         }
+    }
+
+    func testFieldOfViewOfTheFramesThatAreDelivered() throws {
+        // A 16:9 format, upright frames: the angle across the short side.
+        XCTAssertEqual(try XCTUnwrap(CameraSource.fieldOfView(sensorDegrees: 70, frameWidth: 1080, frameHeight: 1920)), 43.0, accuracy: 0.1)
+        // The same frames cut from a 4:3 format whose long side spans 60°: the frame's own shape decides, not the sensor's.
+        XCTAssertEqual(try XCTUnwrap(CameraSource.fieldOfView(sensorDegrees: 60, frameWidth: 1080, frameHeight: 1920)), 36.0, accuracy: 0.1)
+        // Frames that could not be rotated keep the sensor's angle.
+        XCTAssertEqual(CameraSource.fieldOfView(sensorDegrees: 70, frameWidth: 1920, frameHeight: 1080), 70)
+        XCTAssertNil(CameraSource.fieldOfView(sensorDegrees: 0, frameWidth: 1080, frameHeight: 1920))
+        XCTAssertNil(CameraSource.fieldOfView(sensorDegrees: 70, frameWidth: 0, frameHeight: 1920))
+        XCTAssertNil(CameraSource().horizontalFieldOfView)             // Not known before the session runs and a frame has arrived.
     }
 
     func testEveryCodeHasItsOwnWordsAndUnknownOnesTheGenericLine() {

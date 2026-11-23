@@ -36,8 +36,26 @@ extension CaptureSource {
 final class CameraSource: NSObject, CaptureSource, AVCaptureVideoDataOutputSampleBufferDelegate, @unchecked Sendable {
     var onFrame: ((CVPixelBuffer, CMTime) -> Void)?
     var onInterruption: (() -> Void)?
-    private(set) var horizontalFieldOfView: Double?
     private let session = AVCaptureSession()
+    private let state = NSLock()
+    /// Field of view across the long side of the format that is delivering frames, read once the session runs.
+    private var sensorFieldOfView: Double?
+    private var delivered: (width: Int, height: Int)?
+    /// Known only once the session is running and a frame has arrived: it depends on the format the
+    /// preset really selected and on the shape of the frames that come out of it.
+    var horizontalFieldOfView: Double? {
+        state.lock(); defer { state.unlock() }
+        guard let sensorFieldOfView, let delivered else { return nil }
+        return Self.fieldOfView(sensorDegrees: sensorFieldOfView, frameWidth: delivered.width, frameHeight: delivered.height)
+    }
+    /// The sensor reports the angle across its long side. A frame cut to 16:9 from a 4:3 sensor keeps
+    /// that side whole, so the angle across the frame's long side is the sensor's, and the one across its
+    /// short side follows from the frame's own shape. An upright frame's width is its short side.
+    static func fieldOfView(sensorDegrees: Double, frameWidth: Int, frameHeight: Int) -> Double? {
+        guard frameWidth > 0, frameHeight > 0 else { return nil }
+        if frameWidth >= frameHeight { return sensorDegrees.isFinite && sensorDegrees > 1 && sensorDegrees < 179 ? sensorDegrees : nil }
+        return CaptureMotion.uprightFieldOfView(sensorDegrees: sensorDegrees, longSide: Double(frameHeight), shortSide: Double(frameWidth))
+    }
     private let output = AVCaptureVideoDataOutput()
     private let queue = DispatchQueue(label: "com.betabuddy.capture.video", qos: .userInitiated)
     private var configured = false
@@ -62,6 +80,11 @@ final class CameraSource: NSObject, CaptureSource, AVCaptureVideoDataOutputSampl
                 do {
                     try self.configure()
                     if !self.session.isRunning { self.session.startRunning() }
+                    // Only now is the active format the one the preset selected.
+                    if let device = (self.session.inputs.first as? AVCaptureDeviceInput)?.device {
+                        let degrees = Double(device.activeFormat.videoFieldOfView)
+                        self.state.lock(); self.sensorFieldOfView = degrees; self.state.unlock()
+                    }
                     continuation.resume()
                 } catch { continuation.resume(throwing: error) }
             }
@@ -73,6 +96,11 @@ final class CameraSource: NSObject, CaptureSource, AVCaptureVideoDataOutputSampl
             for name in [AVCaptureSession.wasInterruptedNotification, AVCaptureSession.runtimeErrorNotification] {
                 observers.append(NotificationCenter.default.addObserver(forName: name, object: session, queue: .main) { [weak self] _ in self?.onInterruption?() })
             }
+            // After a runtime error the session has stopped; an interruption ends by itself, an error does not.
+            observers.append(NotificationCenter.default.addObserver(forName: AVCaptureSession.runtimeErrorNotification, object: session, queue: nil) { [weak self] _ in
+                guard let self else { return }
+                self.queue.async { if self.configured, !self.session.isRunning { self.session.startRunning() } }
+            })
         }
     }
 
@@ -95,9 +123,6 @@ final class CameraSource: NSObject, CaptureSource, AVCaptureVideoDataOutputSampl
             // The phone stands still; stabilisation would only crop the picture and change its field of view.
             if connection.isVideoStabilizationSupported { connection.preferredVideoStabilizationMode = .off }
         }
-        let size = CMVideoFormatDescriptionGetDimensions(device.activeFormat.formatDescription)
-        horizontalFieldOfView = CaptureMotion.uprightFieldOfView(sensorDegrees: Double(device.activeFormat.videoFieldOfView),
-                                                                 longSide: Double(max(size.width, size.height)), shortSide: Double(min(size.width, size.height)))
         configured = true
     }
 
@@ -109,6 +134,9 @@ final class CameraSource: NSObject, CaptureSource, AVCaptureVideoDataOutputSampl
 
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
         guard let buffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
+        state.lock()
+        if delivered == nil { delivered = (CVPixelBufferGetWidth(buffer), CVPixelBufferGetHeight(buffer)) }
+        state.unlock()
         onFrame?(buffer, CMSampleBufferGetPresentationTimeStamp(sampleBuffer))
     }
 
@@ -227,9 +255,12 @@ final class ClipRecorder: @unchecked Sendable {
          AVVideoCompressionPropertiesKey: [AVVideoAverageBitRateKey: max(1_000_000, width * height * 4), AVVideoMaxKeyFrameIntervalKey: 60]]
     }
 
-    init(url: URL, width: Int, height: Int, settings: [String: Any], date: Date = Date()) throws {
+    /// `fragmentSeconds`: the movie is written in fragments this long, so that a file whose writer never
+    /// got to finish (the app was killed) is still a playable clip up to its last fragment.
+    init(url: URL, width: Int, height: Int, settings: [String: Any], date: Date = Date(), fragmentSeconds: Double = 2) throws {
         self.url = url
         writer = try AVAssetWriter(outputURL: url, fileType: .mov)
+        writer.movieFragmentInterval = CMTime(seconds: fragmentSeconds, preferredTimescale: 600)
         guard writer.canApply(outputSettings: settings, forMediaType: .video) else { throw CaptureSourceError.unavailable }
         input = AVAssetWriterInput(mediaType: .video, outputSettings: settings)
         input.expectsMediaDataInRealTime = true
@@ -408,8 +439,11 @@ final class CapturePipeline: @unchecked Sendable {
     var deliver: ((Frame, @escaping () -> Void) -> Void)?
     /// Seconds recorded so far, on the source's queue.
     var onRecorded: ((Double) -> Void)?
-    /// Pixel size of the source's frames, once, on the source's queue.
-    var onFirstFrame: ((Int, Int) -> Void)?
+    /// Pixel size of the source's frames, on the source's queue: with the first frame, and again
+    /// whenever frames come back after a pause.
+    var onFrames: ((Int, Int) -> Void)?
+    /// A pause in frames longer than this counts as the pictures having stopped.
+    static let pause: TimeInterval = 1
     private let work = DispatchQueue(label: "com.betabuddy.capture.checks", qos: .userInitiated)
     private let context = CIContext(options: [.cacheIntermediates: false])
     private let pose = LivePose()
@@ -422,12 +456,19 @@ final class CapturePipeline: @unchecked Sendable {
     private var lastFed = -Double.infinity
     private var origin: Double?
     private var size: (width: Int, height: Int)?
+    private var lastFrame: Date?
+    private var announce = true
+
+    /// How long ago the source last delivered a frame; `nil` before the first.
+    var secondsSinceFrame: TimeInterval? { lock.lock(); defer { lock.unlock() }; return lastFrame.map { Date().timeIntervalSince($0) } }
 
     /// Pixel size of the frames the source delivers, once one has arrived.
     var frameSize: (width: Int, height: Int)? { lock.lock(); defer { lock.unlock() }; return size }
     var poseDropped: Bool { !pose.enabled }
 
     func setRecorder(_ recorder: ClipRecorder?) { lock.lock(); self.recorder = recorder; lock.unlock() }
+    /// The next frame is reported through `onFrames`, however soon it comes: someone is waiting for the pictures to return.
+    func announceNextFrame() { lock.lock(); announce = true; lock.unlock() }
     /// `interval` is the least time between two frames handed to the page.
     func setFeeding(_ on: Bool, interval: Double? = nil, pose: Bool? = nil) {
         lock.lock()
@@ -441,15 +482,19 @@ final class CapturePipeline: @unchecked Sendable {
         let seconds = time.seconds
         lock.lock()
         size = (CVPixelBufferGetWidth(buffer), CVPixelBufferGetHeight(buffer))
-        let isFirst = origin == nil
+        let now = Date()
+        let resumed = announce || (lastFrame.map { now.timeIntervalSince($0) > Self.pause } ?? true)
+        announce = false
+        lastFrame = now
         if origin == nil { origin = seconds }
         let recorder = self.recorder
+        if seconds < lastFed { lastFed = -.infinity }      // A source that starts over counts its time from the beginning again.
         let feed = feeding && !busy && seconds - lastFed >= interval - 0.005
         if feed { busy = true; lastFed = seconds }
         let wantsPose = self.wantsPose
         let elapsed = seconds - (origin ?? seconds)
         lock.unlock()
-        if isFirst { onFirstFrame?(CVPixelBufferGetWidth(buffer), CVPixelBufferGetHeight(buffer)) }
+        if resumed { onFrames?(CVPixelBufferGetWidth(buffer), CVPixelBufferGetHeight(buffer)) }
         if let recorder, let recorded = recorder.append(buffer, at: time) { onRecorded?(recorded) }
         guard feed else { return }
         work.async { [self] in

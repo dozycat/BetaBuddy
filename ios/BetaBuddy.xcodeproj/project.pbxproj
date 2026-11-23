@@ -58,6 +58,7 @@
 		A6CCE212361BF1F9111BB557 /* MembershipTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 098503FA49B611AD0616C62D /* MembershipTests.swift */; };
 		A96C10334BDC71914EBE9469 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C9F3BFB7EEED9BE808D1130 /* AVFoundation.framework */; };
 		ADB7801DC2438A7B6D4E7884 /* CoreMedia.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 95F7B89B57416C9C6E6F5B54 /* CoreMedia.framework */; };
+		B58E7B4AB8D0408915EBEF28 /* CaptureRecovery.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23B1E2CAC6C284CABB0D7218 /* CaptureRecovery.swift */; };
 		B5ED4035986D2A8E23F1DF3D /* capture-standin.html in Resources */ = {isa = PBXBuildFile; fileRef = 2B01E45A834F62541C0D5341 /* capture-standin.html */; };
 		BFF41156BA3A9A81EE253DAF /* MediaPipeTasksVision.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2EF79A2082843E4FAA12EB15 /* MediaPipeTasksVision.xcframework */; };
 		C10DC5618015D8E01BDF6172 /* AnalysisUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02A20D9113E8B8D5CE2AA7AF /* AnalysisUITests.swift */; };
@@ -115,6 +116,7 @@
 		1F1A0F0CEA9DD60D3F574A78 /* MembershipStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MembershipStore.swift; sourceTree = "<group>"; };
 		2109D140B32372930A88FB14 /* AlbumUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlbumUITests.swift; sourceTree = "<group>"; };
 		21C2F1FA66DC3AF9400169EF /* InfoPlist.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = InfoPlist.xcstrings; sourceTree = "<group>"; };
+		23B1E2CAC6C284CABB0D7218 /* CaptureRecovery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureRecovery.swift; sourceTree = "<group>"; };
 		2B01E45A834F62541C0D5341 /* capture-standin.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = "capture-standin.html"; sourceTree = "<group>"; };
 		2EF79A2082843E4FAA12EB15 /* MediaPipeTasksVision.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = MediaPipeTasksVision.xcframework; path = Vendor/MediaPipeTasksVision/frameworks/MediaPipeTasksVision.xcframework; sourceTree = "<group>"; };
 		3347AC254AE7A2134551EEE4 /* pose_landmarker_full.task */ = {isa = PBXFileReference; path = pose_landmarker_full.task; sourceTree = "<group>"; };
@@ -299,6 +301,7 @@
 				75D4C08308B1484B7470C545 /* AnalysisQueue.swift */,
 				BF9896D69073A417BB9B0B2F /* AppLanguage.swift */,
 				8B87183700FC707A88F7A1FE /* Capture.swift */,
+				23B1E2CAC6C284CABB0D7218 /* CaptureRecovery.swift */,
 				5B8BC2AF18E452C1C6CDAD7E /* CaptureSession.swift */,
 				B1CE7D0FEC8672F025FA47EF /* CaptureSource.swift */,
 				C2073A4BFD1C596095049FD6 /* ClimbStore.swift */,
@@ -599,6 +602,7 @@
 				000BAAC2430D42701BFF962E /* BetaBuddyApp.swift in Sources */,
 				182C46AC97C9E8377CBDD99B /* BrandMark.swift in Sources */,
 				0EECD6E16FB3FAE15E7C6119 /* Capture.swift in Sources */,
+				B58E7B4AB8D0408915EBEF28 /* CaptureRecovery.swift in Sources */,
 				83281BD84E6F11A5D5137F4D /* CaptureSession.swift in Sources */,
 				225D5175E806F176C257581D /* CaptureSource.swift in Sources */,
 				C94C4C67CF2819BE600E26FD /* CaptureText.swift in Sources */,

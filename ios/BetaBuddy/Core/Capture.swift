@@ -193,6 +193,13 @@ struct CaptureSummary: Codable, Equatable, Sendable {
         self.color = color; self.rgb = rgb; self.holds = holds; self.startHands = startHands; self.startFeet = startFeet
         self.finish = finish; self.ok = ok; self.issues = issues; self.route = route
     }
+    /// As it is written into the album: the recognised problem keeps its id and its own name. The
+    /// name and grade the page gave in the interface language are not stored.
+    var stored: CaptureSummary {
+        var copy = self
+        copy.route = route.map { CaptureAssessment.Route(id: $0.id, confidence: $0.confidence, nameZh: $0.nameZh) }
+        return copy
+    }
     init(body: [String: Any]) {
         color = (body["color"] as? String).flatMap { $0.isEmpty ? nil : String($0.prefix(40)) }
         let values = (body["rgb"] as? [Any] ?? []).compactMap { CaptureAssessment.number($0).map { Int(min(255, max(0, $0.rounded()))) } }

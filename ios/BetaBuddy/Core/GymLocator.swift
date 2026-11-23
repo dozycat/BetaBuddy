@@ -116,6 +116,8 @@ final class GymLocator: NSObject, ObservableObject, CLLocationManagerDelegate {
     @Published private(set) var access = Access.notAsked
     @Published private(set) var fix: Fix?
     @Published private(set) var locating = false
+    /// The system could not give a position this time.
+    @Published private(set) var failed = false
     private var manager: CLLocationManager?
 
     override init() {
@@ -124,8 +126,10 @@ final class GymLocator: NSObject, ObservableObject, CLLocationManagerDelegate {
         // `-debugLocation "<lat>,<lon>"` on the launch command line stands in for a fix, for tests. Nothing is asked.
         if let text = UserDefaults.standard.string(forKey: "debugLocation") {
             let parts = text.split(separator: ",").compactMap { Double($0.trimmingCharacters(in: .whitespaces)) }
-            access = parts.count == 2 ? .allowed : .refused
+            // Besides a position: `unavailable` (allowed, but no fix to be had), `ask` (never asked), anything else is a refusal.
+            access = parts.count == 2 || text == "unavailable" ? .allowed : text == "ask" ? .notAsked : .refused
             if parts.count == 2 { fix = Fix(latitude: parts[0], longitude: parts[1], accuracy: 30) }
+            failed = text == "unavailable"
             return
         }
         #endif
@@ -149,10 +153,17 @@ final class GymLocator: NSObject, ObservableObject, CLLocationManagerDelegate {
     func locateIfAllowed() {
         guard let manager, access == .allowed, fix == nil, !locating else { return }
         locating = true
+        failed = false
         manager.requestLocation()
     }
 
     /// Shows the system's question if it has not been answered, then takes one fix.
+    /// Another try after the system could not give a position.
+    func retry() {
+        failed = false
+        locateIfAllowed()
+    }
+
     func ask() {
         guard let manager else { return }
         if access == .notAsked { manager.requestWhenInUseAuthorization() } else { locateIfAllowed() }
@@ -169,11 +180,11 @@ final class GymLocator: NSObject, ObservableObject, CLLocationManagerDelegate {
     nonisolated func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let location = locations.last else { return }
         let fix = Fix(latitude: location.coordinate.latitude, longitude: location.coordinate.longitude, accuracy: location.horizontalAccuracy)
-        Task { @MainActor in self.fix = fix; locating = false }
+        Task { @MainActor in self.fix = fix; locating = false; failed = false }
     }
     nonisolated func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-        // No position: the screen goes on with the last gym and the full directory.
-        Task { @MainActor in locating = false }
+        // No position: the screen goes on with the last gym and the full directory, and says why there is no distance.
+        Task { @MainActor in locating = false; failed = true }
     }
 
     /// Empty without a position.

@@ -52,7 +52,11 @@ struct BetaBuddyApp: App {
                     Button("知道了", role: .cancel) { store.error = nil }
                 } message: { Text(verbatim: store.error ?? "") }
                 .environment(\.locale, language.locale)
-                .task { store.resumeAnalysis(); await membership.refreshEntitlement() }
+                .task {
+                    // A recording an earlier run did not live to save becomes a record now, before anything is analysed.
+                    await CaptureRecovery.sweep(store: store, analysisAvailable: GymPack.current?.supportsAnalysis == true)
+                    store.resumeAnalysis(); await membership.refreshEntitlement()
+                }
                 .onChange(of: scenePhase) { _, phase in
                     if phase == .active { store.resumeAnalysis(); analysisQueue.setSuspended(false); Task { await membership.load() } }
                     else if phase == .background { analysisQueue.setSuspended(true) }

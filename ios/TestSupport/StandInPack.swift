@@ -24,7 +24,7 @@ enum StandInPack {
     /// Writes `<root>/GymPack` and returns `root`. `step` is how many frames each scripted state of the
     /// capture stand-in lasts.
     @discardableResult
-    static func write(to root: URL, capture: Bool = true, analysis: Bool = true, step: Int = 5, directoryIds: Bool = true) throws -> URL {
+    static func write(to root: URL, capture: Bool = true, analysis: Bool = true, step: Int = 5, directoryIds: Bool = true, captureComesUp: Bool = true) throws -> URL {
         let pack = root.appendingPathComponent("GymPack", isDirectory: true)
         try FileManager.default.createDirectory(at: pack, withIntermediateDirectories: true)
         let bundle = Bundle(for: TestSupportMarker.self)
@@ -33,7 +33,11 @@ enum StandInPack {
             guard let url = bundle.url(forResource: name, withExtension: "html") else { throw CocoaError(.fileNoSuchFile) }
             return try String(contentsOf: url, encoding: .utf8)
         }
-        if capture { files["capture.html"] = try page("capture-standin").replacingOccurrences(of: "const STEP = 5;", with: "const STEP = \(step);") }
+        if capture {
+            files["capture.html"] = try page("capture-standin").replacingOccurrences(of: "const STEP = 5;", with: "const STEP = \(step);")
+                // A page that loads and then never says it is ready.
+                .replacingOccurrences(of: "post({ type: 'captureReady', packVersion: VERSION });", with: captureComesUp ? "post({ type: 'captureReady', packVersion: VERSION });" : "")
+        }
         if analysis { files["analysis.html"] = try page("analysis-standin") }
         for (name, text) in files { try Data(text.utf8).write(to: pack.appendingPathComponent(name)) }
         let manifest: [String: Any] = [
