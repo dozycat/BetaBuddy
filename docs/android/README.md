@@ -429,11 +429,28 @@ adb shell "am start -n $A --ei initialTab 1 --ez openCapture true \
 | 设备测试，API 35 | 21 个里 19 个运行并通过，另外两个要真从系统取位置的平时跳过；这两个各自单独跑过（先 `adb emu geo fix`，再 `pm grant` 对应的权限，带 `-e geoFix 1`），都通过 |
 | 设备测试，API 31 | 没有重跑整套；只重跑了相机录像那一个（仍然不过，原因见上） |
 
+### 2026-11-23，模拟器：`Recorder` 写不出画面时由应用自己的编码器接手
+
+上一轮查到的事（Android 12 模拟器的相机给帧打的时间从零数起，CameraX 的 `Recorder` 把它当开机时间，每一帧都被丢掉）原来只有「6 秒后停下并提示」这个兜底，那样的相机上这个功能就录不了。现在改成自动换一条路录，做法见 [design.md](design.md#拍一趟) 的「录像」。
+
+| | 之前 | 之后 |
+| --- | --- | --- |
+| 设备测试，API 31（`Recorder` 写不出画面的那台） | 15 个里 14 个通过，相机录像那一个不过 | 22 个：20 个运行并通过，2 个要真从系统取位置的跳过。两个用设备相机录像的测试都是由应用自己的编码器写的片子（日志：`switching to the app's own recorder: the camera library's recorder wrote nothing in 3 s`） |
+| 设备测试，API 35 | 21 个（19 个运行并通过，2 个跳过） | 22 个：20 个运行并通过，2 个跳过。平常那个相机测试仍然是 `Recorder` 写的（`clip written by the camera library's recorder`）；新增的测试先把「这台设备要用自己的编码器」记上再录，由自己的编码器写 |
+| `./gradlew :app:testDebugUnitTest` | 142 个 | 147 个全部通过（新增：换路的规则 4 个，按步长抄平面 1 个） |
+| `check-resources.py`、`lintDebug` | 通过 | 通过；没有新增文字 |
+
+应用自己的编码器写出来的片子，设备测试里量到的：API 31 上 1280×720、旋转 90°、3.1 秒 85 帧（每秒 27.4 帧）、约 2 MB；API 35 上 3.3 秒 98 帧（每秒 30.1 帧）。
+
+**真实数据包（1.9.3）在 API 31 上用模拟器相机做的一趟**（Debug 包）：取景时页面照常回话（没有攀岩墙）→ 确认后开始录 → 3 秒后自动换成自己的编码器 → 再过约 16 秒停 → 保存 → 姿态识别做完，画面里没有人，给出「没有清楚地找到攀爬者」。把片子取出来用 `ffprobe` 看过：H.264，1280×720，旋转 −90（按它转正后是 720×1280，抽出的一帧确实是直立的），16.5 秒，450 帧（平均每秒 27.2 帧），约 5.6 Mbps，11.5 MB，只有一条画面轨。
+
+**没有验证的：** 任何真机——真机上 `Recorder` 正常的话根本不会走到这条路，走到的那种相机手头没有；自己的编码器在真机上的帧率、发热、长时间录像（这一轮最长 16.5 秒）、各家的 H.264 编码器接不接受这种输入；1280×720 是现在那一路画面的大小，没有为了这条路去要更大的画面；切换前的 3 秒会丢，没有补。
+
 ### 第一次上真机时要看的
 
 Debug 包，带上调试读数启动：`adb shell am start -n com.betabuddy.android/.MainActivity --ei initialTab 1 --ez openCapture true --ez debugCaptureOverlay true`，另开一个 `adb logcat -s capture`。
 
-1. `first frame …: camera clock … s, uptime … s`：两个数应该差不多。差得很远，录像会一帧都写不进去（见上面 Android 12 模拟器的那一条）。
+1. `first frame …: camera clock … s, uptime … s`：两个数应该差不多。差得很远，CameraX 的 `Recorder` 会一帧都写不进去，3 秒后应用会自己换成自己的编码器（日志里有 `switching to the app's own recorder`）。每段片子停下时有一行 `recorded … s by the camera library's recorder` 或 `by the app's own recorder`：记下是哪一个。
 2. 读数第一行的 `fovH`：竖着拿、主摄，应该在 40–60 之间；`frame` 应该是竖的 16:9（例如 720x1280）。
 3. `pitch` / `roll`：手机竖直立着时都接近 0；镜头往上抬，`pitch` 变正；顺时针转（从屏幕这边看），`roll` 变正。`shake` 放稳时接近 0。
 4. `replies/s` 在 2 上下；`hand-over` 几十毫秒以内；`pose` 有人入镜时是 `yes`。姿态识别跟不上会自己停掉，日志最后那行会写 `dropped`。
@@ -457,7 +474,7 @@ emulator -avd <名称> -qemu -append "arm64.nosme"
 - **位置。** 只在模拟器上从系统取过位置（用 `adb emu geo fix` 设的），两种授权都是从外面 `pm grant` 给的，系统的位置询问对话框没有点过；真机上取不取得到、要多久（尤其在室内、在没有网络定位的机型上）不知道。
 - 真实拍摄页面认出线路之后的显示、「不是这条」、难度的填入：只用替身页面走过；用真实数据包的那一趟没有认出线路。
 - 拍摄界面只看了简体中文和英语的截图；繁体中文、日语、韩语的文字只经过了资源检查，没有在屏幕上看过。最大字号、TalkBack 没有试。
-- Android 12 模拟器上 CameraX 录不出画面的原因没有查清，只做了兜底的提示。
+- Android 12 模拟器上 CameraX 录不出画面：原因查到了（相机的时间从零数起），现在由应用自己的编码器接手，见上面那一节；真机上有没有这样的相机、接手之后的片子在真机上怎么样，没有验证。
 - 用户自己打开「分析这一趟」的同时，后台队列正好也在分析同一条记录：现在队列会让路，但只有规则的单元测试，没有在设备上凑出过这个时刻。
 - 交给拍摄页面的水平视场角：算法只有单元测试，没有在真机上对着实际画面核对过；拍摄页面靠它对线路。
 - 下次启动时把没存进去的片子补进攀爬册：只有用合成文件的单元测试，没有在设备上真的杀掉进程试过。
@@ -481,7 +498,7 @@ adb install -r app/build/outputs/apk/release/app-release.apk
 adb logcat -s gym AndroidRuntime
 ```
 
-预期：单元测试 142 个、设备测试 21 个通过（其中两个要真从系统取位置的测试平时跳过，跑法见测试里的说明）（Android 12 的模拟器上相机录像那一个不过，见上）；lint 没有 error；权限里没有 `INTERNET`、`ACCESS_NETWORK_STATE`、`WAKE_LOCK`、`RECORD_AUDIO`。设备测试会往应用的外部文件目录写各个状态的截图（`capture-shots/`），用 `adb shell am instrument` 直接跑（不经 Gradle 卸载应用）就能 `adb pull` 出来；截图不进仓库。然后用 Release 包在设备上走一遍：
+预期：单元测试 147 个、设备测试 22 个通过（其中两个要真从系统取位置的测试平时跳过，跑法见测试里的说明）（Android 12 的模拟器上相机录像那一个不过，见上）；lint 没有 error；权限里没有 `INTERNET`、`ACCESS_NETWORK_STATE`、`WAKE_LOCK`、`RECORD_AUDIO`。设备测试会往应用的外部文件目录写各个状态的截图（`capture-shots/`），用 `adb shell am instrument` 直接跑（不经 Gradle 卸载应用）就能 `adb pull` 出来；截图不进仓库。然后用 Release 包在设备上走一遍：
 
 1. 不装数据包的构建：落在岩馆，显示「这个构建没有内置岩馆数据」；底部齿轮、右上角按钮都能进「设置与关于」，里面的隐私政策和开源许可能打开。
 2. 装了数据包的构建：说明页只出现一次 → 场景出现、能转动缩放、选线 → 切到攀爬册再回来不重载 → 在页面菜单里点「语言与设置」打开原生设置 → 换一种语言，返回后页面是新语言并回到刚才的线路 → 开不开飞行模式表现一致。

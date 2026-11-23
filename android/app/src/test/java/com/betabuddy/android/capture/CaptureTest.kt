@@ -309,4 +309,67 @@ class CaptureTest {
         assertEquals(listOf(1, 1, 1, 2, 3, 5, 5, 5), listOf(-1.0, 0.0, 0.15, 0.4, 0.45, 0.95, 1.0, 3.0).map(CaptureText::level))
         assertNotNull(CaptureText.reason("no_wall"))
     }
+
+    // Which recorder writes a clip
+
+    @Test fun theLibrarysRecorderKeepsAClipItIsWriting() {
+        val switch = RecorderSwitch(graceMillis = 3_000)
+        assertEquals(RecorderSwitch.Path.LIBRARY, switch.path)
+        assertFalse(switch.shouldSwitch(1_000))
+        switch.libraryWrote()
+        // It has written video: whatever the clock says afterwards, the clip stays its own.
+        assertFalse(switch.shouldSwitch(3_000)); assertFalse(switch.shouldSwitch(60_000))
+        assertFalse(switch.libraryEndedEmpty(stopRequested = false))
+        assertEquals(RecorderSwitch.Path.LIBRARY, switch.path); assertFalse(switch.switched)
+    }
+
+    @Test fun nothingWrittenInTimeHandsTheClipToTheAppsOwnRecorderOnce() {
+        val switch = RecorderSwitch(graceMillis = 3_000)
+        assertFalse(switch.shouldSwitch(0)); assertFalse(switch.shouldSwitch(2_999))
+        assertTrue(switch.shouldSwitch(3_000))
+        assertEquals(RecorderSwitch.Path.OWN, switch.path); assertTrue(switch.switched)
+        // Only once, and what the library's recorder says afterwards changes nothing.
+        assertFalse(switch.shouldSwitch(10_000))
+        switch.libraryWrote()
+        assertFalse(switch.libraryWrote)
+        assertEquals(RecorderSwitch.Path.OWN, switch.path)
+    }
+
+    @Test fun aLibraryRecorderThatGivesUpEmptyIsReplacedAtOnceUnlessTheUserStoppedIt() {
+        val gaveUp = RecorderSwitch()
+        assertTrue(gaveUp.libraryEndedEmpty(stopRequested = false))
+        assertEquals(RecorderSwitch.Path.OWN, gaveUp.path)
+        assertFalse(gaveUp.libraryEndedEmpty(stopRequested = false))
+        // The user pressed stop before anything was written: that is a clip too short to keep, not a broken recorder.
+        val stopped = RecorderSwitch()
+        assertFalse(stopped.libraryEndedEmpty(stopRequested = true))
+        assertEquals(RecorderSwitch.Path.LIBRARY, stopped.path); assertFalse(stopped.switched)
+    }
+
+    @Test fun aDeviceThatNeededItStartsOnTheAppsOwnRecorder() {
+        val switch = RecorderSwitch(remembered = true)
+        assertEquals(RecorderSwitch.Path.OWN, switch.path)
+        assertFalse(switch.switched)                       // nothing changed over during this clip
+        assertFalse(switch.shouldSwitch(60_000)); assertFalse(switch.libraryEndedEmpty(false))
+        assertEquals(3_000L, RecorderSwitch.GRACE_MILLIS)
+    }
+
+    @Test fun planesAreCopiedAcrossWhateverTheirStrides() {
+        // A 4 × 2 block out of a 6-wide plane with padded rows, starting one in and one down.
+        val source = java.nio.ByteBuffer.wrap(ByteArray(8 * 3) { it.toByte() })   // row stride 8
+        val tight = java.nio.ByteBuffer.allocate(4 * 2)
+        YuvPlanes.copy(source, 8, 1, 1, 1, tight, 4, 1, 4, 2, ByteArray(0))
+        assertEquals(listOf(9, 10, 11, 12, 17, 18, 19, 20), tight.array().map { it.toInt() })
+        assertEquals(0, source.position()); assertEquals(0, tight.position())
+        // Interleaved source (every second byte), into a padded target.
+        val interleaved = java.nio.ByteBuffer.wrap(ByteArray(8 * 2) { (100 + it).toByte() })
+        val padded = java.nio.ByteBuffer.allocate(6 * 2)
+        YuvPlanes.copy(interleaved, 8, 2, 0, 0, padded, 6, 1, 4, 2, ByteArray(1))
+        assertEquals(listOf(100, 102, 104, 106, 0, 0, 108, 110, 112, 114, 0, 0), padded.array().map { it.toInt() })
+        // Tight source into an interleaved target, the other bytes left alone; the last row may stop short of the stride.
+        val plain = java.nio.ByteBuffer.wrap(byteArrayOf(1, 2, 3, 4, 5, 6))
+        val spaced = java.nio.ByteBuffer.wrap(ByteArray(11) { 9 })
+        YuvPlanes.copy(plain, 3, 1, 0, 0, spaced, 6, 2, 3, 2, ByteArray(8))
+        assertEquals(listOf(1, 9, 2, 9, 3, 9, 4, 9, 5, 9, 6), spaced.array().map { it.toInt() })
+    }
 }
