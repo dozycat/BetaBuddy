@@ -124,12 +124,13 @@ class PackWebView(context: Context, private val pack: GymPack, private val liste
             mediaPlaybackRequiresUserGesture = false
         }
 
+        val documentStart = installBridge(view)
         val loader = WebViewAssetLoader.Builder()
             .setDomain(GymPack.HOST)
             .setHttpAllowed(false)
-            .addPathHandler(GymPack.PATH_PREFIX, PackPathHandler(files ?: AssetFiles(context.applicationContext.assets), pack))
+            .addPathHandler(GymPack.PATH_PREFIX, PackPathHandler(files ?: AssetFiles(context.applicationContext.assets), pack, shimInPages = !documentStart))
             .build()
-        view.webViewClient = Client(loader, documentStartShim = installBridge(view))
+        view.webViewClient = Client(loader, documentStartShim = documentStart)
         view.webChromeClient = object : WebChromeClient() {
             override fun onConsoleMessage(message: ConsoleMessage): Boolean {
                 if (BuildConfig.DEBUG) Log.d(TAG, "console: ${message.message()} (${message.sourceId()}:${message.lineNumber()})")
@@ -146,7 +147,10 @@ class PackWebView(context: Context, private val pack: GymPack, private val liste
     @SuppressLint("JavascriptInterface", "RequiresFeature")
     private fun installBridge(view: WebView): Boolean {
         view.addJavascriptInterface(Bridge(), GymBridge.NATIVE_NAME)
-        if (!WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) return false
+        if (!WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
+            if (BuildConfig.DEBUG) Log.d(TAG, "no document-start scripts in this WebView: the shim is injected when a page starts loading")
+            return false
+        }
         WebViewCompat.addDocumentStartJavaScript(view, GymBridge.shim, setOf(GymPack.ORIGIN))
         return true
     }
@@ -223,12 +227,23 @@ class PackWebView(context: Context, private val pack: GymPack, private val liste
         }
     }
 
-    /** Serves `/gympack/<path>` from the pack (the app's assets, outside tests), and only paths the manifest lists. */
-    private class PackPathHandler(private val files: Files, private val pack: GymPack) : WebViewAssetLoader.PathHandler {
+    /**
+     * Serves `/gympack/<path>` from the pack (the app's assets, outside tests), and only paths the manifest lists.
+     *
+     * [shimInPages]: this WebView cannot run a script at document start, and one injected from
+     * outside when a page starts loading can lose the race against the page's own first script
+     * (whose first message would then go nowhere). So the shim is written into each HTML document
+     * as its first script instead.
+     */
+    private class PackPathHandler(private val files: Files, private val pack: GymPack, private val shimInPages: Boolean) : WebViewAssetLoader.PathHandler {
         override fun handle(path: String): WebResourceResponse? {
             if (path !in pack.servedPaths) return null
-            val stream = files.open(path) ?: return null
             val (type, charset) = GymPack.contentType(path)
+            val source = files.open(path) ?: return null
+            val stream = if (shimInPages && type == "text/html") {
+                val page = try { source.use { it.readBytes().toString(Charsets.UTF_8) } } catch (error: IOException) { return null }
+                ByteArrayInputStream(GymBridge.withShim(page).toByteArray(Charsets.UTF_8))
+            } else source
             return WebResourceResponse(type, charset, 200, "OK", RESPONSE_HEADERS, stream)
         }
     }

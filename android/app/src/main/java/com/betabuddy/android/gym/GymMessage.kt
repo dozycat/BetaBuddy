@@ -64,6 +64,16 @@ object GymBridge {
     /** Name of the object the app injects into the page. */
     const val NATIVE_NAME = "BetaBuddyGymNative"
 
+    /**
+     * [html] with the shim as its first script: right after the doctype when there is one (a
+     * script before it would put the page in quirks mode), at the very start otherwise.
+     */
+    fun withShim(html: String): String {
+        val tag = "<script>$shim</script>"
+        val doctype = Regex("^\\s*<!doctype[^>]*>", RegexOption.IGNORE_CASE).find(html) ?: return tag + html
+        return html.substring(0, doctype.range.last + 1) + tag + html.substring(doctype.range.last + 1)
+    }
+
     val shim: String = """
         (function () {
           if (window.top !== window) return;
