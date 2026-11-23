@@ -277,17 +277,29 @@ final class ClimbStore: ObservableObject {
                 endBackgroundTime()
                 startNextAnalysis()
             }
+            #if DEBUG
+            let poseBegan = Date()
+            #endif
             do {
                 let result = try await VideoAnalyzer().analyze(url: file(climb.videoName), quality: AnalysisQuality(rawValue: climb.pendingAnalysis ?? "") ?? .balanced) { value in
                     await self.setAnalysisProgress(climb.id, value: value)
                 }
                 try Task.checkCancellation()
+                #if DEBUG
+                if climb.capture != nil {
+                    CaptureDiagnostics.event("pose", ["record": climb.id.uuidString, "frames": result.frames.count,
+                                                      "framesWithPerson": result.frames.filter(\.hasWorldLandmarks).count, "seconds": Date().timeIntervalSince(poseBegan)])
+                }
+                #endif
                 // replaceAnalysis merges into the latest record, preserving edits made while running.
                 try replaceAnalysis(climb, analysis: result)
                 analysisMessages[climb.id] = String(localized: "骨架分析已更新。", bundle: AppLanguage.bundle)
             } catch is CancellationError {
                 // Explicit stop clears the request; expiration keeps it for the next foreground.
             } catch {
+                #if DEBUG
+                if climb.capture != nil { CaptureDiagnostics.event("pose", ["record": climb.id.uuidString, "error": error.localizedDescription]) }
+                #endif
                 analysisMessages[climb.id] = error.localizedDescription
                 do { try setPendingAnalysis(climb.id, quality: nil) }
                 catch { self.error = error.localizedDescription; mayAnalyze = false }

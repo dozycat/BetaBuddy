@@ -81,6 +81,24 @@ private struct CaptureOverlay: View {
     }
 }
 
+#if DEBUG
+/// Where the picture is on the screen, for the diagnostics snapshot.
+private struct CapturePictureFrame: PreferenceKey {
+    static var defaultValue = CGRect.zero
+    static func reduce(value: inout CGRect, nextValue: () -> CGRect) { let next = nextValue(); if next != .zero { value = next } }
+}
+#endif
+private extension View {
+    /// Debug builds note where the picture is; a Release build has nothing of this.
+    @ViewBuilder func notingPictureFrame() -> some View {
+        #if DEBUG
+        background(GeometryReader { proxy in Color.clear.preference(key: CapturePictureFrame.self, value: proxy.frame(in: .global)) })
+        #else
+        self
+        #endif
+    }
+}
+
 /// Recommends gyms by distance when the position is known, and leads to the full directory.
 private struct CaptureGymSheet: View {
     @Environment(\.dismiss) private var dismiss
@@ -212,7 +230,51 @@ struct CaptureView: View {
         return first.shown == .exact ? .nearest(first) : .guess(first)
     }
 
+    #if DEBUG
+    @State private var pictureFrame = CGRect.zero
+
+    /// Debug builds leave a picture of this screen and what the location service said in `Documents/capture-diagnostics/`.
     var body: some View {
+        screen
+            .onPreferenceChange(CapturePictureFrame.self) { pictureFrame = $0 }
+            .task { await snapshots() }
+            .onAppear { session.diagnosticsExtra = { [locator] in ["location": locator.diagnostics] } }
+            .onChange(of: locator.access) { session.mark("location", locator.diagnostics) }
+            .onChange(of: locator.fix) { session.mark("location", locator.diagnostics) }
+            .onChange(of: locator.failed) { session.mark("location", locator.diagnostics) }
+    }
+
+    private func snapshots() async {
+        var wait = 1.0      // The first one soon, then every three seconds.
+        while !Task.isCancelled {
+            try? await Task.sleep(for: .seconds(wait))
+            wait = 3
+            guard !Task.isCancelled,
+                  let window = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }).flatMap(\.windows).first(where: \.isKeyWindow) else { continue }
+            // With the gym list or the analysis page on top there is no preview to look for.
+            let showsPreview = viewing == nil && !choosingGym && (session.camera == .running || session.camera == .starting)
+            let frame = session.diagnosticsFrame
+            guard let shot = CaptureSnapshot.take(window: window, picture: showsPreview ? pictureFrame : nil, frame: frame?.jpeg) else { continue }
+            let offer: String? = switch offered {
+            case .here(let gym): "here:\(gym.gym.id)"
+            case .nearest(let gym): "nearest:\(gym.gym.id)"
+            case .guess(let gym): "guess:\(gym.gym.id)"
+            case .ask: "ask"
+            case nil: nil
+            }
+            session.diagnosticsPreview(shot.image, source: shot.source.rawValue, fields: [
+                "picture": [pictureFrame.minX, pictureFrame.minY, pictureFrame.width, pictureFrame.height].map(Double.init),
+                "screen": [Double(window.bounds.width), Double(window.bounds.height)],
+                "pictureDark": shot.dark as Any, "frameAge": (shot.source == .composite ? frame?.age : nil) as Any,
+                "covered": !showsPreview, "offer": offer as Any, "tool": tool.rawValue,
+            ])
+        }
+    }
+    #else
+    var body: some View { screen }
+    #endif
+
+    private var screen: some View {
         ZStack {
             // The capture page has nothing to show; it only has to stay alive and keep answering. It is
             // kept in the window at full size, underneath everything, like a page nobody happens to see.
@@ -404,6 +466,7 @@ struct CaptureView: View {
             }
             .frame(width: size.width, height: size.height)
             .clipShape(RoundedRectangle(cornerRadius: 18))
+            .notingPictureFrame()
             .position(x: proxy.size.width / 2, y: proxy.size.height / 2)
         }
     }

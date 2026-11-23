@@ -127,7 +127,7 @@ final class CaptureTests: XCTestCase {
     func testOtherMessages() throws {
         XCTAssertEqual(CaptureMessage(body: ["type": "captureReady", "packVersion": "1.9.0"]), .ready(packVersion: "1.9.0"))
         XCTAssertEqual(CaptureMessage(body: ["type": "captureReady"]), .ready(packVersion: ""))
-        XCTAssertEqual(CaptureMessage(body: ["type": "captureError", "code": "no_canvas", "message": "x"]), .failed(code: "no_canvas"))
+        XCTAssertEqual(CaptureMessage(body: ["type": "captureError", "code": "no_canvas", "message": "x"]), .failed(code: "no_canvas", message: "x"))
         XCTAssertEqual(CaptureMessage(body: ["type": "error", "message": "boom"]), .pageError("boom"))
         for other in [["type": "analysisReady"], ["type": "ready"], ["type": "captureProgress"], ["kind": "captureReady"]] as [[String: Any]] {
             XCTAssertNil(CaptureMessage(body: other))

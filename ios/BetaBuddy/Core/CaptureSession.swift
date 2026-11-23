@@ -85,7 +85,79 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
     var freeBytes: () -> Int64? = CapturePipeline.freeBytes
     // Local system log only.
     private let log = Logger(subsystem: "com.betabuddy.ios", category: "capture")
+    /// The local system log; in Debug builds also a file that can be pulled off a phone.
+    private func note(_ text: String, error: Bool = false) {
+        if error { log.error("\(text, privacy: .public)") } else { log.info("\(text, privacy: .public)") }
+        #if DEBUG
+        CaptureDiagnostics.log("capture", text)
+        #endif
+    }
     #if DEBUG
+    /// What this visit to the screen leaves on disk, see `CaptureDiagnostics`.
+    private(set) var diagnostics: CaptureDiagnostics?
+    private var sampler: Task<Void, Never>?
+    private var lastFrameJPEG: String?
+    private var lastFrameWritten = Date.distantPast
+    private var previewSource: String?
+    /// Filled in by the screen: what it knows that the session does not (location access).
+    var diagnosticsExtra: () -> [String: Any] = { [:] }
+
+    func mark(_ name: String, _ fields: [String: Any] = [:]) { diagnostics?.event(name, fields) }
+    /// The picture last handed to the page, and how long ago: what a composite preview is made from.
+    var diagnosticsFrame: (jpeg: Data, age: Double)? {
+        guard let lastFrameJPEG, let data = Data(base64Encoded: lastFrameJPEG) else { return nil }
+        return (data, Date().timeIntervalSince(lastFrameHanded))
+    }
+    private var lastFrameHanded = Date.distantPast
+    private var previewFields: [String: Any] = [:]
+
+    /// The capture screen as drawn, from the screen itself; `source` says how the picture inside it was obtained.
+    func diagnosticsPreview(_ image: UIImage, source: String, fields: [String: Any]) {
+        diagnostics?.write(png: image, as: "preview-latest.png")
+        previewFields = fields.merging(["source": source, "pixels": [Int(image.size.width * image.scale), Int(image.size.height * image.scale)]]) { _, new in new }
+        if previewSource != source { previewSource = source; mark("snapshot", previewFields) }
+    }
+
+    /// One line a second: everything the overlay shows, and the rest of the screen's state.
+    private func sampleFields() -> [String: Any] {
+        let now = Date()
+        let replies = recentReplies.filter { now.timeIntervalSince($0) <= 4 }
+        var fields: [String: Any] = [
+            "phase": "\(phase)".components(separatedBy: "(").first ?? "", "camera": "\(camera)", "page": "\(page)", "pack": pageVersion as Any,
+            "fovH": source.horizontalFieldOfView as Any,
+            "frame": [Int(frameSize.width), Int(frameSize.height)],
+            "source": pipeline.frameSize.map { [$0.width, $0.height] } as Any,
+            "pitch": lastInfo.pitch as Any, "roll": lastInfo.roll as Any, "shake": lastInfo.shake as Any,
+            "repliesPerSecond": Double(replies.count) / 4, "replies": metrics.assessments,
+            "handOverMs": lastHandOverMs, "prepareMs": lastPrepareMs, "poseMs": lastPoseMs as Any,
+            "posesFound": metrics.posesFound, "poseFrames": metrics.poseFrames, "poseDropped": metrics.poseDropped,
+            "jpegKB": metrics.frames > 0 ? Double(metrics.jpegBytes) / Double(metrics.frames) / 1024 : 0,
+            "framesHanded": metrics.frames,
+            "gym": gymId as Any, "venue": venue as Any, "grade": grade, "gradePrefilled": gradePrefilled,
+            "color": color as Any, "thermal": CaptureDiagnostics.thermal(),
+            "preview": previewFields, "debugOverlay": showsDebug, "notice": notice.map { "\($0)" } as Any,
+        ]
+        if let assessment {
+            let tapped = Set(assessment.holds.filter(\.user).map(\.id))
+            fields["ok"] = assessment.ok; fields["steady"] = assessment.steady; fields["score"] = assessment.score as Any; fields["ready"] = assessment.ready
+            fields["person"] = assessment.person
+            fields["issues"] = assessment.issues.map { ["code": $0.code, "severity": $0.blocking ? "block" : "warn", "move": $0.move as Any] }
+            fields["hint"] = assessment.hint.map { ["code": $0.code, "move": $0.move as Any] } as Any
+            fields["palette"] = assessment.palette.map { ["key": $0.key, "rgb": $0.rgb, "n": $0.count] }
+            fields["holds"] = assessment.holds.count
+            fields["holdsWithOutline"] = assessment.holds.filter { !$0.poly.isEmpty }.count
+            fields["start"] = ["hands": assessment.startHands, "feet": assessment.startFeet, "conf": assessment.startConfidence as Any,
+                               "tapped": assessment.startConfirmed]
+            fields["finish"] = assessment.finish.map { ["id": $0, "conf": assessment.finishConfidence as Any, "tapped": tapped.contains($0)] } as Any
+            fields["route"] = assessment.route.map { ["id": $0.id, "conf": $0.confidence as Any] } as Any
+        }
+        if phase == .recording, let recorder, let began = recordingStarted {
+            let counts = recorder.counts
+            fields["recording"] = ["seconds": now.timeIntervalSince(began), "frames": counts.frames, "dropped": counts.dropped]
+        }
+        return fields.merging(diagnosticsExtra()) { own, _ in own }
+    }
+
     /// Numbers over the picture for a first run on a phone: `-debugCaptureOverlay YES`, or a long press on the guidance line.
     @Published var showsDebug = UserDefaults.standard.bool(forKey: "debugCaptureOverlay")
     private var lastInfo = CaptureFrameInfo()
@@ -93,6 +165,7 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
     private var recentReplies: [Date] = []
     /// `-debugFailSaves <n>` makes the next n attempts to write a clip into the album fail, so that the screen for that can be seen.
     private var debugSaveFailures = UserDefaults.standard.integer(forKey: "debugFailSaves")
+    private var lockSent: Date?
 
     var debugText: String {
         let now = Date()
@@ -155,13 +228,23 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
             Task { @MainActor [weak self] in
                 guard let self, self.started else { return }
                 if self.camera != .running { self.frameSize = CGSize(width: width, height: height) }
+                #if DEBUG
+                self.mark("frames", ["source": [width, height], "fovH": self.source.horizontalFieldOfView as Any, "details": (self.source as? CameraSource)?.diagnostics as Any])
+                #endif
                 self.camera = .running
                 // Frames are back after a pause (a call, the background): the page has had nothing to answer meanwhile.
                 if self.lastReply != nil { self.lastReply = Date() }
             }
         }
         source.onFrame = { [pipeline] buffer, time in pipeline.handle(buffer, time) }
-        source.onInterruption = { [weak self] in Task { @MainActor in await self?.stop(.interrupted) } }
+        source.onInterruption = { [weak self] in
+            Task { @MainActor in
+                #if DEBUG
+                self?.mark("sourceInterruption")
+                #endif
+                await self?.stop(.interrupted)
+            }
+        }
         background = NotificationCenter.default.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main) { [weak self] _ in
             // Asked for here and now, before this returns: closing the clip must not depend on a task that has yet to start.
             MainActor.assumeIsolated {
@@ -180,6 +263,9 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
                 // The preview has frozen (a camera error, or the pictures simply stopped): there is nothing to record.
                 guard self.camera == .running, self.phase == .framing, let age = self.pipeline.secondsSinceFrame, age > self.stallLimit else { continue }
                 self.camera = .starting
+                #if DEBUG
+                self.mark("stall", ["secondsWithoutFrame": age])
+                #endif
                 self.pipeline.announceNextFrame()
                 try? await self.source.start()
             }
@@ -191,6 +277,24 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
             if parts.count == 3 { pipeline.motion.fixed = CaptureFrameInfo(pitch: parts[0], roll: parts[1], shake: parts[2]) }
         }
         #endif
+        #if DEBUG
+        let diagnostics = CaptureDiagnostics()
+        self.diagnostics = diagnostics
+        var opened = CaptureDiagnostics.environment
+        opened["pack"] = pack?.manifest.packVersion as Any
+        opened["capturePage"] = pack != nil
+        opened["source"] = "\(type(of: source))"
+        opened["cameraAccess"] = AVCaptureDevice.authorizationStatus(for: .video).rawValue      // 0 not asked, 1 restricted, 2 denied, 3 allowed
+        opened["gym"] = gymId as Any
+        diagnostics.event("open", opened)
+        sampler = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(1))
+                guard let self, !Task.isCancelled, self.started else { return }
+                self.diagnostics?.sample(self.sampleFields())
+            }
+        }
+        #endif
         loadPage()
         Task {
             do {
@@ -199,8 +303,20 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
                 // `camera` turns to `.running` with the first frame: only then is there something to record.
                 pipeline.motion.start()
                 pipeline.setFeeding(page != .unavailable, interval: framingInterval)
-            } catch CaptureSourceError.denied { camera = .denied }
-            catch { camera = .unavailable }
+                #if DEBUG
+                mark("sourceStarted", ["cameraAccess": AVCaptureDevice.authorizationStatus(for: .video).rawValue, "details": (source as? CameraSource)?.diagnostics as Any])
+                #endif
+            } catch CaptureSourceError.denied {
+                camera = .denied
+                #if DEBUG
+                mark("sourceError", ["error": "denied", "cameraAccess": AVCaptureDevice.authorizationStatus(for: .video).rawValue])
+                #endif
+            } catch {
+                camera = .unavailable
+                #if DEBUG
+                mark("sourceError", ["error": "unavailable"])
+                #endif
+            }
         }
     }
 
@@ -225,7 +341,12 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
         // A clip that could not be saved is not thrown away by leaving: it stays where recordings are
         // written and is taken into the album the next time the app starts. Discarding is the user's own choice.
         heldClip = nil
-        log.info("capture closed: \(self.metrics.summary, privacy: .public)")
+        note("capture closed: \(metrics.summary)")
+        #if DEBUG
+        sampler?.cancel()
+        mark("close", ["summary": metrics.summary])
+        diagnostics?.flush()
+        #endif
         store.resumeAnalysis(cameraClosed: true)
     }
 
@@ -244,7 +365,12 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
             view.load(URLRequest(url: url))
             // A page that never says it is ready is treated like one that is not there.
             try? await Task.sleep(for: loadingLimit)
-            if started, page == .loading { pageFailed("no captureReady") }
+            if started, page == .loading {
+                #if DEBUG
+                mark("loadingTimeout")
+                #endif
+                pageFailed("no captureReady")
+            }
         }
     }
 
@@ -288,6 +414,9 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
                 rejectedRoutes = []          // The page forgets them with `begin` as well.
                 lastReply = Date()
                 await call(.begin(id: captureID, width: frame.width, height: frame.height, fieldOfView: source.horizontalFieldOfView, venue: venue))
+                #if DEBUG
+                mark("begin", ["id": captureID, "w": frame.width, "h": frame.height, "fovH": source.horizontalFieldOfView as Any, "venue": venue as Any, "gym": gymId as Any])
+                #endif
                 if let color { await call(.setColor(color)) }
             }
             let began = Date()
@@ -305,9 +434,19 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
             #if DEBUG
             lastInfo = frame.info; lastHandOverMs = Date().timeIntervalSince(began) * 1000; lastPrepareMs = frame.prepareSeconds * 1000
             lastPoseMs = frame.poseSeconds.map { $0 * 1000 }
+            // The very picture the page was given, every couple of seconds.
+            lastFrameJPEG = frame.jpegBase64
+            lastFrameHanded = Date()
+            if Date().timeIntervalSince(lastFrameWritten) >= 2, let data = Data(base64Encoded: frame.jpegBase64) {
+                lastFrameWritten = Date()
+                diagnostics?.write(data, as: "frame-latest.jpg")
+            }
             #endif
             if phase == .framing, page == .ready, let lastReply, Date().timeIntervalSince(lastReply) > quietLimit {
-                log.error("capture page has not answered for \(self.quietLimit, format: .fixed(precision: 0)) s")
+                note("capture page has not answered for \(Int(quietLimit)) s", error: true)
+                #if DEBUG
+                mark("quiet", ["seconds": quietLimit])
+                #endif
                 page = .failed
                 assessment = nil
             }
@@ -327,7 +466,10 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) { pageFailed("web content process ended") }
     /// The page is gone for this visit; frames are no longer prepared for it.
     private func pageFailed(_ text: String) {
-        log.error("capture page: \(text, privacy: .public)")
+        note("capture page: \(text)", error: true)
+        #if DEBUG
+        mark("pageFailed", ["text": text])
+        #endif
         page = .failed
         assessment = nil
         pipeline.setFeeding(false)
@@ -340,6 +482,9 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
             pageVersion = version.isEmpty ? pack?.manifest.packVersion : version
             begun = nil
             page = .ready
+            #if DEBUG
+            mark("captureReady", ["pack": pageVersion as Any])
+            #endif
             if phase == .framing { pipeline.setFeeding(started, interval: framingInterval) }   // Also when it came up late.
         case .assessment(let assessment):
             guard phase == .framing, begun?.id == captureID else { return }
@@ -357,17 +502,29 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
             self.summary = summary
             if let plan { self.plan = plan }
             writeDraft()
+            #if DEBUG
+            mark("captureLocked", ["ms": lockSent.map { Date().timeIntervalSince($0) * 1000 } as Any, "planBytes": plan?.utf8.count as Any,
+                                   "summary": ["color": summary.color as Any, "rgb": summary.rgb as Any, "holds": summary.holds, "startHands": summary.startHands,
+                                               "startFeet": summary.startFeet, "finish": summary.finish, "ok": summary.ok, "issues": summary.issues,
+                                               "route": summary.route.map { ["id": $0.id, "conf": $0.confidence as Any] } as Any]])
+            #endif
             // The page may answer, or answer again with a fuller plan, after the clip is in the album.
             if case .saved(let climb) = phase, let plan {
                 do { try store.saveCapturePlan(plan, summary: summary, for: climb) }
-                catch { log.error("late plan not kept: \(error.localizedDescription, privacy: .public)") }
+                catch { note("late plan not kept: \(error.localizedDescription)", error: true) }
             }
-        case .failed(let code):
+        case .failed(let code, let message):
             // Some of these are passing (one frame it could not read, a venue file it could not get) and
             // the page carries on. Whether it still answers is what decides what the screen says, see `hand`.
-            log.info("capture page reported: \(code, privacy: .public)")
+            note("capture page reported: \(code) — \(message)")
+            #if DEBUG
+            mark("captureError", ["code": code, "message": message])
+            #endif
         case .pageError(let text):
-            log.error("capture page error (\(self.page == .loading ? "before" : "after", privacy: .public) ready): \(text, privacy: .public)")
+            note("capture page error (\(page == .loading ? "before" : "after") ready): \(text)", error: true)
+            #if DEBUG
+            mark("pageError", ["text": text, "beforeReady": page == .loading])
+            #endif
             if page == .loading { page = .failed }
         }
     }
@@ -380,6 +537,9 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
     func selectColor(_ key: String?) {
         guard phase == .framing else { return }
         color = key == color ? nil : key
+        #if DEBUG
+        mark("setColor", ["key": color as Any])
+        #endif
         Task { await call(.setColor(color)) }
     }
 
@@ -389,6 +549,9 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
         guard phase == .framing, page == .ready, color != nil else { return }
         Task {
             let found = await answer(.tap(x: point.x, y: point.y, role: role))
+            #if DEBUG
+            mark("tap", ["x": Double(point.x), "y": Double(point.y), "role": role.rawValue, "hold": found as? String as Any, "answered": !(found is Bool)])
+            #endif
             // An empty answer is “no hold here”. A page that answers nothing at all gives the same; `false` means it has no `tap`.
             guard let text = found as? String, text.isEmpty else { tapMissed = false; return }
             tapMissed = true
@@ -399,6 +562,9 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
 
     func resetCorrections() {
         guard phase == .framing, page == .ready else { return }
+        #if DEBUG
+        mark("resetTaps")
+        #endif
         Task { await call(.resetTaps) }
     }
 
@@ -412,12 +578,18 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
     func rejectRoute() {
         guard phase == .framing, let route = recognised else { return }
         rejectedRoutes.insert(route.id)
+        #if DEBUG
+        mark("rejectRoute", ["id": route.id])
+        #endif
         fillInGrade()
         Task { await call(.rejectRoute(route.id)) }
     }
 
     /// The user's own choice of grade. It is never replaced afterwards.
     func pickGrade(_ value: String) {
+        #if DEBUG
+        mark("pickGrade", ["grade": value])
+        #endif
         grade = value
         gradePicked = true
         gradePrefilled = false
@@ -469,8 +641,15 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
         pipeline.setFeeding(false)
         // Only a judgement of this take, for the gym now chosen, is locked. Right after the gym was
         // changed the page is still on the old one: then this take is recorded without a plan.
-        if page == .ready, let begun, begun.id == captureID, begun.venue == venue { Task { await call(.lock) } }
+        let locks = page == .ready && begun?.id == captureID && begun?.venue == venue
+        if locks { Task { await call(.lock) } }
         writeDraft()
+        #if DEBUG
+        lockSent = locks ? Date() : nil
+        mark("recordStart", ["source": [size.width, size.height], "lockSent": locks, "page": "\(page)", "file": url.lastPathComponent,
+                             "codec": (source.writerSettings(width: size.width, height: size.height)[AVVideoCodecKey] as? AVVideoCodecType)?.rawValue as Any])
+        if let lastFrameJPEG, let data = Data(base64Encoded: lastFrameJPEG) { diagnostics?.write(data, as: "frame-at-lock.jpg") }
+        #endif
         watch?.cancel()
         watch = Task { [weak self] in
             while !Task.isCancelled {
@@ -497,7 +676,11 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
         let task = UIApplication.shared.beginBackgroundTask(withName: "Save recording")
         defer { if task != .invalid { UIApplication.shared.endBackgroundTask(task) } }
         let result = await recorder.finish()
-        log.info("recorded \(result.duration, format: .fixed(precision: 1)) s, \(result.frames) frames, \(result.dropped) dropped, stop: \(reason.rawValue, privacy: .public)")
+        note(String(format: "recorded %.1f s, %d frames, %d dropped, stop: %@", result.duration, result.frames, result.dropped, reason.rawValue))
+        #if DEBUG
+        mark("recordStop", ["reason": reason.rawValue, "seconds": result.duration, "frames": result.frames, "dropped": result.dropped, "written": result.url != nil,
+                            "bytes": (try? result.url?.resourceValues(forKeys: [.fileSizeKey]).fileSize) as Any])
+        #endif
         guard let url = result.url, result.duration >= CaptureLimits.minimumDuration else {
             CaptureRecovery.remove(recorder.url)
             notice = result.url == nil && result.frames > 0 ? .recorderFailed : .tooShort
@@ -527,9 +710,16 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
                                        capture: info, capturePlan: plan)
             heldClip = nil
             try? FileManager.default.removeItem(at: CaptureRecovery.draftURL(for: clip.url))
+            #if DEBUG
+            mark("save", ["record": climb.id.uuidString, "seconds": playback.duration, "aspect": playback.aspectRatio, "hasPlan": climb.capture?.hasPlan as Any,
+                          "analysisQueued": climb.capture?.analysisQueued as Any, "video": climb.videoName])
+            #endif
             phase = .saved(climb.id)
             store.resumeAnalysis(cameraClosed: true)
         } catch {
+            #if DEBUG
+            mark("save", ["error": error.localizedDescription])
+            #endif
             phase = .saveFailed(error.localizedDescription)
         }
     }

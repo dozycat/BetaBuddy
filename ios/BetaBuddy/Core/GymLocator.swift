@@ -187,6 +187,25 @@ final class GymLocator: NSObject, ObservableObject, CLLocationManagerDelegate {
         Task { @MainActor in locating = false; failed = true }
     }
 
+    #if DEBUG
+    /// For the diagnostics file: whether the position may be used and how good the fix is. Never the position itself.
+    var diagnostics: [String: Any] {
+        let bucket: String = switch fix?.accuracy {
+        case nil: "none"
+        case let value? where value < 0: "invalid"
+        case let value? where value <= 100: "≤100m"
+        case let value? where value <= GymDistance.usefulAccuracy: "≤1km"
+        default: ">1km"
+        }
+        var fields: [String: Any] = ["auth": "\(access)", "accuracy": bucket, "locating": locating, "failed": failed, "debugStandIn": manager == nil]
+        if let manager {
+            fields["status"] = Int(manager.authorizationStatus.rawValue)      // 0 not asked, 1 restricted, 2 denied, 3 always, 4 when in use
+            fields["precise"] = manager.accuracyAuthorization == .fullAccuracy
+        }
+        return fields
+    }
+    #endif
+
     /// Empty without a position.
     func suggestions() -> GymSuggestions {
         guard let fix else { return GymSuggestions() }

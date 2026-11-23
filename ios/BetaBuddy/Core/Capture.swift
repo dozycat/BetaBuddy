@@ -94,6 +94,9 @@ struct CaptureAssessment: Equatable, Sendable {
     var startHands: [String]
     var startFeet: [String]
     var finish: String?
+    /// How sure the page says it is of the start and of the finish; only ever looked at in diagnostics.
+    var startConfidence: Double?
+    var finishConfidence: Double?
     var route: Route?
 
     /// The user has said where the problem starts, and where it ends. Until then both are the
@@ -155,6 +158,8 @@ struct CaptureAssessment: Equatable, Sendable {
         startHands = Self.ids(start?["hands"])
         startFeet = Self.ids(start?["feet"])
         finish = ((body["finish"] as? [String: Any])?["id"] as? String).flatMap { $0.isEmpty ? nil : String($0.prefix(40)) }
+        startConfidence = Self.number(start?["conf"])
+        finishConfidence = Self.number((body["finish"] as? [String: Any])?["conf"])
         route = Route(body: body["route"])
     }
 
@@ -276,7 +281,7 @@ enum CaptureMessage: Equatable, Sendable {
     /// `plan` is `nil` when the page gave none that can be kept.
     case locked(id: String, plan: String?, summary: CaptureSummary)
     /// The page cannot assess. Recording goes on without it.
-    case failed(code: String)
+    case failed(code: String, message: String = "")
     /// A script error. Before `ready` it means the page never came up.
     case pageError(String)
 
@@ -297,7 +302,7 @@ enum CaptureMessage: Equatable, Sendable {
             if let text = plan, text.isEmpty || text.utf8.count > Self.maximumPlanLength { plan = nil }
             self = .locked(id: String((body["id"] as? String ?? "").prefix(80)), plan: plan,
                            summary: CaptureSummary(body: body["summary"] as? [String: Any] ?? [:]))
-        case "captureError": self = .failed(code: String((body["code"] as? String ?? "").prefix(80)))
+        case "captureError": self = .failed(code: String((body["code"] as? String ?? "").prefix(80)), message: String((body["message"] as? String ?? "").prefix(300)))
         case "error": self = .pageError(String((body["message"] as? String ?? "").prefix(300)))
         default: return nil
         }

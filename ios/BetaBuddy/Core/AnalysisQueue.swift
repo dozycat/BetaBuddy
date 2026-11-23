@@ -63,6 +63,10 @@ final class AnalysisQueue: ObservableObject {
             // Already analysed, no page to do it, or pose recognition found nobody (or was stopped):
             // the request is done with. The record keeps its own “分析这一趟”.
             guard let pack, !store.analysisResults.contains(climb.id), climb.analysis.hasWorldLandmarks else {
+                #if DEBUG
+                CaptureDiagnostics.event("analysisQueue", ["record": climb.id.uuidString, "outcome": "skipped",
+                                                           "why": pack == nil ? "no analysis page" : store.analysisResults.contains(climb.id) ? "already analysed" : "nobody found in the clip"])
+                #endif
                 settled.insert(climb.id)
                 try? store.setAnalysisQueued(climb.id, false)
                 continue
@@ -81,12 +85,20 @@ final class AnalysisQueue: ObservableObject {
         session.start()
         timeout = Task { [weak self, patience] in
             try? await Task.sleep(for: patience)
-            if !Task.isCancelled { self?.finish(climb.id, false) }
+            guard !Task.isCancelled else { return }
+            #if DEBUG
+            CaptureDiagnostics.event("analysisQueue", ["record": climb.id.uuidString, "outcome": "timeout"])
+            #endif
+            self?.finish(climb.id, false)
         }
     }
 
     private func finish(_ id: UUID, _ succeeded: Bool) {
         guard running == id else { return }
+        #if DEBUG
+        CaptureDiagnostics.event("analysisQueue", ["record": id.uuidString, "outcome": succeeded ? "succeeded" : "failed",
+                                                   "planUsed": store.climbs.first { $0.id == id }?.capture?.planUse?.used as Any])
+        #endif
         halt()
         settled.insert(id)
         // Analysed without the marks made while framing is still analysed, but it is said.

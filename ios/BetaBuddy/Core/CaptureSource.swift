@@ -126,6 +126,23 @@ final class CameraSource: NSObject, CaptureSource, AVCaptureVideoDataOutputSampl
         configured = true
     }
 
+    #if DEBUG
+    /// How the session, the frames and the preview are set up, for the diagnostics file. Main thread: it reads the preview layer.
+    var diagnostics: [String: Any] {
+        let device = (session.inputs.first as? AVCaptureDeviceInput)?.device
+        let format = device.map { CMVideoFormatDescriptionGetDimensions($0.activeFormat.formatDescription) }
+        let data = output.connection(with: .video)
+        state.lock(); let sensor = sensorFieldOfView, frames = delivered; state.unlock()
+        return [
+            "preset": session.sessionPreset.rawValue, "running": session.isRunning, "device": device?.localizedName as Any,
+            "format": format.map { [Int($0.width), Int($0.height)] } as Any, "sensorFovH": sensor as Any, "delivered": frames.map { [$0.width, $0.height] } as Any,
+            "dataRotation": data.map { Double($0.videoRotationAngle) } as Any, "dataMirrored": data?.isVideoMirrored as Any,
+            "previewRotation": preview.connection.map { Double($0.videoRotationAngle) } as Any, "previewMirrored": preview.connection?.isVideoMirrored as Any,
+            "previewGravity": preview.videoGravity.rawValue, "previewFrame": [preview.frame.minX, preview.frame.minY, preview.frame.width, preview.frame.height].map(Double.init),
+        ]
+    }
+    #endif
+
     func stop() {
         observers.forEach(NotificationCenter.default.removeObserver)
         observers = []

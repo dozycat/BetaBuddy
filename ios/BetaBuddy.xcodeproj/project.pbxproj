@@ -20,6 +20,7 @@
 		20DC5F18D14B2216D7FAD54A /* PrivacyPolicy.zh-Hans.txt in Resources */ = {isa = PBXBuildFile; fileRef = B7F8A85AA8EA646D83C5623B /* PrivacyPolicy.zh-Hans.txt */; };
 		20F2AE144DF15E9AD0B5388A /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3E66227A41395E86ABCE5E33 /* Accelerate.framework */; };
 		225D5175E806F176C257581D /* CaptureSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1CE7D0FEC8672F025FA47EF /* CaptureSource.swift */; };
+		2265E3C7D9224DFC825271CB /* CaptureDiagnosticsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29BC1E69A88277D3CB521B28 /* CaptureDiagnosticsTests.swift */; };
 		29995CB310C42FBE438B30A1 /* MediaPipeTasksCommon.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8E0CFE80A3BB99A8CDB5F11B /* MediaPipeTasksCommon.xcframework */; };
 		3051868C32F359501A4312D1 /* StandInPack.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCBC8222041AAD7969E6318C /* StandInPack.swift */; };
 		3055DB323A34FC37D2A7A210 /* GymPackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7318870BC8802A65E6F1001 /* GymPackTests.swift */; };
@@ -55,6 +56,7 @@
 		A12147024A4CA862D346FE8B /* GymView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85F50739B83E9927D442985F /* GymView.swift */; };
 		A5C72DB499BCC606758BA91C /* PoseMath.swift in Sources */ = {isa = PBXBuildFile; fileRef = D223147C2D7F097ECD8149E6 /* PoseMath.swift */; };
 		A5F04A407DAACC93DBF3EB71 /* JournalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC6B978A0067117F43BF8620 /* JournalView.swift */; };
+		A625CD0F2C4E73A1A4A92E12 /* CaptureDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB1FE3CE91016E84266DD392 /* CaptureDiagnostics.swift */; };
 		A6CCE212361BF1F9111BB557 /* MembershipTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 098503FA49B611AD0616C62D /* MembershipTests.swift */; };
 		A96C10334BDC71914EBE9469 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C9F3BFB7EEED9BE808D1130 /* AVFoundation.framework */; };
 		ADB7801DC2438A7B6D4E7884 /* CoreMedia.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 95F7B89B57416C9C6E6F5B54 /* CoreMedia.framework */; };
@@ -117,6 +119,7 @@
 		2109D140B32372930A88FB14 /* AlbumUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlbumUITests.swift; sourceTree = "<group>"; };
 		21C2F1FA66DC3AF9400169EF /* InfoPlist.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = InfoPlist.xcstrings; sourceTree = "<group>"; };
 		23B1E2CAC6C284CABB0D7218 /* CaptureRecovery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureRecovery.swift; sourceTree = "<group>"; };
+		29BC1E69A88277D3CB521B28 /* CaptureDiagnosticsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureDiagnosticsTests.swift; sourceTree = "<group>"; };
 		2B01E45A834F62541C0D5341 /* capture-standin.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = "capture-standin.html"; sourceTree = "<group>"; };
 		2EF79A2082843E4FAA12EB15 /* MediaPipeTasksVision.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = MediaPipeTasksVision.xcframework; path = Vendor/MediaPipeTasksVision/frameworks/MediaPipeTasksVision.xcframework; sourceTree = "<group>"; };
 		3347AC254AE7A2134551EEE4 /* pose_landmarker_full.task */ = {isa = PBXFileReference; path = pose_landmarker_full.task; sourceTree = "<group>"; };
@@ -167,6 +170,7 @@
 		C0D97FA407E7F0FF4D6FEB87 /* BetaBuddyTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = BetaBuddyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		C2073A4BFD1C596095049FD6 /* ClimbStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClimbStore.swift; sourceTree = "<group>"; };
 		C614D6B39B02159288ECC886 /* CatUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatUITests.swift; sourceTree = "<group>"; };
+		CB1FE3CE91016E84266DD392 /* CaptureDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureDiagnostics.swift; sourceTree = "<group>"; };
 		D223147C2D7F097ECD8149E6 /* PoseMath.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoseMath.swift; sourceTree = "<group>"; };
 		DBB55650FA0E8706EEAE41DD /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
 		E1A3BE34FB4FA4B89AE39B85 /* AlbumViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlbumViews.swift; sourceTree = "<group>"; };
@@ -301,6 +305,7 @@
 				75D4C08308B1484B7470C545 /* AnalysisQueue.swift */,
 				BF9896D69073A417BB9B0B2F /* AppLanguage.swift */,
 				8B87183700FC707A88F7A1FE /* Capture.swift */,
+				CB1FE3CE91016E84266DD392 /* CaptureDiagnostics.swift */,
 				23B1E2CAC6C284CABB0D7218 /* CaptureRecovery.swift */,
 				5B8BC2AF18E452C1C6CDAD7E /* CaptureSession.swift */,
 				B1CE7D0FEC8672F025FA47EF /* CaptureSource.swift */,
@@ -352,6 +357,7 @@
 		EF52E5E76E36D7772D9CBD75 /* BetaBuddyTests */ = {
 			isa = PBXGroup;
 			children = (
+				29BC1E69A88277D3CB521B28 /* CaptureDiagnosticsTests.swift */,
 				10F7C79F97CE12CD4B5773F5 /* CaptureFlowTests.swift */,
 				F42E95797193AFFFA0A2278A /* CaptureSupportTests.swift */,
 				8C4FB4CECDEE3100CF22FF22 /* ClimbStoreTests.swift */,
@@ -577,6 +583,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2265E3C7D9224DFC825271CB /* CaptureDiagnosticsTests.swift in Sources */,
 				51E7629CC196B5F304B9D78E /* CaptureFlowTests.swift in Sources */,
 				EBA142BB34E4674A5F52424A /* CaptureSupportTests.swift in Sources */,
 				F912FE304C3B66C059B51027 /* ClimbStoreTests.swift in Sources */,
@@ -602,6 +609,7 @@
 				000BAAC2430D42701BFF962E /* BetaBuddyApp.swift in Sources */,
 				182C46AC97C9E8377CBDD99B /* BrandMark.swift in Sources */,
 				0EECD6E16FB3FAE15E7C6119 /* Capture.swift in Sources */,
+				A625CD0F2C4E73A1A4A92E12 /* CaptureDiagnostics.swift in Sources */,
 				B58E7B4AB8D0408915EBEF28 /* CaptureRecovery.swift in Sources */,
 				83281BD84E6F11A5D5137F4D /* CaptureSession.swift in Sources */,
 				225D5175E806F176C257581D /* CaptureSource.swift in Sources */,
