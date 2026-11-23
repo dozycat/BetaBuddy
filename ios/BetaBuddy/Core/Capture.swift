@@ -47,12 +47,22 @@ struct CaptureAssessment: Equatable, Sendable {
     struct Route: Codable, Equatable, Sendable {
         var id: String
         var confidence: Double?
-        /// Display name and grade text, when the page gives them; the app has no other way to learn them.
+        /// Display name and grade text in the interface language, when the page gives them; the
+        /// app has no other way to learn them. `nameZh` is the problem's own name.
         var name: String?
+        var nameZh: String?
         var grade: String?
 
-        init(id: String, confidence: Double? = nil, name: String? = nil, grade: String? = nil) {
-            self.id = id; self.confidence = confidence; self.name = name; self.grade = grade
+        init(id: String, confidence: Double? = nil, name: String? = nil, nameZh: String? = nil, grade: String? = nil) {
+            self.id = id; self.confidence = confidence; self.name = name; self.nameZh = nameZh; self.grade = grade
+        }
+        /// What to call it on screen: its name, else its own name, else its id.
+        var title: String { name ?? nameZh ?? id }
+        /// The grade as one of the values the album uses (V0–V12), or `nil` when the page's text is
+        /// anything else. Gyms write grades in their own ways; only this form is the same in every language.
+        var albumGrade: String? {
+            guard let grade, grade.hasPrefix("V"), let number = Int(grade.dropFirst()), (0...12).contains(number), grade == "V\(number)" else { return nil }
+            return grade
         }
         init?(body: Any?) {
             guard let body = body as? [String: Any], let id = body["id"] as? String, !id.isEmpty else { return nil }
@@ -60,6 +70,7 @@ struct CaptureAssessment: Equatable, Sendable {
             self.id = String(id.prefix(120))
             confidence = CaptureAssessment.number(body["conf"])
             name = text("name")
+            nameZh = text("nameZh")
             grade = text("grade")
         }
     }
@@ -210,7 +221,7 @@ struct CaptureInfo: Codable, Equatable, Sendable {
     var packVersion: String?
     /// The analysis asked for when the clip was saved has not produced a result yet.
     var analysisQueued: Bool?
-    /// The pack's own problem the capture page recognised and the user did not reject: its id, and its name when the page gave one.
+    /// The pack's own problem the capture page recognised and the user did not reject: its id, and its own name (not a translation) when the page gave one.
     var routeId: String?
     var routeName: String?
 }
@@ -271,6 +282,8 @@ enum CaptureCommand: Sendable {
     case setColor(String?)
     case tap(x: Double, y: Double, role: CaptureRole)
     case resetTaps
+    /// “Not this problem”. Only newer pages have it; the call says whether this one does.
+    case rejectRoute(String)
     case lock
 
     private struct Meta: Encodable {
@@ -310,6 +323,7 @@ enum CaptureCommand: Sendable {
         case .tap(let x, let y, let role):
             ("tap", [Self.literal(rounded4(min(1, max(0, x)))), Self.literal(rounded4(min(1, max(0, y)))), Self.literal(role.rawValue)])
         case .resetTaps: ("resetTaps", [])
+        case .rejectRoute(let id): ("rejectRoute", [Self.literal(id)])
         case .lock: ("lock", [])
         }
         let call = "window.BetaBuddyCapture.\(function)(\(arguments.joined(separator: ",")))"

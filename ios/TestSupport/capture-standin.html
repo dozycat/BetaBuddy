@@ -19,7 +19,8 @@
     red: { rgb: [214, 52, 44], holds: [['r1', .15, .70], ['r2', .20, .50], ['r3', .12, .30]] }
   };
   const GUESS = { yellow: { y1: 'start_hand', y2: 'start_hand', y3: 'start_foot', y6: 'finish' }, blue: { b1: 'start_hand', b5: 'finish' }, red: {} };
-  let meta = null, frames = 0, color = null, taps = {}, locked = false, decoded = null, lastInfo = null;
+  let meta = null, frames = 0, color = null, taps = {}, locked = false, decoded = null, lastInfo = null, rejected = new Set();
+  const chinese = (new URLSearchParams(location.search).get('lang') || '').startsWith('zh');
 
   const outline = (cx, cy) => [[-.035, 0], [-.02, -.02], [.02, -.02], [.035, 0], [.02, .02], [-.02, .02]].map(([dx, dy]) => [cx + dx, cy + dy]);
   function lineHolds() {
@@ -50,8 +51,18 @@
     if (color && !holds.some(hold => hold.role === 'finish')) out.push({ code: 'finish_unclear', severity: 'warn' });
     return out;
   }
-  // With a venue of the pack and the yellow problem chosen, the stand-in “recognises” a problem.
-  const routeNow = () => meta && meta.venue && color === 'yellow' ? { id: meta.venue + '/yellow-01', conf: .9, name: '合成线路 黄 1' } : null;
+  // With a venue of the pack and the yellow colour chosen, the stand-in “recognises” a problem: one
+  // with a V grade, and behind it a second candidate whose grade is written the way some gyms do.
+  function routeNow() {
+    if (!meta || !meta.venue || color !== 'yellow') return null;
+    const all = [
+      { id: meta.venue + '/yellow-01', name: chinese ? '合成线路 黄 1' : 'Synthetic Yellow 1', nameZh: '合成线路 黄 1', grade: 'V3', colour: 'yellow', wall: 'east' },
+      { id: meta.venue + '/yellow-02', name: chinese ? '合成线路 黄 2' : 'Synthetic Yellow 2', nameZh: '合成线路 黄 2', grade: chinese ? '紫条 11–12' : 'Purple tag 11–12', colour: 'orange', wall: 'east' }
+    ].filter(route => !rejected.has(route.id));
+    if (!all.length) return null;
+    const others = all.slice(1);
+    return { ...all[0], conf: .9, others: others.map(route => route.id), otherRoutes: others };
+  }
   function assess(t, info) {
     const holds = lineHolds(), issues = issuesNow(holds);
     const pose = info ? info.pose : undefined;
@@ -76,7 +87,8 @@
     };
   }
   window.BetaBuddyCapture = {
-    begin(m) { meta = m; frames = 0; color = null; taps = {}; locked = false; decoded = null; lastInfo = null; },
+    begin(m) { meta = m; frames = 0; color = null; taps = {}; locked = false; decoded = null; lastInfo = null; rejected = new Set(); },
+    rejectRoute(id) { if (meta && !locked) rejected.add(id); },
     addFrame(t, jpegBase64, info) {
       if (!meta) return;
       // The picture is really decoded, so a frame that is not an upright JPEG of the announced size is noticed.
@@ -119,7 +131,7 @@
         }
       });
     },
-    state() { return { meta, frames, color, taps, locked, decoded, lastInfo }; }
+    state() { return { meta, frames, color, taps, locked, decoded, lastInfo, rejected: [...rejected] }; }
   };
   post({ type: 'captureReady', packVersion: VERSION });
 })();

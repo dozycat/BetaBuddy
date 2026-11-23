@@ -11055,6 +11055,40 @@
           }
         }
       }
+    },
+    "难度是按认出的线路填的，可以改。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The grade was filled in from the recognised problem. You can change it."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "グレードは認識した課題から入れました。変更できます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "난이도는 인식한 문제에서 가져왔어요. 바꿀 수 있어요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "难度是按认出的线路填的，可以改。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "難度是按認出的路線填的，可以改。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

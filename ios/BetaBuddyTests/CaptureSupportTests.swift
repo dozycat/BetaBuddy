@@ -96,6 +96,18 @@ final class CaptureSupportTests: XCTestCase {
         XCTAssertNil(manifest.venueID(forGymNamed: "合成岩馆（西门）"))                                            // Same brand, another branch.
         XCTAssertNil(manifest.venueID(forGymNamed: "合成岩馆"))                                                   // A brand alone is not a branch.
         XCTAssertNil(manifest.venueID(forGymNamed: "")); XCTAssertNil(manifest.venueID(forGymNamed: nil))
+        // A pack that lists directory ids is taken at its word: the id decides, whatever the gym is called…
+        XCTAssertEqual(manifest.venueID(gymID: "syn:east", name: "改过名字"), StandInPack.venueID)
+        XCTAssertNil(manifest.venueID(gymID: "syn:west", name: StandInPack.directoryGymName))       // …and a directory gym it does not list is not in it.
+        XCTAssertEqual(manifest.venueID(gymID: nil, name: StandInPack.directoryGymName), StandInPack.venueID)   // Hand-typed: by name.
+        XCTAssertEqual(manifest.venueID(gymID: "", name: StandInPack.directoryGymName), StandInPack.venueID)
+        // A pack from before directory ids: by name, as before.
+        let older = root.appendingPathComponent("older")
+        try StandInPack.write(to: older, directoryIds: false)
+        let old = try GymPack(directory: older.appendingPathComponent(GymPack.directoryName)).manifest
+        XCTAssertEqual(old.venueID(gymID: "syn:east", name: StandInPack.directoryGymName), StandInPack.venueID)
+        XCTAssertEqual(old.venueID(gymID: "syn:west", name: StandInPack.directoryGymName), StandInPack.venueID)
+        XCTAssertNil(old.venueID(gymID: "syn:east", name: "改过名字"))
         XCTAssertTrue(try GymPack(directory: directory.appendingPathComponent(GymPack.directoryName)).supportsCapture)
         XCTAssertEqual(try GymPack(directory: directory.appendingPathComponent(GymPack.directoryName)).captureURL(language: "ja")?.absoluteString, "gympack://local/capture.html?lang=ja")
         let bare = root.appendingPathComponent("bare")

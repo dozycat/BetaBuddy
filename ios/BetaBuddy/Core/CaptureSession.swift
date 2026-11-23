@@ -39,11 +39,15 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
     @Published var notice: Notice?
     /// The last tap on the picture found no hold there. Cleared by itself after a moment.
     @Published private(set) var tapMissed = false
-    /// The user said the problem the page recognised is not the one they are climbing.
-    @Published private(set) var routeRejected = false
+    /// Problems the page recognised and the user turned down in this take.
+    @Published private(set) var rejectedRoutes: Set<String> = []
+    /// The grade shown was taken from the recognised problem, not picked by the user.
+    @Published private(set) var gradePrefilled = false
+    private var gradePicked = false
     @Published var gymId: String? { didSet { if gymId != oldValue { venueChanged() } } }
     @Published var gymName = "" { didSet { if gymName != oldValue { venueChanged() } } }
-    @Published var grade = ungradedValue
+    /// Set with `pickGrade`. Until the user has picked one, a recognised problem's grade is filled in.
+    @Published private(set) var grade = ungradedValue
 
     let source: CaptureSource
     private let store: ClimbStore
@@ -91,7 +95,11 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
     /// with `-debugCaptureVideo <path>`, which is how tests and the simulator get past having no camera.
     nonisolated static func makeSource() -> CaptureSource {
         #if DEBUG
-        if let path = UserDefaults.standard.string(forKey: "debugCaptureVideo") { return FileCaptureSource(url: URL(fileURLWithPath: path)) }
+        if let path = UserDefaults.standard.string(forKey: "debugCaptureVideo") {
+            // `-debugCaptureFieldOfView <degrees>` says how wide the lens that shot the file was, when that is known.
+            let fieldOfView = UserDefaults.standard.double(forKey: "debugCaptureFieldOfView")
+            return FileCaptureSource(url: URL(fileURLWithPath: path), horizontalFieldOfView: fieldOfView > 0 ? fieldOfView : nil)
+        }
         #endif
         return CameraSource()
     }
@@ -191,7 +199,7 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
         }
     }
 
-    private var venue: String? { pack?.manifest.venueID(forGymNamed: gymName) }
+    private var venue: String? { pack?.manifest.venueID(gymID: gymId, name: gymName) }
 
     /// The page is told about a gym only when it is one of the pack's own; choosing another gym
     /// starts its judgement over.
@@ -210,6 +218,7 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
                 guard phase == .framing else { done(); return }   // A locked judgement is not started over.
                 begun = (captureID, frame.width, frame.height, venue)
                 assessment = nil
+                rejectedRoutes = []          // The page forgets them with `begin` as well.
                 lastReply = Date()
                 await call(.begin(id: captureID, width: frame.width, height: frame.height, fieldOfView: source.horizontalFieldOfView, venue: venue))
                 if let color { await call(.setColor(color)) }
@@ -265,6 +274,7 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
             if page == .failed { page = .ready }
             lastReply = Date()
             self.assessment = assessment
+            fillInGrade()
             metrics.assessments += 1
             if let firstAssessment { metrics.assessmentSpan = Date().timeIntervalSince(firstAssessment) } else { firstAssessment = Date() }
         case .locked(let id, let plan, let summary):
@@ -294,7 +304,6 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
     func selectColor(_ key: String?) {
         guard phase == .framing else { return }
         color = key == color ? nil : key
-        routeRejected = false
         Task { await call(.setColor(color)) }
     }
 
@@ -318,11 +327,38 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
     }
 
     /// The problem the page recognised, unless the user has said it is not that one.
-    var recognised: CaptureAssessment.Route? { routeRejected ? nil : (summary?.route ?? assessment?.route) }
+    var recognised: CaptureAssessment.Route? {
+        (summary?.route ?? assessment?.route).flatMap { rejectedRoutes.contains($0.id) ? nil : $0 }
+    }
 
-    /// “Not this one”. The page has no call for it: the user marks start and finish by tapping, and
-    /// the problem is not stored with the record.
-    func rejectRoute() { routeRejected = true }
+    /// “Not this one”. A page that has `rejectRoute` moves on to its next candidate, or to none; an
+    /// older one keeps reporting the same problem, which is then simply not shown and not stored.
+    func rejectRoute() {
+        guard phase == .framing, let route = recognised else { return }
+        rejectedRoutes.insert(route.id)
+        fillInGrade()
+        Task { await call(.rejectRoute(route.id)) }
+    }
+
+    /// The user's own choice of grade. It is never replaced afterwards.
+    func pickGrade(_ value: String) {
+        grade = value
+        gradePicked = true
+        gradePrefilled = false
+    }
+
+    /// Until the user has picked a grade, the recognised problem's is filled in, visibly; when
+    /// that problem goes away again, so does its grade.
+    private func fillInGrade() {
+        guard !gradePicked, phase == .framing else { return }
+        if let known = recognised?.albumGrade {
+            if grade != known { grade = known }
+            gradePrefilled = true
+        } else if gradePrefilled {
+            grade = ungradedValue
+            gradePrefilled = false
+        }
+    }
 
     /// The hint blocks: the user is asked before recording from this position.
     var needsConfirmation: Bool { page == .ready && assessment?.ok == false }
@@ -401,7 +437,7 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
             let swatch = assessment?.palette.first { $0.key == color }
             let info = CaptureInfo(colorKey: color, colorRGB: swatch?.rgb ?? (summary?.color == color ? summary?.rgb : nil), summary: summary,
                                    packVersion: pack == nil ? nil : pageVersion, analysisQueued: analysisAvailable ? true : nil,
-                                   routeId: recognised?.id, routeName: recognised?.name)
+                                   routeId: recognised?.id, routeName: recognised?.nameZh ?? recognised?.name)
             // One write: the clip, its thumbnail, the plan, what was chosen and the request for
             // analysis. Nothing is analysed until this has succeeded.
             let climb = try store.save(title: "", grade: grade, sent: false, note: "", stagedVideo: clip.url, thumbnail: thumbnail, analysis: playback,
@@ -435,7 +471,7 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
         assessment = nil
         plan = nil; summary = nil
         recordingStarted = nil
-        routeRejected = false
+        rejectedRoutes = []
         phase = .framing
         pipeline.setFeeding(page != .unavailable && started, interval: framingInterval)
     }

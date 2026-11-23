@@ -24,7 +24,7 @@ enum StandInPack {
     /// Writes `<root>/GymPack` and returns `root`. `step` is how many frames each scripted state of the
     /// capture stand-in lasts.
     @discardableResult
-    static func write(to root: URL, capture: Bool = true, analysis: Bool = true, step: Int = 5) throws -> URL {
+    static func write(to root: URL, capture: Bool = true, analysis: Bool = true, step: Int = 5, directoryIds: Bool = true) throws -> URL {
         let pack = root.appendingPathComponent("GymPack", isDirectory: true)
         try FileManager.default.createDirectory(at: pack, withIntermediateDirectories: true)
         let bundle = Bundle(for: TestSupportMarker.self)
@@ -39,7 +39,9 @@ enum StandInPack {
         let manifest: [String: Any] = [
             "schema": 1, "packVersion": version, "generatedAt": "2026-01-01T00:00:00Z", "gymName": "合成岩馆", "routeCount": 0, "entry": "index.html",
             "files": files.keys.sorted().map { ["path": $0, "sha256": "00", "bytes": files[$0]!.utf8.count] },
-            "venues": [["id": venueID, "files": [String](), "name": venueName, "names": ["en": "Synthetic Gym East"]]]
+            // Newer packs say which directory gym a venue is; older ones leave the app to go by name.
+            "venues": [["id": venueID, "files": [String](), "name": venueName, "names": ["en": "Synthetic Gym East"]]
+                .merging(directoryIds ? ["directoryIds": ["syn:east"]] : [:]) { first, _ in first }]
         ]
         try JSONSerialization.data(withJSONObject: manifest).write(to: pack.appendingPathComponent("manifest.json"))
         return root

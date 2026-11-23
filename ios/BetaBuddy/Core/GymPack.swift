@@ -15,6 +15,8 @@ struct GymManifest: Decodable, Equatable, Sendable {
         /// The venue's own name and its names per language; only used to recognise a directory gym.
         var name: String?
         var names: [String: String]?
+        /// This venue's ids in the offline gym directory, when the pack knows them.
+        var directoryIds: [String]?
     }
     var venues: [Venue] = []
     var catCode: String?
@@ -306,6 +308,18 @@ extension GymManifest {
     /// of them. The directory and the pack share no key, so this goes by name: a directory entry is
     /// written “brand（branch）”, and it is taken to be a venue when exactly one venue's name carries
     /// both parts. Anything less certain is left out; the capture page then works without a venue.
+    /// The pack's venue for a gym chosen from the directory: by the directory id when the pack lists
+    /// it, by name otherwise (older packs, hand-typed names).
+    func venueID(gymID: String?, name: String?) -> String? {
+        if let gymID, !gymID.isEmpty {
+            let listed = venues.filter { ($0.directoryIds ?? []).contains(gymID) }
+            if listed.count == 1 { return listed[0].id }
+            // A pack that lists directory ids knows which directory gyms are its own; any other one is not in it.
+            if venues.contains(where: { $0.directoryIds?.isEmpty == false }) { return nil }
+        }
+        return venueID(forGymNamed: name)
+    }
+
     func venueID(forGymNamed name: String?) -> String? {
         func plain(_ text: String) -> String {
             String(text.lowercased().unicodeScalars.filter { CharacterSet.alphanumerics.contains($0) })

@@ -23,9 +23,9 @@ final class CaptureFlowTests: XCTestCase {
         clips = []
     }
 
-    private func pack(capture: Bool = true, analysis: Bool = true, step: Int = 3) throws -> GymPack {
+    private func pack(capture: Bool = true, analysis: Bool = true, step: Int = 3, directoryIds: Bool = true) throws -> GymPack {
         let directory = root.appendingPathComponent("pack-\(UUID())")
-        try StandInPack.write(to: directory, capture: capture, analysis: analysis, step: step)
+        try StandInPack.write(to: directory, capture: capture, analysis: analysis, step: step, directoryIds: directoryIds)
         return try GymPack(directory: directory.appendingPathComponent(GymPack.directoryName))
     }
     private func wall(seconds: Double = 2, width: Int = 360, height: Int = 640, photo: CGImage? = nil) async throws -> URL {
@@ -65,7 +65,7 @@ final class CaptureFlowTests: XCTestCase {
         let session = session(store, pack, try await wall(seconds: 2))
         session.gymName = StandInPack.directoryGymName
         session.gymId = "syn:east"
-        session.grade = "V4"
+        session.pickGrade("V4")
         XCTAssertEqual(session.page, .loading)
         var events: [String] = []
         session.$phase.sink { events.append("phase:\($0)") }.store(in: &watching)
@@ -113,7 +113,11 @@ final class CaptureFlowTests: XCTestCase {
         XCTAssertFalse(judged.startConfirmed); XCTAssertFalse(judged.finishConfirmed)
         XCTAssertEqual(judged.hint, .init(code: "start_unclear", blocking: false, move: nil)); XCTAssertTrue(judged.ready)
         // The gym is one of the pack's venues, so the page may say which of its problems this is.
-        XCTAssertEqual(session.recognised, .init(id: StandInPack.venueID + "/yellow-01", confidence: 0.9, name: "合成线路 黄 1"))
+        let recognised = try XCTUnwrap(session.recognised)
+        XCTAssertEqual(recognised.id, StandInPack.venueID + "/yellow-01"); XCTAssertEqual(recognised.confidence, 0.9)
+        XCTAssertEqual(recognised.nameZh, "合成线路 黄 1"); XCTAssertEqual(recognised.grade, "V3")
+        XCTAssertTrue(["合成线路 黄 1", "Synthetic Yellow 1"].contains(recognised.title))       // In the language the page was loaded with.
+        XCTAssertEqual(session.grade, "V4"); XCTAssertFalse(session.gradePrefilled)            // The user picked first: nothing is filled in.
 
         // The user says another hold is the finish, and that a blue one belongs to the problem.
         session.correct(at: CGPoint(x: 0.50, y: 0.60), role: .finish)
@@ -158,9 +162,8 @@ final class CaptureFlowTests: XCTestCase {
         XCTAssertEqual(capture.colorKey, "yellow"); XCTAssertEqual(capture.colorRGB, [226, 196, 40])
         XCTAssertEqual(capture.packVersion, StandInPack.version)
         XCTAssertEqual(capture.analysisQueued, true); XCTAssertTrue(capture.hasPlan)
-        let route = CaptureAssessment.Route(id: StandInPack.venueID + "/yellow-01", confidence: 0.9, name: "合成线路 黄 1")
-        XCTAssertEqual(capture.summary, CaptureSummary(color: "yellow", rgb: [226, 196, 40], holds: 6, startHands: 1, startFeet: 1, finish: true, ok: true, issues: [], route: route))
-        XCTAssertEqual(capture.routeId, route.id); XCTAssertEqual(capture.routeName, route.name)       // Recognised and not rejected: kept with the record.
+        XCTAssertEqual(capture.summary, CaptureSummary(color: "yellow", rgb: [226, 196, 40], holds: 6, startHands: 1, startFeet: 1, finish: true, ok: true, issues: [], route: recognised))
+        XCTAssertEqual(capture.routeId, recognised.id); XCTAssertEqual(capture.routeName, "合成线路 黄 1")   // Recognised and not rejected: kept with the record, under its own name.
         XCTAssertEqual(record.grade, "V4")                                                             // The grade is the one the user picked.
         let plan = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(try XCTUnwrap(reopened.capturePlan(for: record)).utf8)) as? [String: Any])
         XCTAssertEqual(plan["color"] as? String, "yellow")
@@ -297,25 +300,76 @@ final class CaptureFlowTests: XCTestCase {
         XCTAssertTrue((try FileManager.default.contentsOfDirectory(atPath: NSTemporaryDirectory())).filter { $0.hasPrefix("betabuddy-capture-") }.isEmpty)
     }
 
-    func testARejectedProblemIsNotStoredAndTheScreenSaysNothingAboutItAgain() async throws {
+    func testRejectingAProblemMovesToTheNextCandidateAndItsGradeIsOnlyFilledInUntilTheUserPicks() async throws {
         let store = store()
         let session = session(store, try pack(), try await wall())
-        session.gymName = StandInPack.directoryGymName
+        session.gymId = "syn:east"                         // Known to the pack by its directory id; the name plays no part.
+        session.gymName = "随便写的名字"
         session.start()
         await until("ready") { session.assessment?.ready == true }
+        XCTAssertEqual(session.grade, ungradedValue); XCTAssertFalse(session.gradePrefilled)
         session.selectColor("yellow")
         await until("recognised") { session.recognised != nil }
+        let first = try XCTUnwrap(session.recognised)
+        XCTAssertTrue(first.id.hasSuffix("/yellow-01")); XCTAssertEqual(first.nameZh, "合成线路 黄 1"); XCTAssertFalse(first.title.isEmpty)
+        // The user has not picked a grade: the problem's is filled in, and marked as filled in.
+        await until("grade filled in") { session.gradePrefilled }
+        XCTAssertEqual(session.grade, "V3")
+
+        // “Not this one”: the page moves to its next candidate. Its grade is not one the album uses, so nothing is filled in.
         session.rejectRoute()
-        XCTAssertNil(session.recognised); XCTAssertNotNil(session.assessment?.route)
+        XCTAssertNil(session.recognised)                    // At once, before the page has answered.
+        XCTAssertEqual(session.grade, ungradedValue); XCTAssertFalse(session.gradePrefilled)
+        await until("the next candidate") { session.recognised?.id.hasSuffix("/yellow-02") == true }
+        XCTAssertNotNil(session.recognised?.grade); XCTAssertNil(session.recognised?.albumGrade)
+        XCTAssertEqual(session.grade, ungradedValue); XCTAssertFalse(session.gradePrefilled)
+        // The user's own pick is never replaced, whatever is recognised afterwards.
+        session.pickGrade("V6")
+        session.rejectRoute()
+        await until("no candidate left") { session.assessment?.route == nil && session.assessment?.hint?.code == "start_unclear" }
+        XCTAssertNil(session.recognised); XCTAssertEqual(session.grade, "V6"); XCTAssertFalse(session.gradePrefilled)
+        var state = try await pageState(session)
+        XCTAssertEqual((state["rejected"] as? [String])?.count, 2)
+
+        session.startRecording()
+        try await Task.sleep(for: .seconds(1.3))
+        await session.stop(.user)
+        let record = try XCTUnwrap(store.climbs.first)
+        XCTAssertNil(record.capture?.routeId); XCTAssertNil(record.capture?.summary?.route); XCTAssertEqual(record.grade, "V6")
+
+        // A new take starts clean on both sides, and the first problem is offered again; the picked grade stays.
+        session.frameAgain()
+        XCTAssertTrue(session.rejectedRoutes.isEmpty)
+        await until("recognised again") { session.recognised?.id.hasSuffix("/yellow-01") == true }
+        state = try await pageState(session)
+        XCTAssertEqual((state["rejected"] as? [String])?.count, 0)
+        XCTAssertEqual(session.grade, "V6"); XCTAssertFalse(session.gradePrefilled)
+        await session.close()
+    }
+
+    /// Packs before 1.9.1 have no `rejectRoute`: the problem keeps coming, and is simply not shown or stored.
+    func testRejectingAProblemOnAPageWithoutRejectRoute() async throws {
+        let store = store()
+        let session = session(store, try pack(directoryIds: false), try await wall())
+        session.gymId = "syn:east"
+        session.gymName = StandInPack.directoryGymName          // Such a pack does not list directory ids either: the name decides.
+        session.start()
+        await until("ready") { session.assessment?.ready == true }
+        let view = try XCTUnwrap(session.webView)
+        _ = try await view.evaluateJavaScript("delete window.BetaBuddyCapture.rejectRoute; true")
+        session.selectColor("yellow")
+        await until("grade filled in") { session.gradePrefilled && session.grade == "V3" }
+        session.rejectRoute()
+        XCTAssertNil(session.recognised); XCTAssertFalse(session.gradePrefilled); XCTAssertEqual(session.grade, ungradedValue)
+        try await Task.sleep(for: .milliseconds(400))
+        XCTAssertNotNil(session.assessment?.route); XCTAssertNil(session.recognised)       // Still reported, still not shown.
+        XCTAssertEqual(session.grade, ungradedValue)
         session.startRecording()
         try await Task.sleep(for: .seconds(1.3))
         await session.stop(.user)
         let record = try XCTUnwrap(store.climbs.first)
         XCTAssertNil(record.capture?.routeId); XCTAssertNil(record.capture?.routeName)
         XCTAssertNotNil(record.capture?.summary?.route)                 // What the page said stays in its summary.
-        // Another colour is another problem: the rejection does not carry over, and neither does it to the next take.
-        session.frameAgain()
-        XCTAssertFalse(session.routeRejected)
         await session.close()
     }
 
@@ -414,6 +468,8 @@ final class CaptureFlowTests: XCTestCase {
         let session = CaptureSession(store: store, pack: pack, source: FileCaptureSource(url: URL(fileURLWithPath: clip), horizontalFieldOfView: 50))
         // `TEST_RUNNER_BB_CAPTURE_GYM=<a gym's name as the directory writes it>` selects a gym, for a clip shot in one of the pack's own.
         if let gym = ProcessInfo.processInfo.environment["BB_CAPTURE_GYM"], !gym.isEmpty { session.gymName = gym }
+        // …or `TEST_RUNNER_BB_CAPTURE_GYM_ID=<its id in the directory>`, which a pack from 1.9.1 on maps to its venue.
+        if let id = ProcessInfo.processInfo.environment["BB_CAPTURE_GYM_ID"], !id.isEmpty { session.gymId = id }
         var codes: [String] = []
         session.$assessment.sink { value in
             guard let value else { return }
@@ -433,10 +489,10 @@ final class CaptureFlowTests: XCTestCase {
             await until("holds of the first colour", within: 15) { session.assessment?.color == colour && session.assessment?.holds.isEmpty == false }
             let chosen = try XCTUnwrap(session.assessment)
             // A page that recognises problems of the pack's own venues needs a moment for it.
-            if pack.manifest.venueID(forGymNamed: session.gymName) != nil {
+            if pack.manifest.venueID(gymID: session.gymId, name: session.gymName) != nil {
                 let deadline = Date().addingTimeInterval(12)
                 while session.recognised == nil, Date() < deadline { try await Task.sleep(for: .milliseconds(100)) }
-                report.append("venue given; recognised: \(session.recognised.map { "\($0.id) conf \($0.confidence ?? -1) name \($0.name ?? "none")" } ?? "nothing")")
+                report.append("venue given; recognised: \(session.recognised.map { "\($0.id) conf \($0.confidence ?? -1) name \($0.name ?? "none") nameZh \($0.nameZh ?? "none") grade \($0.grade ?? "none")" } ?? "nothing"); grade shown \(session.grade), filled in \(session.gradePrefilled)")
             }
             report.append("first colour: \(chosen.holds.count) holds, \(chosen.holds.filter { !$0.poly.isEmpty }.count) with outlines, start hands \(chosen.startHands.count), feet \(chosen.startFeet.count), finish \(chosen.finish != nil), hint \(chosen.hint?.code ?? "none")")
             // Mark the first hold as the start, the way a tap on the picture does.

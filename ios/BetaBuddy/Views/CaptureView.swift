@@ -255,12 +255,14 @@ struct CaptureView: View {
                         .frame(maxWidth: .infinity, alignment: .leading).background(.white.opacity(0.14), in: Capsule())
                 }.buttonStyle(.plain).disabled(session.phase != .framing).accessibilityIdentifier("captureGym")
                 Menu {
-                    Picker("线路难度", selection: $session.grade) {
+                    Picker("线路难度", selection: Binding(get: { session.grade }, set: { session.pickGrade($0) })) {
                         Text("未标级").tag(ungradedValue)
                         ForEach(0..<13) { Text(verbatim: "V\($0)").tag("V\($0)") }
                     }
                 } label: {
                     HStack(spacing: 6) {
+                        // A grade the user did not pick is marked as such.
+                        if session.gradePrefilled { Image(systemName: "wand.and.stars").font(.caption.bold()).foregroundStyle(BB.lime) }
                         Text(verbatim: gradeText(session.grade))
                         Image(systemName: "chevron.down").font(.caption2.bold())
                     }.font(.subheadline.bold()).lineLimit(1).padding(.horizontal, 12).frame(minHeight: 44)
@@ -419,12 +421,16 @@ struct CaptureView: View {
                 }
                 if session.color != nil, let route = session.recognised {
                     HStack(spacing: 8) {
-                        Text("认出来像是：\([route.name ?? route.id, route.grade ?? ""].filter { !$0.isEmpty }.joined(separator: " · "))")
+                        Text("认出来像是：\([route.title, route.grade ?? ""].filter { !$0.isEmpty }.joined(separator: " · "))")
                             .font(.caption.bold()).fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("captureRoute")
                         Button { session.rejectRoute() } label: {
                             Text("不是这条").font(.caption.bold()).padding(.horizontal, 10).frame(minHeight: 32).background(.white.opacity(0.14), in: Capsule())
                         }.buttonStyle(.plain).accessibilityIdentifier("captureRejectRoute")
                     }
+                }
+                if session.gradePrefilled {
+                    Label("难度是按认出的线路填的，可以改。", systemImage: "wand.and.stars").font(.caption.bold()).foregroundStyle(BB.lime)
+                        .fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("captureGradePrefilled")
                 }
                 prompt(assessment)
                 ScrollView(.horizontal, showsIndicators: false) {

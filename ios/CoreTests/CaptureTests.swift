@@ -55,10 +55,21 @@ final class CaptureTests: XCTestCase {
         XCTAssertNil(try assessment(body).route)
         XCTAssertFalse(try assessment(body).startConfirmed)        // h3 is the page's own guess…
         XCTAssertFalse(try assessment(body).finishConfirmed)
-        body["route"] = ["id": "wall-07", "conf": 0.9, "name": "合成线路 7", "grade": "V3", "extra": true]
+        body["route"] = ["id": "wall-07", "conf": 0.9, "name": "Synthetic 7", "nameZh": "合成线路 7", "grade": "V3", "colour": "yellow", "wall": "east",
+                         "others": ["wall-08"], "otherRoutes": [["id": "wall-08", "name": "Synthetic 8", "grade": ""]], "extra": true]
         body["holds"] = [["id": "h3", "box": [0.4, 0.3, 0.1, 0.1], "role": "start_hand", "user": true], ["id": "h9", "box": [0.4, 0.1, 0.1, 0.1], "role": "finish", "user": true]]
         let value = try assessment(body)
-        XCTAssertEqual(value.route, .init(id: "wall-07", confidence: 0.9, name: "合成线路 7", grade: "V3"))
+        XCTAssertEqual(value.route, .init(id: "wall-07", confidence: 0.9, name: "Synthetic 7", nameZh: "合成线路 7", grade: "V3"))
+        XCTAssertEqual(value.route?.title, "Synthetic 7"); XCTAssertEqual(value.route?.albumGrade, "V3")
+        // What it is called without a name in the interface language, and without any name.
+        XCTAssertEqual(CaptureAssessment.Route(id: "wall-07", nameZh: "合成线路 7").title, "合成线路 7")
+        XCTAssertEqual(CaptureAssessment.Route(id: "wall-07").title, "wall-07")
+        // Only a grade the album itself uses is ever filled in; gyms write grades in many other ways.
+        for (text, expected) in [("V0", "V0"), ("V12", "V12"), ("V13", nil), ("v3", nil), ("V03", nil), ("V3+", nil), ("紫条 11–12", nil), ("", nil)] as [(String, String?)] {
+            XCTAssertEqual(CaptureAssessment.Route(id: "r", grade: text).albumGrade, expected, text)
+        }
+        XCTAssertNil(CaptureAssessment.Route(id: "r").albumGrade)
+        XCTAssertEqual(CaptureAssessment.Route(body: ["id": "r", "grade": ""])?.grade, nil)
         XCTAssertTrue(value.startConfirmed); XCTAssertTrue(value.finishConfirmed)     // …until the user taps.
         // Only an id is promised; without one there is no problem.
         body["route"] = ["id": "wall-07"]
@@ -157,6 +168,8 @@ final class CaptureTests: XCTestCase {
         XCTAssertTrue(CaptureCommand.tap(x: 0.41234567, y: 1.7, role: .startFoot).script.contains("(window.BetaBuddyCapture.tap(0.4123,1,\"start_foot\") || '')"))
         XCTAssertTrue(CaptureCommand.tap(x: 0.5, y: 0.5, role: .none).script.contains("\"none\""))
         XCTAssertTrue(CaptureCommand.resetTaps.script.contains("resetTaps()"))
+        let reject = CaptureCommand.rejectRoute("venue/wall-07\"x").script
+        XCTAssertTrue(reject.contains("typeof window.BetaBuddyCapture.rejectRoute === 'function'")); XCTAssertTrue(reject.contains("rejectRoute(\"venue/wall-07\\\"x\"), true)"), reject)
         XCTAssertTrue(CaptureCommand.lock.script.contains("lock()"))
         XCTAssertEqual(Set(CaptureRole.allCases.map(\.rawValue)), ["start_hand", "start_foot", "finish", "hold", "none"])
     }

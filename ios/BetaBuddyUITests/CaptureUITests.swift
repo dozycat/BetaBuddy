@@ -124,10 +124,6 @@ final class CaptureUITests: XCTestCase {
         XCTAssertFalse(app.descendants(matching: .any)["captureElapsed"].exists)
         XCTAssertTrue(ready.waitForExistence(timeout: 60))
 
-        app.buttons["captureGrade"].tap()
-        XCTAssertTrue(app.buttons["V4"].waitForExistence(timeout: 5))
-        app.buttons["V4"].tap()
-
         // A colour: its holds are outlined, the guessed start and finish carry a question mark, and the
         // screen asks for the start first. Marking is one tap on the picture, with what it marks chosen below.
         app.buttons["captureColor-yellow"].tap()
@@ -136,10 +132,25 @@ final class CaptureUITests: XCTestCase {
         // The gym is one of the synthetic pack's venues, so the stand-in names a problem; it is shown as a guess that can be turned down.
         let route = app.staticTexts["captureRoute"]
         XCTAssertTrue(route.waitForExistence(timeout: 5))
-        XCTAssertEqual(route.label, "认出来像是：合成线路 黄 1")
+        XCTAssertEqual(route.label, "认出来像是：合成线路 黄 1 · V3")
         XCTAssertTrue(app.buttons["captureRejectRoute"].exists)
+        // No grade picked yet: the problem's grade is filled in, and the screen says that it was.
+        XCTAssertTrue(app.staticTexts["captureGradePrefilled"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.buttons["captureGrade"].value as? String, "V3")
         try await Task.sleep(for: .seconds(1))                       // The outlines come with the next assessment.
         keep(app, "07-colour-guessed-start-finish")
+        // “Not this one” moves to the page's next candidate; its grade is not a V grade and is only shown, not filled in.
+        app.buttons["captureRejectRoute"].tap()
+        let next = app.staticTexts.matching(NSPredicate(format: "identifier == 'captureRoute' AND label CONTAINS '黄 2'")).firstMatch
+        XCTAssertTrue(next.waitForExistence(timeout: 5))
+        XCTAssertEqual(next.label, "认出来像是：合成线路 黄 2 · 紫条 11–12")
+        XCTAssertFalse(app.staticTexts["captureGradePrefilled"].exists)
+        XCTAssertEqual(app.buttons["captureGrade"].value as? String, "未标级")
+        keep(app, "07b-next-candidate")
+        // The user's own grade.
+        app.buttons["captureGrade"].tap()
+        XCTAssertTrue(app.buttons["V4"].waitForExistence(timeout: 5))
+        app.buttons["V4"].tap()
 
         let picture = app.descendants(matching: .any)["capturePicture"]
         picture.coordinate(withNormalizedOffset: CGVector(dx: 0.30, dy: 0.80)).tap()
@@ -295,6 +306,53 @@ final class CaptureUITests: XCTestCase {
         app.staticTexts["今天的攀爬"].firstMatch.tap()
         XCTAssertTrue(app.buttons["viewAnalysis"].waitForExistence(timeout: 10))
         removeNewestRecord(app, more: "更多操作", confirm: "删除这一趟")
+    }
+
+    /// The real directory with a real (simulated) position, and the installed pack recognising a problem
+    /// in one of its own gyms. Needs a clip shot in such a gym and that gym's id in the directory, and the
+    /// simulator told where it is beforehand:
+    ///
+    ///     xcrun simctl privacy <device> grant location com.betabuddy.ios
+    ///     xcrun simctl location <device> set <lat>,<lon>
+    ///     TEST_RUNNER_BB_CAPTURE_CLIP=<clip> TEST_RUNNER_BB_CAPTURE_GYM_ID=<directory id> xcodebuild … test \
+    ///       -only-testing:BetaBuddyUITests/CaptureUITests/testInstalledPackRecognisesAProblemInOneOfItsGyms
+    @MainActor
+    func testInstalledPackRecognisesAProblemInOneOfItsGyms() async throws {
+        let environment = ProcessInfo.processInfo.environment
+        guard let clip = environment["BB_CAPTURE_CLIP"], FileManager.default.fileExists(atPath: clip),
+              let gym = environment["BB_CAPTURE_GYM_ID"], !gym.isEmpty else {
+            throw XCTSkip("Optional private clip from one of the pack's gyms, and that gym's directory id, are not supplied")
+        }
+        let app = XCUIApplication()
+        app.launchArguments = ["-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN", "-resetLanguage", "YES", "-initialTab", "1", "-debugCaptureVideo", clip,
+                               "-debugCaptureAttitude", "6,1,0.01", "-debugCaptureFieldOfView", "50"]
+        app.launch()
+        XCTAssertTrue(app.buttons["recordClimb"].waitForExistence(timeout: 15))
+        app.buttons["recordClimb"].tap()
+        XCTAssertTrue(app.buttons["captureGym"].waitForExistence(timeout: 10))
+        try await Task.sleep(for: .seconds(3))                       // One fix from the system.
+        keep(app, "60-real-directory-framing")
+        app.buttons["captureGym"].tap()
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'nearbyGym-'")).firstMatch.waitForExistence(timeout: 15),
+                      "No gym was ranked by distance: is location granted and set for this simulator?")
+        keep(app, "61-real-directory-nearby")
+        app.swipeUp()
+        keep(app, "62-real-directory-same-city")
+        app.swipeDown()
+        let row = app.buttons.matching(NSPredicate(format: "identifier == %@ OR identifier == %@", "nearbyGym-" + gym, "cityGym-" + gym)).firstMatch
+        if !row.waitForExistence(timeout: 3) { app.swipeUp() }
+        XCTAssertTrue(row.waitForExistence(timeout: 5), "The gym is not among those suggested here")
+        row.tap()
+        let swatch = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'captureColor-'")).firstMatch
+        XCTAssertTrue(swatch.waitForExistence(timeout: 20))
+        (environment["BB_CAPTURE_COLOUR"].map { app.buttons["captureColor-" + $0] } ?? swatch).tap()
+        let route = app.staticTexts["captureRoute"]
+        let found = route.waitForExistence(timeout: 30)
+        try await Task.sleep(for: .seconds(1))
+        keep(app, "63-real-route-recognised")
+        XCTAssertTrue(found, "The page recognised no problem")
+        let label = XCTAttachment(string: route.label); label.name = "Recognised problem as shown"; label.lifetime = .keepAlways; add(label)
+        app.buttons["captureClose"].tap()
     }
 
     /// The simulator has no camera: without the file source the screen says so and offers the import.
