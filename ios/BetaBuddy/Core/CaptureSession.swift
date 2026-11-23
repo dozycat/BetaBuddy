@@ -62,6 +62,10 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
     private var background: NSObjectProtocol?
     private(set) var metrics = CaptureMetrics()
     private var firstAssessment: Date?
+    /// When the page last answered (or was last asked to start over). A page that has gone quiet
+    /// must not leave an old judgement on the screen.
+    private var lastReply: Date?
+    var quietLimit: TimeInterval = 5
     /// Seconds between frames handed to the page while framing, and while recording.
     var framingInterval = 0.5
     var recordingInterval = 1.0
@@ -206,6 +210,7 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
                 guard phase == .framing else { done(); return }   // A locked judgement is not started over.
                 begun = (captureID, frame.width, frame.height, venue)
                 assessment = nil
+                lastReply = Date()
                 await call(.begin(id: captureID, width: frame.width, height: frame.height, fieldOfView: source.horizontalFieldOfView, venue: venue))
                 if let color { await call(.setColor(color)) }
             }
@@ -221,6 +226,11 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
                 if frame.info.pose != nil { metrics.posesFound += 1 }
             }
             metrics.poseDropped = pipeline.poseDropped
+            if phase == .framing, page == .ready, let lastReply, Date().timeIntervalSince(lastReply) > quietLimit {
+                log.error("capture page has not answered for \(self.quietLimit, format: .fixed(precision: 0)) s")
+                page = .failed
+                assessment = nil
+            }
             done()
         }
     }
@@ -253,6 +263,7 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
         case .assessment(let assessment):
             guard phase == .framing, begun?.id == captureID else { return }
             if page == .failed { page = .ready }
+            lastReply = Date()
             self.assessment = assessment
             metrics.assessments += 1
             if let firstAssessment { metrics.assessmentSpan = Date().timeIntervalSince(firstAssessment) } else { firstAssessment = Date() }
@@ -266,9 +277,9 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
                 catch { log.error("late plan not kept: \(error.localizedDescription, privacy: .public)") }
             }
         case .failed(let code):
-            // Recording goes on without the page; the screen says the checks are not available.
-            log.info("capture page cannot assess: \(code, privacy: .public)")
-            if phase == .framing { page = .failed; assessment = nil }
+            // Some of these are passing (one frame it could not read, a venue file it could not get) and
+            // the page carries on. Whether it still answers is what decides what the screen says, see `hand`.
+            log.info("capture page reported: \(code, privacy: .public)")
         case .pageError(let text):
             log.error("capture page error (\(self.page == .loading ? "before" : "after", privacy: .public) ready): \(text, privacy: .public)")
             if page == .loading { page = .failed }

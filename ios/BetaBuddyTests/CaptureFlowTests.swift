@@ -319,6 +319,26 @@ final class CaptureFlowTests: XCTestCase {
         await session.close()
     }
 
+    func testAPageThatGoesQuietDoesNotLeaveItsLastJudgementOnTheScreen() async throws {
+        let store = store()
+        let session = session(store, try pack(), try await wall())
+        session.quietLimit = 0.6
+        session.start()
+        await until("ready") { session.assessment?.ready == true }
+        // The page stops answering, as after a script error; frames keep going in.
+        let view = try XCTUnwrap(session.webView)
+        _ = try await view.evaluateJavaScript("window.BetaBuddyCapture.addFrame = function () {}; true")
+        await until("the screen to stop showing a judgement", within: 5) { session.page == .failed && session.assessment == nil }
+        XCTAssertFalse(session.needsConfirmation)
+        // Recording works all the same, and the record simply has no plan… unless the page still answers `lock`.
+        session.startRecording()
+        XCTAssertEqual(session.phase, .recording)
+        try await Task.sleep(for: .seconds(1.3))
+        await session.stop(.user)
+        guard case .saved = session.phase else { return XCTFail("\(session.phase)") }
+        await session.close()
+    }
+
     func testAFailedSaveKeepsTheClipForAnotherTry() async throws {
         let store = store()
         let session = session(store, nil, try await wall())
@@ -391,7 +411,9 @@ final class CaptureFlowTests: XCTestCase {
         }
         guard let pack = GymPack.current, pack.supportsCapture else { throw XCTSkip("The installed build has no pack with a capture page") }
         let store = store()
-        let session = CaptureSession(store: store, pack: pack, source: FileCaptureSource(url: URL(fileURLWithPath: clip)))
+        let session = CaptureSession(store: store, pack: pack, source: FileCaptureSource(url: URL(fileURLWithPath: clip), horizontalFieldOfView: 50))
+        // `TEST_RUNNER_BB_CAPTURE_GYM=<a gym's name as the directory writes it>` selects a gym, for a clip shot in one of the pack's own.
+        if let gym = ProcessInfo.processInfo.environment["BB_CAPTURE_GYM"], !gym.isEmpty { session.gymName = gym }
         var codes: [String] = []
         session.$assessment.sink { value in
             guard let value else { return }
@@ -410,6 +432,12 @@ final class CaptureFlowTests: XCTestCase {
             session.selectColor(colour)
             await until("holds of the first colour", within: 15) { session.assessment?.color == colour && session.assessment?.holds.isEmpty == false }
             let chosen = try XCTUnwrap(session.assessment)
+            // A page that recognises problems of the pack's own venues needs a moment for it.
+            if pack.manifest.venueID(forGymNamed: session.gymName) != nil {
+                let deadline = Date().addingTimeInterval(12)
+                while session.recognised == nil, Date() < deadline { try await Task.sleep(for: .milliseconds(100)) }
+                report.append("venue given; recognised: \(session.recognised.map { "\($0.id) conf \($0.confidence ?? -1) name \($0.name ?? "none")" } ?? "nothing")")
+            }
             report.append("first colour: \(chosen.holds.count) holds, \(chosen.holds.filter { !$0.poly.isEmpty }.count) with outlines, start hands \(chosen.startHands.count), feet \(chosen.startFeet.count), finish \(chosen.finish != nil), hint \(chosen.hint?.code ?? "none")")
             // Mark the first hold as the start, the way a tap on the picture does.
             let hold = chosen.holds[0]

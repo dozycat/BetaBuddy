@@ -188,7 +188,7 @@ id 是页面自己在 `routeSelected` 里给出的字符串，应用不解释它
 | `captureReady` | 可带 `packVersion` | 页面就绪。下一帧到来时调用 `begin`，然后开始交帧 |
 | `captureAssessment` | `ok`、`steady`、`score`、`issues[]`、`hint`、`palette[]`、`color`、`holds[]`、`start`、`finish`、`person`、`wall`、`t`，可能还有 `route` | 画提示、指示条、颜色、岩点描边和起步 / 结束标记。只在取景时接受；录像开始后收到的忽略 |
 | `captureLocked` | `id`、`plan`（字符串）、`summary`（对象） | `plan` 原样留着，随记录保存成 `<记录 id>.capture.json`；`summary` 里的颜色、岩点数、起步手脚点数、有没有结束点、当时是否合格和问题代码存进记录。记录保存之后再收到（或再收到一份）会覆盖保存。`id` 与当前这一次不符的忽略；超过 4 MB 的 `plan` 不保存 |
-| `captureError` | `code`、`message` | 记入本机日志，界面改成「机位检查暂时用不了」，照常能录；之后又收到 `captureAssessment` 就恢复。录像开始后收到的（例如还没看过一帧就开始录时的 `no_frames`）只记日志：这一趟照常录、照常存，只是没有拍摄计划 |
+| `captureError` | `code`、`message` | 只记入本机日志：有些只是一时的（一帧解不出来、某家岩馆的数据文件没取到），页面照常工作。界面看的是页面还在不在回话：取景时连着 5 秒没有收到 `captureAssessment`，提示改成「机位检查暂时用不了，照常可以录」，旧的判断不再留在画面上；又收到就恢复。还没看过一帧就开始录时的 `no_frames`：这一趟照常录、照常存，只是没有拍摄计划 |
 | `error` | `message` | 脚本错误。在 `captureReady` 之前收到按页面没起来处理；之后只记日志 |
 
 读 `captureAssessment` 时从宽：
@@ -197,7 +197,7 @@ id 是页面自己在 `routeSelected` 里给出的字符串，应用不解释它
 - 没有 `ok` 时按有没有妨碍分析的问题来算；没有 `steady` 时当作画面还没稳；没有 `score` 就不画指示条；`hint` 为空时取 `issues` 的第一条。`ok && steady` 才显示「机位可以」。
 - `holds[]` 里没有 `poly` 的画 `box`，两样都没有的不画；`role` 不认识的当作普通岩点；`user` 为真的画实线，否则是虚线、起步 / 结束的标记带问号。有没有 `user` 为真的起步手点、结束点，决定界面引导用户下一步点什么。最多取 300 个岩点、每个多边形 96 个点、16 种颜色。
 - `palette[]` 只用 `rgb` 画色块、用 `count` 写个数；`key` 只在 `setColor` 时传回去，不显示成颜色名。
-- `route`（`captureAssessment` 和 `captureLocked.summary` 里都可能有）：`{ id, conf }`，页面认为这是数据包里的哪一条线。原生另外认两个可有可无的字符串 `name`、`grade` 用来显示；没有 `name` 就显示 `id`——清单里没有线路名，原生没有别的地方可查。它被显示成一个可以否掉的猜测；用户没有否掉的，`id`（和 `name`）随记录保存。记录的难度始终是用户选的。
+- `route`（`captureAssessment` 和 `captureLocked.summary` 里都可能有）：`null` 或 `{ id, conf }`，页面认为这是数据包里的哪一条线；`id` 是线路的对外 id。多出来的 `others` 忽略。原生另外认两个可有可无的字符串 `name`、`grade` 用来显示；没有 `name` 就显示 `id`——清单里没有线路名，线路名在入口页面自己的数据里，原生读不到。对上之后岩点的 `id` 会换一批、补上的岩点只有 `box`：原生不依赖 `id`，没有 `poly` 的照常画 `box`。它被显示成一个可以否掉的猜测；用户没有否掉的，`id`（和 `name`）随记录保存。记录的难度始终是用户选的。
 - 不认识的 `type` 和多出来的字段忽略；只接受主框架发来的消息。
 
 ### 语言
