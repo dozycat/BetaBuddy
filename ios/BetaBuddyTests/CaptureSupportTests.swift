@@ -55,7 +55,7 @@ final class CaptureSupportTests: XCTestCase {
         // Rounding of an approximate distance.
         func approximate(_ meters: Double) -> Double? { NearbyGym(gym: gyms[0], meters: meters, shown: .approximate).displayMeters }
         XCTAssertEqual(approximate(1_200), 1_000); XCTAssertEqual(approximate(1_260), 1_500); XCTAssertEqual(approximate(2_740), 2_500)
-        XCTAssertEqual(approximate(640), 600); XCTAssertEqual(approximate(20), 100)
+        XCTAssertEqual(approximate(640), 1_000); XCTAssertEqual(approximate(20), 1_000)   // Never closer than the station's own error.
         XCTAssertNil(NearbyGym(gym: gyms[0], meters: 640, shown: .hidden).displayMeters)
 
         // With only an approximate position the order stays, no number is shown and no gym is offered as “here”.

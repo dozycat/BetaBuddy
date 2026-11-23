@@ -34,11 +34,12 @@ struct NearbyGym: Identifiable, Equatable {
     var meters: Double
     var shown: Shown
     var id: String { gym.id }
-    /// The distance as it may be shown: as measured, or rounded to 100 m below a kilometre and to 0.5 km above.
+    /// The distance as it may be shown: as measured, or — when only the nearest station is known — rounded to
+    /// 0.5 km and never below a kilometre, because the station is typically that far from the gym itself.
     var displayMeters: Double? {
         switch shown {
         case .exact: meters
-        case .approximate: meters < 1_000 ? max(100, (meters / 100).rounded() * 100) : (meters / 500).rounded() * 500
+        case .approximate: max(1_000, (meters / 500).rounded() * 500)
         case .hidden: nil
         }
     }
