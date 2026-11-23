@@ -27,7 +27,7 @@ Android：
 
 ```
 ios/BetaBuddy/App/        BetaBuddyApp.swift：入口、两个入口的导航（0 岩馆，1 攀爬册）
-ios/BetaBuddy/Core/       Models、PoseMath、VideoAnalyzer、ClimbStore、GymPack、AppLanguage
+ios/BetaBuddy/Core/       Models、PoseMath、VideoAnalyzer、ClimbStore、GymPack、AppLanguage、Capture*（应用内拍摄）、GymLocator
 ios/BetaBuddy/Views/      DesignSystem、BrandMark、Journal、Import、Review、About、Gym、Localization
 ios/BetaBuddy/Resources/  图标、pose_landmarker_full.task、Localizable.xcstrings、InfoPlist.xcstrings、PrivacyInfo、PrivacyPolicy.<语言>.txt、Licenses
 ios/BetaBuddyTests/       模拟器上的单元与集成测试
@@ -42,6 +42,7 @@ android/app/src/main/java/com/betabuddy/android/
   ui/nav/AppShell.kt      两个入口（0 岩馆，1 攀爬册）、底部导航与齿轮、设置页的导航
   gym/                    GymManifest、GymPack、GymMessage（纯 Kotlin）、GymSession、GymScreen
   journal/ pose/ review/ data/   攀爬册：列表与导入、VideoAnalyzer 与 PoseMath、回看、ClimbStore
+  capture/                 应用内拍摄：相机与取景判断（判断在数据包的页面里做）、选岩馆、先保存再分析
   settings/ i18n/         设置与关于、隐私政策、AppLanguage
 android/app/src/main/res/ values*/strings.xml（导航、岩馆、设置）、strings_journal.xml（攀爬册）、raw*/privacy_policy.txt、xml/
 android/app/src/test/     JVM 单元测试（纯 Kotlin）
