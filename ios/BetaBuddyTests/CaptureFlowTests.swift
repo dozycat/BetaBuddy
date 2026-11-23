@@ -518,6 +518,51 @@ final class CaptureFlowTests: XCTestCase {
         XCTAssertEqual(busy.removed, 0); XCTAssertTrue(FileManager.default.fileExists(atPath: recording.appendingPathComponent("busy.mov").path))
     }
 
+    /// From pack 1.9.2 on `lock()` takes in what was tapped or chosen since the last reply. The app's part is to send
+    /// things in the order they happened and to keep what the lock reply says, not what it last saw on the screen.
+    func testATapRightBeforeRecordIsInThePlan() async throws {
+        let store = store()
+        let session = session(store, try pack(), try await wall())
+        session.framingInterval = 0.4                      // Slow enough that no reply comes between the tap and Record.
+        session.start()
+        await until("ready", within: 30) { session.assessment?.ready == true }
+        session.selectColor("yellow")
+        await until("holds", within: 10) { session.assessment?.holds.count == 6 }
+        XCTAssertEqual(session.assessment?.startConfirmed, false)
+        session.correct(at: CGPoint(x: 0.50, y: 0.60), role: .startHand)
+        session.startRecording()
+        XCTAssertEqual(session.assessment?.startConfirmed, false)          // The screen has not seen the tap take effect…
+        await until("the plan") { session.summary != nil }
+        try await Task.sleep(for: .seconds(1.2))
+        await session.stop(.user)
+        let record = try XCTUnwrap(store.climbs.first)
+        // …but the plan has it: one start hand, the user's.
+        XCTAssertEqual(record.capture?.summary?.startHands, 1); XCTAssertEqual(record.capture?.summary?.issues, [])
+        let plan = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(try XCTUnwrap(store.capturePlan(for: record)).utf8)) as? [String: Any])
+        XCTAssertTrue(try XCTUnwrap(plan["holds"] as? [[String: Any]]).contains { $0["id"] as? String == "y4" && $0["role"] as? String == "start_hand" && $0["user"] as? Bool == true })
+        await session.close()
+    }
+
+    /// The analysis went ahead but could not use the marks made while framing: it is still a result, and it is said.
+    func testAnAnalysisThatCouldNotUseThePlanSaysSo() async throws {
+        let store = store()
+        let pack = try pack()
+        let joints = [Joint](repeating: Joint(x: 0.5, y: 0.5, confidence: 0.9), count: 33)
+        let world = [[Double]](repeating: [0, 0, 0, 0.9], count: 33)
+        let poses = PoseAnalysis(frames: (0..<8).map { PoseFrame(time: Double($0) * 0.2, joints: joints, world: world) }, sampledFrames: 8, duration: 2, aspectRatio: 0.5625)
+        let clip = try await wall(seconds: 2)
+        let record = try store.save(title: "", grade: ungradedValue, sent: false, note: "", stagedVideo: clip, thumbnail: Data(), analysis: poses,
+                                    capture: CaptureInfo(analysisQueued: true), capturePlan: "{\"v\":1,\"from\":\"another camera position\"}")
+        let queue = AnalysisQueue(store: store, pack: pack)
+        _ = queue
+        await until("the analysis", within: 60) { store.analysisResults.contains(record.id) && store.climbs.first?.capture?.analysisQueued == nil }
+        XCTAssertEqual(store.climbs.first?.capture?.planUse, CapturePlanUse(used: false, reason: "mismatch"))
+        XCTAssertEqual(store.analysisMessages[record.id], CaptureText.planNotUsed)
+        XCTAssertEqual(ClimbStore(root: store.root).climbs.first?.capture?.planUse?.used, false)       // Kept with the record.
+        // An imported record has no plan to speak of.
+        try store.setPlanUse(CapturePlanUse(used: true), for: UUID())
+    }
+
     func testAChangedGymIsNotLockedUnderTheOldGymsJudgement() async throws {
         let store = store()
         let session = session(store, try pack(), try await wall())
@@ -606,6 +651,9 @@ final class CaptureFlowTests: XCTestCase {
         await until("analysis after pose recognition", within: 60) { store.analysisResults.contains(id) && store.climbs.first?.capture?.analysisQueued == nil }
         let result = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(try XCTUnwrap(store.analysisResult(for: try XCTUnwrap(store.climbs.first))).utf8)) as? [String: Any])
         XCTAssertEqual(result["capture"] as? String, plan)               // Handed over exactly as stored.
+        // The page said the plan was used, and by what the start and the finish went; that is kept with the record.
+        XCTAssertEqual(store.climbs.first?.capture?.planUse, CapturePlanUse(used: true, start: "plan", finish: "video"))
+        XCTAssertNotEqual(store.analysisMessages[id], CaptureText.planNotUsed)
         XCTAssertGreaterThan(try XCTUnwrap(result["poses"] as? Int), 3)
         XCTAssertGreaterThan(try XCTUnwrap(result["frames"] as? Int), 3)
         XCTAssertNil(queue.running); XCTAssertNil(queue.webView)

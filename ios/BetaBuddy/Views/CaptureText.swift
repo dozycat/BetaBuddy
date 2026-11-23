@@ -83,6 +83,11 @@ enum CaptureText {
         }
     }
 
+    /// The analysis went ahead without what was marked while framing: the camera was moved in between.
+    static var planNotUsed: String {
+        String(localized: "分析好了。取景时标的岩点和起步、结束点这次没有用上：机位和取景时对不上。", bundle: AppLanguage.bundle)
+    }
+
     static func notice(_ notice: CaptureSession.Notice) -> String {
         let bundle = AppLanguage.bundle
         switch notice {

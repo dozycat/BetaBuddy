@@ -14,7 +14,10 @@
     run() {
       if (!meta) return;
       if (!poses) return post({ type: 'analysisError', code: 'no_poses', message: 'no poses' });
-      post({ type: 'analysisResult', id: meta.id, climber: { height: 170 },
+      // Like a real page from 1.9.2 on: says whether the capture plan could be used. A plan that is not the stand-in's own JSON counts as unreadable.
+      let use;
+      if (meta.capture !== undefined) { try { use = JSON.parse(meta.capture).standIn ? { used: true, start: 'plan', finish: 'video' } : { used: false, reason: 'mismatch' }; } catch (error) { use = { used: false, reason: 'unreadable' }; } }
+      post({ type: 'analysisResult', id: meta.id, climber: { height: 170 }, ...(use ? { capture: use } : {}),
              json: JSON.stringify({ v: 1, standIn: true, w: meta.w, h: meta.h, frames, poses, capture: meta.capture === undefined ? null : meta.capture }) });
     },
     show() {}, setClimber() {}, state() { return { meta, frames, poses }; }

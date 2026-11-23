@@ -145,12 +145,13 @@ final class AnalysisSession: NSObject, ObservableObject, WKNavigationDelegate, W
             pageReady = true
             feed?.cancel()
             feed = Task { await present() }
-        case .result(let id, let json, let climber):
+        case .result(let id, let json, let climber, let planUse):
             // After showing a saved result the page has no id to give back; this web view only ever serves this record.
             guard id.isEmpty || id == climb.id.uuidString else { return }
             do { try store.saveAnalysisResult(json, for: climb.id) }
             catch { store.error = error.localizedDescription }
             if !climber.isEmpty { store.analysisClimber = climber }
+            try? store.setPlanUse(planUse, for: climb.id)
             report(store.analysisResults.contains(climb.id))
         case .seek(let time): seekRequest = time
         case .failed(let code):

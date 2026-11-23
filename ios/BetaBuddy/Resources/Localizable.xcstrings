@@ -11327,6 +11327,40 @@
           }
         }
       }
+    },
+    "分析好了。取景时标的岩点和起步、结束点这次没有用上：机位和取景时对不上。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analysed. The holds, start and finish marked while framing were not used this time: the camera position does not match the framing."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分析できました。撮影前に指定したホールドとスタート・ゴールは今回は使われていません。カメラの位置が指定時と合いませんでした。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "분석했어요. 촬영 전에 지정한 홀드와 스타트·탑은 이번에는 쓰이지 않았어요. 카메라 위치가 지정할 때와 맞지 않아요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分析好了。取景时标的岩点和起步、结束点这次没有用上：机位和取景时对不上。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分析好了。取景時標的岩點和起步、結束點這次沒有用上：機位和取景時對不上。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

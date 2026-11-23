@@ -89,8 +89,11 @@ final class AnalysisQueue: ObservableObject {
         guard running == id else { return }
         halt()
         settled.insert(id)
-        store.setAnalysisMessage(succeeded ? String(localized: "这一趟分析好了，打开就能看。", bundle: AppLanguage.bundle)
-                                           : String(localized: "这一趟没能自动分析，可以在回看页再试。", bundle: AppLanguage.bundle), for: id)
+        // Analysed without the marks made while framing is still analysed, but it is said.
+        let unused = store.climbs.first { $0.id == id }?.capture?.planUse?.used == false
+        store.setAnalysisMessage(!succeeded ? String(localized: "这一趟没能自动分析，可以在回看页再试。", bundle: AppLanguage.bundle)
+                                 : unused ? CaptureText.planNotUsed
+                                 : String(localized: "这一趟分析好了，打开就能看。", bundle: AppLanguage.bundle), for: id)
         do { try store.setAnalysisQueued(id, false) }
         catch { store.error = error.localizedDescription }
         advance()

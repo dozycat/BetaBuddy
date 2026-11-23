@@ -215,6 +215,27 @@ struct CaptureSummary: Codable, Equatable, Sendable {
     }
 }
 
+/// Whether the analysis page could use the capture plan, as it says with its result. A plan is not
+/// used when the camera was moved between framing and recording; the analysis is then as without one.
+struct CapturePlanUse: Codable, Equatable, Sendable {
+    var used: Bool
+    /// Why not: `mismatch`, `unreadable`, or something a newer page says.
+    var reason: String?
+    /// Whose start and finish the result went by: `user`, `venue`, `plan` or `video`.
+    var start: String?
+    var finish: String?
+
+    init(used: Bool, reason: String? = nil, start: String? = nil, finish: String? = nil) {
+        self.used = used; self.reason = reason; self.start = start; self.finish = finish
+    }
+    init?(body: Any?) {
+        guard let body = body as? [String: Any], let used = body["used"] as? Bool else { return nil }
+        func text(_ key: String) -> String? { (body[key] as? String).flatMap { $0.isEmpty ? nil : String($0.prefix(40)) } }
+        self.used = used
+        reason = text("reason"); start = text("start"); finish = text("finish")
+    }
+}
+
 /// What a record made with the in-app camera keeps about how it was framed. Records imported
 /// from the photo library, and every record written before the camera existed, have none.
 struct CaptureInfo: Codable, Equatable, Sendable {
@@ -231,6 +252,8 @@ struct CaptureInfo: Codable, Equatable, Sendable {
     /// The pack's own problem the capture page recognised and the user did not reject: its id, and its own name (not a translation) when the page gave one.
     var routeId: String?
     var routeName: String?
+    /// What the analysis page said about the plan when it last gave a result; `nil` before that, and from pages that do not say.
+    var planUse: CapturePlanUse?
 }
 
 /// Capture page → app messages. They arrive on the same `gym` handler, from the capture page's own web view.

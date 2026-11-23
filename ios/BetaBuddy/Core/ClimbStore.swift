@@ -121,6 +121,14 @@ final class ClimbStore: ObservableObject {
         try persist(next)
     }
 
+    /// What the analysis page said about the capture plan with its latest result. Only records made with the camera have a plan to speak of.
+    func setPlanUse(_ use: CapturePlanUse?, for id: UUID) throws {
+        var next = archive
+        guard let index = next.climbs.firstIndex(where: { $0.id == id }), next.climbs[index].capture != nil, next.climbs[index].capture?.planUse != use else { return }
+        next.climbs[index].capture?.planUse = use
+        try persist(next)
+    }
+
     /// Whether the analysis asked for when the clip was saved is still to be done.
     func setAnalysisQueued(_ id: UUID, _ queued: Bool) throws {
         var next = archive

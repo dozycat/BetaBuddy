@@ -342,7 +342,8 @@ extension GymManifest {
 enum AnalysisMessage: Equatable, Sendable {
     case ready
     /// `id` is the record id given in `begin`, or empty when the page was showing a saved result.
-    case result(id: String, json: String, climber: [String: Double])
+    /// `capture` says whether the capture plan was used, when the page says so (packs from 1.9.2 on, records made with the camera).
+    case result(id: String, json: String, climber: [String: Double], capture: CapturePlanUse? = nil)
     case seek(Double)
     /// The page could not analyse the clip and is showing its own explanation.
     case failed(code: String)
@@ -363,7 +364,7 @@ enum AnalysisMessage: Equatable, Sendable {
                 guard let number = value as? NSNumber, CFGetTypeID(number) != CFBooleanGetTypeID(), number.doubleValue.isFinite else { continue }
                 climber[key] = number.doubleValue
             }
-            self = .result(id: String((body["id"] as? String ?? "").prefix(80)), json: json, climber: climber)
+            self = .result(id: String((body["id"] as? String ?? "").prefix(80)), json: json, climber: climber, capture: CapturePlanUse(body: body["capture"]))
         case "analysisSeek":
             guard let time = (body["t"] as? NSNumber)?.doubleValue, time.isFinite else { return nil }
             self = .seek(max(0, time))

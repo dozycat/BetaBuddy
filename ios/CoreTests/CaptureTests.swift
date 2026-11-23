@@ -227,7 +227,8 @@ final class CaptureTests: XCTestCase {
         var record = climb()
         record.capture = CaptureInfo(colorKey: "yellow", colorRGB: [226, 196, 40],
                                      summary: CaptureSummary(color: "yellow", rgb: [226, 196, 40], holds: 9, startHands: 2, startFeet: 1, finish: true, ok: true, issues: []),
-                                     hasPlan: true, packVersion: "1.9.0", analysisQueued: true, routeId: "wall-07", routeName: "合成线路 7")
+                                     hasPlan: true, packVersion: "1.9.0", analysisQueued: true, routeId: "wall-07", routeName: "合成线路 7",
+                                     planUse: CapturePlanUse(used: false, reason: "mismatch"))
         let bytes = try JSONEncoder().encode(Archive(climbs: [record]))
         XCTAssertEqual(try JSONDecoder().decode(Archive.self, from: bytes).climbs[0].capture, record.capture)
         // A later build may add fields and leave optional ones out.

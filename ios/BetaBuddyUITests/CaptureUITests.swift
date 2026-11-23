@@ -275,16 +275,14 @@ final class CaptureUITests: XCTestCase {
         XCTAssertTrue(record.wait(for: \.isEnabled, toEqual: true, timeout: 15))
         try await Task.sleep(for: .seconds(6))                       // Let a capture page, if the pack has one, say something first.
         keep(app, "50-installed-pack-framing")
-        // With a capture page: choose the first colour it offers and mark a start hold in the middle of the picture.
+        // With a capture page: choose the first colour it offers. No hold is marked here: a blind tap marks
+        // whatever hold lies there as the start, the plan carries that, and the analysis then rightly finds no climb from it.
         let swatch = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'captureColor-'")).firstMatch
         if swatch.waitForExistence(timeout: 5) {
             swatch.tap()
             XCTAssertTrue(app.buttons["captureTool-start_hand"].waitForExistence(timeout: 5))
             try await Task.sleep(for: .seconds(2))
             keep(app, "50b-installed-pack-colour")
-            app.descendants(matching: .any)["capturePicture"].coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.55)).tap()
-            try await Task.sleep(for: .seconds(2))
-            keep(app, "50c-installed-pack-start-tapped")
         }
         record.tap()
         if app.buttons["recordAnyway"].waitForExistence(timeout: 2) { keep(app, "51-installed-pack-asked"); app.buttons["recordAnyway"].tap() }

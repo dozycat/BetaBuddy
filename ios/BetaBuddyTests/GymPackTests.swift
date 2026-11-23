@@ -285,6 +285,14 @@ final class GymPackTests: XCTestCase {
         XCTAssertEqual(AnalysisMessage(body:["type":"analysisResult","id":"abc","json":"{\"v\":1}","climber":["height":171,"weight":62.5,"flag":true,"name":"x","bad":Double.nan]]),
                        .result(id:"abc",json:"{\"v\":1}",climber:["height":171,"weight":62.5]))
         XCTAssertEqual(AnalysisMessage(body:["type":"analysisResult","json":"{}"]),.result(id:"",json:"{}",climber:[:]))
+        // Whether the capture plan was used, when the page says so; anything else about it is ignored.
+        XCTAssertEqual(AnalysisMessage(body:["type":"analysisResult","json":"{}","capture":["used":true,"start":"user","finish":"video","extra":1]]),
+                       .result(id:"",json:"{}",climber:[:],capture:CapturePlanUse(used:true,start:"user",finish:"video")))
+        XCTAssertEqual(AnalysisMessage(body:["type":"analysisResult","json":"{}","capture":["used":false,"reason":"mismatch"]]),
+                       .result(id:"",json:"{}",climber:[:],capture:CapturePlanUse(used:false,reason:"mismatch")))
+        for junk in [["reason":"mismatch"], ["used":"yes"], "used", NSNull()] as [Any] {
+            XCTAssertEqual(AnalysisMessage(body:["type":"analysisResult","json":"{}","capture":junk]),.result(id:"",json:"{}",climber:[:]))
+        }
         XCTAssertNil(AnalysisMessage(body:["type":"analysisResult","id":"abc"]))
         XCTAssertNil(AnalysisMessage(body:["type":"analysisResult","json":""]))
         XCTAssertNil(AnalysisMessage(body:["type":"analysisResult","json":String(repeating:"x",count:AnalysisMessage.maximumResultLength + 1)]))

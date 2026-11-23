@@ -280,6 +280,10 @@ struct ReviewView: View {
                     .disabled(openAfterPose && current.pendingAnalysis != nil)
                     .accessibilityIdentifier("analyseClimb")
             }
+            if store.analysisResults.contains(climb.id), current.capture?.planUse?.used == false {
+                Text(verbatim: CaptureText.planNotUsed).font(.caption).foregroundStyle(BB.muted).fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("planNotUsed")
+            }
             Text("从这段视频里认出墙上的岩点和你的动作，放进人体模型里比较。全程在本机完成。")
                 .font(.caption).foregroundStyle(BB.muted).fixedSize(horizontal: false, vertical: true)
         }
