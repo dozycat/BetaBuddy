@@ -179,6 +179,7 @@ class CaptureScreenTest {
         await("captureReady", 30)
         assertTrue(exists("captureQuality"))
         assertEquals("colour", state("capturePrompt"))
+        pictureShare("ready, colours to pick")
         shot("13-framing-ready-colours")
 
         // Swatches carry no colour name, only a count.
@@ -196,6 +197,7 @@ class CaptureScreenTest {
         await("captureGradePrefilled")
         assertEquals("V3", session().grade); assertTrue(session().gradePrefilled)
         rule.waitUntil(10_000) { session().assessment?.holds?.size == 6 }
+        pictureShare("problem recognised, grade filled in")
         shot("14-colour-chosen-guesses")
 
         // One tap marks the start hand; then the finish.
@@ -330,7 +332,7 @@ class CaptureScreenTest {
         shot("31-no-capture-page")
         rule.onNodeWithTag("captureRecord").performClick()
         await("captureSaved", 40)
-        assertEquals(context.getString(R.string.capture_stop_limit, 3), text("captureStopReason"))
+        assertEquals(context.getString(R.string.capture_stop_limit, CaptureLimits.MAX_MINUTES), text("captureStopReason"))
         val saved = newClimbs().single()
         assertNull(saved.capture!!.packVersion); assertFalse(saved.capture!!.hasPlan); assertNull(saved.capture!!.analysisQueued)
         assertEquals("balanced", saved.pendingAnalysis ?: "balanced")
@@ -372,6 +374,16 @@ class CaptureScreenTest {
         await("captureSaved", 30)
         assertEquals(context.getString(R.string.capture_stop_storage), text("captureStopReason"))
         assertEquals(1, newClimbs().size)
+    }
+
+    /** How much of the screen's width the picture has; it must stay the main thing on the screen. */
+    private fun pictureShare(what: String): Float {
+        val picture = rule.onNodeWithTag("capturePicture").fetchSemanticsNode().boundsInRoot
+        val screen = rule.onNodeWithTag("captureScreen").fetchSemanticsNode().boundsInRoot
+        val share = picture.width / screen.width
+        android.util.Log.i("capture-test", "picture is ${"%.0f".format(share * 100)}% of the width ($what)")
+        assertTrue("picture only ${share * 100}% of the width ($what)", share >= 0.70f)
+        return share
     }
 
     private fun stagedClips() = JournalGraph.stagingDirectory(context).listFiles().orEmpty().filter { it.name.startsWith("betabuddy-capture-") && it.extension == "mp4" }
@@ -555,6 +567,59 @@ class CaptureScreenTest {
         rule.onNodeWithTag("useNearestGym").performClick()
         awaitGone("captureOffer")
         assertEquals(StandInPack.DIRECTORY_GYM, session().gymName)
+        closeScreen()
+    }
+
+    // The two tests below take a real fix from the system's location service. They are run one at a
+    // time with `-e geoFix 1`, after the permission was granted from outside (granting one here and
+    // revoking the other would end the process) and the emulator was given a position next to the
+    // synthetic directory's first gym:  adb emu geo fix 120.0 30.0
+    private fun granted(permission: String) = context.checkSelfPermission(permission) == android.content.pm.PackageManager.PERMISSION_GRANTED
+    private fun realFix() = InstrumentationRegistry.getArguments().getString("geoFix") == "1"
+
+    @Test fun withPreciseLocationTheNearestGymIsOfferedWithItsDistance() {
+        assumeTrue("run with -e geoFix 1 and precise location granted", realFix() && granted(Manifest.permission.ACCESS_FINE_LOCATION))
+        assumeTrue("needs a logbook without a gym in it", store.lastGym == null)
+        CaptureDebug.noPack = true
+        CaptureDebug.video = wall(person = false)
+        launch()
+        await("captureNoChecks")
+        // One fix from the system: a gym whose own position is known, 200 m away. Offered with the number, not chosen.
+        rule.waitUntil(60_000) { state("captureOffer") == "here" }
+        assertTrue(text("captureOffer"), text("captureOffer").contains(StandInPack.DIRECTORY_GYM) && Regex("[12]\\d0 m").containsMatchIn(text("captureOffer")))
+        assertEquals("© OpenStreetMap contributors", text("captureOfferCredit"))
+        assertEquals("", session().gymName)
+        shot("55-precise-location-offer")
+        rule.onNodeWithTag("captureGym").performClick(); await("captureGymSheet")
+        assertTrue(text("nearbyGym-syn:east"), Regex("[12]\\d0 m").containsMatchIn(text("nearbyGym-syn:east")))
+        assertTrue(text("nearbyGym-syn:station").contains("about 1.5 km"))
+        shot("56-precise-location-sheet")
+        instrumentation.uiAutomation.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK); awaitGone("captureGymSheet")
+        closeScreen()
+    }
+
+    @Test fun withApproximateLocationTheListIsOrderedWithoutNumbersAndTheNearestIsAGuess() {
+        assumeTrue("run with -e geoFix 1 and only approximate location granted",
+            realFix() && granted(Manifest.permission.ACCESS_COARSE_LOCATION) && !granted(Manifest.permission.ACCESS_FINE_LOCATION))
+        assumeTrue("needs a logbook without a gym in it", store.lastGym == null)
+        CaptureDebug.noPack = true
+        CaptureDebug.video = wall(person = false)
+        launch()
+        await("captureNoChecks")
+        // The system blurs the position by a kilometre or two: the nearest gym the directory can place is a guess, without a distance.
+        rule.waitUntil(60_000) { state("captureOffer") == "guess" }
+        assertFalse(exists("captureOfferCredit"))
+        assertFalse(text("captureOffer"), Regex("\\d+ ?(m|km)\\b").containsMatchIn(text("captureOffer")))
+        assertEquals("", session().gymName)
+        shot("57-approximate-location-guess")
+        rule.onNodeWithTag("captureGym").performClick(); await("captureGymSheet")
+        // The gyms that can be placed are listed, nearest first as far as a blurred position can tell, and none carries a number.
+        for (id in listOf("syn:east", "syn:station", "syn:west")) {
+            assertTrue(id, exists("nearbyGym-$id"))
+            assertFalse(text("nearbyGym-$id"), Regex("\\d+(\\.\\d+)? ?(m|km)\\b").containsMatchIn(text("nearbyGym-$id")))
+        }
+        shot("58-approximate-location-sheet")
+        instrumentation.uiAutomation.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK); awaitGone("captureGymSheet")
         closeScreen()
     }
 

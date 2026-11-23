@@ -59,7 +59,11 @@ class MainActivity : AppCompatActivity() {
             //   --es debugCaptureFov <degrees>            the horizontal field of view to report for it
             //   --es debugCaptureAttitude "<pitch>,<roll>,<shake>"   how the phone is held, where there are no motion sensors
             //   --es debugLocation "<lat>,<lon>[,<accuracy m>]"      a position fix; nothing is asked
+            //   --ez debugCaptureOverlay true             draw what is told to the page and how fast it answers, over the picture
+            //   --es debugCaptureKeepFrame <file name>    also write the last picture handed to the page into the app's files directory
             initialCapture = intent.flagExtra("openCapture")
+            CaptureDebug.overlay = intent.flagExtra("debugCaptureOverlay")
+            intent.getStringExtra("debugCaptureKeepFrame")?.let { CaptureDebug.keepFrame = File(filesDir, File(it).name) }
             intent.getStringExtra("debugCaptureVideo")?.let { path -> CaptureDebug.video = File(path).takeIf { it.isAbsolute } ?: File(filesDir, path) }
             intent.getStringExtra("debugCaptureFov")?.toDoubleOrNull()?.let { CaptureDebug.fieldOfView = it }
             intent.getStringExtra("debugCaptureAttitude")?.split(",")?.mapNotNull { it.trim().toDoubleOrNull() }?.takeIf { it.size == 3 }

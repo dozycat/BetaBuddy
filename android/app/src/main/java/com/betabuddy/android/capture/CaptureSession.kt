@@ -134,7 +134,16 @@ class CaptureSession(
     private var held: HeldClip? = null
     private var watch: Job? = null
     private var missed: Job? = null
+    /** When the page's previous reply arrived. */
     private var firstAssessment = 0L
+    /** What the sensors said with the last frame handed over; for the debug overlay. */
+    var lastInfo: CaptureFrameInfo? by mutableStateOf<CaptureFrameInfo?>(null)
+        private set
+    /** The field of view last told to the page. */
+    var lastFieldOfView: Double? by mutableStateOf<Double?>(null)
+        private set
+    /** Debug builds: the last picture handed to the page is also written here, to be looked at. */
+    var keepFrame: File? = null
     /** When the page last answered (or was last asked to start over). A page that has gone quiet must not leave an old judgement on the screen. */
     private var lastReply = 0L
     private var gymChosen = false
@@ -357,9 +366,12 @@ class CaptureSession(
             rejectedRoutes = emptySet()   // The page forgets what was rejected when it starts over; so does the app.
             assessment = null
             lastReply = now
-            host.evaluate(CaptureScript.begin(captureId, frame.width, frame.height, source.horizontalFieldOfView, venue))
+            lastFieldOfView = source.horizontalFieldOfView
+            host.evaluate(CaptureScript.begin(captureId, frame.width, frame.height, lastFieldOfView, venue))
             color?.let { host.evaluate(CaptureScript.setColor(it)) }
         }
+        lastInfo = frame.info
+        keepFrame?.let { file -> scope.launch(Dispatchers.IO) { runCatching { file.writeBytes(android.util.Base64.decode(frame.jpegBase64, android.util.Base64.DEFAULT)) } } }
         val began = SystemClock.elapsedRealtimeNanos()
         host.evaluate(CaptureScript.addFrame(frame.time, frame.jpegBase64, frame.info)) {
             // The call has returned: the page has the picture (it answers with a message later).
@@ -397,8 +409,13 @@ class CaptureSession(
                     lastReply = now
                     assessment = message.assessment
                     fillInGrade()
-                    if (firstAssessment == 0L) firstAssessment = now
-                    metrics = metrics.copy(assessments = metrics.assessments + 1, assessmentSpan = (now - firstAssessment) / 1000.0)
+                    val gap = now - firstAssessment
+                    val flowing = firstAssessment != 0L && gap < 2_500
+                    firstAssessment = now
+                    metrics = metrics.copy(
+                        assessments = metrics.assessments + 1,
+                        flowReplies = metrics.flowReplies + if (flowing) 1 else 0, flowSeconds = metrics.flowSeconds + if (flowing) gap / 1000.0 else 0.0,
+                    )
                 }
                 is CaptureMessage.Locked -> {
                     // Only the reply to this take's own `lock`: never one of a session that was since replaced.

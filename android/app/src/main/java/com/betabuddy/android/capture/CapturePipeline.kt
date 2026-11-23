@@ -154,11 +154,12 @@ data class CaptureMetrics(
     val handOverSeconds: Double = 0.0,
     val jpegBytes: Long = 0,
     val poseDropped: Boolean = false,
-    /** Replies from the page, and the time between the first and the last of them. */
+    /** Replies from the page, and of those the ones that followed another within a few seconds, with the time they took: the rate while frames were flowing. */
     val assessments: Int = 0,
-    val assessmentSpan: Double = 0.0,
+    val flowReplies: Int = 0,
+    val flowSeconds: Double = 0.0,
 ) {
-    val assessmentsPerSecond: Double get() = if (assessments > 1 && assessmentSpan > 0) (assessments - 1) / assessmentSpan else 0.0
+    val assessmentsPerSecond: Double get() = if (flowReplies > 0 && flowSeconds > 0) flowReplies / flowSeconds else 0.0
     private fun average(total: Double, count: Int) = if (count > 0) total / count else 0.0
     val summary: String
         get() = String.format(
