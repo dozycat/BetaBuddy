@@ -2,6 +2,46 @@
 
 做过什么、范围到哪、还有什么没做。下面按时间保留每次验证的事实；这一节是现在的结论。
 
+## 2026-11-23（自动走一遍）· Debug 构建在没人能点屏幕的手机上自己走完拍摄（未发布）
+
+真机能装、能带参数启动、能取文件，但没人去点。Debug 构建加了启动参数 `-debugCaptureAutopilot YES`（配合 `-debugOpenCapture YES` 一启动就进拍摄界面，这时应用直接从攀爬册开始）：它按人的顺序把拍摄界面走一遍，每一步调的就是界面上那个控件调的同一个函数，没有另一条路。Release 构建里没有这些代码（未签名 Release 的可执行文件里搜不到这些名字），也没有新增界面文字。
+
+| 参数 | 作用 |
+| --- | --- |
+| `-debugCaptureAutopilot YES` | 打开自动走一遍 |
+| `-debugCaptureGym <目录里的岩馆 id>` | 先选这家岩馆（和在表里点它一样）|
+| `-debugCaptureColour <色板 key>` | 选这个颜色；不给就选岩点最多的那个 |
+| `-debugCaptureTaps YES` | 页面已经猜了起步点也照样去点起步和结束（不给时只在页面没有起步点时才点）|
+| `-debugCaptureSeconds <n>` | 录多少秒，默认 20 |
+| `-debugCaptureVideo <路径>` | 原有的参数；现在不以 `/` 开头的路径从应用容器算起，例如 `Documents/debug/clip.mp4` |
+
+步骤：选岩馆 → 等页面就绪并给出非空的色板（30 秒等不到就停）→ 选颜色 → 等岩点（最多 15 秒）、记下页面报的线路 → 需要时点最低的那个岩点当起步手、最高的当结束点（走界面自己的点按处理，坐标是 0–1 的画面坐标，记下页面回的岩点编号）→ 按录像（出现「仍然开始录」的询问就答它）→ 录够秒数按停止 → 保存后的卡片留着，等姿态识别和分析页面跑完。每一步在 `session-*.jsonl` 里是一行 `event: autopilot`（`step`：`start`、`gym`、`ready`、`colour`、`holds`、`route`、`tap`、`marks`、`recordAnyway`、`recording`、`stop` / `stopped`、`saved`、`pose`、`analysed`、`done` / `failed`）。
+
+留下的文件（都在 `Documents/capture-diagnostics/`，每次开始时先删掉上一次的）：
+
+- `shot-colour.png`、`shot-marked.png`、`shot-recording.png`、`shot-saved.png`、`shot-analysed.png`：这几个时刻的界面图片，和 `preview-latest.png` 同一个来源。
+- `autopilot-done.json`：走完或者中途停下时写。`ok`、`stage`（`done` 或停在哪一步：`ready`、`colour`、`record`、`save`、`pose`、`analysis`）、`reason`、`record`、`camera`（`CameraSource` 或 `FileCaptureSource`）、`pack`、`gym`、`venue`、`fovH`、`source`、`frame`、`colour`、`colourFrom`、`holds`、`route`、`taps`（每次 `role`、`x`、`y`、`wanted`、`hold`、`answered`、`pageHasTap`）、`marked`、`recordAnyway`、`clip`（`seconds`、`frames`、`dropped`、`bytes`、`reason`）、`locked`（`ms`、`summary`）、`planBytes`、`pose`（`frames`、`framesWithPerson`、`seconds` 或 `error`）、`analysisInput`、`analysis`（`status`、`code`、`message`、`capture`、`seconds`、`resultBytes`）、`queue`（`outcome`、`why`）、`stages`（每一步用了多少秒）、`thermalPeak`、`shots`、`environment`、`session`、`t`。
+
+### 验证
+
+环境：Xcode 27.2、iOS 18.5 Simulator（iPhone 16）、Apple M5 Pro 的 Mac，**没有真机**。
+
+| 检查 | 结果 |
+| --- | --- |
+| 单元测试（合成数据）| 选颜色（指定的 / 最多的 / 指定的不在）、选起步和结束的岩点、容器内相对路径：3 项通过 |
+| UI：替身页面 + 画出来的墙，测试自己一下也不点 | 通过：选了目录里的岩馆（映射到替身数据包的场馆）、选了指定的红色（页面没有起步点）、点了两下（页面回的编号就是要点的那两个）、答了「仍然开始录」、录 4.1 秒 124 帧 0 丢帧、保存；合成的墙上没有人，姿态识别说找不到人，分析按设计跳过，`autopilot-done.json` 里 `ok true`、`queue.outcome` 是 `skipped` |
+| 装着的数据包 1.9.3 + 那段不在仓库里的真实片段，片段拷进应用容器的 `Documents/debug/`、用相对路径、用 `simctl launch` 带参数启动（不经过界面测试）| 走完，`ok true`：岩馆映射到了数据包的场馆；选了岩点最多的颜色（8 个岩点）；页面自己有起步点，所以没有点；答了「仍然开始录」；录 13.2 秒、398 帧、0 丢帧、3.2 MB；锁定 63.7 毫秒、计划 77 KB；姿态 132 帧都有人、6.0 秒；分析页面 3.6 秒给出结果，`capture.used true`，起步、结束按视频里看到的，`shift` 是 0；各步用时：就绪 0.6、颜色 1.5、标记 0.6、录 14.5、保存 0.8、姿态 5.4、分析 5.6 秒 |
+
+| 模拟器单元 / 集成测试 | 86 项，84 通过，2 项按设计跳过 |
+| UI：应用内相机 10 项 | 8 通过，2 项按设计跳过（要真实片段的）|
+| iPhone 构建（未签名）| Debug 和 Release 都通过 |
+
+第一次用 `simctl launch` 带参数启动时应用停在岩馆那一页，拍摄界面没有打开（`-debugOpenCapture` 只在攀爬册那一页起作用）；改成带这个参数时直接从攀爬册开始，之后才走通。自动走一遍的界面测试存下的那条记录带着岩馆，会让后面「还没选过岩馆」的两项测试失败，所以它最后自己把这条记录删掉。
+
+两次的五张图都看过：选了颜色之后的描边、（替身那次）点过之后变实线并带对勾的起步手和结束点、录像中的计时和停止按钮、保存后的卡片、分析完以后卡片上的「看分析」。
+
+没有做的：真机上一次也没有跑（真相机 + 自动走一遍、设备上从容器里读片段都只是按模拟器里的同一段代码准备的）；真数据包那一次页面没有报线路，`-debugCaptureTaps YES` 对着真页面点也没有试；30 秒等不到色板、保存失败这些中途停下的情况只是代码里有，没有触发过。
+
 ## 2026-11-23（真机取证）· Debug 构建把拍摄界面看到的留在磁盘上（未发布）
 
 真机上看不到屏幕、系统日志也取不出来，所以 Debug 构建在拍摄界面打开期间把它看到的和做过的写进应用容器的 `Documents/capture-diagnostics/`，用 `devicectl` 把这个目录取出来就能看。不需要启动参数；Release 构建里没有这些代码（未签名的 Release 构建的可执行文件里搜不到这些文件名）；什么都不发到网络上；位置只记权限状态和精度档，不记坐标。

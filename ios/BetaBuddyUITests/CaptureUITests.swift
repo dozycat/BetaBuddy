@@ -280,16 +280,21 @@ final class CaptureUITests: XCTestCase {
     /// marks start and finish, records, stops, and waits for what comes after saving.
     @MainActor
     func testAutopilotGoesFromColourToSavedWithoutATap() async throws {
-        let app = try await launch(language: "en", locale: "en_US", step: 3,
-                                   extra: ["-debugOpenCapture", "YES", "-debugCaptureAutopilot", "YES", "-debugCaptureGym", "syn:east", "-debugCaptureColour", "red",
-                                           "-debugCaptureSeconds", "4", "-debugCaptureOverlay", "YES"])
+        let app = try await launch(step: 3, extra: ["-debugOpenCapture", "YES", "-debugCaptureAutopilot", "YES", "-debugCaptureGym", "syn:east", "-debugCaptureColour", "red",
+                                                    "-debugCaptureSeconds", "4", "-debugCaptureOverlay", "YES"])
         func note(_ text: String) -> XCUIElement { app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "autopilot " + text)).firstMatch }
         XCTAssertTrue(note("recording").waitForExistence(timeout: 60), "it got as far as recording")
         XCTAssertTrue(app.buttons["captureStop"].exists)
         XCTAssertTrue(note("done").waitForExistence(timeout: 90), "and to the end")
-        // The saved sheet stays up, with the gym it selected by itself.
-        XCTAssertTrue(app.buttons["captureAgain"].exists || app.staticTexts["Saved to the logbook"].exists)
+        // The saved sheet stays up.
+        XCTAssertTrue(app.descendants(matching: .any)["captureSaved"].exists)
         keep(app, "33-autopilot-done")
+        // The record carries the gym it selected by itself. It is taken out again: the other tests start from an album without one.
+        app.buttons["captureDone"].tap()
+        XCTAssertTrue(app.staticTexts[StandInPack.directoryGymName].waitForExistence(timeout: 10))
+        app.staticTexts[StandInPack.directoryGymName].firstMatch.tap()
+        XCTAssertTrue(app.staticTexts["playbackClock"].waitForExistence(timeout: 10))
+        removeNewestRecord(app, more: "更多操作", confirm: "删除这一趟")
     }
 
     /// A camera preview is left black in a snapshot of the view hierarchy. The picture a debug build
