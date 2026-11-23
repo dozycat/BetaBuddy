@@ -28,12 +28,15 @@
 
     <!--
         The in-app camera, asked for when the user opens it: the back camera, video only (no
-        RECORD_AUDIO: no sound is recorded). Approximate location is asked for only when the user
-        taps "find gyms nearby" in the capture screen; one fix from the platform's own location
-        service orders the bundled gym directory on the device and is then forgotten.
+        RECORD_AUDIO: no sound is recorded). Location is asked for only when the user taps "find
+        gyms nearby" in the capture screen; both permissions are requested together so that the
+        system lets the user choose precise or approximate (Android 12+), and the app works with
+        either. One fix from the platform's own location service orders the bundled gym directory
+        on the device and is then forgotten.
     -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission
         android:name="android.permission.RECORD_AUDIO"
         tools:node="remove" />

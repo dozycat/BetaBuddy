@@ -63,6 +63,7 @@
     <string name="capture_analysing">姿勢の認識が終わりました。このトライを分析中…</string>
     <string name="capture_analysis_done">このトライの分析ができました。開くと見られます。</string>
     <string name="capture_analysis_failed">このトライは自動で分析できませんでした。リプレイ画面からもう一度試せます。</string>
+    <string name="capture_plan_not_used">分析できました。撮影前に指定したホールドとスタート・ゴールは今回は使われていません。カメラの位置が指定時と合いませんでした。</string>
     <string name="capture_stop_action">停止して保存</string>
     <string name="capture_record_action">撮影を始める</string>
     <string name="capture_close">閉じる</string>

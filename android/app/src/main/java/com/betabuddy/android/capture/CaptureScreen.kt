@@ -130,6 +130,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 private val Chip = Color.White.copy(alpha = 0.14f)
+/** The lines under the picture: small, so that the picture keeps the room. */
+private val Small = BB.Caption.copy(fontSize = 11.sp, lineHeight = 14.sp)
 private val Warning = Color(0xFFFF9500)
 private val RecordRed = Color(0xFFE5332A)
 
@@ -156,7 +158,7 @@ internal fun CaptureScreen(model: JournalViewModel, pack: GymPack?, onClose: () 
         val source = if (video != null) FileCaptureSource(video, CaptureDebug.fieldOfView) else CameraSource(context)
         if (debug) CaptureDebug.lastSource = source
         CaptureSession(context, usedPack, source, language, defaultTitle = { defaultTitle.value }, packFiles = packFiles)
-            .also { if (debug) { it.motion.fixed = CaptureDebug.attitude; CaptureDebug.configure?.invoke(it) } }
+            .also { if (debug) { it.motion.fixed = CaptureDebug.attitude; it.keepFrame = CaptureDebug.keepFrame; CaptureDebug.configure?.invoke(it) } }
     }
     val locator = remember { GymLocator(context, if (debug) CaptureDebug.locationState ?: CaptureDebug.location?.let { GymLocator.StandIn(fix = it) } else null) }
     val bundled = directoryGyms()
@@ -173,7 +175,7 @@ internal fun CaptureScreen(model: JournalViewModel, pack: GymPack?, onClose: () 
     var askedCamera by rememberSaveable { mutableStateOf(false) }
 
     val cameraPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted -> if (granted) session.retry(owner) }
-    val locationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted -> locator.onPermissionResult(granted) }
+    val locationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { granted -> locator.onPermissionResult(granted.values.any { it }) }
     LaunchedEffect(session) {
         session.start(owner)
         locator.locateIfAllowed()
@@ -234,7 +236,14 @@ internal fun CaptureScreen(model: JournalViewModel, pack: GymPack?, onClose: () 
             val window = (view.parent as? DialogWindowProvider)?.window
             window?.setDimAmount(0f)
             window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-            window?.let { WindowCompat.getInsetsController(it, view).apply { isAppearanceLightStatusBars = false; isAppearanceLightNavigationBars = false } }
+            window?.let {
+                WindowCompat.getInsetsController(it, view).apply {
+                    isAppearanceLightStatusBars = false; isAppearanceLightNavigationBars = false
+                    // The picture gets the room the status bar would take; a swipe from the edge brings the bar back for a moment.
+                    hide(androidx.core.view.WindowInsetsCompat.Type.statusBars())
+                    systemBarsBehavior = androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                }
+            }
             onDispose { window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
         }
         Box(Modifier.fillMaxSize().testTag("captureScreen")) {
@@ -257,14 +266,14 @@ internal fun CaptureScreen(model: JournalViewModel, pack: GymPack?, onClose: () 
             }
             Column(
                 Modifier.fillMaxSize().background(BB.Ink).pointerInput(Unit) { detectTapGestures { } }
-                    .windowInsetsPadding(WindowInsets.safeDrawing).padding(horizontal = 12.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
+                    .windowInsetsPadding(WindowInsets.safeDrawing).padding(horizontal = 12.dp, vertical = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 TopBar(session, busy, onClose = onClose, onChooseGym = { choosingGym = true })
                 when (offer) {
                     is GymOffer.Here -> Offer(offer.gym, guess = false, replaces = offer.replaces, onUse = { session.selectGym(offer.gym.gym.id, offer.gym.gym.name) }, onDecline = { declined = offer.gym.gym.id })
                     is GymOffer.Guess -> Offer(offer.gym, guess = true, replaces = false, onUse = { session.selectGym(offer.gym.gym.id, offer.gym.gym.name) }, onDecline = { declined = offer.gym.gym.id })
-                    GymOffer.Ask -> AskLocation(onAsk = { locationPermission.launch(Manifest.permission.ACCESS_COARSE_LOCATION) }, onDecline = { declined = ASK })
+                    GymOffer.Ask -> AskLocation(onAsk = { locationPermission.launch(GymLocator.PERMISSIONS) }, onDecline = { declined = ASK })
                     null -> Unit
                 }
                 // Above the picture, not on it: the finish of a problem is at the top of the wall, and a tap there must reach it.
@@ -331,14 +340,14 @@ private fun TopBar(session: CaptureSession, busy: Boolean, onClose: () -> Unit, 
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
         val close = stringResource(R.string.capture_close)
         Box(
-            Modifier.size(48.dp).alpha(if (busy) 0.3f else 1f).clip(CircleShape).background(Chip)
+            Modifier.size(44.dp).alpha(if (busy) 0.3f else 1f).clip(CircleShape).background(Chip)
                 .clickable(enabled = !busy, role = Role.Button, onClickLabel = close, onClick = onClose).testTag("captureClose"),
             contentAlignment = Alignment.Center,
         ) { Icon(BBIcons.Close, contentDescription = close, tint = BB.Paper, modifier = Modifier.size(18.dp)) }
         if (session.phase == CaptureSession.Phase.Recording) {
             Spacer(Modifier.weight(1f))
             Row(
-                Modifier.defaultMinSize(minHeight = 48.dp).clip(CircleShape).background(Chip).padding(horizontal = 14.dp),
+                Modifier.defaultMinSize(minHeight = 44.dp).clip(CircleShape).background(Chip).padding(horizontal = 14.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically,
             ) {
                 Box(Modifier.size(10.dp).clip(CircleShape).background(RecordRed))
@@ -346,11 +355,11 @@ private fun TopBar(session: CaptureSession, busy: Boolean, onClose: () -> Unit, 
                 Text(clockText(session.recordedSeconds), style = BB.mono(15.sp, FontWeight.Bold, 0.sp), color = BB.Paper, modifier = Modifier.testTag("captureElapsed"))
             }
             Spacer(Modifier.weight(1f))
-            Spacer(Modifier.width(48.dp))
+            Spacer(Modifier.width(44.dp))
         } else {
             val enabled = session.phase == CaptureSession.Phase.Framing
             Row(
-                Modifier.weight(1f).defaultMinSize(minHeight = 48.dp).alpha(if (enabled) 1f else 0.5f).clip(CircleShape).background(Chip)
+                Modifier.weight(1f).defaultMinSize(minHeight = 44.dp).alpha(if (enabled) 1f else 0.5f).clip(CircleShape).background(Chip)
                     .clickable(enabled = enabled, role = Role.Button, onClick = onChooseGym).padding(horizontal = 12.dp).testTag("captureGym"),
                 horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -366,7 +375,7 @@ private fun TopBar(session: CaptureSession, busy: Boolean, onClose: () -> Unit, 
             val grade = gradeText(session.grade)
             Box {
                 Row(
-                    Modifier.defaultMinSize(minHeight = 48.dp).alpha(if (enabled) 1f else 0.5f).clip(CircleShape).background(Chip)
+                    Modifier.defaultMinSize(minHeight = 44.dp).alpha(if (enabled) 1f else 0.5f).clip(CircleShape).background(Chip)
                         .clickable(enabled = enabled, role = Role.DropdownList, onClickLabel = label) { open = true }.padding(horizontal = 12.dp)
                         .semantics { contentDescription = "$label, $grade" }.testTag("captureGrade"),
                     horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically,
@@ -399,32 +408,25 @@ private const val ASK = "\u0000ask"
 
 @Composable
 private fun Offer(gym: NearbyGym, guess: Boolean, replaces: Boolean, onUse: () -> Unit, onDecline: () -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Chip).padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(BBIcons.Pin, contentDescription = null, tint = BB.Paper, modifier = Modifier.size(14.dp))
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+    OfferRow(onDecline, "declineNearestGym") {
+        Column(Modifier.weight(1f)) {
             Text(
                 if (guess) stringResource(R.string.capture_offer_guess, gym.gym.name) else stringResource(R.string.capture_offer, gym.gym.name, captureDistance(gym).orEmpty()),
-                style = BB.Caption, fontWeight = FontWeight.Bold, color = BB.Paper,
+                // On a narrow screen the name gives way in the middle; the distance at the end stays.
+                style = BB.Caption, fontWeight = FontWeight.Bold, color = BB.Paper, maxLines = 1, overflow = if (guess) TextOverflow.Ellipsis else TextOverflow.MiddleEllipsis,
                 modifier = Modifier.semantics { stateDescription = if (guess) "guess" else "here" }.testTag("captureOffer"),
             )
             // A distance worked out from the directory's coordinates names where they come from.
-            if (!guess) Text(GymDirectory.COORDINATE_CREDIT, style = BB.Caption.copy(fontSize = 10.sp, lineHeight = 12.sp), color = BB.Paper.copy(alpha = 0.7f), modifier = Modifier.testTag("captureOfferCredit"))
+            if (!guess) Text(GymDirectory.COORDINATE_CREDIT, style = BB.Caption.copy(fontSize = 9.sp, lineHeight = 11.sp), color = BB.Paper.copy(alpha = 0.7f), maxLines = 1, modifier = Modifier.testTag("captureOfferCredit"))
         }
         Box(
-            Modifier.defaultMinSize(minHeight = 48.dp).clip(CircleShape).clickable(role = Role.Button, onClick = onUse).testTag("useNearestGym"),
+            Modifier.defaultMinSize(minHeight = 40.dp).clip(CircleShape).clickable(role = Role.Button, onClick = onUse).testTag("useNearestGym"),
             contentAlignment = Alignment.Center,
         ) {
             Text(
-                stringResource(if (replaces) R.string.capture_offer_use else R.string.capture_offer_choose), style = BB.Caption, fontWeight = FontWeight.Bold, color = BB.Ink,
-                modifier = Modifier.clip(CircleShape).background(BB.Lime).padding(horizontal = 12.dp, vertical = 10.dp),
+                stringResource(if (replaces) R.string.capture_offer_use else R.string.capture_offer_choose), style = BB.Caption, fontWeight = FontWeight.Bold, color = BB.Ink, maxLines = 1,
+                modifier = Modifier.clip(CircleShape).background(BB.Lime).padding(horizontal = 10.dp, vertical = 6.dp),
             )
-        }
-        val decline = stringResource(R.string.capture_offer_decline)
-        Box(Modifier.size(48.dp).clip(CircleShape).clickable(role = Role.Button, onClickLabel = decline, onClick = onDecline).testTag("declineNearestGym"), contentAlignment = Alignment.Center) {
-            Icon(BBIcons.Close, contentDescription = decline, tint = BB.Paper, modifier = Modifier.size(14.dp))
         }
     }
 }
@@ -432,20 +434,25 @@ private fun Offer(gym: NearbyGym, guess: Boolean, replaces: Boolean, onUse: () -
 /** No gym chosen and the position never asked for: one tap brings up the system's question. */
 @Composable
 private fun AskLocation(onAsk: () -> Unit, onDecline: () -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Chip).padding(start = 12.dp, end = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Row(
-            Modifier.weight(1f).defaultMinSize(minHeight = 48.dp).clickable(role = Role.Button, onClick = onAsk).testTag("captureAskLocation"),
-            horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(BBIcons.Pin, contentDescription = null, tint = BB.Paper, modifier = Modifier.size(14.dp))
-            Text(stringResource(R.string.capture_gym_ask_location), style = BB.Caption, fontWeight = FontWeight.Bold, color = BB.Paper)
+    OfferRow(onDecline, "declineAskLocation") {
+        Box(Modifier.weight(1f).defaultMinSize(minHeight = 40.dp).clickable(role = Role.Button, onClick = onAsk).testTag("captureAskLocation"), contentAlignment = Alignment.CenterStart) {
+            Text(stringResource(R.string.capture_gym_ask_location), style = BB.Caption, fontWeight = FontWeight.Bold, color = BB.Paper, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
+    }
+}
+
+/** One compact row about the gym, with a way to wave it off. */
+@Composable
+private fun OfferRow(onDecline: () -> Unit, declineTag: String, content: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().defaultMinSize(minHeight = 40.dp).clip(RoundedCornerShape(12.dp)).background(Chip).padding(start = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(BBIcons.Pin, contentDescription = null, tint = BB.Paper, modifier = Modifier.size(14.dp))
+        content()
         val decline = stringResource(R.string.capture_offer_decline)
-        Box(Modifier.size(48.dp).clip(CircleShape).clickable(role = Role.Button, onClickLabel = decline, onClick = onDecline).testTag("declineAskLocation"), contentAlignment = Alignment.Center) {
-            Icon(BBIcons.Close, contentDescription = decline, tint = BB.Paper, modifier = Modifier.size(14.dp))
+        Box(Modifier.size(40.dp).clip(CircleShape).clickable(role = Role.Button, onClickLabel = decline, onClick = onDecline).testTag(declineTag), contentAlignment = Alignment.Center) {
+            Icon(BBIcons.Close, contentDescription = decline, tint = BB.Paper, modifier = Modifier.size(13.dp))
         }
     }
 }
@@ -480,6 +487,7 @@ private fun Picture(
                     if ((phase == CaptureSession.Phase.Framing || phase == CaptureSession.Phase.Recording) && session.color != null && holds != null) {
                         Overlay(holds, width, height, Modifier.alpha(if (phase == CaptureSession.Phase.Recording) 0.45f else 1f))
                     }
+                    if (BuildConfig.DEBUG && CaptureDebug.overlay) DebugReadout(session)
                     when {
                         framing -> {
                             // One tap marks the hold there as whatever is selected below the picture.
@@ -504,6 +512,30 @@ private fun Picture(
                 }
             }
         }
+    }
+}
+
+/**
+ * Debug builds, on request (a launch extra): what is being told to the page and how it answers,
+ * for a first run on a phone. Not text for users, so not in the string resources.
+ */
+@Composable
+private fun DebugReadout(session: CaptureSession) {
+    val info = session.lastInfo
+    val metrics = session.metrics
+    fun number(value: Double?, digits: Int = 1) = value?.let { String.format(java.util.Locale.ROOT, "%.${digits}f", it) } ?: "-"
+    val handOver = if (metrics.frames > 0) metrics.handOverSeconds / metrics.frames * 1000 else null
+    val lines = listOf(
+        "frame ${session.frameSize.first}x${session.frameSize.second}  fovH ${number(session.lastFieldOfView)}",
+        "pitch ${number(info?.pitch)}  roll ${number(info?.roll)}  shake ${number(info?.shake, 3)}  pose ${if (info?.pose != null) "yes" else "no"}",
+        "page ${session.page.name.lowercase()}  replies/s ${number(metrics.assessmentsPerSecond, 2)}  hand-over ${number(handOver)} ms",
+        "issues ${session.assessment?.issues?.joinToString(",") { it.code + if (it.blocking) "!" else "" }?.ifEmpty { "none" } ?: "-"}",
+    )
+    Box(Modifier.fillMaxSize().padding(6.dp), contentAlignment = Alignment.BottomStart) {
+        Text(
+            lines.joinToString("\n"), style = BB.mono(9.sp, FontWeight.Medium, 0.sp), color = Color.White,
+            modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Color.Black.copy(alpha = 0.6f)).padding(5.dp).testTag("captureDebugReadout").clearAndSetSemantics { },
+        )
     }
 }
 
@@ -571,42 +603,45 @@ private fun Overlay(holds: List<CaptureAssessment.Hold>, width: Dp, height: Dp, 
 
 private enum class Tone { PLAIN, BLOCKED, READY }
 
-/** One line: what to change, or that the position is good. Plus an indicator for the score. */
+/** One row: what to change, or that the position is good, and at its end the indicator for the score. */
 @Composable
 private fun Guidance(session: CaptureSession) {
     val assessment = session.assessment
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        when (session.page) {
-            CaptureSession.Page.UNAVAILABLE -> Pill(BBIcons.Video, stringResource(R.string.capture_no_checks), Tone.PLAIN, "captureNoChecks")
-            CaptureSession.Page.FAILED -> Pill(BBIcons.Alert, stringResource(R.string.capture_checks_failed), Tone.PLAIN, "captureNoChecks")
-            CaptureSession.Page.LOADING -> Pill(null, stringResource(R.string.capture_looking), Tone.PLAIN, "captureLooking")
-            CaptureSession.Page.READY -> {
-                val hint = assessment?.hint
-                when {
-                    assessment == null -> Pill(null, stringResource(R.string.capture_looking), Tone.PLAIN, "captureLooking")
-                    // A remark that does not block is shown under the picture, see `Colours`.
-                    assessment.ready -> Pill(BBIcons.Check, stringResource(R.string.capture_ready), Tone.READY, "captureReady")
-                    hint != null -> Pill(if (hint.blocking) BBIcons.Alert else null, captureLine(hint), if (hint.blocking) Tone.BLOCKED else Tone.PLAIN, "captureHint", hint.code)
-                    else -> Pill(null, stringResource(R.string.capture_settling), Tone.PLAIN, "captureSettling")
-                }
-                assessment?.score?.let { Quality(it) }
+    when (session.page) {
+        CaptureSession.Page.UNAVAILABLE -> Pill(BBIcons.Video, stringResource(R.string.capture_no_checks), Tone.PLAIN, "captureNoChecks")
+        CaptureSession.Page.FAILED -> Pill(BBIcons.Alert, stringResource(R.string.capture_checks_failed), Tone.PLAIN, "captureNoChecks")
+        CaptureSession.Page.LOADING -> Pill(null, stringResource(R.string.capture_looking), Tone.PLAIN, "captureLooking")
+        CaptureSession.Page.READY -> {
+            val hint = assessment?.hint
+            val score = assessment?.score
+            when {
+                assessment == null -> Pill(null, stringResource(R.string.capture_looking), Tone.PLAIN, "captureLooking")
+                // A remark that does not block is shown under the picture, see `Colours`.
+                assessment.ready -> Pill(BBIcons.Check, stringResource(R.string.capture_ready), Tone.READY, "captureReady", score = score)
+                hint != null -> Pill(if (hint.blocking) BBIcons.Alert else null, captureLine(hint), if (hint.blocking) Tone.BLOCKED else Tone.PLAIN, "captureHint", hint.code, score)
+                else -> Pill(null, stringResource(R.string.capture_settling), Tone.PLAIN, "captureSettling", score = score)
             }
         }
     }
 }
 
 @Composable
-private fun Pill(icon: ImageVector?, text: String, tone: Tone, tag: String, state: String? = null) {
-    val shape = RoundedCornerShape(14.dp)
+private fun Pill(icon: ImageVector?, text: String, tone: Tone, tag: String, state: String? = null, score: Double? = null) {
+    val shape = RoundedCornerShape(12.dp)
     Row(
-        Modifier.fillMaxWidth().clip(shape).background(if (tone == Tone.READY) BB.Lime else BB.Paper)
-            .then(if (tone == Tone.BLOCKED) Modifier.border(2.5.dp, Warning, shape) else Modifier)
-            .padding(horizontal = 14.dp, vertical = 10.dp)
-            .semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite; if (state != null) stateDescription = state }.testTag(tag),
+        Modifier.fillMaxWidth().defaultMinSize(minHeight = 40.dp).clip(shape).background(if (tone == Tone.READY) BB.Lime else BB.Paper)
+            .then(if (tone == Tone.BLOCKED) Modifier.border(2.dp, Warning, shape) else Modifier)
+            .padding(horizontal = 12.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (icon != null) Icon(icon, contentDescription = null, tint = BB.Ink, modifier = Modifier.size(18.dp))
-        Text(text, style = BB.Subheadline, fontWeight = FontWeight.Bold, color = BB.Ink)
+        Row(
+            Modifier.weight(1f).semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite; if (state != null) stateDescription = state }.testTag(tag),
+            horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (icon != null) Icon(icon, contentDescription = null, tint = BB.Ink, modifier = Modifier.size(16.dp))
+            Text(text, style = BB.Subheadline.copy(fontSize = 14.sp, lineHeight = 18.sp), fontWeight = FontWeight.Bold, color = BB.Ink, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        }
+        if (score != null) Quality(score)
     }
 }
 
@@ -617,14 +652,11 @@ private fun Quality(score: Double) {
     val label = stringResource(R.string.capture_quality)
     val value = stringResource(if (level >= 4) R.string.capture_quality_good else if (level >= 3) R.string.capture_quality_fair else R.string.capture_quality_poor)
     Row(
-        Modifier.clip(CircleShape).background(Color.Black.copy(alpha = 0.55f)).padding(horizontal = 10.dp, vertical = 6.dp)
+        Modifier.clip(CircleShape).background(BB.Ink).padding(horizontal = 7.dp, vertical = 6.dp)
             .testTag("captureQuality").clearAndSetSemantics { contentDescription = label; stateDescription = value },
-        horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        Text(label, style = BB.Caption.copy(fontSize = 11.sp), fontWeight = FontWeight.Bold, color = BB.Paper)
-        Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-            for (index in 1..5) Box(Modifier.size(width = 16.dp, height = 6.dp).clip(CircleShape).background(if (index <= level) BB.Lime else Color.White.copy(alpha = 0.35f)))
-        }
+        for (index in 1..5) Box(Modifier.size(width = 9.dp, height = 6.dp).clip(CircleShape).background(if (index <= level) BB.Lime else Color.White.copy(alpha = 0.35f)))
     }
 }
 
@@ -636,13 +668,13 @@ private fun Quality(score: Double) {
 private fun Colours(session: CaptureSession, tool: CaptureRole, onTool: (CaptureRole) -> Unit) {
     if (session.page != CaptureSession.Page.READY || (session.palette.isEmpty() && session.color == null)) return
     val assessment = session.assessment
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         // Nothing blocks, but the page still has something to say. What it says about the start
         // and the finish is already the business of the line below.
         val hint = assessment?.hint
         if (assessment != null && assessment.ready && hint != null && hint.code != "start_unclear" && hint.code != "finish_unclear") {
             Text(
-                captureLine(hint), style = BB.Caption, fontWeight = FontWeight.Bold, color = BB.Lime,
+                captureLine(hint), style = Small, fontWeight = FontWeight.Bold, color = BB.Lime, maxLines = 1, overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.semantics { stateDescription = hint.code }.testTag("captureHint"),
             )
         }
@@ -651,23 +683,23 @@ private fun Colours(session: CaptureSession, tool: CaptureRole, onTool: (Capture
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 val detail = listOfNotNull(route.title, route.grade).filter { it.isNotBlank() }.joinToString(" · ")
                 Text(
-                    stringResource(R.string.capture_route, detail), style = BB.Caption, fontWeight = FontWeight.Bold, color = BB.Paper,
+                    stringResource(R.string.capture_route, detail), style = Small, fontWeight = FontWeight.Bold, color = BB.Paper, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f, fill = false).testTag("captureRoute"),
                 )
-                Box(Modifier.defaultMinSize(minHeight = 48.dp).clip(CircleShape).clickable(role = Role.Button, onClick = session::rejectRoute).testTag("captureRejectRoute"), contentAlignment = Alignment.Center) {
+                Box(Modifier.defaultMinSize(minHeight = 32.dp).clip(CircleShape).clickable(role = Role.Button, onClick = session::rejectRoute).testTag("captureRejectRoute"), contentAlignment = Alignment.Center) {
                     Text(
-                        stringResource(R.string.capture_route_reject), style = BB.Caption, fontWeight = FontWeight.Bold, color = BB.Paper,
-                        modifier = Modifier.clip(CircleShape).background(Chip).padding(horizontal = 10.dp, vertical = 8.dp),
+                        stringResource(R.string.capture_route_reject), style = Small, fontWeight = FontWeight.Bold, color = BB.Paper, maxLines = 1,
+                        modifier = Modifier.clip(CircleShape).background(Chip).padding(horizontal = 10.dp, vertical = 5.dp),
                     )
                 }
             }
         }
         if (session.gradePrefilled) {
-            Text(stringResource(R.string.capture_grade_prefilled), style = BB.Caption, fontWeight = FontWeight.Bold, color = BB.Lime, modifier = Modifier.testTag("captureGradePrefilled"))
+            Text(stringResource(R.string.capture_grade_prefilled), style = Small, fontWeight = FontWeight.Bold, color = BB.Lime, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.testTag("captureGradePrefilled"))
         }
         val stage = CaptureText.stage(session.tapMissed, session.color != null, assessment, recognised = session.color != null && route != null)
         Text(
-            stringResource(CaptureText.prompt(stage)), style = BB.Caption, fontWeight = FontWeight.Bold, color = BB.Paper,
+            stringResource(CaptureText.prompt(stage)), style = Small, fontWeight = FontWeight.Bold, color = BB.Paper, maxLines = 2, overflow = TextOverflow.Ellipsis,
             modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite; stateDescription = stage.name.lowercase() }.testTag("capturePrompt"),
         )
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -678,7 +710,7 @@ private fun Colours(session: CaptureSession, tool: CaptureRole, onTool: (Capture
                     val label = stringResource(R.string.capture_colour_n, index + 1)
                     val count = stringResource(R.string.capture_hold_count, swatch.count)
                     Row(
-                        Modifier.defaultMinSize(minHeight = 48.dp).clip(CircleShape).background(Chip)
+                        Modifier.defaultMinSize(minHeight = 44.dp).clip(CircleShape).background(Chip)
                             .clickable(role = Role.Button) { onTool(CaptureRole.START_HAND); session.selectColor(swatch.key) }.padding(horizontal = 10.dp)
                             .testTag("captureColor-${swatch.key}").clearAndSetSemantics { contentDescription = "$label, $count" },
                         horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically,
@@ -691,7 +723,7 @@ private fun Colours(session: CaptureSession, tool: CaptureRole, onTool: (Capture
                 // The chosen colour (tap it to choose again), then what a tap on the picture marks.
                 val change = stringResource(R.string.capture_change_colour)
                 Row(
-                    Modifier.defaultMinSize(minHeight = 48.dp).clip(CircleShape).background(Chip).clickable(role = Role.Button, onClickLabel = change) { session.selectColor(null) }
+                    Modifier.defaultMinSize(minHeight = 44.dp).clip(CircleShape).background(Chip).clickable(role = Role.Button, onClickLabel = change) { session.selectColor(null) }
                         .padding(horizontal = 10.dp).testTag("captureChangeColour").clearAndSetSemantics { contentDescription = change },
                     horizontalArrangement = Arrangement.spacedBy(5.dp), verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -701,14 +733,14 @@ private fun Colours(session: CaptureSession, tool: CaptureRole, onTool: (Capture
                 for (role in CaptureRole.entries) {
                     val active = tool == role
                     Box(
-                        Modifier.defaultMinSize(minHeight = 48.dp).clip(CircleShape).background(if (active) BB.Lime else Chip)
+                        Modifier.defaultMinSize(minHeight = 44.dp).clip(CircleShape).background(if (active) BB.Lime else Chip)
                             .clickable(role = Role.Tab) { onTool(role) }.padding(horizontal = 12.dp).semantics { selected = active }.testTag("captureTool-${role.wire}"),
                         contentAlignment = Alignment.Center,
                     ) { Text(stringResource(CaptureText.role(role)), style = BB.Caption, fontWeight = FontWeight.Bold, color = if (active) BB.Ink else BB.Paper, maxLines = 1) }
                 }
                 if (assessment?.holds?.any { it.user } == true) {
                     Row(
-                        Modifier.defaultMinSize(minHeight = 48.dp).clip(CircleShape).background(Chip).clickable(role = Role.Button, onClick = session::resetCorrections)
+                        Modifier.defaultMinSize(minHeight = 44.dp).clip(CircleShape).background(Chip).clickable(role = Role.Button, onClick = session::resetCorrections)
                             .padding(horizontal = 12.dp).testTag("captureResetMarks"),
                         horizontalArrangement = Arrangement.spacedBy(5.dp), verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -838,21 +870,21 @@ private fun AnalysisStatus(climb: Climb, model: JournalViewModel, onViewAnalysis
 
 @Composable
 private fun BottomBar(session: CaptureSession, framing: Boolean, onRecord: () -> Unit) {
-    Box(Modifier.fillMaxWidth().height(78.dp), contentAlignment = Alignment.Center) {
+    Box(Modifier.fillMaxWidth().height(66.dp), contentAlignment = Alignment.Center) {
         if (session.phase == CaptureSession.Phase.Recording) {
             val stop = stringResource(R.string.capture_stop_action)
             Box(
-                Modifier.size(72.dp).clip(CircleShape).border(4.dp, BB.Paper, CircleShape)
+                Modifier.size(62.dp).clip(CircleShape).border(4.dp, BB.Paper, CircleShape)
                     .clickable(role = Role.Button, onClickLabel = stop) { session.stop(CaptureStop.USER) }.semantics { contentDescription = stop }.testTag("captureStop"),
                 contentAlignment = Alignment.Center,
-            ) { Box(Modifier.size(30.dp).clip(RoundedCornerShape(7.dp)).background(RecordRed)) }
+            ) { Box(Modifier.size(26.dp).clip(RoundedCornerShape(6.dp)).background(RecordRed)) }
         } else {
             val record = stringResource(R.string.capture_record_action)
             Box(
-                Modifier.size(72.dp).alpha(if (framing) 1f else 0.3f).clip(CircleShape).border(4.dp, if (session.assessment?.ready == true) BB.Lime else BB.Paper, CircleShape)
+                Modifier.size(62.dp).alpha(if (framing) 1f else 0.3f).clip(CircleShape).border(4.dp, if (session.assessment?.ready == true) BB.Lime else BB.Paper, CircleShape)
                     .clickable(enabled = framing, role = Role.Button, onClickLabel = record, onClick = onRecord).semantics { contentDescription = record }.testTag("captureRecord"),
                 contentAlignment = Alignment.Center,
-            ) { Box(Modifier.size(58.dp).clip(CircleShape).background(RecordRed)) }
+            ) { Box(Modifier.size(50.dp).clip(CircleShape).background(RecordRed)) }
         }
     }
 }

@@ -9,6 +9,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.betabuddy.android.R
 import com.betabuddy.android.data.Archive
+import com.betabuddy.android.data.CapturePlanUse
 import com.betabuddy.android.data.CaptureSweep
 import com.betabuddy.android.data.Climb
 import com.betabuddy.android.data.ClimbFolder
@@ -317,11 +318,11 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
      * Keeps what the page handed back: the result next to the clip, replacing an earlier one, and
      * the body measurements it used in this phone's preferences for the next analysis.
      */
-    suspend fun saveAnalysisResult(id: String, json: String, climber: String?, planUsed: Boolean? = null, planUnusedReason: String? = null): Result<Unit> = withContext(Dispatchers.IO) {
+    suspend fun saveAnalysisResult(id: String, json: String, climber: String?, planUse: CapturePlanUse? = null): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
             if (store().saveAnalysisResult(id, json)) resultsState.update { it + id }
             // Whether the page went by the capture plan is kept with the record, as the page said it.
-            if (planUsed != null) store().setPlanUse(id, planUsed, planUnusedReason)
+            if (planUse != null) store().setPlanUse(id, planUse)
             if (climber != null) preferences.edit { putString(KEY_ANALYSIS_CLIMBER, climber) }
         }
     }
@@ -331,6 +332,9 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
 
     /** The queue is done with this record's request: cleared in the archive, with what to tell the user, if anything. */
     suspend fun settleQueuedAnalysis(id: String, message: UiMessage?) {
+        // Analysed without the marks made while framing is still analysed, but it is said.
+        val unused = message?.id == R.string.capture_analysis_done && withContext(Dispatchers.IO) { store().archive.value.climbs.firstOrNull { it.id == id }?.capture?.planUse?.used == false }
+        val message = if (unused) UiMessage(R.string.capture_plan_not_used) else message
         withContext(Dispatchers.IO) { runCatching { store().setAnalysisQueued(id, false) } }
         if (message != null) queueMessageState.update { it + (id to message) }
     }

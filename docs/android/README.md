@@ -1,6 +1,6 @@
 # BetaBuddy · Android 工程
 
-Kotlin + Jetpack Compose 原生应用，Android 8.0（API 26）及以上，竖屏，只有浅色。和 iOS 版是同一个产品：两个入口（岩馆、攀爬册）加「设置与关于」，五种语言并可在应用内切换，全部离线；后台分析使用本地媒体处理服务，进度通知权限可选；应用内相机用到相机权限，按距离给岩馆排序用到大致位置权限，两项都是用到时才问。产品介绍见[仓库首页](../../README.md)，Android 上的设计见 [design.md](design.md)，岩馆的数据包接口见 [../ios/gym-design.md](../ios/gym-design.md)。
+Kotlin + Jetpack Compose 原生应用，Android 8.0（API 26）及以上，竖屏，只有浅色。和 iOS 版是同一个产品：两个入口（岩馆、攀爬册）加「设置与关于」，五种语言并可在应用内切换，全部离线；后台分析使用本地媒体处理服务，进度通知权限可选；应用内相机用到相机权限，按距离给岩馆排序用到位置权限（大致或精确，由用户选），两项都是用到时才问。产品介绍见[仓库首页](../../README.md)，Android 上的设计见 [design.md](design.md)，岩馆的数据包接口见 [../ios/gym-design.md](../ios/gym-design.md)。
 
 应用 ID `com.betabuddy.android`，版本 `1.2.0`（`android/app/build.gradle.kts` 里的 `versionName` / `versionCode`）。
 
@@ -8,7 +8,7 @@ Kotlin + Jetpack Compose 原生应用，Android 8.0（API 26）及以上，竖�
 
 ### 2026-11-23 · 应用内相机「拍一趟」（未发布）
 
-攀爬册的主按钮改成「拍一趟」，导入退为次要按钮。拍摄界面取景时由数据包的拍摄页面检查机位、认颜色和岩点，用户选颜色、点一下标起步和结束、选难度和岩馆；停止后先保存，再做姿态识别和「分析这一趟」。相机用 CameraX 1.7.0（预览、不带声音的 1080p 录像、给检查用的小帧）；位置用平台自带的 `LocationManager`，只申请大致位置。Manifest 多了 `CAMERA` 和 `ACCESS_COARSE_LOCATION`，没有 `RECORD_AUDIO`。存档的记录多一个可选的 `capture` 字段（与 iOS 同名同义），拍摄计划存成 `<记录 id>.capture.json`；旧存档照常读取。设计见 [design.md](design.md#拍一趟)，验证见下面的[验证状态](#2026-11-23模拟器应用内相机)。
+攀爬册的主按钮改成「拍一趟」，导入退为次要按钮。拍摄界面取景时由数据包的拍摄页面检查机位、认颜色和岩点，用户选颜色、点一下标起步和结束、选难度和岩馆；停止后先保存，再做姿态识别和「分析这一趟」。相机用 CameraX 1.7.0（预览、不带声音的 1080p 录像、给检查用的小帧）；位置用平台自带的 `LocationManager`，大致和精确两条权限一起申请、由用户选。Manifest 多了 `CAMERA`、`ACCESS_COARSE_LOCATION` 和 `ACCESS_FINE_LOCATION`，没有 `RECORD_AUDIO`。存档的记录多一个可选的 `capture` 字段（与 iOS 同名同义），拍摄计划存成 `<记录 id>.capture.json`；旧存档照常读取。设计见 [design.md](design.md#拍一趟)，验证见下面的[验证状态](#2026-11-23模拟器应用内相机)。
 
 ### 2026-11-18 · 攀爬册的分析换成数据包里的分析页面（未发布）
 
@@ -244,7 +244,7 @@ android/
 - **攀爬册只有一个入口** `JournalScreen(onOpenSettings)`。它内部的页面用 `rememberSaveable` 的路由加 `BackHandler` 切换，不往 NavHost 里加路由。导入和回看时底部导航仍然可见；分析由服务持有，切到岩馆、离开回看页或应用退到后台均不取消。系统结束服务时保留请求，下一次打开应用重试。
 - **存储**都在应用私有目录：攀爬册在 `filesDir/BetaBuddy/`（`archive.json`、原片、缩略图、分析页面交回的 `<记录 id>.analysis.json`、拍摄页面交回的 `<记录 id>.capture.json`、`staging/`——导入和录像中的临时文件，下次启动清掉），外加 `SharedPreferences` 里分析页面上一次用的身材参数；岩馆只有 `SharedPreferences` 里的两个布尔值。不写外部存储。
 - **文字**：导航、岩馆、设置的在 `strings.xml`，攀爬册的在 `strings_journal.xml` 且名字以 `journal_` 开头，应用内相机的在 `strings_capture.xml` 且名字以 `capture_` 开头，文件之间不重名。
-- **不加联网依赖。** 权限只有本地分析服务、可选进度通知、相机和大致位置（`check-resources.py` 按这个名单检查，并要求移除 `INTERNET`、`ACCESS_NETWORK_STATE`、`WAKE_LOCK`、`RECORD_AUDIO`）；新增依赖先看它的 Manifest 会合并进来什么权限和组件，该移除的在应用的 Manifest 里移除，并在 `THIRD_PARTY.md` 补一行；依赖有增减时同步 `assets/licenses/components.txt` 里的清单。
+- **不加联网依赖。** 权限只有本地分析服务、可选进度通知、相机和位置（大致与精确，`check-resources.py` 按这个名单检查，并要求移除 `INTERNET`、`ACCESS_NETWORK_STATE`、`WAKE_LOCK`、`RECORD_AUDIO`）；新增依赖先看它的 Manifest 会合并进来什么权限和组件，该移除的在应用的 Manifest 里移除，并在 `THIRD_PARTY.md` 补一行；依赖有增减时同步 `assets/licenses/components.txt` 里的清单。
 - **单元测试是纯 JVM 测试**，读 `src/main/res` 和 `src/main/assets` 用相对模块目录的路径（Gradle 运行测试时的工作目录）。测试夹具用合成数据。
 
 ## 语言
@@ -278,7 +278,7 @@ adb shell "am start -n $A --ei initialTab 1 --ez openCapture true \
     --es debugCaptureAttitude '6,0.5,0.01' --es debugLocation '<纬度>,<经度>,<误差米>'"
 ```
 
-`debugCaptureVideo` 用一个视频文件循环播放代替相机（绝对路径，或者应用 `files/` 目录下的文件名；用 `adb push` 加 `run-as <应用 ID> cp` 放进去）；`debugCaptureFov` 是替它报的水平视场角；`debugCaptureAttitude` 是没有运动传感器时替它报的仰角、侧倾和晃动；`debugLocation` 给一个位置，不出现系统的询问。拍摄界面的日志看 `adb logcat -s capture`，离开时有一行各环节的平均耗时。
+`debugCaptureVideo` 用一个视频文件循环播放代替相机（绝对路径，或者应用 `files/` 目录下的文件名；用 `adb push` 加 `run-as <应用 ID> cp` 放进去）；`debugCaptureFov` 是替它报的水平视场角；`debugCaptureAttitude` 是没有运动传感器时替它报的仰角、侧倾和晃动；`debugLocation` 给一个位置，不出现系统的询问。另有 `--ez debugCaptureOverlay true`（在画面上画出交给页面的数和页面回话的快慢）和 `--es debugCaptureKeepFrame <文件名>`（把最近交给页面的一帧另存到应用的 `files/` 目录）。拍摄界面的日志看 `adb logcat -s capture`，离开时有一行各环节的平均耗时。
 
 参数只在全新启动时读取，换参数前先 `adb shell am force-stop com.betabuddy.android`。`gymQuery` 原样接在入口 URL 的 `hint`、`lang` 之后，页面自己定义其中的参数。岩馆页面可以用 Chrome 的 `chrome://inspect` 调试；日志看 `adb logcat -s gym`。
 
@@ -404,6 +404,45 @@ adb shell "am start -n $A --ei initialTab 1 --ez openCapture true \
 
 这一轮**没有**做的：Android 12 的模拟器没有重跑；画面停过之后「5 秒从头算」只改了代码、没有测试；用户打开分析页面时队列让路只测了规则，没有在设备上凑出两边同时发生的时刻；系统的位置询问仍然没有点过；视场角的新算法没有在真机上对着画面核对。
 
+### 2026-11-23，模拟器：应用内相机，收尾的一轮
+
+**位置。** 改成 `ACCESS_FINE_LOCATION` 和 `ACCESS_COARSE_LOCATION` 一起声明、一起问。在 API 35 的模拟器上用 `adb emu geo fix` 给了一个紧挨合成目录第一家岩馆的位置，两种授权各跑了一个设备测试，位置是真的从系统的 `LocationManager` 取的：只授予大致位置时，画面上方是「可能在：某岩馆」，岩馆表按远近排、每一行都没有数字；授予精确位置时，是「离你最近：某岩馆 · 200 米」加 OpenStreetMap 的署名，表里门牌级的岩馆带距离、车站级的写「约 1.5 公里」。授权是从外面用 `pm grant` 给的，系统的询问对话框本身仍然没有点过。用真实的目录也看了一次（精确位置，位置设在一家岩馆的车站坐标旁）：表里按距离列出附近的岩馆，那家只知道车站的写的是「约 1 公里」，画面上方把它当猜测提出来。第一次试的时候系统答回来的是上一次的位置（模拟器的卫星定位只在有人问的时候才更新），重发位置之后才对：应用只取一次位置，拿到的可能是系统缓存的那个。
+
+**录像上限。** 改成和 iOS 一样的 20 分钟；相机录下的记录在姿态识别时不再受导入的 3 分钟、500 MB 限制。用文件来源（一段机位固定的本机视频循环播放）和真实数据包 1.9.2 录了 211.9 秒：保存之后姿态识别做完了整段（采样 2118 帧，2094 帧有人），后台的分析页面交回结果并且说用上了计划，停止后 190 秒内全部做完；这一条记录让存档索引长到 5.2 MB。20 分钟的片子没有录过：按这个比例索引会到三十兆字节上下、每次写入都要整个重写，内存和耗时在真机上没有量过，iOS 的存档是同样的结构。
+
+**Android 12 模拟器录不出画面。** 查到了原因，没有修：这台模拟器的相机给每一帧打的时间是从相机启动时从零数起的（日志：`first frame 720x1280: camera clock 0.1 s, uptime 2068.3 s`），而 CameraX 的录像把相机的时间当成系统的开机时间来用（`VideoEncoder: mInputTimebase = UPTIME`，`Start on 00:34:30`），于是每一帧都早于「开始」而被丢掉（`Drop buffer by not in start-stop range`）。和分辨率无关：录像档位已经自己降到了 720p（这台相机只支持到这一档），相机是 LIMITED 级、预览和录像走的是 CameraX 的共用一路。API 35 的模拟器上相机时间和开机时间一致（`camera clock 5873.0 s, uptime 5873.1 s`），录像正常。相机声明自己的时间来源是 UNKNOWN，按 Android 的说法这种相机的时间本来就不保证能和别的时钟比，所以不能断言真机上一定没有同样的相机；CameraX 对已知的这类机型有自己的修正表。应用这边的兜底是 6 秒没写进一帧就停下并提示；`first frame` 这行日志留在了代码里，第一次上真机时看它一眼。
+
+**画面的大小。** 见 [design.md](design.md#拍一趟) 的「布局」。设备测试量出来：1080×2400 上平常状态 81%，认出线路时 73%，并断言不低于 70%；720×1280（`wm size` / `wm density` 调出来的）上没有重叠，画面约为屏宽的一半，受高度限制。
+
+**存档字段。** 分析页面说的「计划用上了没有」改成按 iOS 的名字存：`capture.planUse`，里面是页面给的 `used`、`reason`、`start`、`finish`。上一轮的 `planUsed` / `planUnusedReason` 没有发布过，直接换掉。数据包 1.9.3 的结果里多出的 `shift` 一起存。用 1.9.3 和一段机位固定的本机视频（文件来源）又做了一趟，录 19.3 秒：记录里的 `planUse` 是 `used: true`，`start`、`finish` 都是 `video`，`shift` 是 `dx 0, dy 0, rot 0, scale 1`。
+
+**真实相机这条路。** 之前真实数据包的几趟用的都是文件来源。这一轮在 API 35 上用模拟器相机的虚拟场景做了两趟，数据包是真实的 1.9.2（装在本机）：
+
+- Debug 包，开着调试读数：交给页面的那一帧另存出来看过，是直立的 360×640，和预览里看到的是同一个画面、同一个范围；读数是 `frame 720x1280  fovH 71.5`、`pitch -4.7  roll -0.0  shake 0.000`、`page ready  replies/s 2.09  hand-over 22.8 ms`、`issues no_wall!`（视场角和姿态是模拟器给的值，不说明真机上对不对）。
+- Release 包：从攀爬册点进去 → 取景，页面一直在回话（日志里先是 134 帧、`134 replies at 1.99 per second`，再开一次是 46 帧、`1.98 per second`；每帧缩图和编码 7.5–9.4 毫秒、姿态识别 25–34 毫秒、交接 19–38 毫秒）→ 页面说没有攀岩墙（场景是一间屋子），确认后照录 → 21.7 秒后停 → 保存 → 姿态识别在没有人的画面上给出「没有清楚地找到攀爬者」。所以这一趟到姿态识别为止，数据包的分析没有东西可做；带着计划分析完的那一趟仍然是文件来源的。
+
+| 命令 | 结果 |
+| --- | --- |
+| `python3 android/scripts/check-resources.py` | 通过：276 条文字 × 5 种语言 |
+| `./gradlew :app:testDebugUnitTest` | 142 个测试全部通过 |
+| `./gradlew :app:assembleDebug :app:lintDebug :app:assembleRelease` | 通过；lint 0 error |
+| 设备测试，API 35 | 21 个里 19 个运行并通过，另外两个要真从系统取位置的平时跳过；这两个各自单独跑过（先 `adb emu geo fix`，再 `pm grant` 对应的权限，带 `-e geoFix 1`），都通过 |
+| 设备测试，API 31 | 没有重跑整套；只重跑了相机录像那一个（仍然不过，原因见上） |
+
+### 第一次上真机时要看的
+
+Debug 包，带上调试读数启动：`adb shell am start -n com.betabuddy.android/.MainActivity --ei initialTab 1 --ez openCapture true --ez debugCaptureOverlay true`，另开一个 `adb logcat -s capture`。
+
+1. `first frame …: camera clock … s, uptime … s`：两个数应该差不多。差得很远，录像会一帧都写不进去（见上面 Android 12 模拟器的那一条）。
+2. 读数第一行的 `fovH`：竖着拿、主摄，应该在 40–60 之间；`frame` 应该是竖的 16:9（例如 720x1280）。
+3. `pitch` / `roll`：手机竖直立着时都接近 0；镜头往上抬，`pitch` 变正；顺时针转（从屏幕这边看），`roll` 变正。`shake` 放稳时接近 0。
+4. `replies/s` 在 2 上下；`hand-over` 几十毫秒以内；`pose` 有人入镜时是 `yes`。姿态识别跟不上会自己停掉，日志最后那行会写 `dropped`。
+5. 对着墙：`issues` 里的代码和画面上方那句话对得上；色块、岩点描边和预览里的岩点重合（不重合说明给页面的画面和预览不是同一个范围）。
+6. 录 30 秒以上再停：顶上的计时在走；停了之后片子能回看、是竖的、没有声音轨；再录一段超过 3 分钟的，看姿态识别做不做得完。
+7. 录像中按 Home、来电、锁屏、被别的相机应用抢走：回来时都应该已经保存，卡片上写着被打断。
+8. 岩馆：第一次点「按距离找附近的岩馆」，系统的询问里选「大致位置」和「精确位置」各试一次（中间要去系统设置里改）；在馆里看取不取得到位置、要多久。
+9. 把手机架好拍完整的一趟，等「看分析」：分析页面里应该写着用上了取景时标的点；架好之后故意挪一下再拍一趟，应该写没用上。
+
 ### 在 Apple 芯片的 Mac 上跑模拟器
 
 较新的 Apple 芯片支持 SME 指令集，模拟器里的 Android 15 内核会把它报给应用，但实际执行会触发非法指令：MediaPipe 的原生库在第一次推理时以 `SIGILL` 崩溃（崩在读取 SME 向量长度的指令上）。这是模拟器环境的问题。启动模拟器时让内核屏蔽 SME 即可，上面攀爬册的结果都是这样测的；Android 12 的镜像内核不认识 SME，不需要这个参数。
@@ -415,7 +454,7 @@ emulator -avd <名称> -qemu -append "arm64.nosme"
 ### 尚未验证
 
 - **应用内相机在真机上的一切。** 上面全部是模拟器：真实相机的预览与录像（各厂商的流组合、1080p 在老机型上、3 分钟片子的实际大小、发热）、视场角算得对不对、重力和陀螺仪换出来的仰角、侧倾、晃动在真机上的方向和大小（只有公式的单元测试）、屏幕常亮、来电或别的应用抢相机时的中断（只用文件来源模拟过，和按 Home 退到后台）、真实的存储不足和过热。架好机位拍一趟、再用拍摄计划分析的效果完全没有验证过。
-- **位置。** 从来没有向真实的定位服务取过位置（测试和手动都用调试参数给的位置），系统的位置询问也没有点过；没有网络定位的机型上 `LocationManager` 给不给得出位置不知道。只有大致位置时系统报的误差通常在 1 公里以上，按规则只排序、不显示数字，也不会出现「离你最近」的提议——这一点是按规则推的，没有在真机上看过。
+- **位置。** 只在模拟器上从系统取过位置（用 `adb emu geo fix` 设的），两种授权都是从外面 `pm grant` 给的，系统的位置询问对话框没有点过；真机上取不取得到、要多久（尤其在室内、在没有网络定位的机型上）不知道。
 - 真实拍摄页面认出线路之后的显示、「不是这条」、难度的填入：只用替身页面走过；用真实数据包的那一趟没有认出线路。
 - 拍摄界面只看了简体中文和英语的截图；繁体中文、日语、韩语的文字只经过了资源检查，没有在屏幕上看过。最大字号、TalkBack 没有试。
 - Android 12 模拟器上 CameraX 录不出画面的原因没有查清，只做了兜底的提示。
@@ -442,7 +481,7 @@ adb install -r app/build/outputs/apk/release/app-release.apk
 adb logcat -s gym AndroidRuntime
 ```
 
-预期：单元测试 142 个、设备测试 19 个通过（Android 12 的模拟器上相机录像那一个不过，见上）；lint 没有 error；权限里没有 `INTERNET`、`ACCESS_NETWORK_STATE`、`WAKE_LOCK`、`RECORD_AUDIO`。设备测试会往应用的外部文件目录写各个状态的截图（`capture-shots/`），用 `adb shell am instrument` 直接跑（不经 Gradle 卸载应用）就能 `adb pull` 出来；截图不进仓库。然后用 Release 包在设备上走一遍：
+预期：单元测试 142 个、设备测试 21 个通过（其中两个要真从系统取位置的测试平时跳过，跑法见测试里的说明）（Android 12 的模拟器上相机录像那一个不过，见上）；lint 没有 error；权限里没有 `INTERNET`、`ACCESS_NETWORK_STATE`、`WAKE_LOCK`、`RECORD_AUDIO`。设备测试会往应用的外部文件目录写各个状态的截图（`capture-shots/`），用 `adb shell am instrument` 直接跑（不经 Gradle 卸载应用）就能 `adb pull` 出来；截图不进仓库。然后用 Release 包在设备上走一遍：
 
 1. 不装数据包的构建：落在岩馆，显示「这个构建没有内置岩馆数据」；底部齿轮、右上角按钮都能进「设置与关于」，里面的隐私政策和开源许可能打开。
 2. 装了数据包的构建：说明页只出现一次 → 场景出现、能转动缩放、选线 → 切到攀爬册再回来不重载 → 在页面菜单里点「语言与设置」打开原生设置 → 换一种语言，返回后页面是新语言并回到刚才的线路 → 开不开飞行模式表现一致。

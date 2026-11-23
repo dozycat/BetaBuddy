@@ -185,6 +185,9 @@ class CameraSource(context: Context) : CaptureSource {
                 // The field of view is that of the pictures actually delivered: known once the first one is here.
                 if (measured?.first != frame.width || measured?.second != frame.height) {
                     measured = frame.width to frame.height
+                    // Which clock the camera stamps its pictures with: the recorder takes it to be the system's
+                    // uptime, and a camera that counts from somewhere else gives it nothing it will keep.
+                    Log.i(TAG, "first frame ${frame.width}x${frame.height}: camera clock ${"%.1f".format(frame.time)} s, uptime ${"%.1f".format(android.os.SystemClock.uptimeMillis() / 1000.0)} s, since boot ${"%.1f".format(android.os.SystemClock.elapsedRealtimeNanos() / 1e9)} s")
                     horizontalFieldOfView = sensor?.let { (long, short, focal) -> CaptureMotion.streamFieldOfView(long, short, focal, maxOf(frame.width, frame.height), minOf(frame.width, frame.height)) }
                 }
                 onFrame?.invoke(frame)

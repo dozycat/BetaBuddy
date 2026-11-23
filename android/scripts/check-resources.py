@@ -10,8 +10,8 @@
 - every R.string / R.plurals / R.raw / R.drawable / R.mipmap / R.xml / R.color the code or
   the XML refers to exists, and no string is left unused
 - locales_config.xml lists exactly the languages that have resources
-- the manifest only allows the local analysis/notification permissions, the camera and approximate
-  location (never the microphone or precise location), removes network permissions, and both
+- the manifest only allows the local analysis/notification permissions, the camera and location
+  (approximate and precise, asked together; never the microphone), removes network permissions, and both
   backup sections of data_extraction_rules.xml exclude every domain
 - the third-party license texts are in assets/licenses
 
@@ -147,7 +147,7 @@ for folder in (RES / "raw").iterdir():
         if not (RES / language_folder / folder.name).is_file():
             problem(f"{language_folder}/{folder.name} is missing")
 
-# 5. Manifest: local analysis/notification permissions, the camera and approximate location; nothing online or backed up.
+# 5. Manifest: local analysis/notification permissions, the camera and location; nothing online or backed up.
 if manifest is not None:
     removed = set()
     for element in manifest.findall("uses-permission"):
@@ -155,7 +155,7 @@ if manifest is not None:
         if element.get(TOOLS + "node") == "remove":
             removed.add(name)
         elif name not in {"android.permission.POST_NOTIFICATIONS", "android.permission.FOREGROUND_SERVICE", "android.permission.FOREGROUND_SERVICE_DATA_SYNC", "android.permission.FOREGROUND_SERVICE_MEDIA_PROCESSING",
-                          "android.permission.CAMERA", "android.permission.ACCESS_COARSE_LOCATION"}:
+                          "android.permission.CAMERA", "android.permission.ACCESS_COARSE_LOCATION", "android.permission.ACCESS_FINE_LOCATION"}:
             problem(f"manifest declares permission {name}")
     for name in ("android.permission.INTERNET", "android.permission.ACCESS_NETWORK_STATE", "android.permission.WAKE_LOCK", "android.permission.RECORD_AUDIO"):
         if name not in removed:

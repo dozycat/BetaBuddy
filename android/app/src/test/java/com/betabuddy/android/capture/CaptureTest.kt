@@ -250,8 +250,16 @@ class CaptureTest {
     }
 
     @Test fun aRecordingStaysUnderWhatTheAnalyzerAccepts() {
-        assertTrue(CaptureLimits.MAX_SECONDS < ImportRules.MAX_SECONDS)
-        assertEquals(3, CaptureLimits.MAX_MINUTES)
+        // As long as on iOS, and never cut at what an import may be.
+        assertTrue(CaptureLimits.MAX_SECONDS < ImportRules.CAMERA_MAX_SECONDS && CaptureLimits.MAX_SECONDS > ImportRules.MAX_SECONDS)
+        assertEquals(20, CaptureLimits.MAX_MINUTES)
+        val big = 3L * 1024 * 1024 * 1024
+        assertNull(ImportRules.checkCameraClip(big, 19.9 * 60, true))
+        assertEquals(com.betabuddy.android.pose.AnalysisError.TOO_LONG, ImportRules.checkCameraClip(big, 20.1 * 60, true))
+        assertEquals(com.betabuddy.android.pose.AnalysisError.INVALID_VIDEO, ImportRules.checkCameraClip(0, 60.0, true))
+        // An import is held to what it was before.
+        assertEquals(com.betabuddy.android.pose.AnalysisError.TOO_LONG, ImportRules.check(1_000, 181.0, true))
+        assertEquals(com.betabuddy.android.pose.AnalysisError.TOO_LARGE, ImportRules.check(big, 60.0, true))
         assertTrue(CaptureLimits.STOPPING_FREE_BYTES < CaptureLimits.STARTING_FREE_BYTES)
     }
 

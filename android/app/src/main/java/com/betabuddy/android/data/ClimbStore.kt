@@ -158,9 +158,9 @@ class ClimbStore(val root: File) {
 
     /** What the analysis page said it did with this record's capture plan, kept with the record. */
     @Synchronized
-    fun setPlanUse(id: String, used: Boolean, reason: String?) {
+    fun setPlanUse(id: String, use: CapturePlanUse) {
         val capture = state.value.climbs.firstOrNull { it.id == id }?.capture ?: return
-        val next = capture.copy(planUsed = used, planUnusedReason = if (used) null else reason?.prefix(40))
+        val next = capture.copy(planUse = use)
         if (next == capture) return
         persist(state.value.copy(climbs = state.value.climbs.map { if (it.id == id) it.copy(capture = next) else it }))
     }

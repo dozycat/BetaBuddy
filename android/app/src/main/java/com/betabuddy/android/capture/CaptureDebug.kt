@@ -30,10 +30,14 @@ object CaptureDebug {
     @Volatile var noPack: Boolean = false
     /** Called with each session the screen makes, before it starts: a test shortens its limits here. */
     @Volatile var configure: ((CaptureSession) -> Unit)? = null
+    /** Draws what is being told to the page, and how fast it answers, over the picture. Never in a release build. */
+    @Volatile var overlay: Boolean = false
+    /** Where the last picture handed to the page is also written, to be looked at. */
+    @Volatile var keepFrame: File? = null
     /** The source the screen last made, so a test can interrupt it. */
     @Volatile var lastSource: CaptureSource? = null
 
     fun reset() {
-        video = null; fieldOfView = null; attitude = null; location = null; locationState = null; pack = null; packFiles = null; directory = null; lastSource = null; noPack = false; configure = null
+        video = null; fieldOfView = null; attitude = null; location = null; locationState = null; pack = null; packFiles = null; directory = null; lastSource = null; overlay = false; keepFrame = null; noPack = false; configure = null
     }
 }

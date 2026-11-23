@@ -1,5 +1,7 @@
 package com.betabuddy.android.review
 
+import com.betabuddy.android.data.CapturePlanShift
+import com.betabuddy.android.data.CapturePlanUse
 import com.betabuddy.android.data.PoseFrame
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -26,14 +28,7 @@ sealed interface AnalysisMessage {
      * A finished result. [json] is the page's own format and is stored exactly as received.
      * [climber] is the JSON text of the body measurements the page used, to start the next analysis from.
      */
-    data class Result(val id: String, val json: String, val climber: String?, val capture: PlanUse? = null) : AnalysisMessage
-
-    /**
-     * What the page says it did with the capture plan it was given: [used], or not, and then why
-     * (`"mismatch"`: the recording does not show what the plan was made from; `"unreadable"`).
-     * Only a newer page says so, and only for a record that came with a plan.
-     */
-    data class PlanUse(val used: Boolean, val reason: String?)
+    data class Result(val id: String, val json: String, val climber: String?, val capture: CapturePlanUse? = null) : AnalysisMessage
 
     /** The user asked to see this moment of the clip. Seconds. */
     data class Seek(val time: Double) : AnalysisMessage
@@ -61,7 +56,13 @@ sealed interface AnalysisMessage {
                     val climber = (body["climber"] as? JsonObject)?.toString()?.takeIf { it.length <= MAX_CLIMBER_LENGTH }
                     val capture = (body["capture"] as? JsonObject)?.let { use ->
                         val used = (use["used"] as? JsonPrimitive)?.takeIf { !it.isString }?.booleanOrNull ?: return@let null
-                        PlanUse(used, if (used) null else (use["reason"] as? JsonPrimitive)?.takeIf { it.isString }?.content?.take(40))
+                        fun text(name: String) = (use[name] as? JsonPrimitive)?.takeIf { it.isString }?.content?.takeIf { it.isNotEmpty() }?.take(40)
+                        // What the page says it did with the capture plan it was given; only a newer page says so.
+                        val shift = (use["shift"] as? JsonObject)?.let { moved ->
+                            fun number(name: String) = (moved[name] as? JsonPrimitive)?.takeIf { !it.isString }?.doubleOrNull?.takeIf { it.isFinite() }
+                            CapturePlanShift(number("dx"), number("dy"), number("rot"), number("scale")).takeIf { it != CapturePlanShift() }
+                        }
+                        CapturePlanUse(used, text("reason"), text("start"), text("finish"), shift)
                     }
                     Result(string("id").orEmpty(), result, climber, capture)
                 }

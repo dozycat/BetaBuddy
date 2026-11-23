@@ -63,6 +63,7 @@
     <string name="capture_analysing">姿态识别好了，正在分析这一趟…</string>
     <string name="capture_analysis_done">这一趟分析好了，打开就能看。</string>
     <string name="capture_analysis_failed">这一趟没能自动分析，可以在回看页再试。</string>
+    <string name="capture_plan_not_used">分析好了。取景时标的岩点和起步、结束点这次没有用上：机位和取景时对不上。</string>
     <string name="capture_stop_action">停止并保存</string>
     <string name="capture_record_action">开始录</string>
     <string name="capture_close">关闭</string>

@@ -166,14 +166,32 @@ data class CaptureInfo(
     val routeId: String? = null,
     val routeName: String? = null,
     /**
-     * What the analysis page said it did with the capture plan: true when it went by the plan's
-     * marks, false when it could not (then [planUnusedReason] says why, in the page's own code) and
-     * analysed as if there were none. Null until an analysis has said. Nothing may present the
-     * marks as used while this is not true.
+     * What the analysis page said it did with the capture plan, as it said it. Null until an
+     * analysis has said. Nothing may present the marks as used while `used` is not true.
      */
-    val planUsed: Boolean? = null,
-    val planUnusedReason: String? = null,
+    val planUse: CapturePlanUse? = null,
 )
+
+/**
+ * Whether the analysis page could use the capture plan, as it says with its result. A plan is not
+ * used when the camera was moved between framing and recording; the analysis is then as without
+ * one. Same fields as iOS `CapturePlanUse`.
+ */
+@Serializable
+data class CapturePlanUse(
+    val used: Boolean,
+    /** Why not: `mismatch`, `unreadable`, or something a newer page says. */
+    val reason: String? = null,
+    /** Whose start and finish the result went by: `user`, `venue`, `plan` or `video`. */
+    val start: String? = null,
+    val finish: String? = null,
+    /** How far the page found the camera had moved between framing and recording, when it says (packs from 1.9.3 on). */
+    val shift: CapturePlanShift? = null,
+)
+
+/** The page's own measure of how the picture moved: across, down, turned and scaled. Kept as the page gave it; the app does not read it. */
+@Serializable
+data class CapturePlanShift(val dx: Double? = null, val dy: Double? = null, val rot: Double? = null, val scale: Double? = null)
 
 @Serializable
 data class ClimbFolder(val id: String = newId(), val name: String)

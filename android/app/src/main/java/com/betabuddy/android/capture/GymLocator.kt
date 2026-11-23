@@ -21,11 +21,13 @@ import com.betabuddy.android.journal.GymSuggestions
 
 /**
  * One position fix, taken only while the capture screen is choosing a gym, from the platform's own
- * location service with the approximate-location permission. The position is used to order the
- * offline directory and is then forgotten: it is not stored and goes nowhere.
+ * location service. The position is used to order the offline directory and is then forgotten: it
+ * is not stored and goes nowhere.
  *
- * With approximate location the system reports a position a kilometre or two off, so on most
- * phones distances only order the list and are not shown as numbers (see [GymDistance.USEFUL_ACCURACY]).
+ * Both location permissions are asked for together, and the user decides: with precise location
+ * distances are shown and a gym a few hundred metres away can be offered; with approximate
+ * location the system reports a position a kilometre or two off, so distances only order the list
+ * and the nearest gym is put forward as a guess (see [GymDistance.USEFUL_ACCURACY]).
  */
 class GymLocator(context: Context, private val standIn: StandIn? = null) {
     enum class Access { NOT_ASKED, ALLOWED, REFUSED }
@@ -47,7 +49,9 @@ class GymLocator(context: Context, private val standIn: StandIn? = null) {
     var locating: Boolean by mutableStateOf(standIn?.locating ?: false)
         private set
 
-    private fun granted() = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+    private fun has(permission: String) = ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+    /** Approximate is enough to order the list; precise also lets distances be shown. Which one is the user's choice. */
+    private fun granted() = has(Manifest.permission.ACCESS_COARSE_LOCATION) || has(Manifest.permission.ACCESS_FINE_LOCATION)
 
     private fun currentAccess(): Access = when {
         standIn != null -> standIn.access
@@ -72,38 +76,52 @@ class GymLocator(context: Context, private val standIn: StandIn? = null) {
         if (standIn != null || access != Access.ALLOWED || fix != null || locating || !granted()) return
         val manager = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager ?: return
         val enabled = runCatching { manager.getProviders(true) }.getOrDefault(emptyList())
-        // The precise-only provider is of no use to approximate permission before Android 12.
-        val wanted = listOfNotNull(
+        // The satellite provider needs the precise permission before Android 12; from 12 on it answers approximate permission coarsely.
+        val precise = has(Manifest.permission.ACCESS_FINE_LOCATION)
+        val asked = listOfNotNull(
             "fused".takeIf { Build.VERSION.SDK_INT >= 31 }, LocationManager.NETWORK_PROVIDER,
-            LocationManager.GPS_PROVIDER.takeIf { Build.VERSION.SDK_INT >= 31 }, LocationManager.PASSIVE_PROVIDER,
-        )
-        val provider = wanted.firstOrNull { it in enabled } ?: return   // No position: the screen goes on with the last gym and the full directory.
+            LocationManager.GPS_PROVIDER.takeIf { precise || Build.VERSION.SDK_INT >= 31 },
+        ).filter { it in enabled }
+        // Which of them answers first differs from phone to phone (and indoors the satellites may not answer at all):
+        // each is asked once, and the first position that comes back is the one fix.
         locating = true
         var done = false
+        var pending = asked.size
+        val cancel = android.os.CancellationSignal()
         fun finish(location: Location?) {
             if (done) return
             done = true
             locating = false
-            val best = location ?: runCatching { manager.getLastKnownLocation(provider) }.getOrNull()
+            runCatching { cancel.cancel() }
+            // Nobody answered: what the system last knew, if anything, however it came by it.
+            val best = location ?: (asked + LocationManager.PASSIVE_PROVIDER).mapNotNull { provider -> runCatching { manager.getLastKnownLocation(provider) }.getOrNull() }.maxByOrNull { it.elapsedRealtimeNanos }
             if (best != null) fix = Fix(best.latitude, best.longitude, if (best.hasAccuracy()) best.accuracy.toDouble() else Double.MAX_VALUE)
         }
-        try {
-            if (Build.VERSION.SDK_INT >= 30) {
-                manager.getCurrentLocation(provider, null, ContextCompat.getMainExecutor(context)) { location -> finish(location) }
-            } else {
-                val listener = object : LocationListener {
-                    override fun onLocationChanged(location: Location) { manager.removeUpdates(this); finish(location) }
-                    @Deprecated("Deprecated in Java") override fun onStatusChanged(provider: String?, status: Int, extras: android.os.Bundle?) = Unit
-                    override fun onProviderEnabled(provider: String) = Unit
-                    override fun onProviderDisabled(provider: String) = Unit
-                }
-                @Suppress("DEPRECATION")
-                manager.requestSingleUpdate(provider, listener, Looper.getMainLooper())
-                main.postDelayed({ runCatching { manager.removeUpdates(listener) }; finish(null) }, TIMEOUT_MILLIS)
-            }
-        } catch (error: Exception) {
-            finish(null)
+        fun answered(location: Location?) {
+            pending -= 1
+            if (location != null || pending <= 0) finish(location)
         }
+        if (asked.isEmpty()) { finish(null); return }
+        for (provider in asked) {
+            try {
+                if (Build.VERSION.SDK_INT >= 30) {
+                    manager.getCurrentLocation(provider, cancel, ContextCompat.getMainExecutor(context)) { location -> answered(location) }
+                } else {
+                    val listener = object : LocationListener {
+                        override fun onLocationChanged(location: Location) { manager.removeUpdates(this); answered(location) }
+                        @Deprecated("Deprecated in Java") override fun onStatusChanged(provider: String?, status: Int, extras: android.os.Bundle?) = Unit
+                        override fun onProviderEnabled(provider: String) = Unit
+                        override fun onProviderDisabled(provider: String) = Unit
+                    }
+                    @Suppress("DEPRECATION")
+                    manager.requestSingleUpdate(provider, listener, Looper.getMainLooper())
+                    main.postDelayed({ runCatching { manager.removeUpdates(listener) } }, TIMEOUT_MILLIS)
+                }
+            } catch (error: Exception) {
+                answered(null)
+            }
+        }
+        main.postDelayed({ finish(null) }, TIMEOUT_MILLIS)
     }
 
     /** Asks again after a fix could not be had. */
@@ -115,8 +133,10 @@ class GymLocator(context: Context, private val standIn: StandIn? = null) {
         return GymDistance.suggestions(directory, fix.latitude, fix.longitude, fix.accuracy)
     }
 
-    private companion object {
-        const val KEY_REFUSED = "locationRefused"
-        const val TIMEOUT_MILLIS = 20_000L
+    companion object {
+        /** What is asked for, together: the system then offers the choice between precise and approximate. */
+        val PERMISSIONS = arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
+        private const val KEY_REFUSED = "locationRefused"
+        private const val TIMEOUT_MILLIS = 20_000L
     }
 }
