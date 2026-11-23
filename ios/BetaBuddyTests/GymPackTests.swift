@@ -301,7 +301,7 @@ final class GymPackTests: XCTestCase {
         XCTAssertNil(AnalysisMessage(body:["type":"analysisSeek"]))
         XCTAssertNil(AnalysisMessage(body:["type":"analysisSeek","t":"soon"]))
         XCTAssertNil(AnalysisMessage(body:["type":"analysisSeek","t":Double.infinity]))
-        XCTAssertEqual(AnalysisMessage(body:["type":"analysisError","code":"synthetic","message":"m"]),.failed(code:"synthetic"))
+        XCTAssertEqual(AnalysisMessage(body:["type":"analysisError","code":"synthetic","message":"m"]),.failed(code:"synthetic",message:"m"))
         XCTAssertEqual(AnalysisMessage(body:["type":"error","message":"boom"]),.pageError("boom"))
         // Progress is the page's own to show; unknown types and other shapes are ignored.
         XCTAssertNil(AnalysisMessage(body:["type":"analysisProgress","stage":"s","fraction":0.5]))

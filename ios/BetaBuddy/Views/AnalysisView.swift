@@ -152,11 +152,12 @@ final class AnalysisSession: NSObject, ObservableObject, WKNavigationDelegate, W
             catch { store.error = error.localizedDescription }
             if !climber.isEmpty { store.analysisClimber = climber }
             try? store.setPlanUse(planUse, for: climb.id)
+            log.info("result kept; capture plan \(planUse.map { "used \($0.used) reason \($0.reason ?? "-") start \($0.start ?? "-") finish \($0.finish ?? "-")" } ?? "not mentioned", privacy: .public)")
             report(store.analysisResults.contains(climb.id))
         case .seek(let time): seekRequest = time
-        case .failed(let code):
+        case .failed(let code, let message):
             // The page is showing its own explanation; nothing is saved and the page stays open.
-            log.info("page could not analyse: \(code, privacy: .public)")
+            log.info("page could not analyse: \(code, privacy: .public) — \(message, privacy: .public)")
             report(false)
         case .pageError(let text):
             log.error("page error (\(self.pageReady ? "after" : "before", privacy: .public) ready): \(text, privacy: .public)")

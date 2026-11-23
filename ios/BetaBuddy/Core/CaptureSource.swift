@@ -167,7 +167,13 @@ final class FileCaptureSource: CaptureSource, @unchecked Sendable {
     private let queue = DispatchQueue(label: "com.betabuddy.capture.file", qos: .userInitiated)
     private let lock = NSLock()
     private var running = false
+    private var rewindRequested = false
     var previewLayer: CALayer { display }
+
+    /// The file starts over from its first frame with the next frame delivered. Used when recording
+    /// starts, so that what is recorded is the clip from its beginning, like an attempt filmed from the ground.
+    func rewind() { lock.lock(); rewindRequested = true; lock.unlock() }
+    private func takeRewind() -> Bool { lock.lock(); defer { lock.unlock() }; let asked = rewindRequested; rewindRequested = false; return asked }
 
     init(url: URL, horizontalFieldOfView: Double? = nil) {
         self.url = url
@@ -209,6 +215,7 @@ final class FileCaptureSource: CaptureSource, @unchecked Sendable {
             guard reader.startReading() else { break }
             var last = CMTime.zero
             while isRunning, let sample = output.copyNextSampleBuffer() {
+                if takeRewind(), last > .zero { break }       // Back to the first frame; time goes on.
                 guard let buffer = CMSampleBufferGetImageBuffer(sample) else { continue }
                 last = CMSampleBufferGetPresentationTimeStamp(sample)
                 let time = offset + last
@@ -293,6 +300,8 @@ final class ClipRecorder: @unchecked Sendable {
     }
 
     var failed: Bool { writer.status == .failed }
+    /// Frames written and frames left out so far.
+    var counts: (frames: Int, dropped: Int) { lock.lock(); defer { lock.unlock() }; return (frames, dropped) }
 
     private func close() -> (alreadyClosed: Bool, duration: Double, counts: (Int, Int)) {
         lock.lock(); defer { lock.unlock() }

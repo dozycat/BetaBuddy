@@ -85,6 +85,37 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
     var freeBytes: () -> Int64? = CapturePipeline.freeBytes
     // Local system log only.
     private let log = Logger(subsystem: "com.betabuddy.ios", category: "capture")
+    #if DEBUG
+    /// Numbers over the picture for a first run on a phone: `-debugCaptureOverlay YES`, or a long press on the guidance line.
+    @Published var showsDebug = UserDefaults.standard.bool(forKey: "debugCaptureOverlay")
+    private var lastInfo = CaptureFrameInfo()
+    private var lastHandOverMs = 0.0, lastPrepareMs = 0.0, lastPoseMs: Double?
+    private var recentReplies: [Date] = []
+    /// `-debugFailSaves <n>` makes the next n attempts to write a clip into the album fail, so that the screen for that can be seen.
+    private var debugSaveFailures = UserDefaults.standard.integer(forKey: "debugFailSaves")
+
+    var debugText: String {
+        let now = Date()
+        let replies = recentReplies.filter { now.timeIntervalSince($0) <= 4 }
+        func number(_ value: Double?, _ format: String) -> String { value.map { String(format: format, $0) } ?? "–" }
+        var lines = [
+            "fovH \(number(source.horizontalFieldOfView, "%.1f°"))  frame \(Int(frameSize.width))×\(Int(frameSize.height))  page \(pageVersion ?? "–") \(page)",
+            "pitch \(number(lastInfo.pitch, "%+.1f°")) roll \(number(lastInfo.roll, "%+.1f°")) shake \(number(lastInfo.shake, "%.3f"))",
+            String(format: "replies %.1f/s (%d)  hand-over %.1f ms  prepare %.1f ms", Double(replies.count) / 4, metrics.assessments, lastHandOverMs, lastPrepareMs),
+            "pose \(number(lastPoseMs, "%.0f ms")) found \(metrics.posesFound)/\(metrics.poseFrames)\(metrics.poseDropped ? " DROPPED" : "")  jpeg \(metrics.frames > 0 ? metrics.jpegBytes / metrics.frames / 1024 : 0) KB",
+        ]
+        if let assessment {
+            lines.append("ok \(assessment.ok) steady \(assessment.steady) score \(number(assessment.score, "%.2f")) person \(assessment.person) holds \(assessment.holds.count)")
+            lines.append("issues " + (assessment.issues.isEmpty ? "none" : assessment.issues.map { $0.code + ($0.blocking ? "!" : "") + ($0.move.map { "→" + $0 } ?? "") }.joined(separator: " ")))
+            if let route = assessment.route { lines.append("route \(route.id) \(number(route.confidence, "%.2f"))") }
+        }
+        if phase == .recording, let recorder, let began = recordingStarted {
+            let counts = recorder.counts
+            lines.append(String(format: "rec %.0f s  frames %d  dropped %d  plan %@", now.timeIntervalSince(began), counts.frames, counts.dropped, plan.map { "\($0.utf8.count / 1024) KB" } ?? "–"))
+        }
+        return lines.joined(separator: "\n")
+    }
+    #endif
 
     init(store: ClimbStore, pack: GymPack?, source: CaptureSource) {
         self.store = store
@@ -271,6 +302,10 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
                 if frame.info.pose != nil { metrics.posesFound += 1 }
             }
             metrics.poseDropped = pipeline.poseDropped
+            #if DEBUG
+            lastInfo = frame.info; lastHandOverMs = Date().timeIntervalSince(began) * 1000; lastPrepareMs = frame.prepareSeconds * 1000
+            lastPoseMs = frame.poseSeconds.map { $0 * 1000 }
+            #endif
             if phase == .framing, page == .ready, let lastReply, Date().timeIntervalSince(lastReply) > quietLimit {
                 log.error("capture page has not answered for \(self.quietLimit, format: .fixed(precision: 0)) s")
                 page = .failed
@@ -310,6 +345,9 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
             guard phase == .framing, begun?.id == captureID else { return }
             if page == .failed { page = .ready }
             lastReply = Date()
+            #if DEBUG
+            recentReplies = (recentReplies + [Date()]).suffix(20)
+            #endif
             self.assessment = assessment
             fillInGrade()
             metrics.assessments += 1
@@ -422,6 +460,9 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
             guard seconds >= limit else { return }
             Task { @MainActor [weak self] in await self?.stop(.limit) }
         }
+        #if DEBUG
+        (source as? FileCaptureSource)?.rewind()       // A file in place of the camera is recorded from its first frame.
+        #endif
         pipeline.setRecorder(recorder)
         // The judgement of this moment is what the analysis will be given. The page uses nothing
         // that comes after `lock`, so no more frames are prepared for it and live pose stops.
@@ -472,6 +513,9 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
         guard let clip = heldClip else { return }
         if phase != .saving { phase = .saving }
         do {
+            #if DEBUG
+            if debugSaveFailures > 0 { debugSaveFailures -= 1; throw CocoaError(.fileWriteOutOfSpace) }
+            #endif
             let analyzer = VideoAnalyzer()
             let playback = try await analyzer.videoSummary(url: clip.url)
             let thumbnail = try await analyzer.thumbnail(url: clip.url)

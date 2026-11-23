@@ -346,7 +346,8 @@ enum AnalysisMessage: Equatable, Sendable {
     case result(id: String, json: String, climber: [String: Double], capture: CapturePlanUse? = nil)
     case seek(Double)
     /// The page could not analyse the clip and is showing its own explanation.
-    case failed(code: String)
+    /// `message` is the page's own explanation, kept for the local log only: the page shows it itself.
+    case failed(code: String, message: String = "")
     /// A script error. Before `ready` it means the page never came up.
     case pageError(String)
 
@@ -368,7 +369,7 @@ enum AnalysisMessage: Equatable, Sendable {
         case "analysisSeek":
             guard let time = (body["t"] as? NSNumber)?.doubleValue, time.isFinite else { return nil }
             self = .seek(max(0, time))
-        case "analysisError": self = .failed(code: String((body["code"] as? String ?? "").prefix(80)))
+        case "analysisError": self = .failed(code: String((body["code"] as? String ?? "").prefix(80)), message: String((body["message"] as? String ?? "").prefix(300)))
         case "error": self = .pageError(String((body["message"] as? String ?? "").prefix(300)))
         default: return nil   // Progress and anything newer: the page shows it itself.
         }
