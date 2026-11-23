@@ -105,8 +105,8 @@ class CaptureSession(
     /** The last tap on the picture found no hold there. Cleared by itself after a moment. */
     var tapMissed: Boolean by mutableStateOf(false)
         private set
-    /** The user said the problem the page recognised is not the one they are climbing. */
-    var routeRejected: Boolean by mutableStateOf(false)
+    /** Problems the page recognised and the user said are not the one they are climbing, by id. */
+    var rejectedRoutes: Set<String> by mutableStateOf(emptySet())
         private set
     var gymId: String? by mutableStateOf<String?>(null)
         private set
@@ -270,6 +270,7 @@ class CaptureSession(
             if (phase != Phase.Framing) { done(); return }   // A locked judgement is not started over.
             val venue = venue
             begun = Begun(captureId, frame.width, frame.height, venue)
+            rejectedRoutes = emptySet()   // The page forgets what was rejected when it starts over; so does the app.
             assessment = null
             lastReply = now
             host.evaluate(CaptureScript.begin(captureId, frame.width, frame.height, source.horizontalFieldOfView, venue))
@@ -359,7 +360,6 @@ class CaptureSession(
     fun selectColor(key: String?) {
         if (phase != Phase.Framing) return
         color = if (key == color) null else key
-        routeRejected = false
         host?.evaluate(CaptureScript.setColor(color))
     }
 
@@ -386,15 +386,16 @@ class CaptureSession(
     }
 
     /** The problem the page recognised, unless the user has said it is not that one. */
-    val recognised: CaptureRoute? get() = if (routeRejected) null else (summary?.route ?: assessment?.route)
+    val recognised: CaptureRoute? get() = (summary?.route ?: assessment?.route)?.takeIf { it.id !in rejectedRoutes }
 
     /**
-     * "Not this one". A newer page is told, and looks for another; an older one has no call for it.
-     * Either way the problem is not shown again for this attempt and is not stored with the record.
+     * "Not this one". A newer page is told, and comes back with its next candidate or with none; an
+     * older one has no call for it and keeps naming the same problem, which is then simply not
+     * shown again for this attempt. Either way a rejected problem is not stored with the record.
      */
     fun rejectRoute() {
         val route = recognised ?: return
-        routeRejected = true
+        rejectedRoutes = rejectedRoutes + route.id
         host?.evaluate(CaptureScript.rejectRoute(route.id))
     }
 
@@ -543,7 +544,7 @@ class CaptureSession(
         assessment = null
         plan = null; summary = null
         recordedSeconds = 0.0
-        routeRejected = false
+        rejectedRoutes = emptySet()
         phase = Phase.Framing
         pipeline.setFeeding(page != Page.UNAVAILABLE && started, framingInterval)
     }

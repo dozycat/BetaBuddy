@@ -346,15 +346,15 @@ class CaptureScreenTest {
         standIn(analysis = false)
         CaptureDebug.video = wall(person = false)
         // Somewhere between the gyms: none is close enough to be offered.
-        CaptureDebug.location = GymLocator.Fix(StandInPack.LATITUDE + 0.004, StandInPack.LONGITUDE, 30.0)
+        CaptureDebug.location = GymLocator.Fix(StandInPack.LATITUDE + 0.006, StandInPack.LONGITUDE, 30.0)
         launch()
         await("captureHint")
         assertFalse(exists("captureOffer"))
         rule.onNodeWithTag("captureGym").performClick()
         await("captureGymSheet")
         // Gyms whose own position is known, nearest first: a number for a place, "about" for a station.
-        assertTrue(text("nearbyGym-syn:east"), text("nearbyGym-syn:east").contains("240 m"))
-        assertTrue(text("nearbyGym-syn:station"), text("nearbyGym-syn:station").contains("about 1 km"))
+        assertTrue(text("nearbyGym-syn:east"), text("nearbyGym-syn:east").contains("470 m"))
+        assertTrue(text("nearbyGym-syn:station"), text("nearbyGym-syn:station").contains("about 600 m"))
         assertTrue(exists("nearbyGym-syn:west"))
         // The ones only placed by district or city are listed without a distance.
         assertTrue(exists("cityGym-syn:district") && exists("cityGym-syn:city") && exists("cityGym-syn:nowhere"))
