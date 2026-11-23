@@ -417,10 +417,10 @@ object CaptureMotion {
 }
 
 object CaptureLimits {
-    /** Same ceiling as an imported video ([ImportRules.MAX_SECONDS]), less a little so the finished file stays under it. */
-    const val MAX_SECONDS = ImportRules.MAX_SECONDS - 2
+    /** Twenty minutes, as on iOS: what pose recognition takes of a camera record ([ImportRules.CAMERA_MAX_SECONDS]), less a little so the finished file stays under it. */
+    const val MAX_SECONDS = ImportRules.CAMERA_MAX_SECONDS - 2
     /** That ceiling in whole minutes, for the sentence that says a recording stopped at it. */
-    val MAX_MINUTES: Int get() = (ImportRules.MAX_SECONDS / 60).toInt()
+    val MAX_MINUTES: Int get() = (ImportRules.CAMERA_MAX_SECONDS / 60).toInt()
     /** Shorter than this there is nothing to review. */
     const val MIN_SECONDS = 1.0
     /** Free space needed to start recording, and the level at which a running recording is closed. */

@@ -31,14 +31,28 @@ object ImportRules {
     const val MIN_SECONDS = 0.5
     const val MAX_SECONDS = 180.0
 
+    /**
+     * What a clip the in-app camera recorded may be, for pose recognition: as long as the camera
+     * records (twenty minutes, as on iOS, whose pose pass takes the whole of it) and of whatever
+     * size that came to. It is the app's own recording, not something to send back for trimming.
+     */
+    const val CAMERA_MAX_SECONDS = 20.0 * 60
+
     /** Returns null when the clip is acceptable. Same order of checks as iOS. */
-    fun check(sizeBytes: Long, durationSeconds: Double?, hasVideoTrack: Boolean): AnalysisError? = when {
-        sizeBytes > MAX_BYTES -> AnalysisError.TOO_LARGE
+    fun check(
+        sizeBytes: Long, durationSeconds: Double?, hasVideoTrack: Boolean,
+        maxSeconds: Double = MAX_SECONDS, maxBytes: Long = MAX_BYTES,
+    ): AnalysisError? = when {
+        sizeBytes > maxBytes -> AnalysisError.TOO_LARGE
         sizeBytes <= 0 || !hasVideoTrack -> AnalysisError.INVALID_VIDEO
         durationSeconds == null || !durationSeconds.isFinite() || durationSeconds < MIN_SECONDS -> AnalysisError.INVALID_VIDEO
-        durationSeconds > MAX_SECONDS -> AnalysisError.TOO_LONG
+        durationSeconds > maxSeconds -> AnalysisError.TOO_LONG
         else -> null
     }
+
+    /** The same check for a record made with the in-app camera. */
+    fun checkCameraClip(sizeBytes: Long, durationSeconds: Double?, hasVideoTrack: Boolean): AnalysisError? =
+        check(sizeBytes, durationSeconds, hasVideoTrack, maxSeconds = CAMERA_MAX_SECONDS, maxBytes = Long.MAX_VALUE)
 }
 
 /**

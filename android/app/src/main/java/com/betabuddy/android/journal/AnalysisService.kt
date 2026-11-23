@@ -93,7 +93,7 @@ class AnalysisService : Service() {
                     active = launch {
                         try {
                             val quality = AnalysisQuality.entries.firstOrNull { it.name.lowercase(Locale.ROOT) == climb.pendingAnalysis } ?: AnalysisQuality.BALANCED
-                            val result = VideoAnalyzer(this@AnalysisService).analyze(store.file(climb.videoName), quality) { progress ->
+                            val result = VideoAnalyzer(this@AnalysisService).analyze(store.file(climb.videoName), quality, cameraClip = climb.capture != null) { progress ->
                                 scope.launch {
                                     if (activeId == climb.id && mutableState.value.busy) {
                                         mutableState.value = ReanalysisUiState(climbId = climb.id, busy = true, progress = progress)

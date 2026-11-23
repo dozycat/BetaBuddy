@@ -58,11 +58,14 @@ class VideoAnalyzer(context: Context) {
      * @throws CancellationException when the caller cancels; no partial result is returned
      */
     suspend fun analyze(
-        video: File, quality: AnalysisQuality, useGpu: Boolean = false, progress: (Double) -> Unit,
+        video: File, quality: AnalysisQuality, useGpu: Boolean = false,
+        /** The clip was recorded by the in-app camera: it may be longer and larger than an import. */
+        cameraClip: Boolean = false,
+        progress: (Double) -> Unit,
     ): PoseAnalysis = serial.withLock {
         withContext(worker) {
             try {
-                run(video, quality, useGpu, progress)
+                run(video, quality, useGpu, cameraClip, progress)
             } catch (error: CancellationException) {
                 throw error
             } catch (error: AnalysisException) {
@@ -74,11 +77,12 @@ class VideoAnalyzer(context: Context) {
         }
     }
 
-    private suspend fun run(video: File, quality: AnalysisQuality, useGpu: Boolean, progress: (Double) -> Unit): PoseAnalysis {
+    private suspend fun run(video: File, quality: AnalysisQuality, useGpu: Boolean, cameraClip: Boolean, progress: (Double) -> Unit): PoseAnalysis {
         coroutineContext.ensureActive()
         val model = loadModel(context)
         val info = probe(video)
-        ImportRules.check(video.length(), info.durationSeconds, info.hasVideo)?.let { throw AnalysisException(it) }
+        val refused = if (cameraClip) ImportRules.checkCameraClip(video.length(), info.durationSeconds, info.hasVideo) else ImportRules.check(video.length(), info.durationSeconds, info.hasVideo)
+        refused?.let { throw AnalysisException(it) }
         val (displayWidth, displayHeight) = FrameGeometry.displaySize(info.width, info.height, info.rotation)
         val aspect = displayWidth.toDouble() / displayHeight
         if (!(aspect > 0) || !aspect.isFinite()) throw AnalysisException(AnalysisError.INVALID_VIDEO)
