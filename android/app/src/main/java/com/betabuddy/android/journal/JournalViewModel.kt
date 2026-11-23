@@ -9,6 +9,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.betabuddy.android.R
 import com.betabuddy.android.data.Archive
+import com.betabuddy.android.data.CaptureSweep
 import com.betabuddy.android.data.Climb
 import com.betabuddy.android.data.ClimbFolder
 import com.betabuddy.android.data.ClimbStore
@@ -64,8 +65,23 @@ internal object JournalGraph {
     /** Blocks on disk the first time; call from a background thread. */
     fun store(context: Context): ClimbStore = store ?: synchronized(this) {
         store ?: run {
-            VideoStager.clear(stagingDirectory(context))
-            ClimbStore(root(context)).also { store = it }
+            val created = ClimbStore(root(context))
+            // Left over from the last run: unfinished imports go; a clip the camera recorded that
+            // never reached the logbook is taken in if it can be played.
+            val app = context.applicationContext
+            CaptureSweep.sweep(
+                stagingDirectory(context), created, app.getString(R.string.journal_default_title),
+                facts = { clip ->
+                    val info = VideoAnalyzer.probe(clip)
+                    val seconds = info.durationSeconds
+                    if (!info.hasVideo || seconds == null) null else {
+                        val (width, height) = FrameGeometry.displaySize(info.width, info.height, info.rotation)
+                        CaptureSweep.Facts(seconds, width.toDouble() / height)
+                    }
+                },
+                thumbnail = { clip -> kotlinx.coroutines.runBlocking { VideoAnalyzer(app).thumbnail(clip) } },
+            )
+            created.also { store = it }
         }
     }
 }
@@ -115,6 +131,10 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
     private val poseReadyState = MutableStateFlow<String?>(null)
     /** That climb, once its pose recognition has finished with data the analysis page can use. */
     val poseReady: StateFlow<String?> = poseReadyState.asStateFlow()
+
+    private val queueMessageState = MutableStateFlow<Map<String, UiMessage>>(emptyMap())
+    /** How the analysis a camera record asked for ended, per record, for as long as the app runs. */
+    val queueMessages: StateFlow<Map<String, UiMessage>> = queueMessageState.asStateFlow()
 
     private val preferences by lazy { application.getSharedPreferences("journal", Context.MODE_PRIVATE) }
 
@@ -297,11 +317,22 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
      * Keeps what the page handed back: the result next to the clip, replacing an earlier one, and
      * the body measurements it used in this phone's preferences for the next analysis.
      */
-    suspend fun saveAnalysisResult(id: String, json: String, climber: String?): Result<Unit> = withContext(Dispatchers.IO) {
+    suspend fun saveAnalysisResult(id: String, json: String, climber: String?, planUsed: Boolean? = null, planUnusedReason: String? = null): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
             if (store().saveAnalysisResult(id, json)) resultsState.update { it + id }
+            // Whether the page went by the capture plan is kept with the record, as the page said it.
+            if (planUsed != null) store().setPlanUse(id, planUsed, planUnusedReason)
             if (climber != null) preferences.edit { putString(KEY_ANALYSIS_CLIMBER, climber) }
         }
+    }
+
+    /** The capture page's plan for a record made with the in-app camera, or null. */
+    suspend fun capturePlan(id: String): String? = withContext(Dispatchers.IO) { store().capturePlan(id) }
+
+    /** The queue is done with this record's request: cleared in the archive, with what to tell the user, if anything. */
+    suspend fun settleQueuedAnalysis(id: String, message: UiMessage?) {
+        withContext(Dispatchers.IO) { runCatching { store().setAnalysisQueued(id, false) } }
+        if (message != null) queueMessageState.update { it + (id to message) }
     }
 
     suspend fun discardAnalysisResult(id: String) {

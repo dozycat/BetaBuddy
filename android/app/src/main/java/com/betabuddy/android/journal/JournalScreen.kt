@@ -51,6 +51,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.betabuddy.android.R
+import com.betabuddy.android.capture.CaptureColourLabel
+import com.betabuddy.android.capture.CaptureScreen
 import com.betabuddy.android.data.Climb
 import com.betabuddy.android.data.UNGRADED_VALUE
 import com.betabuddy.android.data.clockText
@@ -68,6 +70,7 @@ import kotlinx.coroutines.withContext
 
 private const val ROUTE_LIST = "list"
 private const val ROUTE_IMPORT = "import"
+private const val ROUTE_CAPTURE = "capture"
 private const val ROUTE_REVIEW = "review:"
 
 /**
@@ -77,9 +80,9 @@ private const val ROUTE_REVIEW = "review:"
  * [analysisPack] is the gym pack in this build, if any; the replay offers its analysis page.
  */
 @Composable
-fun JournalScreen(onOpenSettings: () -> Unit, analysisPack: GymPack? = null) {
+fun JournalScreen(onOpenSettings: () -> Unit, analysisPack: GymPack? = null, initialCapture: Boolean = false) {
     val model: JournalViewModel = viewModel()
-    var route by rememberSaveable { mutableStateOf(ROUTE_LIST) }
+    var route by rememberSaveable { mutableStateOf(if (initialCapture) ROUTE_CAPTURE else ROUTE_LIST) }
     val climbs by model.climbs.collectAsState()
     val unreadable by model.storeUnreadable.collectAsState()
 
@@ -100,19 +103,24 @@ fun JournalScreen(onOpenSettings: () -> Unit, analysisPack: GymPack? = null) {
                 else -> Box(Modifier.fillMaxSize().background(BB.Paper))
             }
         }
-        else -> JournalList(
-            climbs = climbs, unreadable = unreadable, model = model,
-            onOpenSettings = onOpenSettings,
-            onImport = { route = ROUTE_IMPORT },
-            onOpen = { route = ROUTE_REVIEW + it.id },
-        )
+        else -> {
+            JournalList(
+                climbs = climbs, unreadable = unreadable, model = model,
+                onOpenSettings = onOpenSettings,
+                onCapture = { route = ROUTE_CAPTURE },
+                onImport = { route = ROUTE_IMPORT },
+                onOpen = { route = ROUTE_REVIEW + it.id },
+            )
+            // The camera covers the logbook, tab bar included; the list stays underneath.
+            if (route == ROUTE_CAPTURE) CaptureScreen(model = model, pack = analysisPack, onClose = { route = ROUTE_LIST }, onImport = { route = ROUTE_IMPORT })
+        }
     }
 }
 
 @Composable
 private fun JournalList(
     climbs: List<Climb>?, unreadable: Boolean, model: JournalViewModel,
-    onOpenSettings: () -> Unit, onImport: () -> Unit, onOpen: (Climb) -> Unit,
+    onOpenSettings: () -> Unit, onCapture: () -> Unit, onImport: () -> Unit, onOpen: (Climb) -> Unit,
 ) {
     var filter by rememberSaveable { mutableStateOf(JournalFilter.ALL) }
     var search by rememberSaveable { mutableStateOf("") }
@@ -155,13 +163,16 @@ private fun JournalList(
                 ColorCard(BB.Lavender) {
                     Text(stringResource(R.string.journal_empty_title), style = BB.Title)
                     Text(stringResource(R.string.journal_empty_body), style = BB.Body, color = BB.Muted)
-                    BigButton(stringResource(R.string.journal_empty_action), onImport, Modifier.testTag("importClimb"), icon = BBIcons.Plus)
+                    // Recording with the in-app camera is the main way in; a clip shot elsewhere is imported.
+                    BigButton(stringResource(R.string.capture_action), onCapture, Modifier.testTag("captureClimb"), icon = BBIcons.Video)
+                    OutlineButton(stringResource(R.string.capture_import_action), Modifier.fillMaxWidth().testTag("importClimb"), onClick = onImport)
                 }
                 LocalNote()
             }
             else -> {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    BigButton(stringResource(R.string.journal_import_action), onImport, Modifier.testTag("importClimb"), icon = BBIcons.Plus)
+                    BigButton(stringResource(R.string.capture_action), onCapture, Modifier.testTag("captureClimb"), icon = BBIcons.Video)
+                    OutlineButton(stringResource(R.string.capture_import_action), Modifier.fillMaxWidth().testTag("importClimb"), onClick = onImport)
                     LocalNote()
                 }
                 FilterBar(filter) { filter = it }
@@ -266,9 +277,13 @@ private fun ClimbRow(climb: Climb, thumbnail: File, onClick: () -> Unit) {
         Spacer(Modifier.width(16.dp))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(9.dp)) {
             Text(climb.title, style = BB.Headline, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            Text("${gradeText(climb.grade)}  /  ${clockText(climb.analysis.duration)}", style = BB.mono(12.sp, FontWeight.Bold, 0.sp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("${gradeText(climb.grade)}  /  ${clockText(climb.analysis.duration)}", style = BB.mono(12.sp, FontWeight.Bold, 0.sp))
+                CaptureColourLabel(climb)
+            }
             Text(dateText(climb.climbedAtMillis, withYear = false), style = BB.Caption, color = BB.Muted)
             if (climb.pendingAnalysis != null) Text(stringResource(R.string.journal_analysis_background), style = BB.Caption, color = BB.Muted)
+            else if (climb.capture?.analysisQueued == true) Text(stringResource(R.string.capture_analysing), style = BB.Caption, color = BB.Muted)
             if (!climb.gymName.isNullOrBlank()) Text(climb.gymName, style = BB.Caption, color = BB.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
             // The status is words plus a mark, never colour alone.
             Text(

@@ -6,6 +6,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.addJsonArray
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.doubleOrNull
@@ -25,7 +26,14 @@ sealed interface AnalysisMessage {
      * A finished result. [json] is the page's own format and is stored exactly as received.
      * [climber] is the JSON text of the body measurements the page used, to start the next analysis from.
      */
-    data class Result(val id: String, val json: String, val climber: String?) : AnalysisMessage
+    data class Result(val id: String, val json: String, val climber: String?, val capture: PlanUse? = null) : AnalysisMessage
+
+    /**
+     * What the page says it did with the capture plan it was given: [used], or not, and then why
+     * (`"mismatch"`: the recording does not show what the plan was made from; `"unreadable"`).
+     * Only a newer page says so, and only for a record that came with a plan.
+     */
+    data class PlanUse(val used: Boolean, val reason: String?)
 
     /** The user asked to see this moment of the clip. Seconds. */
     data class Seek(val time: Double) : AnalysisMessage
@@ -51,7 +59,11 @@ sealed interface AnalysisMessage {
                 "analysisResult" -> {
                     val result = string("json")?.takeIf { it.isNotEmpty() } ?: return null
                     val climber = (body["climber"] as? JsonObject)?.toString()?.takeIf { it.length <= MAX_CLIMBER_LENGTH }
-                    Result(string("id").orEmpty(), result, climber)
+                    val capture = (body["capture"] as? JsonObject)?.let { use ->
+                        val used = (use["used"] as? JsonPrimitive)?.takeIf { !it.isString }?.booleanOrNull ?: return@let null
+                        PlanUse(used, if (used) null else (use["reason"] as? JsonPrimitive)?.takeIf { it.isString }?.content?.take(40))
+                    }
+                    Result(string("id").orEmpty(), result, climber, capture)
                 }
                 "analysisSeek" -> {
                     val time = (body["t"] as? JsonPrimitive)?.takeIf { !it.isString }?.doubleOrNull
@@ -66,14 +78,19 @@ sealed interface AnalysisMessage {
 
 /** App → page calls: `window.BetaBuddyAnalysis.begin / addFrame / addPoses / run / show`. */
 object AnalysisScript {
-    /** [id] is the record's id, [width] × [height] the clip as displayed, [climber] the JSON text an earlier result came with. */
-    fun begin(id: String, width: Int, height: Int, climber: String?): String {
+    /**
+     * [id] is the record's id, [width] × [height] the clip as displayed, [climber] the JSON text an
+     * earlier result came with. [capture] is the capture page's plan for a record made with the
+     * in-app camera, handed back as the text it was stored as.
+     */
+    fun begin(id: String, width: Int, height: Int, climber: String?, capture: String? = null): String {
         val measurements = climber?.let { text -> try { Json.parseToJsonElement(text) as? JsonObject } catch (error: Exception) { null } }
         val meta = buildJsonObject {
             put("id", id)
             put("w", width)
             put("h", height)
             if (measurements != null) put("climber", measurements)
+            if (!capture.isNullOrEmpty()) put("capture", capture)
         }
         return call("begin", literal(meta.toString()))
     }

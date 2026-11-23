@@ -25,25 +25,23 @@ import java.time.ZoneId
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
-
-@Serializable
-internal data class DirectoryGym(val id: String, val name: String, val province: String = "", val city: String = "", val address: String = "", val sourceURL: String = "", val district: String = "", val aliases: List<String> = emptyList())
-@Serializable
-private data class GymDirectory(val gyms: List<DirectoryGym> = emptyList())
-private val directoryJson = Json { ignoreUnknownKeys = true }
 
 @Composable
 internal fun directoryGyms(): List<DirectoryGym> {
     val context = LocalContext.current
     val gyms by produceState<List<DirectoryGym>>(emptyList()) {
         value = withContext(Dispatchers.IO) {
-            runCatching { context.assets.open("gyms-cn.json").bufferedReader().use { directoryJson.decodeFromString<GymDirectory>(it.readText()).gyms } }.getOrDefault(emptyList())
+            loadDirectory(context)
         }
     }
     return gyms
 }
+
+/** Read once per process: the file is a few hundred kilobytes and never changes while the app runs. */
+@Volatile private var cachedDirectory: List<DirectoryGym>? = null
+internal fun loadDirectory(context: android.content.Context): List<DirectoryGym> = cachedDirectory ?: runCatching {
+    context.assets.open("gyms-cn.json").bufferedReader().use { GymDirectory.parse(it.readText()) }
+}.getOrDefault(emptyList()).also { if (it.isNotEmpty()) cachedDirectory = it }
 
 internal fun DirectoryGym.displayLabel(): String = listOf(name, city.ifBlank { province }, address.ifBlank { district }).filter(String::isNotBlank).distinct().joinToString(" · ")
 
@@ -156,7 +154,7 @@ internal fun MetadataFields(model: JournalViewModel, gymId: String?, gymName: St
 }
 
 @Composable
-private fun GymPicker(initialName: String, onSelect: (String?, String) -> Unit, onClose: () -> Unit) {
+internal fun GymPicker(initialName: String, onSelect: (String?, String) -> Unit, onClose: () -> Unit) {
     var query by rememberSaveable { mutableStateOf(initialName) }
     val gyms = directoryGyms()
     val matches = remember(gyms, query) { gyms.filter { gym -> query.trim().split(Regex("\\s+")).all { token -> (listOf(gym.name, gym.city, gym.province, gym.address, gym.district) + gym.aliases).any { it.contains(token, true) } } } }

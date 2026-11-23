@@ -170,4 +170,15 @@ class GymPackTest {
         assertTrue(GymBridge.shim.contains("handlers.gym"))
         assertTrue(GymBridge.shim.contains("JSON.stringify"))
     }
+
+    @Test fun theShimCanBeWrittenIntoAPageAsItsFirstScript() {
+        // For a WebView that cannot run a script at document start.
+        val tag = "<script>" + GymBridge.shim + "</script>"
+        assertEquals("<!doctype html>$tag<meta charset=\"utf-8\"><script src=\"a.js\"></script>", GymBridge.withShim("<!doctype html><meta charset=\"utf-8\"><script src=\"a.js\"></script>"))
+        assertEquals("\n<!DOCTYPE html>$tag\n<html></html>", GymBridge.withShim("\n<!DOCTYPE html>\n<html></html>"))
+        assertEquals("$tag<p>no doctype</p>", GymBridge.withShim("<p>no doctype</p>"))
+        assertEquals(tag, GymBridge.withShim(""))
+        // A doctype further down is not one.
+        assertEquals("$tag<p><!doctype html></p>", GymBridge.withShim("<p><!doctype html></p>"))
+    }
 }

@@ -36,7 +36,40 @@ data class GymManifest(
     val files: List<GymFile>,
     /** Languages the page says it can show. Informational; the app always passes its own `lang`. */
     val languages: List<String>,
+    /** The gyms this pack carries, when it says so. Only used to tell the capture page which one the user is in. */
+    val venues: List<Venue> = emptyList(),
 ) {
+    /**
+     * One gym of the pack. [name] and [names] (per language) are only used to recognise an entry of
+     * the offline directory; [directoryIds] are that directory's ids for this gym, when the pack gives them.
+     */
+    data class Venue(val id: String, val name: String? = null, val names: Map<String, String> = emptyMap(), val directoryIds: List<String> = emptyList())
+
+    /**
+     * The pack's venue a gym from the offline directory stands for, or null when it is not one of
+     * them. A pack that lists the directory's ids for its venues is taken at its word. Otherwise
+     * this goes by name: a directory entry is written "brand（branch）", and it is taken to be a
+     * venue when exactly one venue's name carries both parts. Anything less certain is left out;
+     * the capture page then works without a venue.
+     */
+    fun venueId(gymId: String?, gymName: String?): String? {
+        if (!gymId.isNullOrEmpty()) {
+            val listed = venues.filter { gymId in it.directoryIds }
+            if (listed.size == 1) return listed[0].id
+            if (listed.size > 1) return null
+        }
+        fun plain(text: String) = text.lowercase().filter { it.isLetterOrDigit() }
+        val parts = gymName.orEmpty().split('（', '）', '(', ')').map(::plain).filter { it.isNotEmpty() }
+        if (parts.isEmpty()) return null
+        val whole = parts.joinToString("")
+        val matches = venues.filter { venue ->
+            val known = (listOfNotNull(venue.name) + venue.names.values).map(::plain).filter { it.isNotEmpty() }
+            // A brand alone says nothing about which branch it is.
+            known.any { candidate -> candidate == whole || (parts.size >= 2 && parts.all { it in candidate }) }
+        }
+        return matches.singleOrNull()?.id
+    }
+
     /** The gym's name in the interface language when the pack provides one; the pack's own name otherwise. */
     fun displayName(language: String): String = gymNameLocalized[language]?.takeIf { it.isNotEmpty() } ?: gymName
 
@@ -81,6 +114,17 @@ data class GymManifest(
                 else -> unreadable()
             }
 
+            // Optional, and read leniently: a venue entry this build cannot read is left out.
+            val venues = (root["venues"] as? JsonArray).orEmpty().mapNotNull { item ->
+                val entry = item as? JsonObject ?: return@mapNotNull null
+                Venue(
+                    id = entry["id"].string()?.takeIf { it.isNotEmpty() } ?: return@mapNotNull null,
+                    name = entry["name"].string(),
+                    names = (entry["names"] as? JsonObject)?.mapNotNull { (language, value) -> value.string()?.let { language to it } }?.toMap().orEmpty(),
+                    directoryIds = (entry["directoryIds"] as? JsonArray).orEmpty().mapNotNull { it.string() },
+                )
+            }
+
             return GymManifest(
                 schema = int("schema", "schemaVersion", "schema_version") ?: 1,
                 packVersion = string("packVersion", "pack_version", "version") ?: unreadable(),
@@ -91,6 +135,7 @@ data class GymManifest(
                 entry = string("entry") ?: "index.html",
                 files = files.sortedBy { it.path },
                 languages = languages,
+                venues = venues,
             )
         }
     }
