@@ -224,15 +224,28 @@ struct CapturePlanUse: Codable, Equatable, Sendable {
     /// Whose start and finish the result went by: `user`, `venue`, `plan` or `video`.
     var start: String?
     var finish: String?
+    /// How far the picture had moved between framing and the clip when the plan was still accepted, as the page measured it.
+    struct Shift: Codable, Equatable, Sendable {
+        var dx: Double?
+        var dy: Double?
+        var rot: Double?
+        var scale: Double?
+    }
+    var shift: Shift?
 
-    init(used: Bool, reason: String? = nil, start: String? = nil, finish: String? = nil) {
-        self.used = used; self.reason = reason; self.start = start; self.finish = finish
+    init(used: Bool, reason: String? = nil, start: String? = nil, finish: String? = nil, shift: Shift? = nil) {
+        self.used = used; self.reason = reason; self.start = start; self.finish = finish; self.shift = shift
     }
     init?(body: Any?) {
         guard let body = body as? [String: Any], let used = body["used"] as? Bool else { return nil }
         func text(_ key: String) -> String? { (body[key] as? String).flatMap { $0.isEmpty ? nil : String($0.prefix(40)) } }
         self.used = used
         reason = text("reason"); start = text("start"); finish = text("finish")
+        if let moved = body["shift"] as? [String: Any] {
+            func number(_ key: String) -> Double? { CaptureAssessment.number(moved[key]) }
+            let shift = Shift(dx: number("dx"), dy: number("dy"), rot: number("rot"), scale: number("scale"))
+            if shift != Shift() { self.shift = shift }
+        }
     }
 }
 

@@ -290,6 +290,18 @@ final class GymPackTests: XCTestCase {
                        .result(id:"",json:"{}",climber:[:],capture:CapturePlanUse(used:true,start:"user",finish:"video")))
         XCTAssertEqual(AnalysisMessage(body:["type":"analysisResult","json":"{}","capture":["used":false,"reason":"mismatch"]]),
                        .result(id:"",json:"{}",climber:[:],capture:CapturePlanUse(used:false,reason:"mismatch")))
+        // From 1.9.3 on a plan is also used after the phone was nudged; how far is kept with the rest.
+        XCTAssertEqual(AnalysisMessage(body:["type":"analysisResult","json":"{}","capture":["used":true,"start":"user","finish":"plan","shift":["dx":0.031,"dy":-0.012,"rot":3.5,"scale":1.04,"more":1]]]),
+                       .result(id:"",json:"{}",climber:[:],capture:CapturePlanUse(used:true,start:"user",finish:"plan",shift:.init(dx:0.031,dy:-0.012,rot:3.5,scale:1.04))))
+        XCTAssertEqual(AnalysisMessage(body:["type":"analysisResult","json":"{}","capture":["used":true,"shift":["rot":"a lot","dx":0.1]]]),
+                       .result(id:"",json:"{}",climber:[:],capture:CapturePlanUse(used:true,shift:.init(dx:0.1))))
+        for odd in [["used":true,"shift":"moved"], ["used":true,"shift":[String:Any]()], ["used":true,"shift":["rot":true]]] as [[String: Any]] {
+            XCTAssertEqual(AnalysisMessage(body:["type":"analysisResult","json":"{}","capture":odd]),.result(id:"",json:"{}",climber:[:],capture:CapturePlanUse(used:true)))
+        }
+        // It survives the archive, and a record written before it existed still reads.
+        let moved = CapturePlanUse(used:true,start:"user",finish:"video",shift:.init(dx:0.03,dy:0,rot:-2,scale:0.97))
+        XCTAssertEqual(try JSONDecoder().decode(CapturePlanUse.self, from: JSONEncoder().encode(moved)), moved)
+        XCTAssertEqual(try JSONDecoder().decode(CapturePlanUse.self, from: Data(#"{"used":false,"reason":"mismatch"}"#.utf8)), CapturePlanUse(used:false,reason:"mismatch"))
         for junk in [["reason":"mismatch"], ["used":"yes"], "used", NSNull()] as [Any] {
             XCTAssertEqual(AnalysisMessage(body:["type":"analysisResult","json":"{}","capture":junk]),.result(id:"",json:"{}",climber:[:]))
         }
