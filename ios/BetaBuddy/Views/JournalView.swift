@@ -5,7 +5,12 @@ struct JournalView: View {
     @EnvironmentObject private var membership: MembershipStore
     @State private var filter = 0
     @State private var importing = false
+#if DEBUG
+    /// `-debugOpenCapture YES` opens the camera straight away: a first run on a phone can then be started from a computer.
+    @State private var capturing = UserDefaults.standard.bool(forKey: "debugOpenCapture")
+#else
     @State private var capturing = false
+#endif
     @State private var importAfterCapture = false
     @State private var search = ""
     @State private var albumFilter = JournalFilter()
