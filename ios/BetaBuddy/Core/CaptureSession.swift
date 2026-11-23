@@ -182,6 +182,7 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
             lines.append("issues " + (assessment.issues.isEmpty ? "none" : assessment.issues.map { $0.code + ($0.blocking ? "!" : "") + ($0.move.map { "→" + $0 } ?? "") }.joined(separator: " ")))
             if let route = assessment.route { lines.append("route \(route.id) \(number(route.confidence, "%.2f"))") }
         }
+        if let previewSource { lines.append("snapshot \(previewSource)") }
         if phase == .recording, let recorder, let began = recordingStarted {
             let counts = recorder.counts
             lines.append(String(format: "rec %.0f s  frames %d  dropped %d  plan %@", now.timeIntervalSince(began), counts.frames, counts.dropped, plan.map { "\($0.utf8.count / 1024) KB" } ?? "–"))
@@ -550,7 +551,7 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
         Task {
             let found = await answer(.tap(x: point.x, y: point.y, role: role))
             #if DEBUG
-            mark("tap", ["x": Double(point.x), "y": Double(point.y), "role": role.rawValue, "hold": found as? String as Any, "answered": !(found is Bool)])
+            mark("tap", ["x": Double(point.x), "y": Double(point.y), "role": role.rawValue, "hold": (found as? String).flatMap { $0.isEmpty ? nil : $0 } as Any, "pageHasTap": !(found is Bool)])
             #endif
             // An empty answer is “no hold here”. A page that answers nothing at all gives the same; `false` means it has no `tap`.
             guard let text = found as? String, text.isEmpty else { tapMissed = false; return }

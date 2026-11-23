@@ -185,6 +185,7 @@ final class FileCaptureSource: CaptureSource, @unchecked Sendable {
     private let lock = NSLock()
     private var running = false
     private var rewindRequested = false
+    private let hidesPreview = UserDefaults.standard.bool(forKey: "debugCaptureHidePreview")
     var previewLayer: CALayer { display }
 
     /// The file starts over from its first frame with the next frame delivered. Used when recording
@@ -241,8 +242,12 @@ final class FileCaptureSource: CaptureSource, @unchecked Sendable {
                 if let attachments = CMSampleBufferGetSampleAttachmentsArray(sample, createIfNecessary: true) as? [NSMutableDictionary] {
                     attachments.first?[kCMSampleAttachmentKey_DisplayImmediately] = true
                 }
-                if display.status == .failed { display.flush() }
-                display.enqueue(sample)
+                // `-debugCaptureHidePreview YES` leaves the preview black, the way a camera preview comes out in a
+                // snapshot of the view hierarchy: for trying what the diagnostics picture does then.
+                if !hidesPreview {
+                    if display.status == .failed { display.flush() }
+                    display.enqueue(sample)
+                }
                 onFrame?(buffer, time)
             }
             reader.cancelReading()

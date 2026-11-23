@@ -26,6 +26,7 @@ final class CaptureDiagnosticsTests: XCTestCase {
             "issues": [["code": "too_close", "severity": "block", "move": Optional<String>.none as Any]], "ok": true, "holds": 12, "width": CGFloat(360),
         ], at: when))
         XCTAssertEqual(data.last, 0x0A)
+        XCTAssertTrue(String(decoding: data, as: UTF8.self).contains("\"fovH\":68.1235,"))      // As written, not 68.123500000000007.
         XCTAssertEqual(data.filter { $0 == 0x0A }.count, 1)
         let object = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(object["kind"] as? String, "sample")

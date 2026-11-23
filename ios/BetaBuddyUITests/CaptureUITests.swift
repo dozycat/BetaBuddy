@@ -267,9 +267,28 @@ final class CaptureUITests: XCTestCase {
         XCTAssertTrue(app.buttons["captureRecord"].isEnabled)
         XCTAssertFalse(app.staticTexts["captureRoute"].exists)          // No gym chosen: nothing to recognise a problem in.
         keep(app, "30-ready-start-not-marked-en")
+        // A debug build leaves a picture of this screen on disk; here the preview itself comes out in it.
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS 'snapshot hierarchy'")).firstMatch.waitForExistence(timeout: 8))
         // Back to the swatches to choose again.
         app.buttons["captureChangeColour"].tap()
         XCTAssertTrue(app.buttons["captureColor-blue"].waitForExistence(timeout: 5))
+        app.buttons["captureClose"].tap()
+    }
+
+    /// A camera preview is left black in a snapshot of the view hierarchy. The picture a debug build
+    /// leaves on disk then has the frame last handed to the capture page put under the outlines instead.
+    @MainActor
+    func testDiagnosticsPictureWhenThePreviewDoesNotComeOutInASnapshot() async throws {
+        let app = try await launch(language: "en", locale: "en_US", step: 3, extra: ["-debugCaptureOverlay", "YES", "-debugCaptureHidePreview", "YES"])
+        XCTAssertTrue(app.buttons["recordClimb"].waitForExistence(timeout: 15))
+        app.buttons["recordClimb"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["captureReady"].waitForExistence(timeout: 40))
+        app.buttons["captureColor-yellow"].tap()
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS 'snapshot composite'")).firstMatch.waitForExistence(timeout: 10))
+        keep(app, "32-preview-hidden")
+        // Long enough for one more picture with the outlines in it.
+        try await Task.sleep(for: .seconds(4))
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS 'snapshot composite'")).firstMatch.exists)
         app.buttons["captureClose"].tap()
     }
 

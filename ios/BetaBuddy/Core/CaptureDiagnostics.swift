@@ -71,14 +71,15 @@ final class CaptureDiagnostics: @unchecked Sendable {
         }
     }
 
-    /// Makes any value something `JSONSerialization` takes: numbers that are not finite become null.
+    /// Makes any value something `JSONSerialization` takes: numbers that are not finite become null, and so does a missing value.
     static func clean(_ value: Any) -> Any {
         // An optional that found its way into a dictionary of `Any`.
         let mirror = Mirror(reflecting: value)
         if mirror.displayStyle == .optional { return mirror.children.first.map { clean($0.value) } ?? NSNull() }
         switch value {
         case let flag as Bool: return flag
-        case let number as Double: return number.isFinite ? (number * 10_000).rounded() / 10_000 : NSNull()
+        // Four decimals, written as such (a rounded `Double` would come out as 0.0094000000000000004).
+        case let number as Double: return number.isFinite ? NSDecimalNumber(string: String(format: "%.4f", locale: Locale(identifier: "en_US_POSIX"), number)) : NSNull()
         case let number as CGFloat: return clean(Double(number))
         case let number as Float: return clean(Double(number))
         case let list as [Any]: return list.map(clean)
