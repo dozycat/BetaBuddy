@@ -135,7 +135,7 @@ class FileCaptureSource(private val file: File, override val horizontalFieldOfVi
                 extractor.selectTrack(track)
                 val format = extractor.getTrackFormat(track)
                 val mime = format.getString(MediaFormat.KEY_MIME) ?: return
-                val decoding = MediaFormat(format)
+                val decoding = extractor.getTrackFormat(track)   // a copy of its own: the muxer gets the untouched one
                 decoding.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Flexible)
                 if (Build.VERSION.SDK_INT >= 31) decoding.setInteger(MediaFormat.KEY_COLOR_TRANSFER_REQUEST, MediaFormat.COLOR_TRANSFER_SDR_VIDEO)
                 val decoder = MediaCodec.createDecoderByType(mime)

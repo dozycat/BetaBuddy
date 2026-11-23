@@ -57,6 +57,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import com.betabuddy.android.R
+import com.betabuddy.android.capture.CaptureColourLabel
 import com.betabuddy.android.data.Climb
 import com.betabuddy.android.data.clockText
 import com.betabuddy.android.gym.GymPack
@@ -156,6 +157,8 @@ internal fun ReviewScreen(climb: Climb, model: JournalViewModel, analysisPack: G
         Row(verticalAlignment = Alignment.CenterVertically) {
             Stamp("THE REPLAY")
             Spacer(Modifier.weight(1f))
+            // A record made with the in-app camera: the colour chosen then, as a swatch without a name.
+            CaptureColourLabel(climb, Modifier.padding(end = 10.dp))
             Text(gradeText(climb.grade), style = BB.display(28.sp), maxLines = 1)
         }
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

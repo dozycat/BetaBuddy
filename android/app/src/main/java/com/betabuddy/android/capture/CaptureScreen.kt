@@ -54,6 +54,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -146,12 +147,14 @@ internal fun CaptureScreen(model: JournalViewModel, pack: GymPack?, onClose: () 
     val debug = BuildConfig.DEBUG
     val usedPack = if (debug && CaptureDebug.noPack) null else (if (debug) CaptureDebug.pack else null) ?: pack
     val packFiles = if (debug) CaptureDebug.packFiles else null
+    // In the language shown when the clip is saved, not the one the screen was opened in.
+    val defaultTitle = rememberUpdatedState(stringResource(R.string.journal_default_title))
     // Made once: the screen is recomposed whenever the logbook behind it changes, and a camera must not be set up each time.
     val session = remember {
         val video = if (debug) CaptureDebug.video else null
         val source = if (video != null) FileCaptureSource(video, CaptureDebug.fieldOfView) else CameraSource(context)
         if (debug) CaptureDebug.lastSource = source
-        CaptureSession(context, usedPack, source, language, defaultTitle = { context.getString(R.string.journal_default_title) }, packFiles = packFiles)
+        CaptureSession(context, usedPack, source, language, defaultTitle = { defaultTitle.value }, packFiles = packFiles)
             .also { if (debug) { it.motion.fixed = CaptureDebug.attitude; CaptureDebug.configure?.invoke(it) } }
     }
     val locator = remember { GymLocator(context, if (debug) CaptureDebug.location else null) }
