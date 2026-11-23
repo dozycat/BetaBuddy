@@ -69,7 +69,12 @@ struct RootView: View {
     @EnvironmentObject private var membership: MembershipStore
     @EnvironmentObject private var language: LanguageSettings
     // 0 = 岩馆, 1 = 攀爬册. `-initialTab 1` on the launch command line opens the logbook; nothing writes this key.
+    // A Debug build asked to open the camera straight away (`-debugOpenCapture YES`) starts on the logbook, where the camera is.
+    #if DEBUG
+    @State private var tab = UserDefaults.standard.bool(forKey: "debugOpenCapture") ? 1 : min(1, max(0, UserDefaults.standard.integer(forKey: "initialTab")))
+    #else
     @State private var tab = min(1, max(0, UserDefaults.standard.integer(forKey: "initialTab")))
+    #endif
     @State private var settings = false
     @StateObject private var gym = GymSession()
     var body: some View {
