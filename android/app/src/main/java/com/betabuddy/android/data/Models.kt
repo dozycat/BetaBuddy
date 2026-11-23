@@ -78,6 +78,8 @@ data class Climb(
     val climbedAt: Double? = null,
     val folderId: String? = null,
     val pendingAnalysis: String? = null,
+    /** Set for records made with the in-app camera: what was chosen and recognised while framing. */
+    val capture: CaptureInfo? = null,
 ) {
     val climbedAtMillis: Long get() = (((climbedAt ?: date) + REFERENCE_DATE_OFFSET_SECONDS) * 1000).toLong()
     val dateMillis: Long get() = ((date + REFERENCE_DATE_OFFSET_SECONDS) * 1000).toLong()
@@ -87,6 +89,63 @@ data class Climb(
         fun dateFromMillis(millis: Long): Double = millis / 1000.0 - REFERENCE_DATE_OFFSET_SECONDS
     }
 }
+
+/**
+ * A problem of the pack's own that the capture page took a recording for. A guess of the page's;
+ * the names and the rest are whatever the page said about it, and are only ever shown.
+ */
+@Serializable
+data class CaptureRoute(
+    val id: String,
+    val confidence: Double? = null,
+    val name: String? = null,
+    val nameZh: String? = null,
+    val grade: String? = null,
+    val colour: String? = null,
+    val wall: String? = null,
+) {
+    /** The name to show in this interface language: the Chinese one for Chinese, the other otherwise, whichever exists. */
+    fun displayName(language: String): String =
+        (if (language.startsWith("zh")) nameZh ?: name else name ?: nameZh)?.takeIf { it.isNotBlank() } ?: id
+}
+
+/**
+ * What the capture page had decided when recording started. Kept with the record for display; the
+ * plan itself is the page's own format and is stored next to the clip untouched.
+ */
+@Serializable
+data class CaptureSummary(
+    val color: String? = null,
+    val rgb: List<Int>? = null,
+    val holds: Int = 0,
+    val startHands: Int = 0,
+    val startFeet: Int = 0,
+    val finish: Boolean = false,
+    val ok: Boolean = false,
+    val issues: List<String> = emptyList(),
+    val route: CaptureRoute? = null,
+)
+
+/**
+ * What a record made with the in-app camera keeps about how it was framed. Imported records, and
+ * every record written before the camera existed, have none. Same fields as iOS `CaptureInfo`.
+ */
+@Serializable
+data class CaptureInfo(
+    /** The colour the user chose on the capture screen (the pack's key for it), and how it looked. */
+    val colorKey: String? = null,
+    val colorRGB: List<Int>? = null,
+    val summary: CaptureSummary? = null,
+    /** The page's capture plan is stored next to the clip and is handed to the analysis page. */
+    val hasPlan: Boolean = false,
+    /** Version of the pack whose capture page was used; null when the build had no capture page. */
+    val packVersion: String? = null,
+    /** The analysis asked for when the clip was saved has not produced a result yet. */
+    val analysisQueued: Boolean? = null,
+    /** The pack's own problem the capture page recognised and the user did not reject. */
+    val routeId: String? = null,
+    val routeName: String? = null,
+)
 
 @Serializable
 data class ClimbFolder(val id: String = newId(), val name: String)

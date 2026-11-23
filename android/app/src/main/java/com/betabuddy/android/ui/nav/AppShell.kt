@@ -51,7 +51,12 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.betabuddy.android.BuildConfig
 import com.betabuddy.android.R
+import com.betabuddy.android.capture.CaptureDebug
+import com.betabuddy.android.journal.JournalViewModel
+import com.betabuddy.android.review.AnalysisQueueHost
 import com.betabuddy.android.gym.GymScreen
 import com.betabuddy.android.gym.GymSession
 import com.betabuddy.android.journal.JournalScreen
@@ -80,7 +85,7 @@ private object Routes {
  * logbook to the gym, then leaves the app.
  */
 @Composable
-fun AppShell(gym: GymSession, initialTab: Int = Tabs.GYM) {
+fun AppShell(gym: GymSession, initialTab: Int = Tabs.GYM, initialCapture: Boolean = false) {
     val navigation = rememberNavController()
     val openSettings = { navigation.open(Routes.SETTINGS) }
 
@@ -94,7 +99,7 @@ fun AppShell(gym: GymSession, initialTab: Int = Tabs.GYM) {
 
     NavHost(navController = navigation, startDestination = Routes.HOME, modifier = Modifier.fillMaxSize().background(BB.Paper)) {
         composable(Routes.HOME) {
-            HomeScreen(gym = gym, initialTab = initialTab, onOpenSettings = openSettings)
+            HomeScreen(gym = gym, initialTab = initialTab, initialCapture = initialCapture, onOpenSettings = openSettings)
         }
         composable(Routes.SETTINGS) {
             SettingsScreen(
@@ -112,7 +117,10 @@ fun AppShell(gym: GymSession, initialTab: Int = Tabs.GYM) {
 private fun NavHostController.open(route: String) = navigate(route) { launchSingleTop = true }
 
 @Composable
-private fun HomeScreen(gym: GymSession, initialTab: Int, onOpenSettings: () -> Unit) {
+private fun HomeScreen(gym: GymSession, initialTab: Int, initialCapture: Boolean, onOpenSettings: () -> Unit) {
+    // The same logbook model the logbook tab uses: records made with the camera are analysed from here, whichever tab is in front.
+    val journal: JournalViewModel = viewModel()
+    val debug = BuildConfig.DEBUG
     var tab by rememberSaveable { mutableIntStateOf(initialTab.coerceIn(Tabs.GYM, Tabs.JOURNAL)) }
     var barHeight by rememberSaveable { mutableIntStateOf(0) }
     val journalState = rememberSaveableStateHolder()
@@ -129,6 +137,8 @@ private fun HomeScreen(gym: GymSession, initialTab: Int, onOpenSettings: () -> U
                 // bottom inset left to deal with (navigation bar, and the part of the keyboard the bar covers).
                 .consumeWindowInsets(PaddingValues(bottom = with(LocalDensity.current) { barHeight.toDp() })),
         ) {
+            // Underneath everything: the page that analyses camera records, when one is waiting.
+            AnalysisQueueHost(journal, (if (debug) CaptureDebug.pack else null) ?: gym.pack, if (debug) CaptureDebug.packFiles else null)
             // Always composed: the gym page keeps its scene and selection while the logbook is in front.
             GymScreen(session = gym, visible = tab == Tabs.GYM, onOpenSettings = onOpenSettings)
             if (tab == Tabs.JOURNAL) {
@@ -139,7 +149,7 @@ private fun HomeScreen(gym: GymSession, initialTab: Int, onOpenSettings: () -> U
                             .background(BB.Paper)
                             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)),
                     ) {
-                        JournalScreen(onOpenSettings = onOpenSettings, analysisPack = gym.pack)
+                        JournalScreen(onOpenSettings = onOpenSettings, analysisPack = gym.pack, initialCapture = initialCapture)
                     }
                 }
             }

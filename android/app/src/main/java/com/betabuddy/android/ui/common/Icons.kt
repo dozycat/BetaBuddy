@@ -127,6 +127,55 @@ object BBIcons {
         }
     }
 
+    val Close: ImageVector by lazy {
+        outline("Close", strokeWidth = 2.4f) {
+            moveTo(6f, 6f); lineTo(18f, 18f)
+            moveTo(18f, 6f); lineTo(6f, 18f)
+        }
+    }
+
+    val ChevronDown: ImageVector by lazy {
+        outline("ChevronDown", strokeWidth = 2.4f) {
+            moveTo(5.5f, 9f); lineTo(12f, 15.5f); lineTo(18.5f, 9f)
+        }
+    }
+
+    /** A map pin: a gym, a place. */
+    val Pin: ImageVector by lazy {
+        outline("Pin", strokeWidth = 1.9f) {
+            moveTo(12f, 21f); lineTo(6.6f, 13.6f)
+            arcTo(6.6f, 6.6f, 0f, true, true, 17.4f, 13.6f)
+            close()
+            moveTo(14.2f, 9.6f); arcTo(2.2f, 2.2f, 0f, true, true, 9.8f, 9.6f); arcTo(2.2f, 2.2f, 0f, true, true, 14.2f, 9.6f)
+        }
+    }
+
+    /** A video camera: recording. */
+    val Video: ImageVector by lazy {
+        outline("Video", strokeWidth = 1.9f) {
+            moveTo(5f, 7f); lineTo(13f, 7f)
+            arcTo(2f, 2f, 0f, false, true, 15f, 9f)
+            lineTo(15f, 15f)
+            arcTo(2f, 2f, 0f, false, true, 13f, 17f)
+            lineTo(5f, 17f)
+            arcTo(2f, 2f, 0f, false, true, 3f, 15f)
+            lineTo(3f, 9f)
+            arcTo(2f, 2f, 0f, false, true, 5f, 7f)
+            close()
+            moveTo(15f, 11f); lineTo(21f, 7.5f); lineTo(21f, 16.5f); lineTo(15f, 13f)
+        }
+    }
+
+    /** An arrow turning back: undo what was marked. */
+    val Undo: ImageVector by lazy {
+        outline("Undo", strokeWidth = 2.2f) {
+            moveTo(8f, 5f); lineTo(4f, 9f); lineTo(8f, 13f)
+            moveTo(4f, 9f); lineTo(14f, 9f)
+            arcTo(5f, 5f, 0f, false, true, 14f, 19f)
+            lineTo(9f, 19f)
+        }
+    }
+
     /** A circle with an exclamation mark: something did not open. */
     val Alert: ImageVector by lazy {
         outline("Alert", strokeWidth = 1.6f) {

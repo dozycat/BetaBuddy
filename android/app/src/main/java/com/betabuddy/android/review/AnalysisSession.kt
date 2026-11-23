@@ -46,6 +46,12 @@ internal class AnalysisSession(
     private val scope: CoroutineScope,
     private val poses: () -> List<PoseFrame>,
     private val onSeek: (Double) -> Unit,
+    private val packFiles: PackWebView.Files? = null,
+    /**
+     * Told once how a fresh analysis ended: true when its result has been saved, false when the
+     * page could not analyse or did not come up. Only the queue that runs the page out of sight listens.
+     */
+    private val onOutcome: ((Boolean) -> Unit)? = null,
 ) {
     /** Why the page is covered. The screen turns these into text in the current language. */
     sealed interface Failure {
@@ -82,11 +88,12 @@ internal class AnalysisSession(
         ready = false
         failure = null
         val created = try {
-            PackWebView(context, pack, Page())
+            PackWebView(context, pack, Page(), packFiles)
         } catch (error: Exception) {
             // No usable system WebView on this device.
             Log.e(TAG, "web view unavailable", error)
             failure = Failure.Load(error.message ?: error.javaClass.simpleName)
+            onOutcome?.invoke(false)
             return
         }
         host = created
@@ -121,15 +128,19 @@ internal class AnalysisSession(
                 // After showing a saved result the page no longer names the record; it is still this one.
                 is AnalysisMessage.Result -> if (message.id.isEmpty() || message.id == climbId) {
                     scope.launch {
-                        saving.withLock { model.saveAnalysisResult(climbId, message.json, message.climber) }
+                        val saved = saving.withLock { model.saveAnalysisResult(climbId, message.json, message.climber) }
                             .onFailure { Log.e(TAG, "result not saved", it) }
+                        onOutcome?.invoke(saved.isSuccess)
                     }
                 }
                 is AnalysisMessage.Seek -> onSeek(message.time)
                 // The page is already showing why. Nothing is saved and the page stays open.
-                is AnalysisMessage.Error -> Log.i(TAG, "analysis page could not analyse: ${message.code}")
+                is AnalysisMessage.Error -> {
+                    Log.i(TAG, "analysis page could not analyse: ${message.code}")
+                    onOutcome?.invoke(false)
+                }
                 // Anything else is ignored, except a script error before the page ever came up.
-                null -> if (!ready && GymMessage.parse(json) is GymMessage.Error) failure = Failure.Page
+                null -> if (!ready && GymMessage.parse(json) is GymMessage.Error) { failure = Failure.Page; onOutcome?.invoke(false) }
             }
         }
 
@@ -137,6 +148,7 @@ internal class AnalysisSession(
 
         override fun onLoadFailed(description: String) {
             failure = Failure.Load(description)
+            onOutcome?.invoke(false)
         }
 
         override fun onRendererGone() {
@@ -145,6 +157,7 @@ internal class AnalysisSession(
             host = null
             webView = null
             failure = Failure.RendererGone
+            onOutcome?.invoke(false)
         }
     }
 
@@ -158,23 +171,27 @@ internal class AnalysisSession(
         try {
             if (!withContext(Dispatchers.IO) { video.isFile }) {
                 failure = Failure.Video(R.string.journal_review_video_missing)
+                onOutcome?.invoke(false)
                 return
             }
             val info = withContext(Dispatchers.IO) { VideoAnalyzer.probe(video) }
             val duration = info.durationSeconds
             if (!info.hasVideo || duration == null) {
                 failure = Failure.Video(R.string.journal_error_invalid_video)
+                onOutcome?.invoke(false)
                 return
             }
             val (width, height) = FrameGeometry.displaySize(info.width, info.height, info.rotation)
             val (frameWidth, frameHeight) = AnalysisFeed.frameSize(width, height)
-            host?.evaluate(AnalysisScript.begin(climbId, width, height, model.analysisClimber()))
+            // A record made with the in-app camera brings the capture page's plan; any other has none.
+            host?.evaluate(AnalysisScript.begin(climbId, width, height, model.analysisClimber(), model.capturePlan(climbId)))
             var index = 0
             val delivered = AnalysisFrames.extract(video, AnalysisFeed.frameTimes(duration), frameWidth, frameHeight) { time, jpeg ->
                 withContext(Dispatchers.Main) { host?.evaluate(AnalysisScript.addFrame(index++, time, jpeg)) }
             }
             if (delivered < AnalysisFeed.MIN_FRAMES) {
                 failure = Failure.Video(R.string.journal_error_invalid_video)
+                onOutcome?.invoke(false)
                 return
             }
             val stored = poses()

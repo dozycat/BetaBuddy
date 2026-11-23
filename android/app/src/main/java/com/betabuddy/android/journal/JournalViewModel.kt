@@ -116,6 +116,10 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
     /** That climb, once its pose recognition has finished with data the analysis page can use. */
     val poseReady: StateFlow<String?> = poseReadyState.asStateFlow()
 
+    private val queueMessageState = MutableStateFlow<Map<String, UiMessage>>(emptyMap())
+    /** How the analysis a camera record asked for ended, per record, for as long as the app runs. */
+    val queueMessages: StateFlow<Map<String, UiMessage>> = queueMessageState.asStateFlow()
+
     private val preferences by lazy { application.getSharedPreferences("journal", Context.MODE_PRIVATE) }
 
     private var stagingJob: Job? = null
@@ -302,6 +306,15 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
             if (store().saveAnalysisResult(id, json)) resultsState.update { it + id }
             if (climber != null) preferences.edit { putString(KEY_ANALYSIS_CLIMBER, climber) }
         }
+    }
+
+    /** The capture page's plan for a record made with the in-app camera, or null. */
+    suspend fun capturePlan(id: String): String? = withContext(Dispatchers.IO) { store().capturePlan(id) }
+
+    /** The queue is done with this record's request: cleared in the archive, with what to tell the user, if anything. */
+    suspend fun settleQueuedAnalysis(id: String, message: UiMessage?) {
+        withContext(Dispatchers.IO) { runCatching { store().setAnalysisQueued(id, false) } }
+        if (message != null) queueMessageState.update { it + (id to message) }
     }
 
     suspend fun discardAnalysisResult(id: String) {

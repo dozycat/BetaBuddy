@@ -38,7 +38,13 @@ import java.io.IOException
  *
  * Main thread only. Throws from the constructor when the device has no usable system WebView.
  */
-class PackWebView(context: Context, private val pack: GymPack, private val listener: Listener) {
+class PackWebView(context: Context, private val pack: GymPack, private val listener: Listener, private val files: Files? = null) {
+    /** Where the pack's files are read from. The app reads its own assets; device tests serve a synthetic pack. */
+    fun interface Files {
+        /** The file at this pack-relative path, or null when there is none. */
+        fun open(path: String): java.io.InputStream?
+    }
+
     /** All calls arrive on the main thread, and none after [dispose]. */
     interface Listener {
         /** The JSON text of one message the page posted to its `gym` handler. */
@@ -67,6 +73,12 @@ class PackWebView(context: Context, private val pack: GymPack, private val liste
 
     fun evaluate(script: String) {
         if (!disposed) view.evaluateJavascript(script, null)
+    }
+
+    /** [answer] gets the JSON text of what the script evaluated to, on the main thread; nothing once disposed. */
+    fun evaluate(script: String, answer: (String?) -> Unit) {
+        if (disposed) return
+        view.evaluateJavascript(script) { value -> if (!disposed) answer(value) }
     }
 
     fun dispose() {
@@ -115,7 +127,7 @@ class PackWebView(context: Context, private val pack: GymPack, private val liste
         val loader = WebViewAssetLoader.Builder()
             .setDomain(GymPack.HOST)
             .setHttpAllowed(false)
-            .addPathHandler(GymPack.PATH_PREFIX, PackPathHandler(context.applicationContext.assets, pack))
+            .addPathHandler(GymPack.PATH_PREFIX, PackPathHandler(files ?: AssetFiles(context.applicationContext.assets), pack))
             .build()
         view.webViewClient = Client(loader, documentStartShim = installBridge(view))
         view.webChromeClient = object : WebChromeClient() {
@@ -203,15 +215,19 @@ class PackWebView(context: Context, private val pack: GymPack, private val liste
         }
     }
 
-    /** Serves `/gympack/<path>` from the pack in the app's assets, and only paths the manifest lists. */
-    private class PackPathHandler(private val assets: AssetManager, private val pack: GymPack) : WebViewAssetLoader.PathHandler {
+    private class AssetFiles(private val assets: AssetManager) : Files {
+        override fun open(path: String): java.io.InputStream? = try {
+            assets.open(GymPack.ASSET_DIRECTORY + "/" + path)
+        } catch (error: IOException) {
+            null
+        }
+    }
+
+    /** Serves `/gympack/<path>` from the pack (the app's assets, outside tests), and only paths the manifest lists. */
+    private class PackPathHandler(private val files: Files, private val pack: GymPack) : WebViewAssetLoader.PathHandler {
         override fun handle(path: String): WebResourceResponse? {
             if (path !in pack.servedPaths) return null
-            val stream = try {
-                assets.open(GymPack.ASSET_DIRECTORY + "/" + path)
-            } catch (error: IOException) {
-                return null
-            }
+            val stream = files.open(path) ?: return null
             val (type, charset) = GymPack.contentType(path)
             return WebResourceResponse(type, charset, 200, "OK", RESPONSE_HEADERS, stream)
         }

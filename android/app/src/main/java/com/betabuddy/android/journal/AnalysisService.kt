@@ -42,6 +42,8 @@ class AnalysisService : Service() {
         super.onCreate()
         val manager = getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(NotificationChannel(CHANNEL, getString(R.string.journal_analyze_skeleton), NotificationManager.IMPORTANCE_LOW))
+        // Pose recognition gives way to the camera: the running one is stopped, its request is kept.
+        scope.launch { CameraGate.open.collect { open -> if (open) active?.cancel() } }
         val notification = notification()
         if (Build.VERSION.SDK_INT >= 35) {
             startForeground(NOTIFICATION, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROCESSING)
@@ -78,6 +80,11 @@ class AnalysisService : Service() {
             val store = withContext(Dispatchers.IO) { JournalGraph.store(this@AnalysisService) }
             try {
                 while (true) {
+                    // The in-app camera is in use: requests stay in the archive and start again when it lets go.
+                    if (CameraGate.open.value) {
+                        mutableState.value = ReanalysisUiState()
+                        break
+                    }
                     val climb = store.climbs.firstOrNull { it.pendingAnalysis != null } ?: break
                     activeId = climb.id
                     mutableState.value = ReanalysisUiState(climbId = climb.id, busy = true)
@@ -168,6 +175,7 @@ class AnalysisService : Service() {
         }
 
         internal fun start(context: Context) {
+            if (CameraGate.open.value) return   // Picked up when the camera closes.
             try {
                 context.startForegroundService(Intent(context, AnalysisService::class.java))
             } catch (_: RuntimeException) {

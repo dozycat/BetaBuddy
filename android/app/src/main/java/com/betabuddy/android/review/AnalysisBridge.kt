@@ -66,14 +66,19 @@ sealed interface AnalysisMessage {
 
 /** App → page calls: `window.BetaBuddyAnalysis.begin / addFrame / addPoses / run / show`. */
 object AnalysisScript {
-    /** [id] is the record's id, [width] × [height] the clip as displayed, [climber] the JSON text an earlier result came with. */
-    fun begin(id: String, width: Int, height: Int, climber: String?): String {
+    /**
+     * [id] is the record's id, [width] × [height] the clip as displayed, [climber] the JSON text an
+     * earlier result came with. [capture] is the capture page's plan for a record made with the
+     * in-app camera, handed back as the text it was stored as.
+     */
+    fun begin(id: String, width: Int, height: Int, climber: String?, capture: String? = null): String {
         val measurements = climber?.let { text -> try { Json.parseToJsonElement(text) as? JsonObject } catch (error: Exception) { null } }
         val meta = buildJsonObject {
             put("id", id)
             put("w", width)
             put("h", height)
             if (measurements != null) put("climber", measurements)
+            if (!capture.isNullOrEmpty()) put("capture", capture)
         }
         return call("begin", literal(meta.toString()))
     }

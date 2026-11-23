@@ -6,8 +6,6 @@
     <string name="journal_tagline">No go is wasted.</string>
     <string name="journal_empty_title">Your first climb\nstarts here.</string>
     <string name="journal_empty_body">Pick a climbing video, replay the skeleton and the details on your phone, and note how it felt and the beta you want to try next.</string>
-    <string name="journal_empty_action">Log your first climb</string>
-    <string name="journal_import_action">Import a climb</string>
     <string name="journal_local_note">Videos stay on your phone · no account</string>
     <string name="journal_filter_cd">Filter records</string>
     <string name="journal_filter_all">All</string>

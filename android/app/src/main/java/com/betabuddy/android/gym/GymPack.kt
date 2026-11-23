@@ -51,11 +51,24 @@ class GymPack(val manifest: GymManifest) {
         return URI("https", HOST, PATH_PREFIX + ANALYSIS_PAGE, "lang=$language", null).toASCIIString().takeIf(::allows)
     }
 
+    /**
+     * Whether this pack carries the capture page. Without it the camera still records and saves;
+     * there is just no check of the camera position and nothing is recognised.
+     */
+    val supportsCapture: Boolean get() = manifest.files.any { it.path == CAPTURE_PAGE }
+
+    /** Address of the pack's capture page, loaded the same way as the entry page, or null when the pack has none. */
+    fun captureUrl(language: String): String? {
+        if (!supportsCapture) return null
+        return URI("https", HOST, PATH_PREFIX + CAPTURE_PAGE, "lang=$language", null).toASCIIString().takeIf(::allows)
+    }
+
     companion object {
         /** Directory under the app's assets. Ignored by Git; filled by the install script. */
         const val ASSET_DIRECTORY = "gympack"
         const val MANIFEST = "manifest.json"
         const val ANALYSIS_PAGE = "analysis.html"
+        const val CAPTURE_PAGE = "capture.html"
 
         /** WebViewAssetLoader's reserved domain. It is never resolved; requests to it are answered locally. */
         const val HOST = "appassets.androidplatform.net"

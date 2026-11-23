@@ -6,8 +6,6 @@
     <string name="journal_tagline">沒有白爬的一趟。</string>
     <string name="journal_empty_title">第一趟，\n從這裡開始。</string>
     <string name="journal_empty_body">選一段攀爬影片，在手機上回看骨架和動作細節，把感受和下一次想試的 beta 留下來。</string>
-    <string name="journal_empty_action">記錄第一趟</string>
-    <string name="journal_import_action">匯入這一趟</string>
     <string name="journal_local_note">影片留在手機裡 · 不需要帳號</string>
     <string name="journal_filter_cd">記錄篩選</string>
     <string name="journal_filter_all">全部</string>

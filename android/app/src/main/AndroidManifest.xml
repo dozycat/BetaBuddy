@@ -3,8 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <!--
-        The app never goes online and asks the user for no permission. It declares none of its
-        own, and these entries remove the ones dependencies' manifests would otherwise merge in:
+        The app never goes online. These entries remove the permissions dependencies' manifests
+        would otherwise merge in:
         INTERNET and ACCESS_NETWORK_STATE from Google's datatransport library (MediaPipe Tasks
         pulls it in for telemetry upload), ACCESS_NETWORK_STATE and WAKE_LOCK from Media3
         (bandwidth estimation and background playback, neither of which a local replay uses).
@@ -25,6 +25,21 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROCESSING" />
+
+    <!--
+        The in-app camera, asked for when the user opens it: the back camera, video only (no
+        RECORD_AUDIO: no sound is recorded). Approximate location is asked for only when the user
+        taps "find gyms nearby" in the capture screen; one fix from the platform's own location
+        service orders the bundled gym directory on the device and is then forgotten.
+    -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission
+        android:name="android.permission.RECORD_AUDIO"
+        tools:node="remove" />
+    <uses-feature
+        android:name="android.hardware.camera.any"
+        android:required="false" />
 
     <application
         android:allowBackup="false"
