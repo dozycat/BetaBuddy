@@ -21,7 +21,7 @@ Android：
 - 存储：`filesDir/BetaBuddy/` 下的 JSON 与文件，原子写入，排除云备份和设备间迁移。
 - 岩馆：`WebView` + `WebViewAssetLoader`，本地地址 `https://appassets.androidplatform.net/gympack/`，只提供清单列出的文件；垫片把页面的 `window.webkit.messageHandlers.gym` 接到 `addJavascriptInterface`。
 - 语言：AppCompat 的按应用语言接口；`values/` 是英语。
-- Gradle（wrapper）+ AGP 内置 Kotlin，版本全部固定在 `android/gradle/libs.versions.toml`。仅声明本地分析前台服务和可选通知权限，不申请网络、相册或存储权限。
+- Gradle（wrapper）+ AGP 内置 Kotlin，版本全部固定在 `android/gradle/libs.versions.toml`。声明本地分析前台服务、可选通知、相机（应用内拍摄，只录画面）和大致位置（按距离给岩馆排序，只用平台自带的定位）；不申请麦克风、精确位置、网络、相册或存储权限。
 
 ## 目录
 
@@ -83,7 +83,7 @@ Android 的版本号在 `android/app/build.gradle.kts`（`versionName`、`versio
 
 **全国岩馆目录例外。** 用户要求为攀爬册离线筛选整理全国岩馆信息：公开来源的馆名、行政区、地址与来源链接可以进入独立的 `gyms-cn.json` 目录，保留来源与覆盖说明，使用可复跑脚本更新。这不授权把上述 3D GymPack、墙名、线路或求解器内容提交进来。目录测试仍使用合成数据；不得把目录快照描述为实时或完整名录。应用户为按距离推荐岩馆提出的要求，目录里可以保存由 OpenStreetMap（ODbL）推得的近似坐标（每条带精度标注）和对应的地理编码缓存；这些坐标不得当作精确位置展示。
 
-**不引入联网依赖。** 不加会访问网络的 SDK、遥测、远程配置或远程资源。岩馆页面只能读数据包目录，`http(s)` / `ws(s)` / `ftp` 被内容规则拦截。新增第三方代码要固定版本和校验值，并更新 `ios/THIRD_PARTY.md`。Android 只声明本地分析前台服务和可选通知权限：新增依赖先看它的 Manifest 会合并进来什么，权限和上报组件在应用的 Manifest 里用 `tools:node="remove"` 去掉，并更新 `android/THIRD_PARTY.md`。
+**不引入联网依赖。** 不加会访问网络的 SDK、遥测、远程配置或远程资源。岩馆页面只能读数据包目录，`http(s)` / `ws(s)` / `ftp` 被内容规则拦截。新增第三方代码要固定版本和校验值，并更新 `ios/THIRD_PARTY.md`。Android 只声明本地分析前台服务、可选通知、`CAMERA` 和 `ACCESS_COARSE_LOCATION`：新增依赖先看它的 Manifest 会合并进来什么，权限和上报组件在应用的 Manifest 里用 `tools:node="remove"` 去掉，并更新 `android/THIRD_PARTY.md`。
 
 **分析诚实性。** 不展示没验证过的评分或诊断。骨架不跨检测空白延续。攀爬册的「分析这一趟」由数据包里的分析页面完成：岩点、墙面和动作是从视频里自动认的，会认错；数字是模型里比出来的相对值，不说成教练意见——原生界面上配套的文字守同一个口径。岩馆内容标明非官方，推演不说成建议。新增文案和指标先对照 `docs/ios/product-design.md` 和 `docs/ios/gym-design.md`。验证记录只写实际做过的事，没做的列在「尚未验证」里。
 
