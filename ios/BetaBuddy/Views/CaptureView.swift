@@ -220,20 +220,24 @@ struct CaptureView: View {
                 GymWebView(webView: webView).allowsHitTesting(false).accessibilityHidden(true)
             }
             BB.ink.ignoresSafeArea()
-            VStack(spacing: 10) {
+            // Every row but the picture is kept low, so that the picture gets what is left: about four
+            // fifths of the screen's width on an ordinary iPhone. Nothing is drawn over the picture but the
+            // holds themselves: guidance sits above it (the finish is at the top of the wall), marking below it.
+            VStack(spacing: 6) {
                 topBar
                 if let offered { offer(offered) }
-                // Nothing is drawn over the picture but the holds themselves: guidance sits above it (the
-                // finish is at the top of the wall), colours and marking below it (the start is at the bottom).
-                if framing { guidance }
-                picture
-                if framing { colours }
-                else if session.phase == .recording {
-                    Text("手机放稳，去爬吧。爬完回来点停止。").font(.subheadline.bold()).multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true).frame(maxWidth: .infinity)
+                if framing {
+                    #if DEBUG
+                    // A long press on the guidance line shows or hides the numbers.
+                    guidance.onLongPressGesture(minimumDuration: 1) { session.showsDebug.toggle() }
+                    #else
+                    guidance
+                    #endif
                 }
+                picture
+                if framing { notes }
                 bottomBar
-            }.padding(.horizontal, 12).padding(.vertical, 8)
+            }.padding(.horizontal, 10).padding(.vertical, 6)
         }
         .foregroundStyle(BB.paper)
         .statusBarHidden(true)
@@ -275,7 +279,7 @@ struct CaptureView: View {
                 // A clip that has not made it into the album is not dropped by closing the screen without a word.
                 if case .saveFailed = session.phase { confirmingDiscard = true } else { Task { await session.close(); dismiss() } }
             } label: {
-                Image(systemName: "xmark").font(.system(size: 16, weight: .bold)).frame(width: 44, height: 44)
+                Image(systemName: "xmark").font(.system(size: 15, weight: .bold)).frame(width: 40, height: 40)
                     .background(.white.opacity(0.14), in: Circle())
             }.buttonStyle(.plain).accessibilityLabel(Text("关闭")).accessibilityIdentifier("captureClose")
                 .disabled(session.phase == .recording || session.phase == .saving)
@@ -288,17 +292,17 @@ struct CaptureView: View {
                         Text("正在录").font(.subheadline.bold())
                         Text(verbatim: clockText(context.date.timeIntervalSince(began))).font(.system(.subheadline, design: .monospaced).bold()).monospacedDigit()
                             .accessibilityIdentifier("captureElapsed")
-                    }.padding(.horizontal, 14).frame(minHeight: 44).background(.white.opacity(0.14), in: Capsule())
+                    }.padding(.horizontal, 14).frame(minHeight: 40).background(.white.opacity(0.14), in: Capsule())
                 }
                 Spacer(minLength: 0)
-                Color.clear.frame(width: 44, height: 44)
+                Color.clear.frame(width: 40, height: 40)
             } else {
                 Button { choosingGym = true } label: {
                     HStack(spacing: 6) {
                         Image(systemName: "mappin.and.ellipse")
                         if session.gymName.isEmpty { Text("选择岩馆") } else { Text(verbatim: session.gymName) }
                         Image(systemName: "chevron.down").font(.caption2.bold())
-                    }.font(.subheadline.bold()).lineLimit(1).padding(.horizontal, 12).frame(minHeight: 44)
+                    }.font(.subheadline.bold()).lineLimit(1).padding(.horizontal, 12).frame(minHeight: 40)
                         .frame(maxWidth: .infinity, alignment: .leading).background(.white.opacity(0.14), in: Capsule())
                 }.buttonStyle(.plain).disabled(session.phase != .framing).accessibilityIdentifier("captureGym")
                 Menu {
@@ -312,7 +316,7 @@ struct CaptureView: View {
                         if session.gradePrefilled { Image(systemName: "wand.and.stars").font(.caption.bold()).foregroundStyle(BB.lime) }
                         Text(verbatim: gradeText(session.grade))
                         Image(systemName: "chevron.down").font(.caption2.bold())
-                    }.font(.subheadline.bold()).lineLimit(1).padding(.horizontal, 12).frame(minHeight: 44)
+                    }.font(.subheadline.bold()).lineLimit(1).padding(.horizontal, 12).frame(minHeight: 40)
                         .background(.white.opacity(0.14), in: Capsule())
                 }.disabled(session.phase != .framing).accessibilityLabel(Text("线路难度")).accessibilityValue(Text(verbatim: gradeText(session.grade)))
                     .accessibilityIdentifier("captureGrade")
@@ -327,30 +331,30 @@ struct CaptureView: View {
             switch offer {
             case .ask:
                 Button { locator.ask() } label: {
-                    Text("按距离找附近的岩馆").font(.caption.bold()).frame(maxWidth: .infinity, alignment: .leading).frame(minHeight: 36).contentShape(Rectangle())
+                    Text("按距离找附近的岩馆").font(.caption.bold()).frame(maxWidth: .infinity, alignment: .leading).frame(minHeight: 32).contentShape(Rectangle())
                 }.buttonStyle(.plain).accessibilityIdentifier("askLocationHere")
                 dismissOffer("ask")
             case .here(let gym), .nearest(let gym), .guess(let gym):
                 Group {
                     if case .guess = offer { Text("可能在：\(gym.gym.name)") }
                     else { Text("离你最近：\(gym.gym.name) · \(CaptureText.distance(gym) ?? "")") }
-                }.font(.caption.bold()).fixedSize(horizontal: false, vertical: true).frame(maxWidth: .infinity, alignment: .leading)
+                }.font(.caption.bold()).lineLimit(1).minimumScaleFactor(0.8).frame(maxWidth: .infinity, alignment: .leading)
                     .accessibilityIdentifier("gymOfferText")
                 Button { session.gymId = gym.gym.id; session.gymName = gym.gym.name } label: {
                     // With a gym already selected this replaces it, and says so.
                     Group { if case .here = offer, !session.gymName.isEmpty { Text("换成这家") } else { Text("选这家") } }
-                        .font(.caption.bold()).padding(.horizontal, 12).frame(minHeight: 36)
+                        .font(.caption.bold()).padding(.horizontal, 12).frame(minHeight: 28)
                         .foregroundStyle(BB.ink).background(BB.lime, in: Capsule())
                 }.buttonStyle(.plain).accessibilityIdentifier("useNearestGym")
                 dismissOffer(gym.gym.id)
             }
         }
-        .padding(.leading, 12).padding(.trailing, 4).padding(.vertical, 4)
-        .background(.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 14))
+        .padding(.leading, 12).padding(.trailing, 2).padding(.vertical, 1)
+        .background(.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 12))
     }
     private func dismissOffer(_ key: String) -> some View {
         Button { declined = key } label: {
-            Image(systemName: "xmark").font(.caption.bold()).frame(width: 36, height: 36)
+            Image(systemName: "xmark").font(.caption.bold()).frame(width: 32, height: 32)
         }.buttonStyle(.plain).accessibilityLabel(Text("不用了")).accessibilityIdentifier("declineNearestGym")
     }
 
@@ -370,6 +374,16 @@ struct CaptureView: View {
                     if session.phase == .framing || session.phase == .recording, session.color != nil, let holds = session.assessment?.holds {
                         CaptureOverlay(holds: holds, size: size).opacity(session.phase == .recording ? 0.45 : 1)
                     }
+                    #if DEBUG
+                    // Numbers for a first run on a phone. Debug builds only; never part of the release interface.
+                    if session.showsDebug {
+                        TimelineView(.periodic(from: .now, by: 1)) { _ in
+                            Text(verbatim: session.debugText).font(.system(size: 9, weight: .semibold, design: .monospaced))
+                                .foregroundStyle(.white).padding(5).background(.black.opacity(0.6), in: RoundedRectangle(cornerRadius: 6))
+                                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading).padding(6)
+                        }.allowsHitTesting(false).accessibilityIdentifier("captureDebug")
+                    }
+                    #endif
                     if framing {
                         // One tap marks the hold there as whatever is selected below the picture.
                         Color.clear.contentShape(Rectangle())
@@ -409,7 +423,7 @@ struct CaptureView: View {
             if let assessment {
                 HStack(spacing: 8) {
                     if assessment.ready {
-                        // A remark that does not block is shown under the picture, see `colours`.
+                        // A remark that does not block is shown under the picture, see `notes`.
                         pill(icon: "checkmark.circle.fill", text: Text("机位可以，开始吧"), tone: .ready)
                             .accessibilityIdentifier("captureReady")
                     } else if let hint = assessment.hint {
@@ -428,69 +442,64 @@ struct CaptureView: View {
 
     private enum Tone { case plain, blocked, ready }
     private func pill(icon: String, text: Text, tone: Tone) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Image(systemName: icon).font(.subheadline.bold())
-            text.font(.subheadline.bold()).fixedSize(horizontal: false, vertical: true)
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Image(systemName: icon).font(.footnote.bold())
+            text.font(.footnote.bold()).lineLimit(2).minimumScaleFactor(0.85).fixedSize(horizontal: false, vertical: true)
         }
-        .padding(.horizontal, 14).padding(.vertical, 10).frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 10).padding(.vertical, 6).frame(maxWidth: .infinity, minHeight: 32, alignment: .leading)
         .foregroundStyle(BB.ink)
-        .background(tone == .ready ? BB.lime : BB.paper, in: RoundedRectangle(cornerRadius: 14))
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(tone == .blocked ? Color.orange : .clear, lineWidth: 2.5))
+        .background(tone == .ready ? BB.lime : BB.paper, in: RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(tone == .blocked ? Color.orange : .clear, lineWidth: 2))
         .accessibilityElement(children: .combine)
     }
 
     /// Five segments, never a number: the score only orders camera positions.
     private func quality(_ score: Double) -> some View {
         let level = min(5, max(1, Int((score * 5).rounded(.up))))
-        return VStack(spacing: 4) {
-            Text("机位").font(.caption2.bold())
-            HStack(spacing: 2) {
-                ForEach(1...5, id: \.self) { index in
-                    Capsule().fill(index <= level ? BB.lime : .white.opacity(0.3)).frame(width: 9, height: 6)
-                }
+        return HStack(spacing: 2) {
+            ForEach(1...5, id: \.self) { index in
+                Capsule().fill(index <= level ? BB.lime : .white.opacity(0.3)).frame(width: 7, height: 12)
             }
         }
-        .padding(.horizontal, 10).frame(minHeight: 44).background(.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 14))
+        .padding(.horizontal, 8).frame(minHeight: 32).background(.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 12))
         .accessibilityElement(children: .ignore).accessibilityLabel(Text("机位"))
         .accessibilityValue(level >= 4 ? Text("好") : level >= 3 ? Text("一般") : Text("差"))
         .accessibilityIdentifier("captureQuality")
     }
 
-    /// Under the picture: first the colours the page sees on the wall; once one is chosen, what a tap
-    /// on the picture marks. The start comes first because the page's own guess at it is the weakest.
+    /// The page has colours to choose from, or one is chosen: the row of chips is shown.
+    private var hasChips: Bool { framing && session.page == .ready && (!session.palette.isEmpty || session.color != nil) }
+
+    /// Under the picture, in small type: what the page has to say that does not block, what it
+    /// recognised, and what to tap next. The start comes first because the page's guess at it is the weakest.
     @ViewBuilder
-    private var colours: some View {
-        if session.page == .ready, !session.palette.isEmpty || session.color != nil {
+    private var notes: some View {
+        if hasChips {
             let assessment = session.assessment
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 3) {
                 // Nothing blocks, but the page still has something to say. What it says about the start
                 // and the finish is already the business of the line below.
                 if let assessment, assessment.ready, let hint = assessment.hint, !["start_unclear", "finish_unclear"].contains(hint.code) {
                     Label { Text(verbatim: CaptureText.line(hint)) } icon: { Image(systemName: "info.circle") }
-                        .font(.caption.bold()).foregroundStyle(BB.lime).fixedSize(horizontal: false, vertical: true)
+                        .font(.caption2.bold()).foregroundStyle(BB.lime).lineLimit(2).fixedSize(horizontal: false, vertical: true)
                         .accessibilityElement(children: .combine)
                         .accessibilityIdentifier("captureHint").accessibilityValue(Text(verbatim: hint.code))
                 }
                 if session.color != nil, let route = session.recognised {
                     HStack(spacing: 8) {
                         Text("认出来像是：\([route.title, route.grade ?? ""].filter { !$0.isEmpty }.joined(separator: " · "))")
-                            .font(.caption.bold()).fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("captureRoute")
+                            .font(.caption2.bold()).lineLimit(2).fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("captureRoute")
                         Button { session.rejectRoute() } label: {
-                            Text("不是这条").font(.caption.bold()).padding(.horizontal, 10).frame(minHeight: 32).background(.white.opacity(0.14), in: Capsule())
+                            Text("不是这条").font(.caption2.bold()).padding(.horizontal, 10).frame(minHeight: 26).background(.white.opacity(0.14), in: Capsule())
                         }.buttonStyle(.plain).accessibilityIdentifier("captureRejectRoute")
                     }
                 }
                 if session.gradePrefilled {
-                    Label("难度是按认出的线路填的，可以改。", systemImage: "wand.and.stars").font(.caption.bold()).foregroundStyle(BB.lime)
-                        .fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("captureGradePrefilled")
+                    Label("难度是按认出的线路填的，可以改。", systemImage: "wand.and.stars").font(.caption2.bold()).foregroundStyle(BB.lime)
+                        .lineLimit(2).fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("captureGradePrefilled")
                 }
                 prompt(assessment)
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        if let chosen = session.color { tools(chosen, assessment) } else { swatches }
-                    }
-                }
-            }
+            }.frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
@@ -508,7 +517,7 @@ struct CaptureView: View {
         case "finish": Text("起步标好了。选“结束”，再点一下结束点。")
         default: Text("起步和结束都标好了。其余虚线仍是自动猜的。")
         }
-        return text.font(.caption.bold()).fixedSize(horizontal: false, vertical: true)
+        return text.font(.caption2.bold()).lineLimit(2).minimumScaleFactor(0.9).fixedSize(horizontal: false, vertical: true)
             .accessibilityIdentifier("capturePrompt").accessibilityValue(Text(verbatim: stage))
     }
 
@@ -518,10 +527,10 @@ struct CaptureView: View {
         ForEach(Array(session.palette.enumerated()), id: \.element.key) { index, swatch in
             Button { tool = .startHand; session.selectColor(swatch.key) } label: {
                 HStack(spacing: 6) {
-                    Circle().fill(Color(swatch.rgb)).frame(width: 26, height: 26).overlay(Circle().stroke(.white, lineWidth: 1.5))
+                    Circle().fill(Color(swatch.rgb)).frame(width: 24, height: 24).overlay(Circle().stroke(.white, lineWidth: 1.5))
                     Text(verbatim: "\(swatch.count)").font(.caption.monospacedDigit())
                 }
-                .padding(.horizontal, 10).frame(minHeight: 44).background(.white.opacity(0.14), in: Capsule())
+                .padding(.horizontal, 10).frame(minHeight: 40).background(.white.opacity(0.14), in: Capsule())
             }.buttonStyle(.plain)
                 .accessibilityLabel(Text("颜色 \(index + 1)")).accessibilityValue(Text("\(swatch.count) 个岩点"))
                 .accessibilityIdentifier("captureColor-\(swatch.key)")
@@ -533,10 +542,10 @@ struct CaptureView: View {
     private func tools(_ chosen: String, _ assessment: CaptureAssessment?) -> some View {
         Button { session.selectColor(nil) } label: {
             HStack(spacing: 5) {
-                Circle().fill(Color(session.palette.first { $0.key == chosen }?.rgb ?? [128, 128, 128])).frame(width: 26, height: 26)
+                Circle().fill(Color(session.palette.first { $0.key == chosen }?.rgb ?? [128, 128, 128])).frame(width: 24, height: 24)
                     .overlay(Circle().stroke(.white, lineWidth: 1.5))
                 Image(systemName: "chevron.down").font(.caption2.bold())
-            }.padding(.horizontal, 10).frame(minHeight: 44).background(.white.opacity(0.14), in: Capsule())
+            }.padding(.horizontal, 8).frame(minHeight: 40).background(.white.opacity(0.14), in: Capsule())
         }.buttonStyle(.plain).accessibilityLabel(Text("换颜色")).accessibilityIdentifier("captureChangeColour")
         ForEach(CaptureRole.allCases, id: \.self) { role in
             let selected = tool == role
@@ -545,7 +554,7 @@ struct CaptureView: View {
                     Image(systemName: Self.symbol(role)).font(.caption.bold())
                     Text(verbatim: CaptureText.role(role)).font(.caption.bold())
                 }
-                .padding(.horizontal, 12).frame(minHeight: 44)
+                .padding(.horizontal, 10).frame(minHeight: 40)
                 .foregroundStyle(selected ? BB.ink : BB.paper)
                 .background(selected ? BB.lime : .white.opacity(0.14), in: Capsule())
             }.buttonStyle(.plain).accessibilityAddTraits(selected ? [.isSelected] : [])
@@ -554,7 +563,7 @@ struct CaptureView: View {
         if assessment?.holds.contains(where: \.user) == true {
             Button { session.resetCorrections() } label: {
                 Label("恢复自动识别", systemImage: "arrow.uturn.backward").font(.caption.bold())
-                    .padding(.horizontal, 12).frame(minHeight: 44).background(.white.opacity(0.14), in: Capsule())
+                    .padding(.horizontal, 10).frame(minHeight: 40).background(.white.opacity(0.14), in: Capsule())
             }.buttonStyle(.plain).accessibilityIdentifier("captureResetMarks")
         }
     }
@@ -658,14 +667,27 @@ struct CaptureView: View {
 
     // MARK: Bottom: record / stop
 
+    /// One row: on the left what there is to choose (colours, then what a tap marks), on the right the
+    /// record button, which stays where it is in every state.
     private var bottomBar: some View {
-        HStack {
-            Spacer()
+        HStack(spacing: 8) {
+            if hasChips {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 6) {
+                        if let chosen = session.color { tools(chosen, session.assessment) } else { swatches }
+                    }
+                }
+            } else if session.phase == .recording {
+                Text("手机放稳，去爬吧。爬完回来点停止。").font(.footnote.bold()).lineLimit(2).minimumScaleFactor(0.85)
+                    .fixedSize(horizontal: false, vertical: true).frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                Spacer(minLength: 0)
+            }
             if session.phase == .recording {
                 Button { Task { await session.stop(.user) } } label: {
                     ZStack {
-                        Circle().stroke(BB.paper, lineWidth: 4).frame(width: 72, height: 72)
-                        RoundedRectangle(cornerRadius: 7).fill(.red).frame(width: 30, height: 30)
+                        Circle().stroke(BB.paper, lineWidth: 3.5).frame(width: 56, height: 56)
+                        RoundedRectangle(cornerRadius: 6).fill(.red).frame(width: 24, height: 24)
                     }.contentShape(Circle())
                 }.buttonStyle(.plain).accessibilityLabel(Text("停止并保存")).accessibilityIdentifier("captureStop")
             } else {
@@ -673,14 +695,13 @@ struct CaptureView: View {
                     if session.needsConfirmation { confirming = true } else { session.startRecording() }
                 } label: {
                     ZStack {
-                        Circle().stroke(session.assessment?.ready == true ? BB.lime : BB.paper, lineWidth: 4).frame(width: 72, height: 72)
-                        Circle().fill(.red).frame(width: 58, height: 58)
+                        Circle().stroke(session.assessment?.ready == true ? BB.lime : BB.paper, lineWidth: 3.5).frame(width: 56, height: 56)
+                        Circle().fill(.red).frame(width: 44, height: 44)
                     }.contentShape(Circle())
                 }.buttonStyle(.plain).disabled(!framing).opacity(framing ? 1 : 0.3)
                     .accessibilityLabel(Text("开始录")).accessibilityIdentifier("captureRecord")
             }
-            Spacer()
-        }.frame(height: 78)
+        }.frame(height: 60)
     }
 }
 

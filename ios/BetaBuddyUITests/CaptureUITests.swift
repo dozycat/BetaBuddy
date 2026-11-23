@@ -28,7 +28,7 @@ final class CaptureUITests: XCTestCase {
         }
     }
     @MainActor private func launch(language: String = "zh-Hans", locale: String = "zh_CN", capture: Bool = true, source: Bool = true, step: Int = 14,
-                                   location: String = "\(StandInPack.origin.latitude),\(StandInPack.origin.longitude)") async throws -> XCUIApplication {
+                                   location: String = "\(StandInPack.origin.latitude),\(StandInPack.origin.longitude)", extra: [String] = []) async throws -> XCUIApplication {
         try StandInPack.write(to: work, capture: capture, step: step)
         let directory = work.appendingPathComponent("gyms.json")
         try Data(StandInPack.directory.utf8).write(to: directory)
@@ -41,9 +41,23 @@ final class CaptureUITests: XCTestCase {
             self.clip = clip
             arguments += ["-debugCaptureVideo", clip.path]
         }
-        app.launchArguments = arguments
+        app.launchArguments = arguments + extra
         app.launch()
         return app
+    }
+    /// How much of the screen's width the picture takes, noted with the screenshots.
+    @MainActor @discardableResult private func pictureShare(_ app: XCUIApplication, _ state: String) -> Double {
+        let picture = app.descendants(matching: .any)["capturePicture"]
+        guard picture.waitForExistence(timeout: 5), app.frame.width > 0 else { XCTFail("no picture"); return 0 }
+        let share = Double(picture.frame.width / app.frame.width)
+        let line = String(format: "%@: picture %.0f of %.0f pt = %.0f%%", state, picture.frame.width, app.frame.width, share * 100)
+        let attachment = XCTAttachment(string: line); attachment.name = "Picture width, " + state; attachment.lifetime = .keepAlways; add(attachment)
+        if let directory = ProcessInfo.processInfo.environment["BB_SCREENSHOT_DIR"], !directory.isEmpty {
+            let file = URL(fileURLWithPath: directory).appendingPathComponent("picture-width.txt")
+            let old = (try? String(contentsOf: file, encoding: .utf8)) ?? ""
+            try? (old + line + "\n").write(to: file, atomically: true, encoding: .utf8)
+        }
+        return share
     }
     /// The guidance line while it reports `code`.
     @MainActor private func hint(_ app: XCUIApplication, _ code: String, timeout: TimeInterval = 40) -> XCUIElement {
@@ -88,6 +102,8 @@ final class CaptureUITests: XCTestCase {
         let ready = app.descendants(matching: .any)["captureReady"]
         XCTAssertTrue(ready.waitForExistence(timeout: 40))
         keep(app, "04-ready")
+        // No gym yet, so the offer row is there: the picture still gets most of the width.
+        XCTAssertGreaterThanOrEqual(pictureShare(app, "offer row, no colour"), 0.70)
 
         // Gym: only gyms whose own position is known are ranked, nearest first; a station-level position
         // is shown as approximate; the rest of the city follows without distances.
@@ -142,6 +158,7 @@ final class CaptureUITests: XCTestCase {
         XCTAssertEqual(app.buttons["captureGrade"].value as? String, "V3")
         try await Task.sleep(for: .seconds(1))                       // The outlines come with the next assessment.
         keep(app, "07-colour-guessed-start-finish")
+        XCTAssertGreaterThanOrEqual(pictureShare(app, "gym and colour chosen, problem recognised, grade filled in"), 0.70)
         // “Not this one” moves to the page's next candidate; its grade is not a V grade and is only shown, not filled in.
         app.buttons["captureRejectRoute"].tap()
         let next = app.staticTexts.matching(NSPredicate(format: "identifier == 'captureRoute' AND label CONTAINS '黄 2'")).firstMatch
@@ -173,6 +190,8 @@ final class CaptureUITests: XCTestCase {
         XCTAssertEqual(prompt(app, "missed", timeout: 3).label, "这里没有认出岩点。")
         _ = prompt(app, "marked")
         keep(app, "09-start-and-finish-marked")
+        // The ordinary state: a gym and a colour chosen. The picture is about four fifths of the screen wide.
+        XCTAssertGreaterThanOrEqual(pictureShare(app, "gym and colour chosen"), 0.78)
 
         app.buttons["captureRecord"].tap()
         XCTAssertTrue(app.descendants(matching: .any)["captureElapsed"].waitForExistence(timeout: 5))
@@ -232,10 +251,14 @@ final class CaptureUITests: XCTestCase {
 
     @MainActor
     func testReadyStateInEnglish() async throws {
-        let app = try await launch(language: "en", locale: "en_US", step: 3)
+        // With the numbers a debug build can show over the picture for a first run on a phone.
+        let app = try await launch(language: "en", locale: "en_US", step: 3, extra: ["-debugCaptureOverlay", "YES"])
         XCTAssertTrue(app.buttons["recordClimb"].waitForExistence(timeout: 15))
         app.buttons["recordClimb"].tap()
         XCTAssertTrue(app.descendants(matching: .any)["captureReady"].waitForExistence(timeout: 40))
+        let numbers = app.staticTexts.matching(NSPredicate(format: "label CONTAINS 'fovH' AND label CONTAINS 'replies' AND label CONTAINS 'hand-over' AND label CONTAINS 'issues'")).firstMatch
+        XCTAssertTrue(numbers.waitForExistence(timeout: 5))
+        keep(app, "31-debug-overlay")
         XCTAssertEqual(app.buttons["captureColor-red"].label, "Colour 3"); XCTAssertEqual(app.buttons["captureColor-red"].value as? String, "3 holds")
         app.buttons["captureColor-red"].tap()
         // Nothing blocks. The start is not known for this colour, and the screen asks for it; recording is allowed all the same.
@@ -410,6 +433,50 @@ final class CaptureUITests: XCTestCase {
         XCTAssertTrue(app.buttons["再试一次"].exists)
         XCTAssertFalse(app.staticTexts["附近没有找到目录里的岩馆。"].exists)
         keep(app, "73-location-unavailable")
+    }
+
+    /// A clip that cannot be written into the album: the card says so, and closing asks before anything is dropped.
+    /// A debug build is told to fail the next two saves.
+    @MainActor
+    func testAClipThatCannotBeSavedIsNotDroppedWithoutAsking() async throws {
+        let app = try await launch(step: 2, extra: ["-debugFailSaves", "2"])
+        XCTAssertTrue(app.buttons["recordClimb"].waitForExistence(timeout: 15))
+        let before = app.staticTexts.matching(identifier: "今天的攀爬").count        // Whatever earlier runs left in the album.
+        app.buttons["recordClimb"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["captureReady"].waitForExistence(timeout: 40))
+        app.buttons["captureRecord"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["captureElapsed"].waitForExistence(timeout: 5))
+        try await Task.sleep(for: .seconds(2))
+        app.buttons["captureStop"].tap()
+        // Not saved: the clip is held, with what can be done about it.
+        XCTAssertTrue(app.staticTexts["这一趟还没存进攀爬册"].waitForExistence(timeout: 20))
+        XCTAssertFalse(app.descendants(matching: .any)["captureSaved"].exists)
+        keep(app, "80-save-failed")
+        // Closing asks first.
+        app.buttons["captureClose"].tap()
+        let sheet = app.sheets.firstMatch
+        XCTAssertTrue(sheet.buttons["discardAndClose"].waitForExistence(timeout: 5))
+        XCTAssertTrue(sheet.buttons["再存一次"].exists); XCTAssertTrue(app.buttons["取消"].exists)
+        keep(app, "81-save-failed-close-asks")
+        // Cancel: nothing happens, the clip is still held.
+        app.buttons["取消"].tap()
+        XCTAssertTrue(app.staticTexts["这一趟还没存进攀爬册"].waitForExistence(timeout: 5))
+        // Retry from the question: it fails once more (the second arranged failure) and the clip is still held.
+        app.buttons["captureClose"].tap()
+        XCTAssertTrue(sheet.buttons["再存一次"].waitForExistence(timeout: 5))
+        sheet.buttons["再存一次"].tap()
+        XCTAssertTrue(app.staticTexts["这一趟还没存进攀爬册"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.descendants(matching: .any)["captureSaved"].exists)
+        // Discard: only now is the clip dropped, and the album has no record of it.
+        app.buttons["captureClose"].tap()
+        XCTAssertTrue(sheet.buttons["discardAndClose"].waitForExistence(timeout: 5))
+        sheet.buttons["discardAndClose"].tap()
+        XCTAssertTrue(app.buttons["recordClimb"].waitForExistence(timeout: 10))
+        XCTAssertEqual(app.staticTexts.matching(identifier: "今天的攀爬").count, before)
+        // Nothing is left for the next launch to adopt either.
+        app.terminate(); app.launch()
+        XCTAssertTrue(app.buttons["recordClimb"].waitForExistence(timeout: 15))
+        XCTAssertEqual(app.staticTexts.matching(identifier: "今天的攀爬").count, before)
     }
 
     /// The simulator has no camera: without the file source the screen says so and offers the import.
