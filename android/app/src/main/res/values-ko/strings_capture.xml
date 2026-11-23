@@ -63,6 +63,7 @@
     <string name="capture_analysing">자세 인식이 끝났어요. 이번 시도를 분석하는 중…</string>
     <string name="capture_analysis_done">이번 시도의 분석이 끝났어요. 열면 볼 수 있어요.</string>
     <string name="capture_analysis_failed">이번 시도는 자동으로 분석하지 못했어요. 다시 보기 화면에서 다시 시도할 수 있어요.</string>
+    <string name="capture_plan_not_used">분석했어요. 촬영 전에 지정한 홀드와 스타트·탑은 이번에는 쓰이지 않았어요. 카메라 위치가 지정할 때와 맞지 않아요.</string>
     <string name="capture_stop_action">정지하고 저장</string>
     <string name="capture_record_action">녹화 시작</string>
     <string name="capture_close">닫기</string>

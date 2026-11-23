@@ -56,7 +56,7 @@ internal fun CaptureGymSheet(
 ) {
     var all by remember { mutableStateOf(false) }
     val context = LocalContext.current
-    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted -> locator.onPermissionResult(granted) }
+    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { granted -> locator.onPermissionResult(granted.values.any { it }) }
     LaunchedEffect(Unit) { locator.locateIfAllowed() }
     if (all) {
         // A choice made in the full directory closes the whole sheet.
@@ -103,7 +103,7 @@ internal fun CaptureGymSheet(
                     GymLocator.Access.NOT_ASKED -> {
                         Row(
                             Modifier.fillMaxWidth().defaultMinSize(minHeight = 48.dp)
-                                .clickable(role = Role.Button) { permission.launch(Manifest.permission.ACCESS_COARSE_LOCATION) }.testTag("askLocation"),
+                                .clickable(role = Role.Button) { permission.launch(GymLocator.PERMISSIONS) }.testTag("askLocation"),
                             horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Icon(BBIcons.Pin, contentDescription = null, tint = BB.Ink, modifier = Modifier.size(20.dp))
