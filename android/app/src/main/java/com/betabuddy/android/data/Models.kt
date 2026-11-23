@@ -185,7 +185,13 @@ data class CapturePlanUse(
     /** Whose start and finish the result went by: `user`, `venue`, `plan` or `video`. */
     val start: String? = null,
     val finish: String? = null,
+    /** How far the page found the camera had moved between framing and recording, when it says (packs from 1.9.3 on). */
+    val shift: CapturePlanShift? = null,
 )
+
+/** The page's own measure of how the picture moved: across, down, turned and scaled. Kept as the page gave it; the app does not read it. */
+@Serializable
+data class CapturePlanShift(val dx: Double? = null, val dy: Double? = null, val rot: Double? = null, val scale: Double? = null)
 
 @Serializable
 data class ClimbFolder(val id: String = newId(), val name: String)

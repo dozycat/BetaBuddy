@@ -104,6 +104,11 @@ class CaptureRecordsTest {
         assertEquals(use(true, start = "user", finish = "plan"), result(""","capture":{"used":true,"start":"user","finish":"plan","later":1}""").capture)
         assertEquals(use(false, "mismatch"), result(""","capture":{"used":false,"reason":"mismatch"}""").capture)
         assertEquals(use(false), result(""","capture":{"used":false,"reason":7,"start":""}""").capture)
+        // How far the camera had moved, when a newer page says: kept with the rest, read leniently.
+        assertEquals(use(true, start = "plan").copy(shift = com.betabuddy.android.data.CapturePlanShift(dx = 0.04, dy = -0.01, rot = 2.5, scale = 1.03)),
+            result(""","capture":{"used":true,"start":"plan","shift":{"dx":0.04,"dy":-0.01,"rot":2.5,"scale":1.03,"more":1}}""").capture)
+        assertEquals(com.betabuddy.android.data.CapturePlanShift(dx = 0.1), result(""","capture":{"used":true,"shift":{"dx":0.1,"dy":"down","rot":null}}""").capture?.shift)
+        assertNull(result(""","capture":{"used":true,"shift":{}}""").capture?.shift); assertNull(result(""","capture":{"used":true,"shift":3}""").capture?.shift)
         // Anything that does not plainly say "used" is not taken as used.
         for (odd in listOf(""","capture":{"used":"yes"}""", ""","capture":{}""", ""","capture":true""", ""","capture":null""")) assertNull(odd, result(odd).capture)
 
@@ -115,6 +120,8 @@ class CaptureRecordsTest {
         assertEquals(use(true, start = "venue", finish = "venue"), store.climbs.single().capture?.planUse)
         // Written under the names the iOS app uses, so a record reads the same on both.
         assertTrue(File(root, ClimbStore.INDEX_NAME).readText().contains(""""planUse":{"used":true,"start":"venue","finish":"venue"}"""))
+        store.setPlanUse(climb.id, use(true).copy(shift = com.betabuddy.android.data.CapturePlanShift(dx = 0.04, rot = 2.5)))
+        assertTrue(File(root, ClimbStore.INDEX_NAME).readText().contains(""""planUse":{"used":true,"shift":{"dx":0.04,"rot":2.5}}"""))
         // An imported record has no plan to have used.
         val imported = save(plan = null, capture = null, pending = null)
         store.setPlanUse(imported.id, use(true))

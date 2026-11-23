@@ -1,5 +1,6 @@
 package com.betabuddy.android.review
 
+import com.betabuddy.android.data.CapturePlanShift
 import com.betabuddy.android.data.CapturePlanUse
 import com.betabuddy.android.data.PoseFrame
 import kotlinx.serialization.json.Json
@@ -57,7 +58,11 @@ sealed interface AnalysisMessage {
                         val used = (use["used"] as? JsonPrimitive)?.takeIf { !it.isString }?.booleanOrNull ?: return@let null
                         fun text(name: String) = (use[name] as? JsonPrimitive)?.takeIf { it.isString }?.content?.takeIf { it.isNotEmpty() }?.take(40)
                         // What the page says it did with the capture plan it was given; only a newer page says so.
-                        CapturePlanUse(used, text("reason"), text("start"), text("finish"))
+                        val shift = (use["shift"] as? JsonObject)?.let { moved ->
+                            fun number(name: String) = (moved[name] as? JsonPrimitive)?.takeIf { !it.isString }?.doubleOrNull?.takeIf { it.isFinite() }
+                            CapturePlanShift(number("dx"), number("dy"), number("rot"), number("scale")).takeIf { it != CapturePlanShift() }
+                        }
+                        CapturePlanUse(used, text("reason"), text("start"), text("finish"), shift)
                     }
                     Result(string("id").orEmpty(), result, climber, capture)
                 }
