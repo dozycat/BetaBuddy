@@ -1,10 +1,14 @@
 # BetaBuddy · Android 工程
 
-Kotlin + Jetpack Compose 原生应用，Android 8.0（API 26）及以上，竖屏，只有浅色。和 iOS 版是同一个产品：两个入口（岩馆、攀爬册）加「设置与关于」，五种语言并可在应用内切换，全部离线；后台分析使用本地媒体处理服务，进度通知权限可选。产品介绍见[仓库首页](../../README.md)，Android 上的设计见 [design.md](design.md)，岩馆的数据包接口见 [../ios/gym-design.md](../ios/gym-design.md)。
+Kotlin + Jetpack Compose 原生应用，Android 8.0（API 26）及以上，竖屏，只有浅色。和 iOS 版是同一个产品：两个入口（岩馆、攀爬册）加「设置与关于」，五种语言并可在应用内切换，全部离线；后台分析使用本地媒体处理服务，进度通知权限可选；应用内相机用到相机权限，按距离给岩馆排序用到大致位置权限，两项都是用到时才问。产品介绍见[仓库首页](../../README.md)，Android 上的设计见 [design.md](design.md)，岩馆的数据包接口见 [../ios/gym-design.md](../ios/gym-design.md)。
 
 应用 ID `com.betabuddy.android`，版本 `1.2.0`（`android/app/build.gradle.kts` 里的 `versionName` / `versionCode`）。
 
 ## 构建
+
+### 2026-11-23 · 应用内相机「拍一趟」（未发布）
+
+攀爬册的主按钮改成「拍一趟」，导入退为次要按钮。拍摄界面取景时由数据包的拍摄页面检查机位、认颜色和岩点，用户选颜色、点一下标起步和结束、选难度和岩馆；停止后先保存，再做姿态识别和「分析这一趟」。相机用 CameraX 1.7.0（预览、不带声音的 1080p 录像、给检查用的小帧）；位置用平台自带的 `LocationManager`，只申请大致位置。Manifest 多了 `CAMERA` 和 `ACCESS_COARSE_LOCATION`，没有 `RECORD_AUDIO`。存档的记录多一个可选的 `capture` 字段（与 iOS 同名同义），拍摄计划存成 `<记录 id>.capture.json`；旧存档照常读取。设计见 [design.md](design.md#拍一趟)，验证见下面的[验证状态](#2026-11-23模拟器应用内相机)。
 
 ### 2026-11-18 · 攀爬册的分析换成数据包里的分析页面（未发布）
 
@@ -135,6 +139,7 @@ python3 android/scripts/check-resources.py   # 资源 XML、五种语言的键�
 | core-ktx / activity-compose / appcompat | 1.19.1 / 1.13.0 / 1.8.0 | |
 | lifecycle / navigation-compose / webkit | 2.11.0 / 2.10.2 / 1.18.0 | |
 | Media3 ExoPlayer | 1.11.1 | |
+| CameraX（camera-core / camera2 / lifecycle / video / view） | 1.7.0 | 应用内相机；连带 media3-muxer（跟随 Media3 的版本） |
 | MediaPipe Tasks Vision | 0.10.35 | 0.10 线的最后一个版本 |
 | kotlinx-serialization-json / kotlinx-coroutines | 1.13.0 / 1.11.0 | |
 
@@ -186,13 +191,15 @@ android/
       gym/                             数据包、WebView 容器（岩馆页面与分析页面共用）、消息桥、岩馆界面
       settings/                        设置与关于、隐私政策、开源许可
       i18n/                            AppLanguage：当前界面语言与应用内语言选择
-      journal/                         攀爬册：列表、导入、文字
+      capture/                         应用内相机：拍摄页面的消息、画面来源（CameraX / 文件）、取帧、拍摄界面、岩馆建议
+      journal/                         攀爬册：列表、导入、文字、岩馆目录与距离、相机开关与分析队列的规则
       pose/                            解码、姿态识别、几何
-      review/                          回看：播放与骨架叠加；数据包分析页面的宿主
+      review/                          回看：播放与骨架叠加；数据包分析页面的宿主；相机记录的后台分析队列
       data/                            记录的数据结构与本地存储
     src/main/res/
       values*/strings.xml              导航、岩馆、设置的文字（五种语言）
       values*/strings_journal.xml      攀爬册的文字（五种语言，名字都以 journal_ 开头）
+      values*/strings_capture.xml      应用内相机的文字（五种语言，名字都以 capture_ 开头，译文取自 iOS 的字符串表）
       raw*/privacy_policy.txt          内置隐私政策（简中、繁中、英）
       xml/locales_config.xml           应用支持的语言
       xml/data_extraction_rules.xml    不进云备份，也不随换机迁移
@@ -201,7 +208,7 @@ android/
       licenses/                        第三方许可全文（设置里可以查看）
       gympack/                         场馆数据包（被忽略，由脚本装入）
     src/test/                          JVM 单元测试（纯 Kotlin，不依赖 Android 类）
-    src/androidTest/                   设备测试（解码与推理）
+    src/androidTest/                   设备测试（解码与推理；拍摄界面，用替身数据包和画出来的墙）
 ```
 
 ## 与 iOS 的对应
@@ -219,6 +226,12 @@ android/
 | `Views/JournalView.swift`、`ImportView.swift` | `journal/JournalScreen.kt`、`journal/ImportScreen.kt` |
 | `Views/ReviewView.swift` | `review/ReviewScreen.kt`、`review/Playback.kt`、`review/SkeletonOverlay.kt` |
 | `Views/AnalysisView.swift` | `review/AnalysisScreen.kt`、`review/AnalysisSession.kt`、`review/AnalysisBridge.kt`、`review/AnalysisFrames.kt` |
+| `Core/Capture.swift`、`Views/CaptureText.swift` | `capture/Capture.kt`、`capture/CaptureText.kt` |
+| `Core/CaptureSource.swift` | `capture/CaptureSource.kt`、`capture/FileCaptureSource.kt`、`capture/CapturePipeline.kt` |
+| `Core/CaptureSession.swift`、`Views/CaptureView.swift` | `capture/CaptureSession.kt`、`capture/CaptureScreen.kt`、`capture/CaptureGymSheet.kt` |
+| `Core/GymLocator.swift` | `journal/GymDirectory.kt`（目录与距离）、`capture/GymLocator.kt`（取一次位置） |
+| `Core/AnalysisQueue.swift` | `journal/CameraGate.kt`、`review/AnalysisQueue.kt` |
+| `TestSupport/`（替身页面、合成的墙） | `src/androidTest/assets/*-standin.html`、`src/androidTest/.../capture/StandIns.kt` |
 | `Resources/Localizable.xcstrings` | `res/values*/strings.xml`、`strings_journal.xml` |
 | `Resources/PrivacyPolicy.<语言>.txt` | `res/raw*/privacy_policy.txt` |
 | `ios/GymPack/`（被忽略） | `app/src/main/assets/gympack/`（被忽略） |
@@ -229,9 +242,9 @@ android/
 
 - **界面用同一套组件。** 颜色和字体取 `ui/theme` 的 `BB`（`Paper/Ink/Lime/Lavender/Muted/Line`、`display()`、`mono()`、`Title…Caption`），页面和控件取 `ui/common`（`PaperPage`、`Stamp`、`BigButton`、`SectionLabel`、`Stat`、`CircleIconButton`、`ColorCard`、`Hairline`、`BBIcons`）。岩馆、攀爬册、设置都依赖这些名字，改名要一起改。
 - **攀爬册只有一个入口** `JournalScreen(onOpenSettings)`。它内部的页面用 `rememberSaveable` 的路由加 `BackHandler` 切换，不往 NavHost 里加路由。导入和回看时底部导航仍然可见；分析由服务持有，切到岩馆、离开回看页或应用退到后台均不取消。系统结束服务时保留请求，下一次打开应用重试。
-- **存储**都在应用私有目录：攀爬册在 `filesDir/BetaBuddy/`（`archive.json`、原片、缩略图、分析页面交回的 `<记录 id>.analysis.json`、`staging/`），外加 `SharedPreferences` 里分析页面上一次用的身材参数；岩馆只有 `SharedPreferences` 里的两个布尔值。不写外部存储。
-- **文字**：导航、岩馆、设置的在 `strings.xml`，攀爬册的在 `strings_journal.xml` 且名字以 `journal_` 开头，两个文件不重名。
-- **不加联网依赖。** 仅允许本地分析服务与可选进度通知权限； 新增依赖先看它的 Manifest 会合并进来什么权限和组件，该移除的在应用的 Manifest 里移除，并在 `THIRD_PARTY.md` 补一行；依赖有增减时同步 `assets/licenses/components.txt` 里的清单。
+- **存储**都在应用私有目录：攀爬册在 `filesDir/BetaBuddy/`（`archive.json`、原片、缩略图、分析页面交回的 `<记录 id>.analysis.json`、拍摄页面交回的 `<记录 id>.capture.json`、`staging/`——导入和录像中的临时文件，下次启动清掉），外加 `SharedPreferences` 里分析页面上一次用的身材参数；岩馆只有 `SharedPreferences` 里的两个布尔值。不写外部存储。
+- **文字**：导航、岩馆、设置的在 `strings.xml`，攀爬册的在 `strings_journal.xml` 且名字以 `journal_` 开头，应用内相机的在 `strings_capture.xml` 且名字以 `capture_` 开头，文件之间不重名。
+- **不加联网依赖。** 权限只有本地分析服务、可选进度通知、相机和大致位置（`check-resources.py` 按这个名单检查，并要求移除 `INTERNET`、`ACCESS_NETWORK_STATE`、`WAKE_LOCK`、`RECORD_AUDIO`）；新增依赖先看它的 Manifest 会合并进来什么权限和组件，该移除的在应用的 Manifest 里移除，并在 `THIRD_PARTY.md` 补一行；依赖有增减时同步 `assets/licenses/components.txt` 里的清单。
 - **单元测试是纯 JVM 测试**，读 `src/main/res` 和 `src/main/assets` 用相对模块目录的路径（Gradle 运行测试时的工作目录）。测试夹具用合成数据。
 
 ## 语言
@@ -257,7 +270,15 @@ adb shell am start -n $A --ez gymNoticeSeen true --es gymQuery "sheet=half&tab=s
 adb shell am start -n $A --ez gymNoticeSeen true --es gymOpenRoute <线路 id>
 adb shell am start -n $A --ez gymNoticeSeen true --es gymOpenWall <岩壁 id>
 adb exec-out screencap -p > shot.png
+
+# 应用内相机，在没有像样相机的地方（模拟器）：
+adb shell am start -n $A --ei initialTab 1 --ez openCapture true          # 直接打开拍摄界面
+adb shell "am start -n $A --ei initialTab 1 --ez openCapture true \
+    --es debugCaptureVideo <文件> --es debugCaptureFov 50 \
+    --es debugCaptureAttitude '6,0.5,0.01' --es debugLocation '<纬度>,<经度>,<误差米>'"
 ```
+
+`debugCaptureVideo` 用一个视频文件循环播放代替相机（绝对路径，或者应用 `files/` 目录下的文件名；用 `adb push` 加 `run-as <应用 ID> cp` 放进去）；`debugCaptureFov` 是替它报的水平视场角；`debugCaptureAttitude` 是没有运动传感器时替它报的仰角、侧倾和晃动；`debugLocation` 给一个位置，不出现系统的询问。拍摄界面的日志看 `adb logcat -s capture`，离开时有一行各环节的平均耗时。
 
 参数只在全新启动时读取，换参数前先 `adb shell am force-stop com.betabuddy.android`。`gymQuery` 原样接在入口 URL 的 `hint`、`lang` 之后，页面自己定义其中的参数。岩馆页面可以用 Chrome 的 `chrome://inspect` 调试；日志看 `adb logcat -s gym`。
 
@@ -316,6 +337,8 @@ adb exec-out screencap -p > shot.png
 - 从列表打开一条记录时回看画面是黑的，要步进或播放一次才出现：播放器在画面的 `TextureView` 有 surface 之前就解码了第一帧。改为拿到 surface 之后再开始解码。
 - 「精细」档实际采样超过每秒 15 帧（3 秒的 30 帧视频采了 75 帧）：解码器的时间戳是整微秒，采样器的容差太小。修正并补了单元测试。
 - lint 的两个 error：Manifest 里引用的启动项类来自只在运行时出现的依赖；一处在可组合函数里读了进程级的默认语言。
+
+@@CAPTURE_VALIDATION@@
 
 ### 在 Apple 芯片的 Mac 上跑模拟器
 

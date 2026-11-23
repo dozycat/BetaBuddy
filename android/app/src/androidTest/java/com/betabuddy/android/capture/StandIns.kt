@@ -28,10 +28,19 @@ import java.io.InputStream
 internal class StandInPack(testContext: Context, capture: Boolean = true, analysis: Boolean = true, step: Int = 5) : PackWebView.Files {
     private val pages = buildMap {
         put("index.html", "<!doctype html><meta charset=\"utf-8\"><title>synthetic pack</title><p>synthetic pack</p><script>window.BetaBuddyGym={openWall(){},openRoute(){},openVenue(){},state(){return {ready:true}}};try{window.webkit.messageHandlers.gym.postMessage({type:'ready',packVersion:'$VERSION',routeCount:0})}catch(e){}</script>")
-        fun page(name: String) = testContext.assets.open(name).use { it.readBytes().toString(Charsets.UTF_8) }
+        // A real pack's pages load their code from a file of its own, and so do these: the stand-in's
+        // script is split off into one. (An older WebView can only inject the message shim once the
+        // page has started loading; an inline script would speak before it is there.)
+        fun page(name: String, script: String, change: (String) -> String = { it }) {
+            val text = testContext.assets.open(name).use { it.readBytes().toString(Charsets.UTF_8) }
+            val code = text.substringAfter("<script>").substringBeforeLast("</script>")
+            check(code.isNotBlank() && code != text)
+            put(script, change(code))
+            put(name.replace("-standin", ""), "<!doctype html><meta charset=\"utf-8\"><title>stand-in</title><script src=\"$script\"></script>")
+        }
         // `step` is how many frames each scripted state of the capture stand-in lasts.
-        if (capture) put("capture.html", page("capture-standin.html").replace("const STEP = 5;", "const STEP = $step;").also { check("const STEP = $step;" in it) })
-        if (analysis) put("analysis.html", page("analysis-standin.html"))
+        if (capture) page("capture-standin.html", "capture.js") { code -> code.replace("const STEP = 5;", "const STEP = $step;").also { check("const STEP = $step;" in it) } }
+        if (analysis) page("analysis-standin.html", "analysis.js")
     }
 
     val pack = GymPack(

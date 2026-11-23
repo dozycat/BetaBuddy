@@ -130,6 +130,8 @@ class CaptureSession(
     /** When the page last answered (or was last asked to start over). A page that has gone quiet must not leave an old judgement on the screen. */
     private var lastReply = 0L
     private var gymChosen = false
+    private var stalled = false
+    private var lastWatch = 0L
 
     var metrics = CaptureMetrics()
         private set
@@ -139,6 +141,8 @@ class CaptureSession(
     var recordingInterval = 1.0
     var maxSeconds = CaptureLimits.MAX_SECONDS
     var watchIntervalMillis = 3_000L
+    /** A recording that has written nothing after this long is not going to: it is closed and the user is told, rather than left to climb in front of a camera that records nothing. */
+    var stallLimitMillis = 6_000L
     /** Free space in bytes where clips are written; replaced in tests. */
     var freeBytes: () -> Long? = { CapturePipeline.freeBytes(staging) }
     /** Lets a test see how the phone is held without sensors. */
@@ -413,6 +417,8 @@ class CaptureSession(
         val began = System.currentTimeMillis()
         val started = source.startRecording(file, maxSeconds, onProgress = { seconds -> if (phase == Phase.Recording) recordedSeconds = seconds }, onFinished = ::finished)
         if (started == null) { notice = Notice.RECORDER_FAILED; return }
+        stalled = false
+        lastWatch = SystemClock.elapsedRealtime()
         recording = started
         recordingFile = file
         recordingStartedMillis = began
@@ -424,10 +430,19 @@ class CaptureSession(
         if (page == Page.READY) host?.evaluate(CaptureScript.lock())
         watch?.cancel()
         val power = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
+        val startedAt = SystemClock.elapsedRealtime()
         watch = scope.launch {
             while (isActive) {
-                delay(watchIntervalMillis)
+                delay(minOf(watchIntervalMillis, 1_000L))
                 if (phase != Phase.Recording) return@launch
+                if (recordedSeconds <= 0.0 && SystemClock.elapsedRealtime() - startedAt > stallLimitMillis) {
+                    Log.e(TAG, "nothing recorded after ${stallLimitMillis / 1000} s")
+                    stalled = true
+                    stop(CaptureStop.INTERRUPTED)
+                    return@launch
+                }
+                if (SystemClock.elapsedRealtime() - lastWatch < watchIntervalMillis) continue
+                lastWatch = SystemClock.elapsedRealtime()
                 val left = freeBytes()
                 if (left != null && left < CaptureLimits.STOPPING_FREE_BYTES) stop(CaptureStop.STORAGE)
                 else if (Build.VERSION.SDK_INT >= 29 && (power?.currentThermalStatus ?: 0) >= PowerManager.THERMAL_STATUS_CRITICAL) stop(CaptureStop.OVERHEATED)
@@ -469,7 +484,7 @@ class CaptureSession(
         val file = result.file
         if (file == null || result.seconds < CaptureLimits.MIN_SECONDS) {
             (file ?: recordingFile)?.delete()
-            notice = if (file == null && result.end == ClipEnd.FAILED) Notice.RECORDER_FAILED else Notice.TOO_SHORT
+            notice = if (stalled || (file == null && result.end == ClipEnd.FAILED)) Notice.RECORDER_FAILED else Notice.TOO_SHORT
             if (started) startFraming() else release()
             return
         }

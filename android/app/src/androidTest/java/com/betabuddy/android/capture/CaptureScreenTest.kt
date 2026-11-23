@@ -72,12 +72,14 @@ class CaptureScreenTest {
     }
 
     @After fun tearDown() {
-        instrumentation.runOnMainSync { AppLanguage.select(null) }
-        instrumentation.waitForIdleSync()
         scenario?.close()
+        setLanguage(null)
         CaptureDebug.reset()
         for (climb in store.climbs) if (climb.id !in before) runCatching { store.delete(climb) }
         clips.values.forEach { it.delete() }
+        // A clip still being closed when the screen went away is finished first; then the gate is let go.
+        val deadline = System.currentTimeMillis() + 15_000
+        while (CameraGate.open.value && System.currentTimeMillis() < deadline) Thread.sleep(100)
         assertFalse("the camera gate is left open", CameraGate.open.value)
     }
 
@@ -94,17 +96,26 @@ class CaptureScreenTest {
         CaptureDebug.packFiles = pack
     }
 
-    /** [language] and the name the logbook's button has in it, or nothing for the device's own (English) language. */
-    private fun launch(language: String? = null, button: String = "") {
+    /**
+     * The app's own language setting, made before any activity exists so that none has to be
+     * rebuilt mid-test: through the system's per-app setting where there is one (Android 13+),
+     * through AppCompat's own store below that. Null follows the device.
+     */
+    private fun setLanguage(language: String?) {
+        if (android.os.Build.VERSION.SDK_INT >= 33) {
+            instrumentation.uiAutomation.executeShellCommand("cmd locale set-app-locales ${context.packageName} --locales ${language ?: "\"\""}").close()
+            Thread.sleep(500)
+        } else {
+            instrumentation.runOnMainSync { AppLanguage.select(language) }
+        }
+    }
+
+    private fun launch(language: String? = null) {
+        if (language != null) setLanguage(language)
         scenario = ActivityScenario.launch(
             Intent(context, MainActivity::class.java).putExtra("initialTab", 1).putExtra("gymNoticeSeen", true).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
         )
         await("captureClimb")
-        if (language != null) {
-            // The in-app language needs a running activity to take; the screen is rebuilt in it.
-            instrumentation.runOnMainSync { AppLanguage.select(language) }
-            rule.waitUntil(20_000) { runCatching { text("captureClimb") }.getOrNull() == button }
-        }
         rule.onNodeWithTag("captureClimb").performClick()
         await("captureScreen")
     }
@@ -140,7 +151,7 @@ class CaptureScreenTest {
         CaptureDebug.video = wall(person = true)
         CaptureDebug.fieldOfView = 52.0
         CaptureDebug.location = GymLocator.Fix(StandInPack.LATITUDE, StandInPack.LONGITUDE, 30.0)
-        launch("zh-Hans", "拍一趟")
+        launch("zh-Hans")
 
         // The page's verdicts arrive as codes; each is shown as this build's own sentence.
         awaitState("captureHint", "too_dark")
@@ -148,7 +159,7 @@ class CaptureScreenTest {
         // A gym 200 m away is offered, not chosen.
         await("captureOffer")
         assertTrue(text("captureOffer"), text("captureOffer").contains(StandInPack.DIRECTORY_GYM))
-        assertEquals("", session().gymName)
+        assertEquals("what is selected is still the last record's gym, if any", store.lastGym?.second.orEmpty(), session().gymName)
         shot("11-framing-blocked")
         awaitState("captureHint", "cut_top")
         assertEquals("上面出画了，往后退一点", text("captureHint"))
@@ -347,8 +358,14 @@ class CaptureScreenTest {
         CaptureDebug.video = wall(person = false)
         // Somewhere between the gyms: none is close enough to be offered.
         CaptureDebug.location = GymLocator.Fix(StandInPack.LATITUDE + 0.006, StandInPack.LONGITUDE, 30.0)
+        // The most recent record was at the west gym: that is what the screen starts with.
+        val earlier = wall(person = false).copyTo(File(context.cacheDir, "earlier-${System.nanoTime()}.mp4"))
+        store.save("", "Earlier", "V2", false, "", earlier, byteArrayOf(1), com.betabuddy.android.data.PoseAnalysis(emptyList(), 0, 3.0, 0.5625),
+            gymId = "syn:west", gymName = "合成岩馆（西门）", climbedAtMillis = System.currentTimeMillis() + 86_400_000)
         launch()
         await("captureHint")
+        rule.waitUntil(10_000) { session().gymName == "合成岩馆（西门）" }
+        assertEquals("syn:west", session().gymId)
         assertFalse(exists("captureOffer"))
         rule.onNodeWithTag("captureGym").performClick()
         await("captureGymSheet")
@@ -364,10 +381,10 @@ class CaptureScreenTest {
         assertEquals("© OpenStreetMap contributors", text("coordinateCredit"))
         assertFalse(exists("askLocation"))
         shot("51-gym-sheet")
-        assertEquals("", session().gymName)   // looking at the list chooses nothing
-        rule.onNodeWithTag("nearbyGym-syn:west").performClick()
+        assertEquals("合成岩馆（西门）", session().gymName)   // looking at the list, nearer gyms and all, chooses nothing
+        rule.onNodeWithTag("nearbyGym-syn:east").performClick()
         awaitGone("captureGymSheet")
-        assertEquals("合成岩馆（西门）", session().gymName); assertEquals("syn:west", session().gymId)
+        assertEquals(StandInPack.DIRECTORY_GYM, session().gymName); assertEquals("syn:east", session().gymId)
         rule.onNodeWithTag("captureClose").performClick()
         awaitGone("captureScreen")
     }
@@ -386,7 +403,9 @@ class CaptureScreenTest {
         shot("61-device-camera")
         rule.onNodeWithTag("captureRecord").performClick()
         await("captureStop")
-        rule.waitUntil(30_000) { session().recordedSeconds >= 2.0 }
+        rule.waitUntil(30_000) { session().recordedSeconds >= 2.0 || session().notice != null }
+        // A camera that hands the recorder nothing is noticed and said; here that is a failure of this device's camera.
+        assertNull("the device's camera gave the recorder no video", session().notice)
         rule.onNodeWithTag("captureStop").performClick()
         await("captureSaved", 40)
         val saved = newClimbs().single()
