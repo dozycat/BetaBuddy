@@ -101,6 +101,12 @@
     <string name="capture_gym_near">近くのジム</string>
     <string name="capture_gym_none_near">近くに、一覧にあるジムは見つかりませんでした。</string>
     <string name="capture_gym_location_note">位置情報は、このスマートフォン上でジムを並べ替えるためだけに使います。保存せず、デバイスの外にも出ません。</string>
+    <string name="capture_location_waiting">位置情報を取得中…</string>
+    <string name="capture_location_unavailable">今は位置情報を取得できません。</string>
+    <string name="capture_location_retry">もう一度試す</string>
+    <string name="capture_location_refused">位置情報へのアクセスがありません。「設定」で BetaBuddy に位置情報の使用を許可すると、距離でジムを探せます。</string>
+    <string name="capture_offer_guess">ここかもしれません：%1$s</string>
+    <string name="capture_offer_choose">これにする</string>
     <string name="capture_gym_same_city">同じ市内のジム</string>
     <string name="capture_gym_ask_location">近くのジムを距離順に探す</string>
     <string name="capture_gym_all">すべてのジム</string>

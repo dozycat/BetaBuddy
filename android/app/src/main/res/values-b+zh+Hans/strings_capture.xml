@@ -101,6 +101,12 @@
     <string name="capture_gym_near">离你近的</string>
     <string name="capture_gym_none_near">附近没有找到目录里的岩馆。</string>
     <string name="capture_gym_location_note">位置只在这台手机上用来给岩馆排序，不保存，也不离开设备。</string>
+    <string name="capture_location_waiting">正在定位…</string>
+    <string name="capture_location_unavailable">暂时取不到位置。</string>
+    <string name="capture_location_retry">再试一次</string>
+    <string name="capture_location_refused">没有位置权限。在系统设置里允许 BetaBuddy 使用位置，就能按距离找岩馆。</string>
+    <string name="capture_offer_guess">可能在：%1$s</string>
+    <string name="capture_offer_choose">选这家</string>
     <string name="capture_gym_same_city">同城的岩馆</string>
     <string name="capture_gym_ask_location">按距离找附近的岩馆</string>
     <string name="capture_gym_all">全部岩馆</string>

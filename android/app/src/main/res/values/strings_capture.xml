@@ -101,6 +101,12 @@
     <string name="capture_gym_near">Near you</string>
     <string name="capture_gym_none_near">No gym from the directory was found nearby.</string>
     <string name="capture_gym_location_note">Your location is only used on this phone to order the gyms. It is not saved and does not leave the device.</string>
+    <string name="capture_location_waiting">Finding your location…</string>
+    <string name="capture_location_unavailable">Your location is not available right now.</string>
+    <string name="capture_location_retry">Try again</string>
+    <string name="capture_location_refused">Location access is off. Allow BetaBuddy to use your location in Settings to find gyms by distance.</string>
+    <string name="capture_offer_guess">Possibly at: %1$s</string>
+    <string name="capture_offer_choose">Choose it</string>
     <string name="capture_gym_same_city">In the same city</string>
     <string name="capture_gym_ask_location">Find gyms near me</string>
     <string name="capture_gym_all">All gyms</string>
