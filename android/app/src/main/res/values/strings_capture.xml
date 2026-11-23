@@ -86,6 +86,8 @@
     <string name="capture_prompt_start">Dashed outlines are automatic guesses, and the start is often guessed wrong. Tap the start hand holds.</string>
     <string name="capture_prompt_finish">Start marked. Choose “Finish”, then tap the finish hold.</string>
     <string name="capture_prompt_marked">Start and finish are marked. The other dashed outlines are still automatic guesses.</string>
+    <string name="capture_prompt_route">Start and finish are marked from the recognised problem. If they are wrong, tap a hold to change them.</string>
+    <string name="capture_grade_prefilled">The grade was filled in from the recognised problem. You can change it.</string>
     <string name="capture_colour_n">Colour %1$d</string>
     <string name="capture_hold_count">%1$d holds</string>
     <string name="capture_change_colour">Change colour</string>

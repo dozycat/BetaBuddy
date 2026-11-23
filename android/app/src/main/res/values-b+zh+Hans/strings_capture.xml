@@ -86,6 +86,8 @@
     <string name="capture_prompt_start">虚线是自动猜的，起步点常常猜错。点一下起步的手点。</string>
     <string name="capture_prompt_finish">起步标好了。选“结束”，再点一下结束点。</string>
     <string name="capture_prompt_marked">起步和结束都标好了。其余虚线仍是自动猜的。</string>
+    <string name="capture_prompt_route">起步和结束是按认出的这条线标的。不对的话，点一下岩点改。</string>
+    <string name="capture_grade_prefilled">难度是按认出的线路填的，可以改。</string>
     <string name="capture_colour_n">颜色 %1$d</string>
     <string name="capture_hold_count">%1$d 个岩点</string>
     <string name="capture_change_colour">换颜色</string>

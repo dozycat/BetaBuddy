@@ -92,7 +92,8 @@ data class Climb(
 
 /**
  * A problem of the pack's own that the capture page took a recording for. A guess of the page's;
- * the names and the rest are whatever the page said about it, and are only ever shown.
+ * [name] is in the interface language, [nameZh] the problem's own name; with the rest they are
+ * whatever the page said about it, and are only ever shown.
  */
 @Serializable
 data class CaptureRoute(
@@ -104,9 +105,19 @@ data class CaptureRoute(
     val colour: String? = null,
     val wall: String? = null,
 ) {
-    /** The name to show in this interface language: the Chinese one for Chinese, the other otherwise, whichever exists. */
-    fun displayName(language: String): String =
-        (if (language.startsWith("zh")) nameZh ?: name else name ?: nameZh)?.takeIf { it.isNotBlank() } ?: id
+    /** What to call it on screen: its name in the page's language, else its own name, else its id. */
+    val title: String get() = name?.takeIf { it.isNotBlank() } ?: nameZh?.takeIf { it.isNotBlank() } ?: id
+
+    /**
+     * The grade as one of the values the logbook uses (V0–V12), or null when the page's text is
+     * anything else. Gyms write grades in their own ways; only this form is the same in every language.
+     */
+    val albumGrade: String?
+        get() {
+            val text = grade ?: return null
+            val number = text.removePrefix("V").toIntOrNull() ?: return null
+            return text.takeIf { number in 0..12 && it == "V$number" }
+        }
 }
 
 /**
@@ -142,7 +153,7 @@ data class CaptureInfo(
     val packVersion: String? = null,
     /** The analysis asked for when the clip was saved has not produced a result yet. */
     val analysisQueued: Boolean? = null,
-    /** The pack's own problem the capture page recognised and the user did not reject. */
+    /** The pack's own problem the capture page recognised and the user did not reject: its id, and its own name (not a translation) when the page gave one. */
     val routeId: String? = null,
     val routeName: String? = null,
 )

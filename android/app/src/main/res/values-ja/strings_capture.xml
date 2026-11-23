@@ -86,6 +86,8 @@
     <string name="capture_prompt_start">点線は自動の推測で、スタートはよく外れます。スタートの手のホールドをタップしてください。</string>
     <string name="capture_prompt_finish">スタートを指定しました。「ゴール」を選んで、ゴールのホールドをタップしてください。</string>
     <string name="capture_prompt_marked">スタートとゴールを指定しました。ほかの点線は自動の推測のままです。</string>
+    <string name="capture_prompt_route">スタートとゴールは認識した課題に合わせて付けています。違っていたら、ホールドをタップして直してください。</string>
+    <string name="capture_grade_prefilled">グレードは認識した課題から入れました。変更できます。</string>
     <string name="capture_colour_n">色 %1$d</string>
     <string name="capture_hold_count">ホールド %1$d 個</string>
     <string name="capture_change_colour">色を変える</string>

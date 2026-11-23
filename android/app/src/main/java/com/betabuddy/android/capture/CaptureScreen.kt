@@ -343,12 +343,13 @@ private fun TopBar(session: CaptureSession, busy: Boolean, onClose: () -> Unit, 
                         .semantics { contentDescription = "$label, $grade" }.testTag("captureGrade"),
                     horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(grade, style = BB.Subheadline, fontWeight = FontWeight.Bold, color = BB.Paper, maxLines = 1)
+                    // A grade the user did not pick is marked as such.
+                    Text(grade, style = BB.Subheadline, fontWeight = FontWeight.Bold, color = if (session.gradePrefilled) BB.Lime else BB.Paper, maxLines = 1)
                     Icon(BBIcons.ChevronDown, contentDescription = null, tint = BB.Paper, modifier = Modifier.size(12.dp))
                 }
                 DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = BB.Paper) {
                     for (value in gradeValues) {
-                        DropdownMenuItem(text = { Text(gradeText(value), color = BB.Ink) }, onClick = { session.grade = value; open = false }, modifier = Modifier.testTag("captureGrade-$value"))
+                        DropdownMenuItem(text = { Text(gradeText(value), color = BB.Ink) }, onClick = { session.pickGrade(value); open = false }, modifier = Modifier.testTag("captureGrade-$value"))
                     }
                 }
             }
@@ -576,7 +577,6 @@ private fun Quality(score: Double) {
 private fun Colours(session: CaptureSession, tool: CaptureRole, onTool: (CaptureRole) -> Unit) {
     if (session.page != CaptureSession.Page.READY || (session.palette.isEmpty() && session.color == null)) return
     val assessment = session.assessment
-    val language = AppLanguage.current()
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         // Nothing blocks, but the page still has something to say. What it says about the start
         // and the finish is already the business of the line below.
@@ -590,8 +590,7 @@ private fun Colours(session: CaptureSession, tool: CaptureRole, onTool: (Capture
         val route = session.recognised
         if (session.color != null && route != null) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                // Whatever the page says about the problem, so the user can tell at a glance whether it is theirs.
-                val detail = listOfNotNull(route.displayName(language), route.grade, route.wall).filter { it.isNotBlank() }.joinToString(" · ")
+                val detail = listOfNotNull(route.title, route.grade).filter { it.isNotBlank() }.joinToString(" · ")
                 Text(
                     stringResource(R.string.capture_route, detail), style = BB.Caption, fontWeight = FontWeight.Bold, color = BB.Paper,
                     modifier = Modifier.weight(1f, fill = false).testTag("captureRoute"),
@@ -604,7 +603,10 @@ private fun Colours(session: CaptureSession, tool: CaptureRole, onTool: (Capture
                 }
             }
         }
-        val stage = CaptureText.stage(session.tapMissed, session.color != null, assessment)
+        if (session.gradePrefilled) {
+            Text(stringResource(R.string.capture_grade_prefilled), style = BB.Caption, fontWeight = FontWeight.Bold, color = BB.Lime, modifier = Modifier.testTag("captureGradePrefilled"))
+        }
+        val stage = CaptureText.stage(session.tapMissed, session.color != null, assessment, recognised = session.color != null && route != null)
         Text(
             stringResource(CaptureText.prompt(stage)), style = BB.Caption, fontWeight = FontWeight.Bold, color = BB.Paper,
             modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite; stateDescription = stage.name.lowercase() }.testTag("capturePrompt"),

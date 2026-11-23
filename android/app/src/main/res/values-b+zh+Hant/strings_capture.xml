@@ -86,6 +86,8 @@
     <string name="capture_prompt_start">虛線是自動猜的，起步點常常猜錯。點一下起步的手點。</string>
     <string name="capture_prompt_finish">起步標好了。選「結束」，再點一下結束點。</string>
     <string name="capture_prompt_marked">起步和結束都標好了。其餘虛線仍是自動猜的。</string>
+    <string name="capture_prompt_route">起步和結束是按認出的這條路線標的。不對的話，點一下岩點改。</string>
+    <string name="capture_grade_prefilled">難度是按認出的路線填的，可以改。</string>
     <string name="capture_colour_n">顏色 %1$d</string>
     <string name="capture_hold_count">%1$d 個岩點</string>
     <string name="capture_change_colour">換顏色</string>

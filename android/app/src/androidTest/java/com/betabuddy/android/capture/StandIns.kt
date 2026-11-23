@@ -25,7 +25,7 @@ import java.io.InputStream
  * for the capture and analysis pages that answer from a script (the same two pages the iOS tests
  * use, see ios/TestSupport). No venue, route or algorithm is in it.
  */
-internal class StandInPack(testContext: Context, capture: Boolean = true, analysis: Boolean = true, step: Int = 5) : PackWebView.Files {
+internal class StandInPack(testContext: Context, capture: Boolean = true, analysis: Boolean = true, step: Int = 5, directoryIds: Boolean = true) : PackWebView.Files {
     private val pages = buildMap {
         put("index.html", "<!doctype html><meta charset=\"utf-8\"><title>synthetic pack</title><p>synthetic pack</p><script>window.BetaBuddyGym={openWall(){},openRoute(){},openVenue(){},state(){return {ready:true}}};try{window.webkit.messageHandlers.gym.postMessage({type:'ready',packVersion:'$VERSION',routeCount:0})}catch(e){}</script>")
         // A real pack's pages load their code from a file of its own, and so do these: the stand-in's
@@ -47,7 +47,7 @@ internal class StandInPack(testContext: Context, capture: Boolean = true, analys
         GymManifest.parse(
             """{"schema":1,"packVersion":"$VERSION","generatedAt":"2026-01-01T00:00:00Z","gymName":"合成岩馆","routeCount":0,"entry":"index.html",
                "files":[${pages.keys.sorted().joinToString(",") { """{"path":"$it","sha256":"00"}""" }}],
-               "venues":[{"id":"$VENUE_ID","files":[],"name":"合成岩馆 抱石 东门店","names":{"en":"Synthetic Gym East"}}]}""",
+               "venues":[{"id":"$VENUE_ID","files":[],"name":"合成岩馆 抱石 东门店","names":{"en":"Synthetic Gym East"}${if (directoryIds) ""","directoryIds":["syn:east"]""" else ""}}]}""",
         ),
     )
 

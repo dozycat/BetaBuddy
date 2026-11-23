@@ -96,17 +96,22 @@ class CaptureTest {
         val full = assessment("""{"type":"captureAssessment","route":{"id":"synthetic-east/yellow-01","conf":0.9,"name":"Synthetic Yellow 1","nameZh":"合成线路 黄 1","grade":"V3","colour":"yellow","wall":"East","others":[{"id":"x"}]}}""").route!!
         assertEquals("synthetic-east/yellow-01", full.id)
         assertEquals(0.9, full.confidence!!, 1e-9)
-        assertEquals("合成线路 黄 1", full.displayName("zh-Hans"))
-        assertEquals("合成线路 黄 1", full.displayName("zh-Hant"))
-        assertEquals("Synthetic Yellow 1", full.displayName("en"))
+        // On screen: the name in the page's language, else the problem's own name, else its id.
+        assertEquals("Synthetic Yellow 1", full.title); assertEquals("合成线路 黄 1", full.nameZh)
         assertEquals("V3", full.grade); assertEquals("yellow", full.colour); assertEquals("East", full.wall)
         val bare = assessment("""{"type":"captureAssessment","route":{"id":"r1","conf":"high","name":7}}""").route!!
         assertNull(bare.confidence); assertNull(bare.name)
-        assertEquals("r1", bare.displayName("ja"))            // nothing to show but the id
+        assertEquals("r1", bare.title)            // nothing to show but the id
         assertNull(assessment("""{"type":"captureAssessment","route":null}""").route)
         assertNull(assessment("""{"type":"captureAssessment","route":{"conf":0.9}}""").route)
-        // Only one of the two names: it is used for every language.
-        assertEquals("只有中文名", assessment("""{"type":"captureAssessment","route":{"id":"r","nameZh":"只有中文名"}}""").route!!.displayName("en"))
+        assertEquals("只有中文名", assessment("""{"type":"captureAssessment","route":{"id":"r","nameZh":"只有中文名","name":""}}""").route!!.title)
+    }
+
+    @Test fun onlyAPlainVGradeIsTakenForTheLogbook() {
+        fun grade(text: String?) = com.betabuddy.android.data.CaptureRoute("r", grade = text).albumGrade
+        assertEquals("V0", grade("V0")); assertEquals("V3", grade("V3")); assertEquals("V12", grade("V12"))
+        // Gyms write grades in their own ways; anything else is shown as it is and never filled in.
+        for (other in listOf(null, "", "V13", "V-1", "V03", "v3", "V3+", "V3-4", " V3", "6A", "紫条 11–12", "V", "VB")) assertNull(other, grade(other))
     }
 
     @Test fun otherMessages() {
@@ -255,11 +260,15 @@ class CaptureTest {
         assertEquals(CaptureText.Stage.COLOUR, CaptureText.stage(false, false, null))
         assertEquals(CaptureText.Stage.START, CaptureText.stage(false, true, null))
         assertEquals(CaptureText.Stage.START, CaptureText.stage(false, true, holds(false, true)))
+        // With a recognised problem the marks come from the pack's data: the prompt says so until the user marks the start.
+        assertEquals(CaptureText.Stage.ROUTE, CaptureText.stage(false, true, holds(false, false), recognised = true))
+        assertEquals(CaptureText.Stage.FINISH, CaptureText.stage(false, true, holds(true, false), recognised = true))
+        assertEquals(CaptureText.Stage.COLOUR, CaptureText.stage(false, false, null, recognised = true))
         assertEquals(CaptureText.Stage.FINISH, CaptureText.stage(false, true, holds(true, false)))
         assertEquals(CaptureText.Stage.MARKED, CaptureText.stage(false, true, holds(true, true)))
         assertEquals(CaptureText.Stage.MISSED, CaptureText.stage(true, true, holds(true, true)))
         assertEquals(R.string.capture_prompt_start, CaptureText.prompt(CaptureText.Stage.START))
-        assertEquals(5, CaptureText.Stage.entries.map(CaptureText::prompt).toSet().size)
+        assertEquals(6, CaptureText.Stage.entries.map(CaptureText::prompt).toSet().size)
     }
 
     @Test fun stopsNoticesRolesAndTheIndicator() {

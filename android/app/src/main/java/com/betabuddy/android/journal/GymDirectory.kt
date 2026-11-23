@@ -85,11 +85,14 @@ data class NearbyGym(val gym: DirectoryGym, val meters: Double, val shown: Shown
         HIDDEN,
     }
 
-    /** The distance as it may be shown: as measured, or rounded to 100 m below a kilometre and to 0.5 km above. */
+    /**
+     * The distance as it may be shown: as measured, or (when only the nearest station is known)
+     * rounded to 0.5 km and never below a kilometre, because the station is typically that far from the gym itself.
+     */
     val displayMeters: Double?
         get() = when (shown) {
             Shown.EXACT -> meters
-            Shown.APPROXIMATE -> if (meters < 1_000) maxOf(100.0, Math.round(meters / 100) * 100.0) else Math.round(meters / 500) * 500.0
+            Shown.APPROXIMATE -> maxOf(1_000.0, Math.round(meters / 500) * 500.0)
             Shown.HIDDEN -> null
         }
 }

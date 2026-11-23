@@ -82,12 +82,13 @@ object CaptureText {
     }
 
     /** Where the user is in marking the problem. The screen has a sentence for each. */
-    enum class Stage { MISSED, COLOUR, START, FINISH, MARKED }
+    enum class Stage { MISSED, COLOUR, START, ROUTE, FINISH, MARKED }
 
-    fun stage(tapMissed: Boolean, colourChosen: Boolean, assessment: CaptureAssessment?): Stage = when {
+    /** With a recognised problem the start and finish come from the pack's data, not from a guess at the picture. */
+    fun stage(tapMissed: Boolean, colourChosen: Boolean, assessment: CaptureAssessment?, recognised: Boolean = false): Stage = when {
         tapMissed -> Stage.MISSED
         !colourChosen -> Stage.COLOUR
-        assessment?.startConfirmed != true -> Stage.START
+        assessment?.startConfirmed != true -> if (recognised) Stage.ROUTE else Stage.START
         !assessment.finishConfirmed -> Stage.FINISH
         else -> Stage.MARKED
     }
@@ -97,6 +98,7 @@ object CaptureText {
         Stage.MISSED -> R.string.capture_prompt_missed
         Stage.COLOUR -> R.string.capture_prompt_colour
         Stage.START -> R.string.capture_prompt_start
+        Stage.ROUTE -> R.string.capture_prompt_route
         Stage.FINISH -> R.string.capture_prompt_finish
         Stage.MARKED -> R.string.capture_prompt_marked
     }

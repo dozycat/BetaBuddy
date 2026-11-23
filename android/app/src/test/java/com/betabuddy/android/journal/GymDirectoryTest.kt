@@ -46,13 +46,15 @@ class GymDirectoryTest {
         assertTrue(result.ranked.none { it.gym.precision?.ranks != true })
     }
 
-    @Test fun stationDistancesAreRounded() {
+    @Test fun stationDistancesAreRoundedAndNeverLookCloserThanAKilometre() {
         val station = at().ranked.first { it.gym.id == "syn:station" }
         assertEquals(1279.0, station.meters, 3.0)
-        assertEquals(1500.0, station.displayMeters!!, 0.0)     // to half a kilometre above one
-        assertEquals(600.0, NearbyGym(station.gym, 649.0, NearbyGym.Shown.APPROXIMATE).displayMeters!!, 0.0)   // to 100 m below
-        assertEquals(100.0, NearbyGym(station.gym, 20.0, NearbyGym.Shown.APPROXIMATE).displayMeters!!, 0.0)
+        assertEquals(1500.0, station.displayMeters!!, 0.0)     // to half a kilometre
+        // The station is typically about a kilometre from the gym itself: nothing nearer is claimed.
+        assertEquals(1000.0, NearbyGym(station.gym, 649.0, NearbyGym.Shown.APPROXIMATE).displayMeters!!, 0.0)
+        assertEquals(1000.0, NearbyGym(station.gym, 20.0, NearbyGym.Shown.APPROXIMATE).displayMeters!!, 0.0)
         assertEquals(1000.0, NearbyGym(station.gym, 1100.0, NearbyGym.Shown.APPROXIMATE).displayMeters!!, 0.0)
+        assertEquals(2500.0, NearbyGym(station.gym, 2300.0, NearbyGym.Shown.APPROXIMATE).displayMeters!!, 0.0)
         assertEquals(649.0, NearbyGym(station.gym, 649.0, NearbyGym.Shown.EXACT).displayMeters!!, 0.0)
         assertNull(NearbyGym(station.gym, 649.0, NearbyGym.Shown.HIDDEN).displayMeters)
     }

@@ -86,6 +86,8 @@
     <string name="capture_prompt_start">점선은 자동으로 추측한 것이고, 스타트는 자주 틀려요. 스타트 손 홀드를 눌러 주세요.</string>
     <string name="capture_prompt_finish">스타트를 지정했어요. ‘탑’을 고르고 탑 홀드를 눌러 주세요.</string>
     <string name="capture_prompt_marked">스타트와 탑을 지정했어요. 나머지 점선은 여전히 자동 추측이에요.</string>
+    <string name="capture_prompt_route">스타트와 탑은 인식한 문제에 맞춰 표시했어요. 틀리면 홀드를 눌러 고쳐 주세요.</string>
+    <string name="capture_grade_prefilled">난이도는 인식한 문제에서 가져왔어요. 바꿀 수 있어요.</string>
     <string name="capture_colour_n">색 %1$d</string>
     <string name="capture_hold_count">홀드 %1$d개</string>
     <string name="capture_change_colour">색 바꾸기</string>

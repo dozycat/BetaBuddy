@@ -90,8 +90,8 @@ class CaptureScreenTest {
         SyntheticWallClip.make(File(context.cacheDir, "synthetic-wall-$person-${System.nanoTime()}.mp4"), photo = photo)
     }
 
-    private fun standIn(capture: Boolean = true, analysis: Boolean = true, step: Int = 5) {
-        val pack = StandInPack(instrumentation.context, capture, analysis, step)
+    private fun standIn(capture: Boolean = true, analysis: Boolean = true, step: Int = 5, directoryIds: Boolean = true) {
+        val pack = StandInPack(instrumentation.context, capture, analysis, step, directoryIds)
         CaptureDebug.pack = pack.pack
         CaptureDebug.packFiles = pack
     }
@@ -180,10 +180,15 @@ class CaptureScreenTest {
         val swatch = rule.onAllNodesWithTag("captureColor-yellow", useUnmergedTree = true).fetchSemanticsNodes().first().config
         assertEquals(listOf("颜色 1, 6 个岩点"), swatch.getOrNull(SemanticsProperties.ContentDescription))
         rule.onNodeWithTag("captureColor-yellow").performClick()
-        awaitState("capturePrompt", "start")
-        // The gym is one of the pack's, so the stand-in "recognises" a problem; it is shown as a guess.
+        // The gym is one of the pack's, so the stand-in "recognises" a problem; it is shown as a guess,
+        // and the prompt says where the start and finish marks come from.
         await("captureRoute")
-        assertTrue(text("captureRoute"), text("captureRoute").contains("合成线路 黄 1"))
+        assertEquals("认出来像是：合成线路 黄 1 · V3", text("captureRoute"))
+        awaitState("capturePrompt", "route")
+        assertEquals("起步和结束是按认出的这条线标的。不对的话，点一下岩点改。", text("capturePrompt"))
+        // Its grade is filled in, and marked as not the user's own.
+        await("captureGradePrefilled")
+        assertEquals("V3", session().grade); assertTrue(session().gradePrefilled)
         rule.waitUntil(10_000) { session().assessment?.holds?.size == 6 }
         shot("14-colour-chosen-guesses")
 
@@ -201,12 +206,20 @@ class CaptureScreenTest {
         assertEquals(setOf("y1"), marked.holds.filter { it.role == CaptureRole.START_HAND && it.user }.map { it.id }.toSet())
         assertEquals("y6", marked.holds.single { it.role == CaptureRole.FINISH }.id)
         assertTrue(exists("captureResetMarks"))
-        rule.onNodeWithTag("captureRejectRoute").performClick()
-        awaitGone("captureRoute")
 
+        // "Not this one": the page moves on to its next candidate. That one's grade is written the
+        // way some gyms do, which is shown but never filled in; the filled-in grade goes away with the problem it came from.
+        rule.onNodeWithTag("captureRejectRoute").performClick()
+        rule.waitUntil(20_000) { exists("captureRoute") && text("captureRoute").contains("合成线路 黄 2") }
+        assertEquals("认出来像是：合成线路 黄 2 · 紫条 11–12", text("captureRoute"))
+        awaitGone("captureGradePrefilled")
+        assertEquals(com.betabuddy.android.data.UNGRADED_VALUE, session().grade)
+
+        // The user's own choice of grade is kept whatever is recognised afterwards.
         rule.onNodeWithTag("captureGrade").performClick()
         await("captureGrade-V4")
         rule.onNodeWithTag("captureGrade-V4").performClick()
+        rule.waitUntil(5_000) { session().grade == "V4" && !session().gradePrefilled }
 
         // Nothing is analysed while the camera is in use.
         assertTrue(CameraGate.open.value)
@@ -227,7 +240,9 @@ class CaptureScreenTest {
         assertEquals("yellow", capture.colorKey); assertEquals(listOf(226, 196, 40), capture.colorRGB)
         assertEquals(StandInPack.VERSION, capture.packVersion)
         assertTrue(capture.hasPlan)
-        assertNull("a rejected problem is not kept", capture.routeId)
+        // The problem that was not rejected is kept, by id and its own name; the rejected one is not.
+        assertEquals("${StandInPack.VENUE_ID}/yellow-02", capture.routeId); assertEquals("合成线路 黄 2", capture.routeName)
+        assertEquals("${StandInPack.VENUE_ID}/yellow-02", capture.summary?.route?.id)
         assertTrue(store.file(saved.videoName).length() > 10_000)
         assertTrue(saved.analysis.duration >= 1.0)
         val plan = Json.parseToJsonElement(store.capturePlan(saved.id)!!).jsonObject
@@ -369,9 +384,10 @@ class CaptureScreenTest {
         assertFalse(exists("captureOffer"))
         rule.onNodeWithTag("captureGym").performClick()
         await("captureGymSheet")
-        // Gyms whose own position is known, nearest first: a number for a place, "about" for a station.
+        // Gyms whose own position is known, nearest first: a number for a place; for one known only by
+        // its nearest station (610 m away here), "about", and never less than a kilometre.
         assertTrue(text("nearbyGym-syn:east"), text("nearbyGym-syn:east").contains("470 m"))
-        assertTrue(text("nearbyGym-syn:station"), text("nearbyGym-syn:station").contains("about 600 m"))
+        assertTrue(text("nearbyGym-syn:station"), text("nearbyGym-syn:station").contains("about 1 km"))
         assertTrue(exists("nearbyGym-syn:west"))
         // The ones only placed by district or city are listed without a distance.
         assertTrue(exists("cityGym-syn:district") && exists("cityGym-syn:city") && exists("cityGym-syn:nowhere"))

@@ -112,7 +112,13 @@ class CaptureSession(
         private set
     var gymName: String by mutableStateOf("")
         private set
+    /** Set with [pickGrade]. Until the user has picked one, a recognised problem's grade is filled in. */
     var grade: String by mutableStateOf(UNGRADED_VALUE)
+        private set
+    /** The grade shown was taken from the recognised problem, not picked by the user. */
+    var gradePrefilled: Boolean by mutableStateOf(false)
+        private set
+    private var gradePicked = false
 
     private var host: PackWebView? = null
     private var started = false
@@ -313,6 +319,7 @@ class CaptureSession(
                     val now = SystemClock.elapsedRealtime()
                     lastReply = now
                     assessment = message.assessment
+                    fillInGrade()
                     if (firstAssessment == 0L) firstAssessment = now
                     metrics = metrics.copy(assessments = metrics.assessments + 1, assessmentSpan = (now - firstAssessment) / 1000.0)
                 }
@@ -398,9 +405,34 @@ class CaptureSession(
      * shown again for this attempt. Either way a rejected problem is not stored with the record.
      */
     fun rejectRoute() {
+        if (phase != Phase.Framing) return
         val route = recognised ?: return
         rejectedRoutes = rejectedRoutes + route.id
+        fillInGrade()
         host?.evaluate(CaptureScript.rejectRoute(route.id))
+    }
+
+    /** The user's own choice of grade. It is never replaced afterwards. */
+    fun pickGrade(value: String) {
+        grade = value
+        gradePicked = true
+        gradePrefilled = false
+    }
+
+    /**
+     * Until the user has picked a grade, the recognised problem's is filled in, visibly; when that
+     * problem goes away again, so does its grade.
+     */
+    private fun fillInGrade() {
+        if (gradePicked || phase != Phase.Framing) return
+        val known = recognised?.albumGrade
+        if (known != null) {
+            grade = known
+            gradePrefilled = true
+        } else if (gradePrefilled) {
+            grade = UNGRADED_VALUE
+            gradePrefilled = false
+        }
     }
 
     /** The hint blocks: the user is asked before recording from this position. */
@@ -511,7 +543,7 @@ class CaptureSession(
                 val info = CaptureInfo(
                     colorKey = color, colorRGB = swatch?.rgb ?: summary?.rgb?.takeIf { summary?.color == color }, summary = summary,
                     packVersion = if (pack == null) null else pageVersion, analysisQueued = if (analysisAvailable) true else null,
-                    routeId = route?.id, routeName = route?.displayName(language)?.takeIf { it != route.id },
+                    routeId = route?.id, routeName = route?.nameZh ?: route?.name,
                 )
                 // One write: the clip, its thumbnail, the plan, what was chosen and the request for
                 // analysis. Nothing is analysed until this has succeeded.
