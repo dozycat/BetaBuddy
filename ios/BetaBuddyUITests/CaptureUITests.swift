@@ -27,14 +27,15 @@ final class CaptureUITests: XCTestCase {
             try? shot.pngRepresentation.write(to: URL(fileURLWithPath: directory).appendingPathComponent(name + ".png"))
         }
     }
-    @MainActor private func launch(language: String = "zh-Hans", locale: String = "zh_CN", capture: Bool = true, source: Bool = true, step: Int = 14) async throws -> XCUIApplication {
+    @MainActor private func launch(language: String = "zh-Hans", locale: String = "zh_CN", capture: Bool = true, source: Bool = true, step: Int = 14,
+                                   location: String = "\(StandInPack.origin.latitude),\(StandInPack.origin.longitude)") async throws -> XCUIApplication {
         try StandInPack.write(to: work, capture: capture, step: step)
         let directory = work.appendingPathComponent("gyms.json")
         try Data(StandInPack.directory.utf8).write(to: directory)
         let app = XCUIApplication()
         var arguments = ["-AppleLanguages", "(\(language))", "-AppleLocale", locale, "-resetLanguage", "YES", "-initialTab", "1",
                          "-debugGymPackRoot", work.path, "-debugGymDirectory", directory.path,
-                         "-debugLocation", "\(StandInPack.origin.latitude),\(StandInPack.origin.longitude)"]
+                         "-debugLocation", location]
         if source {
             let clip = try await SyntheticWallClip.make(width: 540, height: 960, seconds: 4)
             self.clip = clip
@@ -360,6 +361,57 @@ final class CaptureUITests: XCTestCase {
         XCTAssertTrue(found, "The page recognised no problem")
         let label = XCTAttachment(string: route.label); label.name = "Recognised problem as shown"; label.lifetime = .keepAlways; add(label)
         app.buttons["captureClose"].tap()
+    }
+
+    /// With no gym chosen yet, the distance recommendation is on the screen itself; and when there is
+    /// no distance to go by, the list says which of three reasons it is.
+    @MainActor
+    func testGymOffersOnFirstUseAndWhyThereIsNoDistance() async throws {
+        // Nearest gym known only by its station: offered as a guess, not chosen.
+        var app = try await launch(step: 2, location: "30.0115,120.0005")
+        XCTAssertTrue(app.buttons["recordClimb"].waitForExistence(timeout: 15))
+        app.buttons["recordClimb"].tap()
+        let text = app.staticTexts["gymOfferText"]
+        XCTAssertTrue(text.waitForExistence(timeout: 15))
+        XCTAssertEqual(text.label, "可能在：只知道最近车站的岩馆")
+        XCTAssertTrue(app.buttons["captureGym"].label.contains("选择岩馆"))
+        XCTAssertEqual(app.buttons["useNearestGym"].label, "选这家")
+        keep(app, "70-gym-guess-offered")
+        app.buttons["declineNearestGym"].tap()
+        XCTAssertFalse(text.waitForExistence(timeout: 1))
+        XCTAssertTrue(app.buttons["captureGym"].label.contains("选择岩馆"))
+        app.terminate()
+
+        // Never asked: one tap away, on the screen and in the list.
+        app = try await launch(step: 2, location: "ask")
+        app.buttons["recordClimb"].tap()
+        XCTAssertTrue(app.buttons["askLocationHere"].waitForExistence(timeout: 15))
+        keep(app, "71-location-not-asked")
+        app.buttons["captureGym"].tap()
+        XCTAssertTrue(app.buttons["askLocation"].waitForExistence(timeout: 5))
+        app.terminate()
+
+        // Refused: nothing on the screen; the list says so and how to change it.
+        app = try await launch(step: 2, location: "refused")
+        app.buttons["recordClimb"].tap()
+        XCTAssertTrue(app.buttons["captureGym"].waitForExistence(timeout: 15))
+        XCTAssertFalse(app.buttons["askLocationHere"].exists); XCTAssertFalse(app.staticTexts["gymOfferText"].exists)
+        app.buttons["captureGym"].tap()
+        XCTAssertTrue(app.staticTexts["locationRefused"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["打开系统设置"].exists)
+        XCTAssertFalse(app.staticTexts["附近没有找到目录里的岩馆。"].exists)
+        keep(app, "72-location-refused")
+        app.terminate()
+
+        // Allowed, but no position to be had: said as that, with another try.
+        app = try await launch(step: 2, location: "unavailable")
+        app.buttons["recordClimb"].tap()
+        XCTAssertTrue(app.buttons["captureGym"].waitForExistence(timeout: 15))
+        app.buttons["captureGym"].tap()
+        XCTAssertTrue(app.staticTexts["locationUnavailable"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["再试一次"].exists)
+        XCTAssertFalse(app.staticTexts["附近没有找到目录里的岩馆。"].exists)
+        keep(app, "73-location-unavailable")
     }
 
     /// The simulator has no camera: without the file source the screen says so and offers the import.

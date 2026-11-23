@@ -96,8 +96,15 @@ private struct CaptureGymSheet: View {
                         ForEach(suggestions.ranked) { item in
                             row(item.gym, distance: CaptureText.distance(item)).accessibilityIdentifier("nearbyGym-\(item.gym.id)")
                         }
-                        if locator.locating { ProgressView() }
-                        else if suggestions.ranked.isEmpty { Text("附近没有找到目录里的岩馆。").foregroundStyle(BB.muted) }
+                        // Three different things: still waiting for a position, no position to be had, and a position with no gym near it.
+                        if locator.fix == nil {
+                            if locator.failed {
+                                Text("暂时取不到位置。").foregroundStyle(BB.muted).accessibilityIdentifier("locationUnavailable")
+                                Button("再试一次") { locator.retry() }
+                            } else {
+                                HStack(spacing: 10) { ProgressView(); Text("正在定位…").foregroundStyle(BB.muted) }.accessibilityIdentifier("locationWaiting")
+                            }
+                        } else if suggestions.ranked.isEmpty { Text("附近没有找到目录里的岩馆。").foregroundStyle(BB.muted) }
                     } header: { Text("离你近的") } footer: {
                         VStack(alignment: .leading, spacing: 5) {
                             Text("位置只在这台 iPhone 上用来给岩馆排序，不保存，也不离开设备。")
@@ -115,6 +122,14 @@ private struct CaptureGymSheet: View {
                         Button { locator.ask() } label: { Label("按距离找附近的岩馆", systemImage: "location") }
                             .accessibilityIdentifier("askLocation")
                     } footer: { Text("位置只在这台 iPhone 上用来给岩馆排序，不保存，也不离开设备。") }
+                } else {
+                    Section {
+                        Text("没有位置权限。在系统设置里允许 BetaBuddy 使用位置，就能按距离找岩馆。").foregroundStyle(BB.muted)
+                            .accessibilityIdentifier("locationRefused")
+                        Button("打开系统设置") {
+                            if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
+                        }
+                    }
                 }
                 Section {
                     NavigationLink { GymPickerView(gymId: $gymId, gymName: $gymName) } label: {
@@ -159,6 +174,7 @@ struct CaptureView: View {
     @State private var viewing: Climb?
     /// The gym the user declined when it was offered as the one they are standing in.
     @State private var declined: String?
+    @State private var confirmingDiscard = false
     /// Leaves the camera for the photo library import.
     private let onImport: () -> Void
 
@@ -174,10 +190,26 @@ struct CaptureView: View {
         return store.climbs.first { $0.id == id }
     }
     private var framing: Bool { session.phase == .framing && session.camera == .running }
-    /// A gym right where the phone is that is not the one selected. It is offered; the selection never changes by itself.
-    private var offered: NearbyGym? {
-        guard framing, let here = locator.suggestions().here, here.gym.id != session.gymId, here.gym.id != declined else { return nil }
-        return here
+    /// What the screen offers about the gym without being asked. It is only ever an offer: the
+    /// selection, which starts as the last record's gym, never changes by itself.
+    private enum GymOffer {
+        /// A gym right where the phone is, other than the one selected.
+        case here(NearbyGym)
+        /// No gym is selected yet: the nearest one whose own position is known…
+        case nearest(NearbyGym)
+        /// …or the nearest one known only by its station, or with only a rough position: a guess, and worded as one.
+        case guess(NearbyGym)
+        /// No gym is selected and the position has never been asked for.
+        case ask
+    }
+    private var offered: GymOffer? {
+        guard framing else { return nil }
+        let suggestions = locator.suggestions()
+        if let here = suggestions.here, here.gym.id != session.gymId, here.gym.id != declined { return .here(here) }
+        guard session.gymId == nil, session.gymName.isEmpty else { return nil }
+        if locator.access == .notAsked { return declined == "ask" ? nil : .ask }
+        guard let first = suggestions.ranked.first, first.gym.id != declined else { return nil }
+        return first.shown == .exact ? .nearest(first) : .guess(first)
     }
 
     var body: some View {
@@ -191,9 +223,15 @@ struct CaptureView: View {
             VStack(spacing: 10) {
                 topBar
                 if let offered { offer(offered) }
+                // Nothing is drawn over the picture but the holds themselves: guidance sits above it (the
+                // finish is at the top of the wall), colours and marking below it (the start is at the bottom).
+                if framing { guidance }
                 picture
-                // Below the picture, not on it: the start of a problem is at the bottom of the wall.
                 if framing { colours }
+                else if session.phase == .recording {
+                    Text("手机放稳，去爬吧。爬完回来点停止。").font(.subheadline.bold()).multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true).frame(maxWidth: .infinity)
+                }
                 bottomBar
             }.padding(.horizontal, 12).padding(.vertical, 8)
         }
@@ -218,6 +256,12 @@ struct CaptureView: View {
             Button("仍然开始录") { session.startRecording() }.accessibilityIdentifier("recordAnyway")
             Button("再调一下机位", role: .cancel) {}
         } message: { Text(verbatim: session.assessment?.hint.map(CaptureText.line) ?? "") }
+        .confirmationDialog("这一趟还没存进攀爬册", isPresented: $confirmingDiscard, titleVisibility: .visible) {
+            Button("再存一次") { Task { await session.save() } }
+            Button("放弃这段录像", role: .destructive) { Task { session.discardHeldClip(); await session.close(); dismiss() } }
+                .accessibilityIdentifier("discardAndClose")
+            Button("取消", role: .cancel) {}
+        }
         .alert(Text(verbatim: session.notice.map(CaptureText.notice) ?? ""), isPresented: Binding(get: { session.notice != nil }, set: { if !$0 { session.notice = nil } })) {
             Button("知道了", role: .cancel) { session.notice = nil }
         }
@@ -227,7 +271,10 @@ struct CaptureView: View {
 
     private var topBar: some View {
         HStack(spacing: 8) {
-            Button { Task { await session.close(); dismiss() } } label: {
+            Button {
+                // A clip that has not made it into the album is not dropped by closing the screen without a word.
+                if case .saveFailed = session.phase { confirmingDiscard = true } else { Task { await session.close(); dismiss() } }
+            } label: {
                 Image(systemName: "xmark").font(.system(size: 16, weight: .bold)).frame(width: 44, height: 44)
                     .background(.white.opacity(0.14), in: Circle())
             }.buttonStyle(.plain).accessibilityLabel(Text("关闭")).accessibilityIdentifier("captureClose")
@@ -273,21 +320,38 @@ struct CaptureView: View {
         }
     }
 
-    private func offer(_ here: NearbyGym) -> some View {
+    @ViewBuilder
+    private func offer(_ offer: GymOffer) -> some View {
         HStack(spacing: 8) {
             Image(systemName: "location.fill").font(.caption)
-            Text("离你最近：\(here.gym.name) · \(CaptureText.distance(here) ?? "")").font(.caption.bold())
-                .fixedSize(horizontal: false, vertical: true).frame(maxWidth: .infinity, alignment: .leading)
-            Button { session.gymId = here.gym.id; session.gymName = here.gym.name } label: {
-                Text("换成这家").font(.caption.bold()).padding(.horizontal, 12).frame(minHeight: 36)
-                    .foregroundStyle(BB.ink).background(BB.lime, in: Capsule())
-            }.buttonStyle(.plain).accessibilityIdentifier("useNearestGym")
-            Button { declined = here.gym.id } label: {
-                Image(systemName: "xmark").font(.caption.bold()).frame(width: 36, height: 36)
-            }.buttonStyle(.plain).accessibilityLabel(Text("不用了")).accessibilityIdentifier("declineNearestGym")
+            switch offer {
+            case .ask:
+                Button { locator.ask() } label: {
+                    Text("按距离找附近的岩馆").font(.caption.bold()).frame(maxWidth: .infinity, alignment: .leading).frame(minHeight: 36).contentShape(Rectangle())
+                }.buttonStyle(.plain).accessibilityIdentifier("askLocationHere")
+                dismissOffer("ask")
+            case .here(let gym), .nearest(let gym), .guess(let gym):
+                Group {
+                    if case .guess = offer { Text("可能在：\(gym.gym.name)") }
+                    else { Text("离你最近：\(gym.gym.name) · \(CaptureText.distance(gym) ?? "")") }
+                }.font(.caption.bold()).fixedSize(horizontal: false, vertical: true).frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityIdentifier("gymOfferText")
+                Button { session.gymId = gym.gym.id; session.gymName = gym.gym.name } label: {
+                    // With a gym already selected this replaces it, and says so.
+                    Group { if case .here = offer, !session.gymName.isEmpty { Text("换成这家") } else { Text("选这家") } }
+                        .font(.caption.bold()).padding(.horizontal, 12).frame(minHeight: 36)
+                        .foregroundStyle(BB.ink).background(BB.lime, in: Capsule())
+                }.buttonStyle(.plain).accessibilityIdentifier("useNearestGym")
+                dismissOffer(gym.gym.id)
+            }
         }
         .padding(.leading, 12).padding(.trailing, 4).padding(.vertical, 4)
         .background(.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 14))
+    }
+    private func dismissOffer(_ key: String) -> some View {
+        Button { declined = key } label: {
+            Image(systemName: "xmark").font(.caption.bold()).frame(width: 36, height: 36)
+        }.buttonStyle(.plain).accessibilityLabel(Text("不用了")).accessibilityIdentifier("declineNearestGym")
     }
 
     // MARK: Middle: the picture and what is drawn on it
@@ -314,17 +378,6 @@ struct CaptureView: View {
                                 session.correct(at: CGPoint(x: value.location.x / size.width, y: value.location.y / size.height), role: tool)
                             })
                             .accessibilityElement().accessibilityLabel(Text(verbatim: CaptureText.role(tool))).accessibilityIdentifier("capturePicture")
-                        VStack(spacing: 8) {
-                            guidance
-                            Spacer(minLength: 0)
-                        }.padding(10)
-                    } else if session.phase == .recording {
-                        VStack {
-                            Spacer()
-                            Text("手机放稳，去爬吧。爬完回来点停止。").font(.subheadline.bold()).multilineTextAlignment(.center)
-                                .padding(.horizontal, 14).padding(.vertical, 10).foregroundStyle(BB.ink)
-                                .background(BB.paper, in: RoundedRectangle(cornerRadius: 14)).padding(10)
-                        }
                     } else if session.phase == .saving {
                         VStack(spacing: 14) { ProgressView().tint(BB.ink); Text("正在保存…").font(.headline) }
                             .padding(24).foregroundStyle(BB.ink).background(BB.paper, in: RoundedRectangle(cornerRadius: 22))
@@ -354,7 +407,7 @@ struct CaptureView: View {
             pill(icon: "viewfinder", text: Text("正在看画面…"), tone: .plain)
         case .ready:
             if let assessment {
-                VStack(spacing: 6) {
+                HStack(spacing: 8) {
                     if assessment.ready {
                         // A remark that does not block is shown under the picture, see `colours`.
                         pill(icon: "checkmark.circle.fill", text: Text("机位可以，开始吧"), tone: .ready)
@@ -389,16 +442,15 @@ struct CaptureView: View {
     /// Five segments, never a number: the score only orders camera positions.
     private func quality(_ score: Double) -> some View {
         let level = min(5, max(1, Int((score * 5).rounded(.up))))
-        return HStack(spacing: 6) {
+        return VStack(spacing: 4) {
             Text("机位").font(.caption2.bold())
-            HStack(spacing: 3) {
+            HStack(spacing: 2) {
                 ForEach(1...5, id: \.self) { index in
-                    Capsule().fill(index <= level ? BB.lime : .white.opacity(0.35)).frame(width: 16, height: 6)
+                    Capsule().fill(index <= level ? BB.lime : .white.opacity(0.3)).frame(width: 9, height: 6)
                 }
             }
         }
-        .padding(.horizontal, 10).padding(.vertical, 6).background(.black.opacity(0.55), in: Capsule())
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 10).frame(minHeight: 44).background(.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 14))
         .accessibilityElement(children: .ignore).accessibilityLabel(Text("机位"))
         .accessibilityValue(level >= 4 ? Text("好") : level >= 3 ? Text("一般") : Text("差"))
         .accessibilityIdentifier("captureQuality")
