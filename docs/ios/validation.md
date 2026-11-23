@@ -13,6 +13,7 @@
 | `-debugCaptureColour <色板 key>` | 选这个颜色；不给就选岩点最多的那个 |
 | `-debugCaptureTaps YES` | 页面已经猜了起步点也照样去点起步和结束（不给时只在页面没有起步点时才点）|
 | `-debugCaptureSeconds <n>` | 录多少秒，默认 20 |
+| `-debugCaptureBlind YES` | 页面认不出颜色时（比如手机镜头朝下放着）也照样录：跳过选颜色和标点，只为在没人操作时试一遍真相机的录像、保存和后续 |
 | `-debugCaptureVideo <路径>` | 原有的参数；现在不以 `/` 开头的路径从应用容器算起，例如 `Documents/debug/clip.mp4` |
 
 步骤：选岩馆 → 等页面就绪并给出非空的色板（30 秒等不到就停）→ 选颜色 → 等岩点（最多 15 秒）、记下页面报的线路 → 需要时点最低的那个岩点当起步手、最高的当结束点（走界面自己的点按处理，坐标是 0–1 的画面坐标，记下页面回的岩点编号）→ 按录像（出现「仍然开始录」的询问就答它）→ 录够秒数按停止 → 保存后的卡片留着，等姿态识别和分析页面跑完。每一步在 `session-*.jsonl` 里是一行 `event: autopilot`（`step`：`start`、`gym`、`ready`、`colour`、`holds`、`route`、`tap`、`marks`、`recordAnyway`、`recording`、`stop` / `stopped`、`saved`、`pose`、`analysed`、`done` / `failed`）。

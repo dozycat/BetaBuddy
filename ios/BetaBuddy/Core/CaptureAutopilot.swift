@@ -12,6 +12,8 @@ import UIKit
 /// - `-debugCaptureColour <palette key>`: the colour to choose; without it, the one with the most holds.
 /// - `-debugCaptureTaps YES`: mark start and finish even when the page already guesses a start.
 /// - `-debugCaptureSeconds <n>`: how long to record (20).
+/// - `-debugCaptureBlind YES`: record even when the page sees no colours (a phone lying lens down): the
+///   colour and the marks are skipped, so that the camera's own recording can be tried with nobody there.
 @MainActor
 final class CaptureAutopilot {
     /// What the screen's controls do, handed over by the screen itself.
@@ -73,6 +75,9 @@ final class CaptureAutopilot {
 
     // MARK: The run
 
+    /// Nothing to choose from, and told to record all the same.
+    private var blind = false
+
     func run() async {
         guard Self.wanted, !Self.started else { return }
         Self.started = true
@@ -83,8 +88,10 @@ final class CaptureAutopilot {
                        "taps": defaults.bool(forKey: "debugCaptureTaps"), "seconds": seconds])
         do {
             try await ready()
-            try await colour()
-            await marks()
+            if !blind {
+                try await colour()
+                await marks()
+            }
             try await record()
             try await analysed()
             finish(nil)
@@ -150,12 +157,17 @@ final class CaptureAutopilot {
                 step("gym", ["id": id, "error": "not in the directory"])
             }
         }
-        let came = await wait(30) {
+        let mayGoBlind = UserDefaults.standard.bool(forKey: "debugCaptureBlind")
+        let came = await wait(mayGoBlind ? 10 : 30) {
             guard session.camera == .running, session.page == .ready, let assessment = session.assessment, !assessment.palette.isEmpty else { return false }
             guard let gymWanted else { return true }
             return latest("begin")?["gym"] as? String == gymWanted && assessment != afterGym
         }
-        guard came else {
+        if !came, mayGoBlind, session.camera == .running {
+            blind = true
+            report["blind"] = true
+        }
+        guard came || blind else {
             throw Halt(stage: "ready", reason: "no colours to choose from within 30 s: camera \(session.camera), page \(session.page), "
                        + (session.assessment == nil ? "no assessment" : "palette of \(session.assessment?.palette.count ?? 0)"))
         }
