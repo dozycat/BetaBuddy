@@ -45,7 +45,7 @@ xcodebuild -project ios/BetaBuddy.xcodeproj -scheme BetaBuddy \
   CODE_SIGNING_ALLOWED=NO build
 ```
 
-模拟器没有相机。应用内相机的测试用一段画出来的墙（`TestSupport/SyntheticWallClip.swift` 现场生成）代替相机，用一个按固定脚本回话的替身页面（`TestSupport/capture-standin.html`）代替数据包的拍摄页面；替身什么也不识别，只用来走通应用这一侧。这些都只编进测试包。Debug 构建的启动参数：`-debugCaptureVideo <路径>` 用一段视频代替相机，`-debugGymPackRoot <目录>` 改用 `<目录>/GymPack` 里的数据包，`-debugGymDirectory <路径>` 换一份岩馆目录，`-debugLocation "<纬度>,<经度>"` 给一个位置（不弹系统询问），`-debugCaptureAttitude "<仰角>,<倾斜>,<晃动>"` 顶替模拟器没有的运动传感器。界面测试会把每个状态截图附在结果里；加上 `TEST_RUNNER_BB_SCREENSHOT_DIR=<目录>` 另存一份 PNG。
+模拟器没有相机。应用内相机的测试用一段画出来的墙（`TestSupport/SyntheticWallClip.swift` 现场生成）代替相机，用一个按固定脚本回话的替身页面（`TestSupport/capture-standin.html`）代替数据包的拍摄页面；替身什么也不识别，只用来走通应用这一侧。这些都只编进测试包。Debug 构建的启动参数：`-debugCaptureVideo <路径>` 用一段视频代替相机，`-debugGymPackRoot <目录>` 改用 `<目录>/GymPack` 里的数据包，`-debugGymDirectory <路径>` 换一份岩馆目录，`-debugLocation "<纬度>,<经度>"` 给一个位置（不弹系统询问），`-debugCaptureAttitude "<仰角>,<倾斜>,<晃动>"` 顶替模拟器没有的运动传感器，`-debugCaptureFieldOfView <度>` 给顶替相机的视频一个视场角，`-debugFailSaves <n>` 让接下来 n 次保存失败（用来看「没存进攀爬册」那几个界面），`-debugCaptureOverlay YES` 在画面上叠一块调试数字（视场角、仰角 / 倾斜 / 晃动、页面每秒回几条、交一帧多少毫秒、姿态耗时、当前的问题代码、录像帧数和丢帧数；真机上也可以长按提示那一行来开关，只在 Debug 构建里有）。顶替相机的视频在开始录像时从第一帧重新放，录下来的就是这段视频从头开始的样子。界面测试会把每个状态截图附在结果里；加上 `TEST_RUNNER_BB_SCREENSHOT_DIR=<目录>` 另存一份 PNG。
 
 要对着装好的数据包走一遍「拍 → 存 → 姿态识别 → 分析」，同样需要一段真实的攀爬视频来顶替相机：
 
