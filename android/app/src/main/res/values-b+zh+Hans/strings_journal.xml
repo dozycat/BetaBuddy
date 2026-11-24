@@ -68,7 +68,7 @@
     <string name="journal_analysis_start">分析这一趟</string>
     <string name="journal_analysis_view">看分析</string>
     <string name="journal_analysis_again">重新分析</string>
-    <string name="journal_analysis_note">从这段视频里认出这条线的岩点，一步一步标出你的手点和脚点，以及从画面里看出的用法。自动识别，可能认错；全程在本机完成。</string>
+    <string name="journal_analysis_note">从这段视频里认出这条线的岩点，一步一步标出你的手点和脚点，用小人跟着你的动作走一遍，并从这一趟里量出几条建议。自动识别，可能认错，不是教练意见；全程在本机完成。</string>
     <string name="journal_analysis_preparing">正在准备画面…</string>
     <string name="journal_analysis_failed_title">分析页面没有打开</string>
     <string name="journal_note_title">下一次，我想…</string>

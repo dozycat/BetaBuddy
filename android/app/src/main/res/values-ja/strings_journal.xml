@@ -68,7 +68,7 @@
     <string name="journal_analysis_start">このトライを分析</string>
     <string name="journal_analysis_view">分析を見る</string>
     <string name="journal_analysis_again">もう一度分析</string>
-    <string name="journal_analysis_note">この動画からこの課題のホールドを読み取り、手と足のホールドを1手ずつ、画面から見た使い方と一緒に示します。自動認識なので間違えることがあります。すべて端末内で処理します。</string>
+    <string name="journal_analysis_note">この動画からこの課題のホールドを読み取り、手と足のホールドを1手ずつ、あなたの動きをなぞる人形と一緒に示し、このトライから測ったヒントをいくつか出します。自動認識なので間違えることがあり、コーチの助言ではありません。すべて端末内で処理します。</string>
     <string name="journal_analysis_preparing">フレームを準備中…</string>
     <string name="journal_analysis_failed_title">分析ページを開けませんでした</string>
     <string name="journal_note_title">次のトライでは…</string>

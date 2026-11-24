@@ -7,6 +7,8 @@ import XCTest
 ///
 /// `TEST_RUNNER_BB_ANALYSIS_SEEK=<label>` may give the label of the page's “show this moment in the
 /// video” button in Simplified Chinese; the text belongs to the pack and is not written here.
+/// `TEST_RUNNER_BB_ANALYSIS_NEXT=<label>` may give the page's “next step” label the same way; the run
+/// then also keeps screenshots of a step page and of the page further down.
 final class AnalysisUITests: XCTestCase {
     func testAnalyseAttemptWithLocalClip() throws {
         let environment = ProcessInfo.processInfo.environment
@@ -51,6 +53,22 @@ final class AnalysisUITests: XCTestCase {
         Thread.sleep(forTimeInterval: 1)   // Let the page paint what it has just laid out before the screenshot.
         XCTAssertFalse(app.staticTexts["analysisError"].exists)
         keep(app, "Analysis page with a result")
+        if let label = environment["BB_ANALYSIS_NEXT"], !label.isEmpty {
+            // Optional tour for screenshots: a step page while it plays, then further down the page.
+            let next = page.buttons[label]
+            if next.waitForExistence(timeout: 5) {
+                next.tap(); next.tap()
+                Thread.sleep(forTimeInterval: 1.5)
+                keep(app, "Step page while it plays")
+                page.swipeUp()
+                Thread.sleep(forTimeInterval: 1)
+                keep(app, "Further down the page")
+                page.swipeUp()
+                Thread.sleep(forTimeInterval: 1)
+                keep(app, "Further down the page, again")
+                page.swipeDown(); page.swipeDown()
+            }
+        }
         (seek ?? done).tap()
         // Back on the clip; the result was kept, so the entry now reads “看分析”.
         let view = app.buttons["viewAnalysis"]
