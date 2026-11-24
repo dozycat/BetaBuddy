@@ -1,6 +1,6 @@
 # iOS 1.7.0 (19)
 
-状态：2026-11-24 已生成并校验包含相机超时修复的签名归档，App Store IPA 已于本轮 Xcode 登录后成功导出并校验；尚未上传或提交审核。以 `feature/camera-capture` 的 `8109608` 为基础，发布分支为 `codex/release-1.7.0`。内置 GymPack 1.9.3，安装时核对清单的 25 个文件。
+状态：2026-11-24 11:59（中国时间）已提交 App Store 正式审核，Apple 页面确认 1.7.0 (19)「等待审核」。审核通过后自动发布、立即向全部用户提供更新、保留现有评分。以 `feature/camera-capture` 的 `8109608` 为基础，发布分支为 `codex/release-1.7.0`。内置 GymPack 1.9.3，安装时核对清单的 25 个文件。
 
 ## 此版本的新增内容（商店语言使用英文）
 
@@ -45,7 +45,7 @@ The existing non-consumable lifetime membership remains unchanged: it unlocks ad
 - [ ] 真正攀爬场景的分析效果、独立核对相机预览层、拒绝相机/位置、大致位置、后台中断、长时间录制与温度表现。
 - [x] 支持站点相机与位置说明已更新源文件并重新生成静态文件。
 - [ ] 将支持站点部署到现有线上站点。
-- [ ] 上传 App Store Connect、关联版本及提交审核。
+- [x] 上传 App Store Connect、关联 1.7.0 (19) 及提交正式审核。
 
 本轮修复取景页面加载失败后，已在准备中的帧仍可能进入页面并把状态误恢复为就绪的问题：未完成就绪握手时不再交帧，加载失败会清除当前检查会话。既有 `testAPageThatNeverComesUpIsGivenUpOn` 在首次全套运行中出现 3 个断言失败（属于同一个测试），修复后该用例及全部单元 / 集成通过；不把首次运行记作全通过。模拟器用视频或合成画面替代相机的验证不代表真机相机通过。真实攀爬片段分析与线路识别测试需要指定片段和岩馆；没有输入时按设计跳过，不能计作通过。旧版本的偶发镜头失控未在本轮定位，不列为已修复。
 
@@ -62,7 +62,7 @@ The existing non-consumable lifetime membership remains unchanged: it unlocks ad
 - `before-camera-timeout-fix/`：仅用于追溯的旧归档，不用于发布。
 - `logs/`：核心测试、首轮测试、复跑、归档及导出错误日志。
 
-本轮未 push、未上传 App Store Connect、未提交审核；发布分支留在本机。已在用户指定的 iPhone 17 Pro Max（iOS 27.2）完成真实相机录像与保存检查，详情见下。
+发布分支留在本机，未 push；已上传并提交 App Store 正式审核。已在用户指定的 iPhone 17 Pro Max（iOS 27.2）完成真实相机录像与保存检查，详情见下。
 
 ## 2026-11-24 · iPhone 17 Pro Max 真机
 
@@ -75,4 +75,14 @@ Xcode 账户登录后 App Store 导出成功。真实设备运行 1.7.0 (19) Deb
 - 随后安装同一最终归档中的 Release 应用到该设备并打开攀爬册；读取存档确认刚录制的测试记录仍在。用户可以直接试用 Release，相机自动测试与诊断采集代码不在此构建中。
 - 本机证据在 `ios/build/1.7.0/device-camera-authorized/`：测试报告、调试截图、录像副本和只含本次测试记录的持久化校验。全部被 Git 忽略，不上传。
 
-尚未上传 App Store Connect 或提交 1.7.0 审核。线上支持/隐私页面尚待部署。
+线上支持/隐私页面尚待部署：当前 Cloudflare 命令行账号不拥有原站点，网页仍等待用户登录所属账号。应用内政策、商店描述和审核备注已包含相机与可选定位说明。
+
+## 2026-11-24 · 正式送审回执
+
+- 11:55:58 上传日志返回 `Upload succeeded` / `EXPORT SUCCEEDED`，构建随后完成 Apple 处理。
+- 11:59 正式提交；页面先确认「已提交 1 个项目」，审核详情显示 `1.7.0 (19)`「等待审核」。
+- [审核记录](https://appstoreconnect.apple.com/apps/6809249574/distribution/reviewsubmissions/details/888889af-80fa-4906-a9b4-96338ea6ebe8)，提交 ID `888889af-80fa-4906-a9b4-96338ea6ebe8`。
+- 构建 ID `141e5086-2868-49a3-98c6-c4cb039f1f1d`。简体中文和英语（美国）栏目继续使用英文内容，描述、推广文本、新增内容与审核备注均已保存。
+- 发布设置：审核通过自动发布、立即向所有用户发布、保留评分。会员内购沿用现有商品，无新商品提交。
+- 1.6.0 当时显示「可分发」；1.7.0 尚未通过审核，不能视为已上线。
+- 本机凭证：`ios/build/1.7.0/appstore-1.7.0-19-submitted.png`；上传日志 `ios/build/1.7.0/logs/upload.log`。
