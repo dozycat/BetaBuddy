@@ -68,7 +68,7 @@
     <string name="journal_analysis_start">Analyse this attempt</string>
     <string name="journal_analysis_view">View analysis</string>
     <string name="journal_analysis_again">Analyse again</string>
-    <string name="journal_analysis_note">Finds the holds and your moves in this clip and compares them against a body model. Everything stays on this device.</string>
+    <string name="journal_analysis_note">Finds this problem’s holds in the clip and walks through your hand and foot holds move by move, with how each hold looks to be used. It’s auto-detected and can be wrong. Everything stays on this device.</string>
     <string name="journal_analysis_preparing">Preparing frames…</string>
     <string name="journal_analysis_failed_title">The analysis page didn’t open</string>
     <string name="journal_note_title">Next go, I want to…</string>

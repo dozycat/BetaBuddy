@@ -68,7 +68,7 @@
     <string name="journal_analysis_start">이번 시도 분석</string>
     <string name="journal_analysis_view">분석 보기</string>
     <string name="journal_analysis_again">다시 분석</string>
-    <string name="journal_analysis_note">이 영상에서 벽의 홀드와 내 동작을 읽어 신체 모델과 비교합니다. 모든 처리는 기기 안에서 이루어집니다.</string>
+    <string name="journal_analysis_note">이 영상에서 이 문제의 홀드를 읽어 손과 발 홀드를 한 무브씩, 화면에서 본 사용법과 함께 보여 줍니다. 자동 인식이라 틀릴 수 있습니다. 모든 처리는 기기 안에서 이루어집니다.</string>
     <string name="journal_analysis_preparing">프레임 준비 중…</string>
     <string name="journal_analysis_failed_title">분석 페이지를 열지 못했습니다</string>
     <string name="journal_note_title">다음 시도에는…</string>

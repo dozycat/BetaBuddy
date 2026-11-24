@@ -284,7 +284,7 @@ struct ReviewView: View {
                 Text(verbatim: CaptureText.planNotUsed).font(.caption).foregroundStyle(BB.muted).fixedSize(horizontal: false, vertical: true)
                     .accessibilityIdentifier("planNotUsed")
             }
-            Text("从这段视频里认出墙上的岩点和你的动作，放进人体模型里比较。全程在本机完成。")
+            Text("从这段视频里认出这条线的岩点，一步一步标出你的手点和脚点，以及从画面里看出的用法。自动识别，可能认错；全程在本机完成。")
                 .font(.caption).foregroundStyle(BB.muted).fixedSize(horizontal: false, vertical: true)
         }
     }

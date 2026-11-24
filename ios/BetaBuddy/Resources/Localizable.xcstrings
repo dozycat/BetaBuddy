@@ -7209,36 +7209,36 @@
         }
       }
     },
-    "从这段视频里认出墙上的岩点和你的动作，放进人体模型里比较。全程在本机完成。": {
+    "从这段视频里认出这条线的岩点，一步一步标出你的手点和脚点，以及从画面里看出的用法。自动识别，可能认错；全程在本机完成。": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Finds the holds and your moves in this clip and compares them against a body model. Everything stays on this device."
+            "value": "Finds this problem’s holds in the clip and walks through your hand and foot holds move by move, with how each hold looks to be used. It’s auto-detected and can be wrong. Everything stays on this device."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "この動画から壁のホールドとあなたのムーブを読み取り、身体モデルで比較します。すべて端末内で処理します。"
+            "value": "この動画からこの課題のホールドを読み取り、手と足のホールドを1手ずつ、画面から見た使い方と一緒に示します。自動認識なので間違えることがあります。すべて端末内で処理します。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "이 영상에서 벽의 홀드와 내 동작을 읽어 신체 모델과 비교합니다. 모든 처리는 기기 안에서 이루어집니다."
+            "value": "이 영상에서 이 문제의 홀드를 읽어 손과 발 홀드를 한 무브씩, 화면에서 본 사용법과 함께 보여 줍니다. 자동 인식이라 틀릴 수 있습니다. 모든 처리는 기기 안에서 이루어집니다."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "从这段视频里认出墙上的岩点和你的动作，放进人体模型里比较。全程在本机完成。"
+            "value": "从这段视频里认出这条线的岩点，一步一步标出你的手点和脚点，以及从画面里看出的用法。自动识别，可能认错；全程在本机完成。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "從這段影片裡認出牆上的岩點和你的動作，放進人體模型裡比較。全程在本機完成。"
+            "value": "從這段影片裡認出這條線的岩點，一步一步標出你的手點和腳點，以及從畫面裡看出的用法。自動識別，可能認錯；全程在本機完成。"
           }
         }
       }
