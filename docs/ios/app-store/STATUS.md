@@ -1,5 +1,9 @@
 # BetaBuddy 发布状态
 
+2026-11-24：**iOS 1.7.0 (19) 已准备签名归档，尚未上传、尚未提审。** 基于最新相机分支，内置数据包 1.9.3，支持应用内拍摄、取景检查、停止后保存并分析以及可选附近岩馆推荐。发布检查发现并修复取景页面加载失败后在途帧使状态误恢复的问题。核心 21/21；修复后单元/集成 84 通过、2 项按设计跳过；首轮 UI 16 通过、3 项按设计跳过，修复后相机中英文定向 UI 2/2 通过。最终归档签名及资源校验通过。
+
+App Store IPA 导出受阻：命令行和 Xcode Organizer 均报无账户、缺少分发证书；已实际查看 Xcode Apple Accounts 页面为空，等待登录。真机相机验收尚未做。支持站点源文件与静态页面已补齐相机及定位说明，线上尚未部署。详情和产物位置见 [release-1.7.0.md](release-1.7.0.md)。分支 `codex/release-1.7.0` 本机保留，未推送。
+
 2026-11-22 19:58（中国时间）：**1.6.0 (18) 已通过 Xcode Organizer 成功上传至 App Store Connect**。归档分发记录显示 `uploadEvent.state=success`、`uploadedBuildNumber=18`、错误与警告均为空；ContentDelivery 日志确认 `UPLOAD SUCCEEDED with no errors`。尚未确认 Apple 处理完成，尚未关联商店版本或提交正式审核。上传期间 Mac 再次锁屏；Chrome 发布页刷新后仍显示 Apple 登录表单，已请用户指出已登录的窗口。正式发布未完成。
 
 2026-11-22：1.6.0 (18) 已完成猫攀爬会员限制、单一保存操作及 GymPack 1.8.0 接入。Mac 核心 10/10、iOS 单元/集成 52 项（1 项可选片段跳过）、导航/会员/保存及两种猫播放 UI 验证通过。签名归档已生成；CLI 上传失败（Failed to Use Accounts），尚未上传、尚未提交审核。等待 Mac 解锁及 App Store Connect 登录后，用 Xcode Organizer 上传并提交自动发布。详情见 [release-1.6.0.md](release-1.6.0.md)。

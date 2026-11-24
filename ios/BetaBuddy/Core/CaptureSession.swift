@@ -417,7 +417,9 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
     private func hand(_ frame: CapturePipeline.Frame, _ done: @escaping () -> Void) {
         let size = CGSize(width: frame.width, height: frame.height)
         if frameSize != size { frameSize = size }
-        guard started, page == .ready || page == .failed, webView != nil else { done(); return }
+        // A quiet page may recover, but a frame prepared before a loading failure must
+        // not start a session on a page that never announced it was ready.
+        guard started, page == .ready || (page == .failed && begun != nil), webView != nil else { done(); return }
         // The page can only have gone quiet while it was being asked. After any pause in what it is
         // given (a call, the background, a camera that stopped) its clock starts again.
         let now = Date()
@@ -489,6 +491,7 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
         mark("pageFailed", ["text": text])
         #endif
         page = .failed
+        begun = nil
         assessment = nil
         pipeline.setFeeding(false)
     }
