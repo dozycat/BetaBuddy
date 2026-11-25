@@ -225,8 +225,9 @@ adb shell "am start -n $A --ei initialTab 1 --ez openCapture true \
 | `./gradlew :app:testDebugUnitTest` | 146 个测试全部通过 |
 | `./gradlew :app:assembleDebug :app:lintDebug` | 通过；lint 0 error（warning 是固定版本的更新提示、复数资源建议、KTX 写法之类） |
 | `./gradlew :app:compileDebugAndroidTestKotlin` | 设备测试能编译 |
+| `./gradlew :app:connectedDebugAndroidTest`（Android 15 模拟器，`-camera-back virtualscene -qemu -append "arm64.nosme"`） | 22 个里 20 个运行并通过，2 个要真从系统取位置的跳过 |
 
-这一组没有上模拟器或真机：设备测试（`CaptureScreenTest` 13 个、`VideoAnalyzerInstrumentedTest` 9 个）和 Release 包上一次是在更早的代码上跑的，见下一节。
+设备测试（`CaptureScreenTest` 13 个、`VideoAnalyzerInstrumentedTest` 9 个）在这一轮整理之后的代码上重跑过，只在 Android 15 模拟器上；没有真机。Release 包上一次是在更早的代码上跑的，见下一节。
 
 ### 模拟器上做过的
 
@@ -245,7 +246,7 @@ adb shell "am start -n $A --ei initialTab 1 --ez openCapture true \
 
 - **任何真机。** 相机预览与录像在各厂商相机上的表现、视场角和姿态传感器的数值、发热与过热中止、内存、硬件解码器、HDR 视频、长片子的取帧和存档写入耗时；应用自己的编码器在真机上会不会被用到、用到时的帧率。
 - **数据包 1.9.6–1.9.8 的分析页面在 Android 上**（一步一步的几屏、剪纸小人、这一趟的建议）：没有在 Android 模拟器或真机上打开过；Android 这边只确认了这些文件装进了 APK。
-- 这一轮整理之后的设备测试和 Release 包：只编译过，没有重跑（共用的测试视频写法 `TestClips` 是这一轮抽出来的）。
+- 这一轮整理之后的 Release 包：只编译过，没有重跑；设备测试只在 Android 15 模拟器上重跑过，Android 12 模拟器上没有。
 - 岩馆页面改用共用的 `PackWebView` 之后：只重看了加载、`ready` 和 `hintSeen`；网络审计、`openSettings`、换语言后回到原线路没有重做。
 - 系统的位置询问对话框（授权都是从外面 `pm grant` 给的）；在室内、没有网络定位的机型上取不取得到位置、要多久。
 - 用户打开「分析这一趟」的同时后台队列也在分析同一条记录：只有规则的单元测试。下次启动时把没存进去的片子补进攀爬册：只有合成文件的单元测试。
@@ -276,6 +277,8 @@ Debug 包，带上调试读数启动：`adb shell am start -n com.betabuddy.andr
 ```sh
 emulator -avd <名称> -qemu -append "arm64.nosme"
 ```
+
+不带这个参数时，设备测试的第一个就会让应用进程崩溃，后面的测试一个都跑不到。另外，两个用设备相机的拍摄测试要模拟器有相机：AVD 里没配相机时，系统照样报有相机功能，测试不会跳过，而是等不到画面而超时。可以在启动时加 `-camera-back virtualscene`。
 
 ### 重新验证的步骤
 
