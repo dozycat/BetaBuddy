@@ -1,31 +1,27 @@
 # BetaBuddy payment Worker
 
-`GET /health` reports service availability. `POST /v1/entitlement` accepts a
-StoreKit 2 `signedTransactionInfo` from the app, verifies Apple's certificate
-chain and signature, then asks Apple's App Store Server API for the current
-transaction state. It grants the lifetime entitlement only for
-`com.betabuddy.ios.lifetime` when the transaction has not been revoked.
+A Cloudflare Worker at `pay.dozycat.ai`. The app does not call it: the lifetime
+entitlement is checked on the device with StoreKit's verified transactions.
 
-The Worker never receives videos, pose data, route choices, or payment card
-details. It does receive the signed App Store transaction for verification.
-Do not log, persist, or put that token in a URL. The 1.2.0 app does not call
-this endpoint; it uses StoreKit's on-device verified entitlement. This endpoint
-does not yet deliver premium gym packs or training recommendations.
+- `GET /health` reports service availability.
+- `POST /v1/entitlement` accepts a StoreKit 2 `signedTransactionInfo`, verifies
+  Apple's certificate chain and signature, then asks Apple's App Store Server API
+  for the current transaction state. It reports the lifetime entitlement as
+  active only for `com.betabuddy.ios.lifetime` when the transaction has not been
+  revoked.
 
-The Worker code and `pay.dozycat.ai` production domain have been deployed.
-`GET /health` and rejection of an invalid signed transaction passed. On
-2026-11-13, the App Store Connect **In-App Purchase** API key was saved as
-Production Worker secrets `APPLE_ISSUER_ID`, `APPLE_KEY_ID`, and
-`APPLE_PRIVATE_KEY`. The Cloudflare dashboard shows all three values encrypted.
-Never commit the private key. The deployed Worker uses
-the `nodejs_compat` flag. For future code updates, run `bun run check` and
-`bun run deploy`; `wrangler.jsonc` routes the Worker to `pay.dozycat.ai`.
+The Worker never receives videos, pose data, route choices or payment card
+details. It does receive the signed App Store transaction for verification:
+never log it, persist it or put it in a URL.
 
-On 2026-11-13, normal DNS access to `https://pay.dozycat.ai/health` returned
-HTTP 200, and a fake signed transaction was denied with `{"active":false}`.
-The earlier connection failure from this Mac cleared without changing DNS.
-Real purchase verification still needs a sandbox transaction test.
+The App Store Server API key is held as the Worker secrets `APPLE_ISSUER_ID`,
+`APPLE_KEY_ID` and `APPLE_PRIVATE_KEY`; never commit the private key. The bundle
+ID and product ID are set in `src/index.ts`. Apple's public root certificates in
+`src/apple-roots.ts` come from <https://www.apple.com/certificateauthority/>.
 
-The app ID, bundle ID, and product ID are fixed in `src/index.ts`. Apple's
-public root certificates in `src/apple-roots.ts` came from
-<https://www.apple.com/certificateauthority/>.
+```sh
+bun run check     # type-check
+bun run deploy    # wrangler deploy; wrangler.jsonc routes the Worker to pay.dozycat.ai
+```
+
+Not yet verified: a real sandbox purchase through this endpoint.
