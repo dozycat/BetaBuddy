@@ -8,16 +8,19 @@ iOS：
 
 - Swift、SwiftUI，iOS 17+，仅 iPhone、竖屏、浅色。
 - 姿态识别：MediaPipe Tasks Vision 的 Pose Landmarker Full（33 点），模型随应用打包，在设备上以 CPU 推理。
-- 视频：AVFoundation 顺序解码，Core Image 预处理。
+- 视频：AVFoundation 顺序解码，Core Image 预处理。应用内拍摄用 AVFoundation 后置相机，只录画面；机位判断由数据包里的拍摄页面在设备上完成。
+- 位置：用户点按距离找岩馆时经 Core Location 取一次位置，只用来给内置岩馆目录排序，不保存。
+- 内购：StoreKit 2 的一次性终生会员（`App/MembershipStore.swift`），权益只认 StoreKit 已验证的交易；本地测试用 `ios/StoreKit/Lifetime.storekit` 和 `BetaBuddyStoreKit` scheme。
 - 存储：Application Support 下的 JSON 与文件，原子写入，排除云备份。
 - 岩馆：`WKWebView` 加载随包内置的场馆数据包，经自定义协议 `gympack://local/` 提供文件。
-- 工程由 XcodeGen 从 `ios/project.yml` 生成。没有 CocoaPods，没有 Swift 包运行时依赖，没有后台服务。
+- 工程由 XcodeGen 从 `ios/project.yml` 生成。没有 CocoaPods，没有 Swift 包运行时依赖。应用不调用任何后台服务；`services/` 里的支持站点和支付 Worker 不在应用的调用路径上。
 
 Android：
 
 - Kotlin、Jetpack Compose，Android 8.0（API 26）+，单 Activity、竖屏、浅色。应用 ID `com.betabuddy.android`。
 - 姿态识别：同一个 Pose Landmarker Full 模型，MediaPipe Tasks Vision，`MediaExtractor` + `MediaCodec` 顺序解码，CPU 推理。
 - 回看：Media3 ExoPlayer 画到 `TextureView`，骨架用 Compose `Canvas` 叠加。
+- 拍摄：CameraX，只录画面；位置用平台自带的 `LocationManager`，不引入 Google Play 服务。没有内购。
 - 存储：`filesDir/BetaBuddy/` 下的 JSON 与文件，原子写入，排除云备份和设备间迁移。
 - 岩馆：`WebView` + `WebViewAssetLoader`，本地地址 `https://appassets.androidplatform.net/gympack/`，只提供清单列出的文件；垫片把页面的 `window.webkit.messageHandlers.gym` 接到 `addJavascriptInterface`。
 - 语言：AppCompat 的按应用语言接口；`values/` 是英语。
@@ -26,30 +29,36 @@ Android：
 ## 目录
 
 ```
-ios/BetaBuddy/App/        BetaBuddyApp.swift：入口、两个入口的导航（0 岩馆，1 攀爬册）
-ios/BetaBuddy/Core/       Models、PoseMath、VideoAnalyzer、ClimbStore、GymPack、AppLanguage、Capture*（应用内拍摄）、GymLocator
-ios/BetaBuddy/Views/      DesignSystem、BrandMark、Journal、Import、Review、About、Gym、Localization
-ios/BetaBuddy/Resources/  图标、pose_landmarker_full.task、Localizable.xcstrings、InfoPlist.xcstrings、PrivacyInfo、PrivacyPolicy.<语言>.txt、Licenses
+ios/BetaBuddy/App/        BetaBuddyApp.swift：入口、两个入口的导航（0 岩馆，1 攀爬册）；MembershipStore（StoreKit）
+ios/BetaBuddy/Core/       Models、PoseMath、VideoAnalyzer、AnalysisQueue、ClimbStore、GymPack、AppLanguage、Capture*（应用内拍摄）、GymLocator
+ios/BetaBuddy/Views/      DesignSystem、BrandMark、Journal、Album、Import、Review、Analysis、Capture、About、Gym、Localization
+ios/BetaBuddy/Resources/  图标、pose_landmarker_full.task、gyms-cn.json、Localizable.xcstrings、InfoPlist.xcstrings、PrivacyInfo、PrivacyPolicy.<语言>.txt、Licenses
 ios/BetaBuddyTests/       模拟器上的单元与集成测试
 ios/BetaBuddyUITests/     界面冒烟测试
-ios/CoreTests/            Mac 上可跑的核心测试（Package.swift 只含 Models 与 PoseMath）
-ios/TestSupport/          测试用的替身数据包与替身拍摄页面（合成数据，不识别任何东西）
+ios/CoreTests/            Mac 上可跑的核心测试（Package.swift 只含 Models、PoseMath 与 Capture）
+ios/TestSupport/          两个测试包共用：画出来的墙、合成数据包、拍摄与分析页面的替身（合成数据，不识别任何东西）
+ios/StoreKit/             终生会员的本地 StoreKit 配置
 ios/LocalMediaPipe/       SDK 指标上报工厂的空实现
-ios/scripts/              bootstrap.sh、install-gym-pack.sh、prepare-local-graph.sh
+ios/scripts/              bootstrap.sh、install-gym-pack.sh、prepare-local-graph.sh、generate-icon.swift、ExportOptions.plist
 android/app/src/main/java/com/betabuddy/android/
   MainActivity.kt         唯一的 Activity
   ui/theme、ui/common     BB 颜色与字体、公共组件、BBIcons
   ui/nav/AppShell.kt      两个入口（0 岩馆，1 攀爬册）、底部导航与齿轮、设置页的导航
-  gym/                    GymManifest、GymPack、GymMessage（纯 Kotlin）、GymSession、GymScreen
-  journal/ pose/ review/ data/   攀爬册：列表与导入、VideoAnalyzer 与 PoseMath、回看、ClimbStore
-  capture/                 应用内拍摄：相机与取景判断（判断在数据包的页面里做）、选岩馆、先保存再分析
+  gym/                    GymManifest、GymPack、GymMessage（纯 Kotlin）、GymSession、GymScreen、PackWebView
+  journal/ pose/ review/ data/   攀爬册：列表、导入与后台分析服务、VideoAnalyzer 与 PoseMath、回看与分析页面、ClimbStore
+  capture/                应用内拍摄：相机与取景判断（判断在数据包的页面里做）、选岩馆与 GymLocator、先保存再分析
   settings/ i18n/         设置与关于、隐私政策、AppLanguage
-android/app/src/main/res/ values*/strings.xml（导航、岩馆、设置）、strings_journal.xml（攀爬册）、raw*/privacy_policy.txt、xml/
+android/app/src/main/res/ values*/strings.xml（导航、岩馆、设置）、strings_journal.xml、strings_album.xml、strings_capture.xml、raw*/privacy_policy.txt、xml/
+android/app/src/main/assets/  姿态模型、gyms-cn.json、licenses/
 android/app/src/test/     JVM 单元测试（纯 Kotlin）
-android/app/src/androidTest/  设备测试
+android/app/src/androidTest/  设备测试与拍摄、分析页面的替身
 android/scripts/          install-gym-pack.sh、check-resources.py
 docs/android/             README（构建、版本组合、验证状态）、design
-docs/ios/                 product-design、gym-design、validation、app-store/
+docs/ios/                 product-design、gym-design、validation、app-store/、brand/
+docs/gym-directory.md     全国岩馆目录的来源、覆盖与更新方法
+data/gym-directory/       目录的权威快照、分店对应、坐标缓存
+scripts/gym-directory/    目录的抓取、定位与检查脚本
+services/                 support-site（支持与隐私网页）、pay-worker（交易核对，应用未调用）
 legacy/web/               早期网页实现，不再维护，不要改
 ```
 
@@ -88,7 +97,7 @@ Android 的版本号在 `android/app/build.gradle.kts`（`versionName`、`versio
 
 **分析诚实性。** 不展示没验证过的评分或诊断。骨架不跨检测空白延续。攀爬册的「分析这一趟」由数据包里的分析页面完成：岩点、墙面和动作是从视频里自动认的，会认错；数字是模型里比出来的相对值，不说成教练意见——原生界面上配套的文字守同一个口径。岩馆内容标明非官方，推演不说成建议。新增文案和指标先对照 `docs/ios/product-design.md` 和 `docs/ios/gym-design.md`。验证记录只写实际做过的事，没做的列在「尚未验证」里。
 
-**多语言。** 开发语言是简体中文，另有繁体中文、英语、日语、韩语。面向用户的文字一律走 `Localizable.xcstrings`：视图里用字符串字面量（键就是简体中文原文），非视图代码用 `String(localized: "…", bundle: AppLanguage.bundle)`，格式化用 `AppLanguage.locale`——语言可以在应用内切换，不能依赖进程启动时的语言；不翻译的品牌标记和数据用 `Text(verbatim:)`。新增或改动文字时，五种语言一起补齐，占位符个数和换行数保持一致，`LocalizationTests` 会检查。用攀岩的人实际说的话，不加原文没有的承诺。不要把界面语言写进存档：存类型或原值，显示时再取文字。 Android 的文字在 `res/values*/strings.xml` 和 `strings_journal.xml`，`values/` 是英语；与 iOS 是同一句话就用同一份译文，五种语言的键、占位符和换行一致，`ShellStringsTest`、`JournalStringsTest` 和 `check-resources.py` 会检查。
+**多语言。** 开发语言是简体中文，另有繁体中文、英语、日语、韩语。面向用户的文字一律走 `Localizable.xcstrings`：视图里用字符串字面量（键就是简体中文原文），非视图代码用 `String(localized: "…", bundle: AppLanguage.bundle)`，格式化用 `AppLanguage.locale`——语言可以在应用内切换，不能依赖进程启动时的语言；不翻译的品牌标记和数据用 `Text(verbatim:)`。新增或改动文字时，五种语言一起补齐，占位符个数和换行数保持一致，`LocalizationTests` 会检查。用攀岩的人实际说的话，不加原文没有的承诺。不要把界面语言写进存档：存类型或原值，显示时再取文字。 Android 的文字在 `res/values*/` 的 `strings.xml`、`strings_journal.xml`、`strings_album.xml`、`strings_capture.xml`，`values/` 是英语；与 iOS 是同一句话就用同一份译文，五种语言的键、占位符和换行一致，`ShellStringsTest`、`JournalStringsTest`、`CaptureStringsTest` 和 `check-resources.py` 会检查。
 
 **代码风格。** 跟随现有文件：视图用 `DesignSystem.swift`（Android 是 `ui/theme`、`ui/common`）里的 `BB` 颜色与组件，错误信息要告诉用户能做什么。不为假设的需求加抽象。
 
@@ -98,6 +107,6 @@ Android 的版本号在 `android/app/build.gradle.kts`（`versionName`、`versio
 
 1. `git status` 和 `git diff --cached` 里没有 `ios/GymPack/`、`android/app/src/main/assets/gympack/`、Vendor、构建产物、签名材料、场馆内容或本机路径。
 2. `swift test --package-path ios` 通过；动了应用代码就跑模拟器测试和未签名的真机构建。动了 Android 就跑 `check-resources.py`、单元测试和 `assembleDebug`。
-3. 改了行为就同步 `docs/ios/`、`docs/android/` 里对应的设计和验证记录；改了隐私相关行为就同步 `PrivacyPolicy.txt`、`docs/ios/app-store/privacy-policy.txt` 和 `PrivacyInfo.xcprivacy`。Android 的内置隐私政策是 `android/app/src/main/res/raw*/privacy_policy.txt`（三种语言一起改）。
+3. 改了行为就同步 `docs/ios/`、`docs/android/` 里对应的设计和验证记录；改了隐私相关行为就同步 `ios/BetaBuddy/Resources/PrivacyPolicy.<语言>.txt`、`docs/ios/app-store/privacy-policy*.txt`、`PrivacyInfo.xcprivacy` 和 `services/support-site`。Android 的内置隐私政策是 `android/app/src/main/res/raw*/privacy_policy.txt`（三种语言一起改）。
 4. 除非被明确要求，不 push、不上传构建、不改签名团队。
 - 开发者账户信息（团队 ID、App 的 Apple ID、证书、描述文件、备案资料、个人姓名和邮箱）不进仓库；签名用 `DEVELOPMENT_TEAM=<团队 ID>` 在命令行传入。

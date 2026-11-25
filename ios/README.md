@@ -45,7 +45,7 @@ xcodebuild -project ios/BetaBuddy.xcodeproj -scheme BetaBuddy \
   CODE_SIGNING_ALLOWED=NO build
 ```
 
-模拟器没有相机。应用内相机的测试用一段画出来的墙（`TestSupport/SyntheticWallClip.swift` 现场生成）代替相机，用一个按固定脚本回话的替身页面（`TestSupport/capture-standin.html`）代替数据包的拍摄页面；替身什么也不识别，只用来走通应用这一侧。这些都只编进测试包。Debug 构建的启动参数：`-debugCaptureVideo <路径>` 用一段视频代替相机，`-debugGymPackRoot <目录>` 改用 `<目录>/GymPack` 里的数据包，`-debugGymDirectory <路径>` 换一份岩馆目录，`-debugLocation "<纬度>,<经度>"` 给一个位置（不弹系统询问），`-debugCaptureAttitude "<仰角>,<倾斜>,<晃动>"` 顶替模拟器没有的运动传感器，`-debugCaptureFieldOfView <度>` 给顶替相机的视频一个视场角，`-debugFailSaves <n>` 让接下来 n 次保存失败（用来看「没存进攀爬册」那几个界面），`-debugCaptureOverlay YES` 在画面上叠一块调试数字（视场角、仰角 / 倾斜 / 晃动、页面每秒回几条、交一帧多少毫秒、姿态耗时、当前的问题代码、录像帧数和丢帧数；真机上也可以长按提示那一行来开关，只在 Debug 构建里有）。`-debugCaptureHidePreview YES` 让顶替相机的预览留黑（真机的相机预览在视图层级的截图里就是这样）。顶替相机的视频在开始录像时从第一帧重新放，录下来的就是这段视频从头开始的样子。`-debugOpenCapture YES` 一启动就进拍摄界面；`-debugCaptureAutopilot YES` 让拍摄界面自己走一遍（选颜色、需要时点起步和结束、录、停、等分析），给没人能点屏幕的手机用，配合 `-debugCaptureGym <目录里的岩馆 id>`、`-debugCaptureColour <色板 key>`、`-debugCaptureTaps YES`、`-debugCaptureSeconds <秒>`，结果写在 `Documents/capture-diagnostics/autopilot-done.json` 和几张 `shot-*.png` 里；`-debugCaptureVideo` 的路径不以 `/` 开头时从应用容器算起（例如 `Documents/debug/clip.mp4`）。这些的说明见 `docs/ios/validation.md` 的「自动走一遍」一节。Debug 构建在拍摄界面打开期间还会把看到的和做过的写进应用容器的 `Documents/capture-diagnostics/`（每秒一行的 `session-*.jsonl`、最近交给页面的图、界面本身的图、日志；不超过 30 MB，不用启动参数，Release 构建里没有），格式见 `docs/ios/validation.md` 的「真机取证」一节。界面测试会把每个状态截图附在结果里；加上 `TEST_RUNNER_BB_SCREENSHOT_DIR=<目录>` 另存一份 PNG。
+模拟器没有相机。应用内相机的测试用一段画出来的墙（`TestSupport/SyntheticWallClip.swift` 现场生成）代替相机，用一个按固定脚本回话的替身页面（`TestSupport/capture-standin.html`）代替数据包的拍摄页面；替身什么也不识别，只用来走通应用这一侧。这些都只编进测试包。Debug 构建的启动参数：`-debugCaptureVideo <路径>` 用一段视频代替相机，`-debugGymPackRoot <目录>` 改用 `<目录>/GymPack` 里的数据包，`-debugGymDirectory <路径>` 换一份岩馆目录，`-debugLocation "<纬度>,<经度>"` 给一个位置（不弹系统询问），`-debugCaptureAttitude "<仰角>,<倾斜>,<晃动>"` 顶替模拟器没有的运动传感器，`-debugCaptureFieldOfView <度>` 给顶替相机的视频一个视场角，`-debugFailSaves <n>` 让接下来 n 次保存失败（用来看「没存进攀爬册」那几个界面），`-debugCaptureOverlay YES` 在画面上叠一块调试数字（视场角、仰角 / 倾斜 / 晃动、页面每秒回几条、交一帧多少毫秒、姿态耗时、当前的问题代码、录像帧数和丢帧数；真机上也可以长按提示那一行来开关，只在 Debug 构建里有）。`-debugCaptureHidePreview YES` 让顶替相机的预览留黑（真机的相机预览在视图层级的截图里就是这样）。顶替相机的视频在开始录像时从第一帧重新放，录下来的就是这段视频从头开始的样子。`-debugOpenCapture YES` 一启动就进拍摄界面；`-debugCaptureAutopilot YES` 让拍摄界面自己走一遍（选颜色、需要时点起步和结束、录、停、等分析），给没人能点屏幕的手机用，配合 `-debugCaptureGym <目录里的岩馆 id>`、`-debugCaptureColour <色板 key>`、`-debugCaptureTaps YES`、`-debugCaptureSeconds <秒>`、`-debugCaptureBlind YES`，结果写在 `Documents/capture-diagnostics/autopilot-done.json` 和几张 `shot-*.png` 里；`-debugCaptureVideo` 的路径不以 `/` 开头时从应用容器算起（例如 `Documents/debug/clip.mp4`）。这些的说明见 `docs/ios/validation.md` 的「自动走一遍」一节。Debug 构建在拍摄界面打开期间还会把看到的和做过的写进应用容器的 `Documents/capture-diagnostics/`（每秒一行的 `session-*.jsonl`、最近交给页面的图、界面本身的图、日志；不超过 30 MB，不用启动参数，Release 构建里没有），格式见 `docs/ios/validation.md` 的「真机取证」一节。界面测试会把每个状态截图附在结果里；加上 `TEST_RUNNER_BB_SCREENSHOT_DIR=<目录>` 另存一份 PNG。
 
 要对着装好的数据包走一遍「拍 → 存 → 姿态识别 → 分析」，同样需要一段真实的攀爬视频来顶替相机：
 
@@ -66,6 +66,10 @@ TEST_RUNNER_BB_ANALYSIS_CLIP=<视频> TEST_RUNNER_BB_ANALYSIS_SEEK=<label> \
   -destination 'platform=iOS Simulator,name=<模拟器>' -derivedDataPath ios/.derivedData \
   test -only-testing:BetaBuddyUITests/AnalysisUITests
 ```
+
+姿态识别的回归测试 `VideoAnalyzerTests/testLocalRegressionVideo` 同样需要一段私有的参考视频，用 `TEST_RUNNER_BB_REGRESSION_CLIP=<视频>` 交给测试进程，没有就跳过。
+
+终生会员的测试（`BetaBuddyTests/MembershipTests`、`BetaBuddyUITests/CatUITests`）用 `StoreKit/Lifetime.storekit` 在本地模拟购买，不连 App Store；用到岩馆页面的部分在没装数据包时跳过。在模拟器里手动试购买、恢复和退款，用 `BetaBuddyStoreKit` scheme 运行。
 
 第三方 SDK 可能输出反馈张量或投影相关的诊断提示，模拟器也会输出系统框架提示；这些不等于测试失败。做过和没做过的验证记在 [../docs/ios/validation.md](../docs/ios/validation.md)。
 
@@ -105,18 +109,19 @@ xcrun simctl launch booted com.betabuddy.ios -AppleLanguages "(ja)"
 
 ## 目录
 
-- `BetaBuddy/App`：应用入口与两个入口（岩馆、攀爬册）的导航。
+- `BetaBuddy/App`：应用入口与两个入口（岩馆、攀爬册）的导航；`MembershipStore` 管终生会员，权益只认 StoreKit 已验证的交易。
 - `BetaBuddy/Core`：数据结构、骨架连线、MediaPipe 推理与给分析页面抽画面、原子写入的本地存储（含分析结果文件和拍摄计划），以及岩馆数据包的定位、清单读取、三个页面的消息解析和调用；应用内相机的画面来源（相机，或 Debug 下的视频文件）、录像、给拍摄页面交帧、保存后的分析队列、按距离给岩馆排序。
 - `BetaBuddy/Views`：设计系统、攀爬册、拍摄、导入、回看、关于、岩馆页面容器、分析页面容器，以及存储值和拍摄页面的代码到界面文字的转换。
 - `BetaBuddy/Resources`：图标、姿态模型、`Localizable.xcstrings` 与 `InfoPlist.xcstrings`、隐私清单、三种语言的离线隐私政策、第三方许可。
 - `CoreTests`：可在 macOS 直接运行的姿态数据、旧存档兼容、筛选边界，以及拍摄页面的消息解析与调用的测试。
 - `TestSupport`：两个测试包共用的合成素材：画出来的墙、合成数据包、拍摄页面和分析页面的替身、带坐标的合成岩馆目录。不进应用。
-- `BetaBuddyTests`：本地存储、模型打包、视频推理、数据包加载、分析页面的消息与调用、本地化完整性的测试。
-- `BetaBuddyUITests`：在简体中文和英语下各走一遍两个入口的冒烟测试，文件夹流程，应用内相机从取景到保存的全程（合成素材），以及需要本地视频才运行的两个端到端测试。
+- `BetaBuddyTests`：本地存储、模型打包、视频推理、数据包加载、分析页面的消息与调用、应用内拍摄的流程与取证、岩馆目录与按距离排序、终生会员、本地化完整性的测试。
+- `BetaBuddyUITests`：在简体中文和英语下各走一遍两个入口的冒烟测试，导入保存和文件夹流程，应用内相机从取景到保存的全程（合成素材），需要本地视频才运行的端到端测试，以及需要装好数据包才运行的会员猫攀爬回放。
 - `LocalMediaPipe`：SDK 指标上报工厂的本地空实现及其头文件依赖。
+- `StoreKit`：终生会员的本地 StoreKit 配置，测试和 `BetaBuddyStoreKit` scheme 用。
 - `scripts`：`bootstrap.sh`、`install-gym-pack.sh`、`prepare-local-graph.sh`、`generate-icon.swift`、`ExportOptions.plist`。
 - [THIRD_PARTY.md](THIRD_PARTY.md)：第三方 SDK、模型与素材的来源和校验值。
 
 ## 网络
 
-应用自己不下载模型，不上传视频，不调用任何云端服务。岩馆页面被禁止访问网络。两种情况由系统发起：用户选了只存在 iCloud 的视频时，照片选择器可能先下载原片；「关于」页里的支持与隐私链接会在浏览器里打开。
+应用自己不下载模型，不上传视频，不调用任何云端服务。岩馆、拍摄和分析页面共用一套内容规则，被禁止访问网络。以下由系统发起：用户选了只存在 iCloud 的视频时，照片选择器可能先下载原片；购买和恢复终生会员由 App Store 处理；「关于」页里的支持与隐私链接会在浏览器里打开。
