@@ -20,7 +20,7 @@
 - 8 个核心几何测试、9 个 iOS 单元/视频集成测试通过；补充了已有记录重算后保存最新笔记的验证，并运行导航 UI 回归。
 - 模型 SHA-256：5134a3aad27a58b93da0088d431f366da362b44e3ccfbe3462b3827a839011b1，未更换或修改模型。
 
-原始私有视频不纳入源码。可选测试 testLocalRegressionVideo 从 /tmp/bb-regression.mp4 读取，缺失则跳过。第 9 秒检测输出叠加预览位于 ios/build/validation/fixed-frame-9s.png（构建输出，不纳入源码）。这是模型结果可视化，不是已完成真机测试的证明。
+原始私有视频不纳入源码。可选测试 testLocalRegressionVideo 读取环境变量 `TEST_RUNNER_BB_REGRESSION_CLIP` 指向的私有视频，没有设置或文件不存在则跳过。第 9 秒检测输出叠加预览位于 ios/build/validation/fixed-frame-9s.png（构建输出，不纳入源码）。这是模型结果可视化，不是已完成真机测试的证明。
 
 尚需用户在真实 iPhone 更新构建 2 后重算并确认；模拟器耗时不代表真机功耗、温度或速度。正式 App Review 尚未重新提交。
 
