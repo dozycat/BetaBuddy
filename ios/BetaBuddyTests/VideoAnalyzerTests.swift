@@ -213,20 +213,16 @@ final class VideoAnalyzerTests: XCTestCase {
         }
     }
 
+    // Optional: a private reference clip (TEST_RUNNER_BB_REGRESSION_CLIP) in which the climber is mid-frame at 9 s.
     func testLocalRegressionVideo() async throws {
-        let url = URL(fileURLWithPath:"/tmp/bb-regression.mp4")
-        guard FileManager.default.fileExists(atPath:url.path) else { throw XCTSkip("Optional private regression video is not installed") }
-        let asset = AVURLAsset(url:url)
-        let tracks = try await asset.loadTracks(withMediaType:.video)
-        let track = try XCTUnwrap(tracks.first)
-        print("REGRESSION",try await track.load(.naturalSize),try await track.load(.preferredTransform))
+        guard let path = ProcessInfo.processInfo.environment["BB_REGRESSION_CLIP"], FileManager.default.fileExists(atPath:path) else {
+            throw XCTSkip("Set TEST_RUNNER_BB_REGRESSION_CLIP to the private reference clip")
+        }
+        let url = URL(fileURLWithPath:path)
         for quality in AnalysisQuality.allCases {
             let result = try await VideoAnalyzer().analyze(url:url,quality:quality) { _ in }
             let detected = Double(result.frames.count) / Double(max(1,result.sampledFrames))
-            print("REGRESSION",quality.rawValue,"DETECTED",detected)
-            try JSONEncoder().encode(result).write(to:URL(fileURLWithPath:"/tmp/bb-regression-\(quality.rawValue).json"))
-            // At the user's reported 9-second point, the hips are on the climber
-            // near the middle of the frame, not the pipes near the top-right corner.
+            // At 9 s the hips are on the climber near the middle of the frame, not on the pipes near the top-right corner.
             let frame = try XCTUnwrap(result.nearestFrame(to:9))
             let hipX = (frame.joints[23].x + frame.joints[24].x) / 2, hipY = (frame.joints[23].y + frame.joints[24].y) / 2
             XCTAssertTrue((0.40...0.60).contains(hipX))

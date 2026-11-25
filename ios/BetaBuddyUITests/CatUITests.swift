@@ -8,6 +8,9 @@ final class CatUITests: XCTestCase {
         guard FileManager.default.fileExists(atPath: ios.appendingPathComponent("GymPack/cat.js").path) else {
             throw XCTSkip("Install the private cat pack for replay QA")
         }
+        // The first problem the installed pack has cat plans for, so no route id is written into this repository.
+        let plans = try String(contentsOf: ios.appendingPathComponent("GymPack/catplans.0.js"), encoding: .utf8)
+        let route = try XCTUnwrap(plans.firstMatch(of: #/"routes":\{"([^"]+)"/#).map { String($0.1) }, "The installed pack has no cat plans")
         let session = try SKTestSession(contentsOf: ios.appendingPathComponent("StoreKit/Lifetime.storekit"))
         session.disableDialogs = true
         session.clearTransactions()
@@ -16,7 +19,7 @@ final class CatUITests: XCTestCase {
         let app = XCUIApplication()
         for preset in 0...1 {
             app.launchArguments = ["-AppleLanguages", "(en)", "-AppleLocale", "en_US", "-resetLanguage", "YES", "-gymNoticeSeen", "YES",
-                                   "-gymQuery", "route=baishan-a01&species=cat&catp=\(preset)&catstrict=0&sheet=mini&hint=0"]
+                                   "-gymQuery", "route=\(route)&species=cat&catp=\(preset)&catstrict=0&sheet=mini&hint=0"]
             app.launch()
             let page = app.webViews.firstMatch
             XCTAssertTrue(page.waitForExistence(timeout: 30))
