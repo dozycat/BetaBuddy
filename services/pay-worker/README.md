@@ -15,7 +15,11 @@ details. It does receive the signed App Store transaction for verification:
 never log it, persist it or put it in a URL.
 
 The App Store Server API key is held as the Worker secrets `APPLE_ISSUER_ID`,
-`APPLE_KEY_ID` and `APPLE_PRIVATE_KEY`; never commit the private key. The bundle
+`APPLE_KEY_ID` and `APPLE_PRIVATE_KEY`; never commit the private key. The
+App's Apple ID (needed to verify production transactions) is the secret
+`APP_APPLE_ID`; it is account information and is not written in the repo. The
+deployed Worker predates this secret: set it with
+`bunx wrangler secret put APP_APPLE_ID` before the next deploy. The bundle
 ID and product ID are set in `src/index.ts`. Apple's public root certificates in
 `src/apple-roots.ts` come from <https://www.apple.com/certificateauthority/>.
 

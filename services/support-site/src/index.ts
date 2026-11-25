@@ -21,7 +21,7 @@ h1{font-size:clamp(42px,8vw,76px);letter-spacing:-.065em;line-height:1.03;margin
 }
 
 const support = `<div class="eyebrow">Help for your next attempt</div><h1>BetaBuddy support</h1>
-<p class="lead">Explore offline gyms and review your own climbs on your iPhone. BANANA+ Kerry and Logbook are free. In iOS 1.6.0, the optional one-time lifetime membership unlocks cat climbing and additional gyms, including DOME Xuhui Vanke, with no subscription or ads.</p>
+<p class="lead">Explore offline gyms and review your own climbs on your iPhone. One gym and the Logbook are free. The optional one-time lifetime membership unlocks cat climbing and the other gyms in the app, with no subscription or ads.</p>
 <a class="cta" href="mailto:${email}">Email support →</a><p>When reporting a problem, include your iPhone model, iOS and BetaBuddy versions, the steps you took, and any error message. You do not need to send a personal video in your first message. Never send a password or verification code.</p>
 <div class="grid">
 <section class="card"><h2>No climber detected</h2><p>Use a video with one climber, their whole body visible, good lighting, and a fixed camera. Occlusion or a distant subject can reduce detection. Videos must be 0.5 seconds–20 minutes and no larger than 500 MB.</p></section>

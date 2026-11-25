@@ -6,10 +6,10 @@ type Env = {
   APPLE_ISSUER_ID: string;
   APPLE_KEY_ID: string;
   APPLE_PRIVATE_KEY: string;
+  APP_APPLE_ID: string;
 };
 
 const bundleID = "com.betabuddy.ios";
-const appAppleID = 6809249574;
 const productID = "com.betabuddy.ios.lifetime";
 
 function json(body: object, status = 200): Response {
@@ -56,7 +56,7 @@ export default {
       try {
         const checked = new Apple.SignedDataVerifier(
           roots, false, environment, bundleID,
-          environment === Apple.Environment.PRODUCTION ? appAppleID : undefined,
+          environment === Apple.Environment.PRODUCTION ? Number(env.APP_APPLE_ID) : undefined,
         );
         const transaction = await checked.verifyAndDecodeTransaction(signed);
         device = { environment, checked, transaction };
