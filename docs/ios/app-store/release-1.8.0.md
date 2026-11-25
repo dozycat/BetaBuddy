@@ -1,6 +1,6 @@
 # iOS 1.8.0 (21)
 
-状态：已准备，**未归档、未上传、未提审**。以 1.7.1 发布分支为基础。
+状态：2026-11-25 12:55（中国时间）**已正式提审，等待审核**。以最新主分支的 1.8.0 准备工作为基础。构建 21 已于 12:45 上传成功，正式版审核通过后自动向所有用户发布，保留评分。同一构建已提交既有公开 TestFlight 群组的外测审核，通过后自动通知测试员。1.7.1 当前已可分发。
 
 数据包：1.9.8（若换成更新的数据包，改这一行和「更新内容」里对应的描述，再按 [验证记录](../validation.md) 里 1.8.0 那一节重跑）。
 
@@ -23,14 +23,16 @@
 
 English:
 
-> “Analyse this attempt” now walks through your climb move by move: it frames the problem, marks only your next hand and foot holds, and a paper-cut figure follows your moves the whole way. New “Tips from this attempt” point out long pauses, both feet cutting loose and hands moving without the feet, each linked to that moment in the video. Holds bolted onto another hold or volume count as part of the problem. Results are auto-detected, can be wrong, and are not coaching advice. The model’s beta is hidden for now.
+> Review your climb move by move with clearer hold outlines and a paper-cut figure that follows the detected movement. Tap observations about pauses and hand or foot movement to revisit that moment in your video. This update reduces some wrong-colour outlines and false detections from video captions and background walls. Detection can still miss or misidentify holds. The model-generated beta comparison is temporarily hidden. All analysis stays on your device.
 
 ## 验证
 
-见 [验证记录](../validation.md)「2026-11-25（中午）· 1.8.0 换成数据包 1.9.8」、「2026-11-25 · 1.8.0 换成数据包 1.9.7」（这两次只换了数据包，只重跑了分析界面测试）、「2026-11-24（晚）· 1.8.0 换成数据包 1.9.6」和之前的「2026-11-24 · iOS 1.8.0 发布准备」。摘要：核心 21/21；单元 / 集成 84 通过、2 跳过；UI 中带参考片段的分析端到端通过；相机界面 2 项 UI 测试失败（1.7.1 上同样失败，尚未处理）；未签名真机构建成功（数据包 1.9.6）；Android 单元 147/147、Debug 构建与 lint 通过。
+见 [验证记录](../validation.md)「2026-11-25 · iOS 1.8.0 (21) 发布验证」。核心 21/21；iOS 单元／集成 84 通过、2 项按设计跳过；参考片段分析和两项相机 UI 测试在 iOS 18.5 通过。此前相机测试在新系统上的失败来自 sheet 滚动、popover 取消方式及重复无障碍节点；调整测试后，iOS 27.2 两项完整流程均通过，没有修改应用业务代码。分析第一页、逐步页面和建议卡片已检查截图。
 
-## 发布前还要做
+Android 资源检查、147 项单元测试和 Debug 构建通过，未发布 Android 正式版本。签名归档与 Android Debug APK 内的数据包均与源文件逐字节一致；16 段颜色回归复查通过。
 
-- 处理或确认相机界面那 2 项 UI 测试失败。
-- 真机上看一遍分析页：逐步几屏、小人连续播放是否流畅、建议卡片。
-- 归档、上传、提审由用户决定；签名团队在命令行传入，不写进仓库。
+用户明确选择本次直接发布，不追加真机验证；本轮没有真机实测，不将模拟器和参考片段检查描述为现场效果验收。
+
+## 发布产物
+
+签名归档、上传日志、测试结果、归档校验及 Apple 回执截图保存在本机忽略目录 `ios/build/1.8.0/`。审核状态只代表提交已被接收，尚未通过审核或上线。公开测试沿用已有邀请链接，当前构建仍需等待外测审核。

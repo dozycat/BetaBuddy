@@ -79,6 +79,17 @@ final class CaptureUITests: XCTestCase {
         button.tap()
     }
 
+    @MainActor private func cancelConfirmation(_ app: XCUIApplication, label: String) {
+        if app.buttons[label].exists {
+            app.buttons[label].tap()
+        } else {
+            // Compact popovers omit the cancel row and dismiss by tapping outside.
+            let outside = app.otherElements["PopoverDismissRegion"]
+            XCTAssertTrue(outside.exists, app.debugDescription)
+            outside.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.2)).tap()
+        }
+    }
+
     @MainActor
     func testFramingGuidanceRecordingAndSavingInChinese() async throws {
         let app = try await launch()
@@ -120,7 +131,10 @@ final class CaptureUITests: XCTestCase {
         let district = app.buttons["cityGym-syn:district"]
         XCTAssertTrue(district.waitForExistence(timeout: 5))
         XCTAssertNil(district.label.rangeOfCharacter(from: .decimalDigits), district.label)
-        XCTAssertTrue(app.buttons["allGyms"].waitForExistence(timeout: 5))
+        // Newer systems first expand the sheet; another swipe scrolls its list.
+        let allGyms = app.buttons["allGyms"]
+        for _ in 0..<3 where !allGyms.exists || !allGyms.isHittable { app.swipeUp() }
+        XCTAssertTrue(allGyms.waitForExistence(timeout: 5), app.debugDescription)
         keep(app, "05b-gym-same-city")
         app.buttons["取消"].tap()
         // The gym right here is offered, not chosen: the selection only changes when the user says so.
@@ -137,7 +151,7 @@ final class CaptureUITests: XCTestCase {
         let anyway = app.buttons["recordAnyway"]
         XCTAssertTrue(anyway.waitForExistence(timeout: 5))
         keep(app, "06-ask-before-recording")
-        app.buttons["再调一下机位"].tap()
+        cancelConfirmation(app, label: "再调一下机位")
         XCTAssertFalse(app.descendants(matching: .any)["captureElapsed"].exists)
         XCTAssertTrue(ready.waitForExistence(timeout: 60))
 
@@ -497,10 +511,10 @@ final class CaptureUITests: XCTestCase {
         app.buttons["captureClose"].tap()
         let sheet = app.sheets.firstMatch
         XCTAssertTrue(sheet.buttons["discardAndClose"].waitForExistence(timeout: 5))
-        XCTAssertTrue(sheet.buttons["再存一次"].exists); XCTAssertTrue(app.buttons["取消"].exists)
         keep(app, "81-save-failed-close-asks")
+        XCTAssertTrue(sheet.buttons["再存一次"].exists, app.debugDescription)
         // Cancel: nothing happens, the clip is still held.
-        app.buttons["取消"].tap()
+        cancelConfirmation(app, label: "取消")
         XCTAssertTrue(app.staticTexts["这一趟还没存进攀爬册"].waitForExistence(timeout: 5))
         // Retry from the question: it fails once more (the second arranged failure) and the clip is still held.
         app.buttons["captureClose"].tap()
@@ -511,7 +525,8 @@ final class CaptureUITests: XCTestCase {
         // Discard: only now is the clip dropped, and the album has no record of it.
         app.buttons["captureClose"].tap()
         XCTAssertTrue(sheet.buttons["discardAndClose"].waitForExistence(timeout: 5))
-        sheet.buttons["discardAndClose"].tap()
+        // Newer accessibility trees expose both the enclosing and inner button.
+        sheet.buttons["discardAndClose"].firstMatch.tap()
         XCTAssertTrue(app.buttons["recordClimb"].waitForExistence(timeout: 10))
         XCTAssertEqual(app.staticTexts.matching(identifier: "今天的攀爬").count, before)
         // Nothing is left for the next launch to adopt either.
