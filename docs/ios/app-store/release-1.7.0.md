@@ -81,8 +81,7 @@ Xcode 账户登录后 App Store 导出成功。真实设备运行 1.7.0 (19) Deb
 
 - 11:55:58 上传日志返回 `Upload succeeded` / `EXPORT SUCCEEDED`，构建随后完成 Apple 处理。
 - 11:59 正式提交；页面先确认「已提交 1 个项目」，审核详情显示 `1.7.0 (19)`「等待审核」。
-- [审核记录](https://appstoreconnect.apple.com/apps/6809249574/distribution/reviewsubmissions/details/888889af-80fa-4906-a9b4-96338ea6ebe8)，提交 ID `888889af-80fa-4906-a9b4-96338ea6ebe8`。
-- 构建 ID `141e5086-2868-49a3-98c6-c4cb039f1f1d`。简体中文和英语（美国）栏目继续使用英文内容，描述、推广文本、新增内容与审核备注均已保存。
+- 简体中文和英语（美国）栏目继续使用英文内容，描述、推广文本、新增内容与审核备注均已保存。
 - 发布设置：审核通过自动发布、立即向所有用户发布、保留评分。会员内购沿用现有商品，无新商品提交。
 - 1.6.0 当时显示「可分发」；1.7.0 尚未通过审核，不能视为已上线。
 - 本机凭证：`ios/build/1.7.0/appstore-1.7.0-19-submitted.png`；上传日志 `ios/build/1.7.0/logs/upload.log`。

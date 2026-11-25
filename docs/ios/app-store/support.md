@@ -10,6 +10,6 @@ Contact: [hi@dozycat.ai](mailto:hi@dozycat.ai). When reporting a problem, includ
 - Video import: check the original in Photos, allow iCloud to download it if needed, and trim it before retrying.
 - iPhone feels hot: pause repeated analyses or use Everyday review; analysis stops at a serious thermal state.
 - Delete a climb: delete its app copy and analysis from the record; the original in Photos is unaffected. There is no cloud restore.
-- Lifetime membership: buy or restore from Settings & About using the same Apple Account. The badge appears in Logbook immediately. Training suggestions and new gym data are future plans.
+- Lifetime membership: buy or restore from Settings & About using the same Apple Account. Membership unlocks the additional gyms and cat climbing in Gym; the badge appears in Logbook immediately.
 
 The full privacy policy is at <https://betabuddy.dozycat.ai/privacy>.

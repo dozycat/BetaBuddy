@@ -14,7 +14,7 @@
 
 2026-11-24（站点同步完成）：**1.7.0 相机与可选定位的支持/隐私说明已上线。** 原 `betabuddy-support` Worker 部署 `84ae1477` 为 `100% Ready`，已通过浏览器核对正式首页与 `/privacy/`。App 1.7.0 (19) 已于 11:59 送审，当时回执为「等待审核」，本次未重新查询 Apple 状态。
 
-2026-11-24 11:59（中国时间）：**iOS 1.7.0 (19) 已正式提交，状态「等待审核」。** 11:55:58 上传成功，Apple 处理完成后已关联构建并送审；[审核回执](https://appstoreconnect.apple.com/apps/6809249574/distribution/reviewsubmissions/details/888889af-80fa-4906-a9b4-96338ea6ebe8)确认一个项目 `1.7.0 (19)`。审核通过后自动发布、立即向所有用户提供更新、保留评分。两种商店栏目及审核备注已同步相机功能说明。1.6.0 当前可分发，1.7.0 尚未上线。线上支持/隐私页补充说明仍待 Cloudflare 所属账号登录后部署；本地源文件及产物已准备好。详情见 [release-1.7.0.md](release-1.7.0.md)。
+2026-11-24 11:59（中国时间）：**iOS 1.7.0 (19) 已正式提交，状态「等待审核」。** 11:55:58 上传成功，Apple 处理完成后已关联构建并送审；审核回执确认一个项目 `1.7.0 (19)`。审核通过后自动发布、立即向所有用户提供更新、保留评分。两种商店栏目及审核备注已同步相机功能说明。1.6.0 当前可分发，1.7.0 尚未上线。线上支持/隐私页补充说明仍待 Cloudflare 所属账号登录后部署；本地源文件及产物已准备好。详情见 [release-1.7.0.md](release-1.7.0.md)。
 
 2026-11-24（继续）：**1.7.0 (19) App Store IPA 已导出并校验，尚未上传或提审。** 用户在 Xcode 登录后分发签名恢复。已在 iPhone 17 Pro Max 真相机录下约 10 秒无声视频，305 帧、零丢帧；保存成功，文件完整解码正常。室内场景没有攀爬者，分析按设计跳过，未验证实攀识别效果。随后在同一手机安装最终归档中的 Release 构建并打开攀爬册，确认测试记录保留。发布包在本机忽略目录 `ios/build/1.7.0/AppStore/BetaBuddy.ipa`，完整记录见 [release-1.7.0.md](release-1.7.0.md)。线上支持/隐私页面仍待部署。
 
@@ -22,27 +22,27 @@
 
 App Store IPA 导出受阻：命令行和 Xcode Organizer 均报无账户、缺少分发证书；已实际查看 Xcode Apple Accounts 页面为空，等待登录。真机相机验收尚未做。支持站点源文件与静态页面已补齐相机及定位说明，线上尚未部署。详情和产物位置见 [release-1.7.0.md](release-1.7.0.md)。分支 `codex/release-1.7.0` 本机保留，未推送。
 
-2026-11-22 20:22（中国时间）：**iOS 1.6.0 (18) 与现有终生会员权益说明更新已联合提交 App Store 正式审核**，Connect 确认「已提交 2 个项目」。[审核记录](https://appstoreconnect.apple.com/apps/6809249574/distribution/reviewsubmissions/details/18dff318-770c-400e-99e2-bff0f0a90b13)，提交 ID `18dff318-770c-400e-99e2-bff0f0a90b13`。发布设置为审核通过后自动发布、立即向所有用户供应更新。当前正式版为 1.5.0；1.6.0 尚未获批上架。
+2026-11-22 20:22（中国时间）：**iOS 1.6.0 (18) 与现有终生会员权益说明更新已联合提交 App Store 正式审核**，Connect 确认「已提交 2 个项目」。发布设置为审核通过后自动发布、立即向所有用户供应更新。当前正式版为 1.5.0；1.6.0 尚未获批上架。
 
-简体中文与英语（美国）商店文案、更新说明和审核备注已保存，两种商店各增加猫攀爬及单一保存界面截图（中尺寸组共 6 张）。现有会员商品五种本地化增加猫攀爬权益，实际会员页截图已上传。构建 ID `695c203e-9126-4440-b882-85fa4c09f51f`。送审凭证在本机忽略目录 `ios/build/1.6.0/appstore-submitted.png`。两个猫预设 UI 测试另行复跑通过（1 个测试，0 失败），测试截图关闭首次操作提示。此次未更改商品价格或销售地区。支持站点源文件已更新但尚未部署；偶发镜头失控仍未确认根因，不宣称修复。
+简体中文与英语（美国）商店文案、更新说明和审核备注已保存，两种商店各增加猫攀爬及单一保存界面截图（中尺寸组共 6 张）。现有会员商品五种本地化增加猫攀爬权益，实际会员页截图已上传。送审凭证在本机忽略目录 `ios/build/1.6.0/appstore-submitted.png`。两个猫预设 UI 测试另行复跑通过（1 个测试，0 失败），测试截图关闭首次操作提示。此次未更改商品价格或销售地区。支持站点源文件已更新但尚未部署；偶发镜头失控仍未确认根因，不宣称修复。
 
 2026-11-22 19:58（中国时间）：**1.6.0 (18) 已通过 Xcode Organizer 成功上传至 App Store Connect**。归档分发记录显示 `uploadEvent.state=success`、`uploadedBuildNumber=18`、错误与警告均为空；ContentDelivery 日志确认 `UPLOAD SUCCEEDED with no errors`。尚未确认 Apple 处理完成，尚未关联商店版本或提交正式审核。上传期间 Mac 再次锁屏；Chrome 发布页刷新后仍显示 Apple 登录表单，已请用户指出已登录的窗口。正式发布未完成。
 
 2026-11-22：1.6.0 (18) 已完成猫攀爬会员限制、单一保存操作及 GymPack 1.8.0 接入。Mac 核心 10/10、iOS 单元/集成 52 项（1 项可选片段跳过）、导航/会员/保存及两种猫播放 UI 验证通过。签名归档已生成；CLI 上传失败（Failed to Use Accounts），尚未上传、尚未提交审核。等待 Mac 解锁及 App Store Connect 登录后，用 Xcode Organizer 上传并提交自动发布。详情见 [release-1.6.0.md](release-1.6.0.md)。
 
-2026-11-20 14:30（中国时间）：iOS **1.5.0 (17)** 与现有终生会员内购的权益说明更新已联合提交 App Store 正式审核，Connect 确认 `2 Items Submitted`，状态 **Waiting for Review**。发布方式为审核通过后自动发布、立即向全部用户供应更新；现有正式版仍为 **1.4.0 (16)**。提交 ID：`74d3b7ec-edfd-44a2-8d7e-2b4e300adff8`；[审核记录](https://appstoreconnect.apple.com/apps/6809249574/distribution/reviewsubmissions/details/74d3b7ec-edfd-44a2-8d7e-2b4e300adff8)。简体中文与英语（美国）的商店描述、更新说明和审核备注已保存；会员商品五种本地化继续使用英文，描述增加额外岩馆解锁，并上传新版真实模拟器会员界面截图。价格和销售地区未变。
+2026-11-20 14:30（中国时间）：iOS **1.5.0 (17)** 与现有终生会员内购的权益说明更新已联合提交 App Store 正式审核，Connect 确认 `2 Items Submitted`，状态 **Waiting for Review**。发布方式为审核通过后自动发布、立即向全部用户供应更新；现有正式版仍为 **1.4.0 (16)**。简体中文与英语（美国）的商店描述、更新说明和审核备注已保存；会员商品五种本地化继续使用英文，描述增加额外岩馆解锁，并上传新版真实模拟器会员界面截图。价格和销售地区未变。
 
-构建内置 GymPack **1.6.0**（数据提交 `3a91196`），额外岩馆绑定现有终生会员，香蕉嘉里继续免费。StoreKit 本地购买、恢复、退款与实际 WKWebView 切馆集成验证通过；签名归档及 16 个数据文件哈希校验通过。命令行上传报 `Failed to Use Accounts`，改用 **Xcode Organizer** 后于 14:20 上传成功，不能把该命令行错误等同于用户未登录。代码发布提交 `2a5a32f` 位于 `codex/member-gyms-testflight`，详情见 [release-1.5.0.md](release-1.5.0.md)。
+构建内置 GymPack **1.6.0**（数据提交 `3a91196`），额外岩馆绑定现有终生会员，默认岩馆继续免费。StoreKit 本地购买、恢复、退款与实际 WKWebView 切馆集成验证通过；签名归档及 16 个数据文件哈希校验通过。命令行上传报 `Failed to Use Accounts`，改用 **Xcode Organizer** 后于 14:20 上传成功，不能把该命令行错误等同于用户未登录。代码发布提交 `2a5a32f` 位于 `codex/member-gyms-testflight`，详情见 [release-1.5.0.md](release-1.5.0.md)。
 
-构建 17 已加入现有内测群组和「BetaBuddy 邀请测试」外测群组，外测已提交 Beta App Review，并开启审核通过后自动通知测试者。[公开测试链接](https://testflight.apple.com/join/WZPw69Vx) 沿用原链接；构建 17 的外测仍需 Apple 审核通过。构建 ID：`882a5fa4-7581-4fae-b670-5ae0c4ae6b1b`。正式送审凭证保存在本机忽略目录 `ios/build/appstore-1.5.0-17-submitted.jpg`，会员审核截图为 `ios/build/lifetime-member-gyms-1.5.0.png`。真机 StoreKit 沙盒及性能尚未验证。
+构建 17 已加入现有内测群组和「BetaBuddy 邀请测试」外测群组，外测已提交 Beta App Review，并开启审核通过后自动通知测试者。[公开测试链接](https://testflight.apple.com/join/WZPw69Vx) 沿用原链接；构建 17 的外测仍需 Apple 审核通过。正式送审凭证保存在本机忽略目录 `ios/build/appstore-1.5.0-17-submitted.jpg`，会员审核截图为 `ios/build/lifetime-member-gyms-1.5.0.png`。真机 StoreKit 沙盒及性能尚未验证。
 
 支持站点与隐私页的新权益说明已更新源文件并重新生成，但尚未部署：当前 Wrangler 可访问的两个账号均不拥有现有 `betabuddy-support` Worker，未在错误账号创建新站点。App 内离线政策与 App Store 元数据已更新。
 
 2026-11-15 23:14（中国时间）：**iOS 1.4.0 (16) 已提交 App Store 正式审核，状态「等待审核」。** [审核提交](https://appstoreconnect.apple.com/apps/6809249574/distribution/reviewsubmissions/details/33a429cc-5863-4594-9979-61138965ed0c)显示「已提交 1 个项目」及 `1.4.0 (16)`；提交 ID `33a429cc-5863-4594-9979-61138965ed0c`。审核通过后自动发布、立即向所有用户提供更新、保留现有评分。简体中文与英语（美国）商店栏目均已更新描述和 What's New，审核备注写明本版变更。提交成功截图保存在本机忽略目录 `ios/build/appstore-1.4.0-16-submitted.png`。
 
-本次从已上传内测版 1.4.0 (15) 的最新 `main` 打包，保留先保存视频、可选后台姿态分析、拍摄时间自动读取与编辑，以及 GymPack **1.3.9** 的 3D 模型和模拟功能；姿态模型文件未更换。新增视频时长上限 **20 分钟**，500 MB 文件上限不变。11 个 Swift package 测试和 Xcode 单元／UI 测试均通过，含 20 分钟边界测试；签名归档内确认 `com.betabuddy.ios`、版本 1.4.0 (16)、GymPack 1.3.9 的 10 个文件 SHA-256 全部一致，以及姿态模型存在。Xcode 于 23:09 返回 `Upload succeeded` / `EXPORT SUCCEEDED`，Apple 处理后[构建 16](https://appstoreconnect.apple.com/teams/5ed1fb00-fca4-4901-b156-1f383d335b4e/apps/6809249574/testflight/ios/e4c2f1e8-60e0-4916-8bdf-55b80d03e000)显示已验证。发布说明见 [release-1.4.0-build16.md](release-1.4.0-build16.md)。当前正式支持站点 `https://betabuddy.dozycat.ai/` 已同步 20 分钟说明，首页和隐私页线上内容哈希与仓库产物一致。
+本次从已上传内测版 1.4.0 (15) 的最新 `main` 打包，保留先保存视频、可选后台姿态分析、拍摄时间自动读取与编辑，以及 GymPack **1.3.9** 的 3D 模型和模拟功能；姿态模型文件未更换。新增视频时长上限 **20 分钟**，500 MB 文件上限不变。11 个 Swift package 测试和 Xcode 单元／UI 测试均通过，含 20 分钟边界测试；签名归档内确认 `com.betabuddy.ios`、版本 1.4.0 (16)、GymPack 1.3.9 的 10 个文件 SHA-256 全部一致，以及姿态模型存在。Xcode 于 23:09 返回 `Upload succeeded` / `EXPORT SUCCEEDED`，Apple 处理后构建 16显示已验证。发布说明见 [release-1.4.0-build16.md](release-1.4.0-build16.md)。当前正式支持站点 `https://betabuddy.dozycat.ai/` 已同步 20 分钟说明，首页和隐私页线上内容哈希与仓库产物一致。
 
-2026-11-15 11:52（中国时间）：**iOS 1.4.0 (15) 已上传 TestFlight。** Xcode 于 11:44 返回 `Upload succeeded` / `EXPORT SUCCEEDED`，Apple 处理完成后[构建 15](https://appstoreconnect.apple.com/teams/5ed1fb00-fca4-4901-b156-1f383d335b4e/apps/6809249574/testflight/ios/6bd4bc79-9120-408d-b6e4-2e4c91893c55)出现。英文 What to Test 已保存。现有「BetaBuddy 内部测试」群组已自动关联，群组构建状态为**正在测试**；现有「BetaBuddy 邀请测试」群组已加入构建 15、自动通知测试员已开启，群组构建状态为**正在等待审核**，需待 Apple 的 TestFlight 外测审核通过才可供外部测试员安装。[公开邀请链接](https://testflight.apple.com/join/WZPw69Vx)沿用原链接。本次**未提交 App Store 正式审核**。
+2026-11-15 11:52（中国时间）：**iOS 1.4.0 (15) 已上传 TestFlight。** Xcode 于 11:44 返回 `Upload succeeded` / `EXPORT SUCCEEDED`，Apple 处理完成后构建 15 出现在 TestFlight。英文 What to Test 已保存。现有「BetaBuddy 内部测试」群组已自动关联，群组构建状态为**正在测试**；现有「BetaBuddy 邀请测试」群组已加入构建 15、自动通知测试员已开启，群组构建状态为**正在等待审核**，需待 Apple 的 TestFlight 外测审核通过才可供外部测试员安装。[公开邀请链接](https://testflight.apple.com/join/WZPw69Vx)沿用原链接。本次**未提交 App Store 正式审核**。
 
 同日准备：先拉取远端 `main` 并确认其包含功能提交 `0805607`；App Store Connect 上传前未见 1.4.0，构建 15 未占用。在独立发布工作树执行 iOS bootstrap，固定版本 SDK 与模型校验通过；GymPack 1.3.9 来自私有仓库 `betabuddy-gym-data` 的已发布快照 `6ad87ac`，安装脚本逐文件校验清单中的 10 个 SHA-256。未签名真机构建与签名 Release 归档均成功；归档内确认 Bundle ID `com.betabuddy.ios`、版本 1.4.0 (15) 及 GymPack 1.3.9 的 10 个文件校验一致，签名团队与原发布包一致。真机后台执行时长、热状态及不同视频元数据仍未验收，自动化测试范围见 [release-1.4.0.md](release-1.4.0.md)。用户本轮暂停 Android 发布；`android-v1.2.0` 未创建。
 
@@ -62,13 +62,13 @@ App Store IPA 导出受阻：命令行和 Xcode Organizer 均报无账户、缺�
 
 2026-11-14 00:50（中国时间）：攀爬册文件夹、组合筛选和离线岩馆目录已合入远端 main（功能提交 `9907175`，发布提交 `7034d9b`）。iOS **1.3.0 (12)** 已签名归档，于 00:38 上传成功（Xcode `EXPORT SUCCEEDED`）并完成 Apple 处理。现有「BetaBuddy 内部测试」群组已自动分发，状态 **Testing**，可安装；「BetaBuddy 邀请测试」已加入构建 12 并提交 Beta App Review，状态 **Waiting for Review**，已勾选审核通过后自动通知测试者。公开邀请链接继续使用 [TestFlight](https://testflight.apple.com/join/WZPw69Vx)，新版本需待外测审核通过后才对外可用。英文 What to Test 已保存，内容见 [release-1.3.0.md](release-1.3.0.md)。本次没有提交 App Store 正式版本审核。
 
-归档内版本、非豁免加密声明、342 条岩馆目录以及本机已安装的 GymPack 均已核对。构建 ID：`69e51629-9e4d-4ee1-90e8-c955ca803cd1`；[TestFlight 构建](https://appstoreconnect.apple.com/teams/5ed1fb00-fca4-4901-b156-1f383d335b4e/apps/6809249574/testflight/ios/69e51629-9e4d-4ee1-90e8-c955ca803cd1)。外测状态截图保存在本机忽略目录 `ios/build/testflight-1.3.0-12-review.png`。
+归档内版本、非豁免加密声明、342 条岩馆目录以及本机已安装的 GymPack 均已核对。外测状态截图保存在本机忽略目录 `ios/build/testflight-1.3.0-12-review.png`。
 
-2026-11-13 13:37（中国时间）：1.2.0 (10) 与首个非消耗型内购 `com.betabuddy.ios.lifetime` 已在同一份新提交中正式送审，App Store Connect 显示两项均“等待审核”。提交 ID：`d559c99f-190c-43e0-99f0-c77d22159051`；[审核记录](https://appstoreconnect.apple.com/apps/6809249574/distribution/reviewsubmissions/details/d559c99f-190c-43e0-99f0-c77d22159051)。构建 10 已成功上传、完成出口合规并关联到 1.2.0；英文商店文案、截图、内购本地化与审核截图均已保存。Cloudflare 技术支持站点 `https://betabuddy.dozycat.ai` 正常返回 200。旧的构建 9 提交已撤回；当前可分发正式版仍为 1.0.0，1.2.0 尚待 Apple 审核。
+2026-11-13 13:37（中国时间）：1.2.0 (10) 与首个非消耗型内购 `com.betabuddy.ios.lifetime` 已在同一份新提交中正式送审，App Store Connect 显示两项均“等待审核”。构建 10 已成功上传、完成出口合规并关联到 1.2.0；英文商店文案、截图、内购本地化与审核截图均已保存。Cloudflare 技术支持站点 `https://betabuddy.dozycat.ai` 正常返回 200。旧的构建 9 提交已撤回；当前可分发正式版仍为 1.0.0，1.2.0 尚待 Apple 审核。
 
 2026-11-13 下午早些时候：Apple 以 Guideline 2.2（Beta Testing）拒绝了 1.2.0 (9)，认为 App 看起来像功能有限的预发布版本；截图是“设置与关于”页。已在审核消息中说明攀岩术语 beta 的含义，并询问具体未完成的功能。修正版 1.2.0 (10) 将歧义标题 `YOUR BETA` 改为 `YOUR CLIMB`，移除会员页的未来计划，并使 App 内离线隐私文案只陈述当前权益。App Store Connect 的简体中文及英语（美国）描述、更新说明、审核备注与副标题已改为英文并保存；内购的五种地区本地化名称和描述已统一为英文，明确一次性购买立即获得永久徽章。新的 1206 × 2622 英文内购审核截图已上传。Cloudflare 支持页已部署新版。Xcode 账户重新登录后，构建 10 上传成功；最新提交状态见上方。
 
-2026-11-13：按用户要求，1.1.0 (5) 的审核提交已取消，App Store Connect 显示“被开发者拒绝”；版本记录改为 1.2.0。1.2.0 的简体中文和英语（美国）商店文案、更新说明、关键词、技术支持 URL 和中／大屏 iPhone 截图均已改成英文。两种语言的隐私政策 URL 均改为 `https://betabuddy.dozycat.ai/privacy`，会员内购的两种商店本地化也都使用英文。英文支持与隐私站点已部署在 Cloudflare 静态 Worker `betabuddy-support`，`https://betabuddy.dozycat.ai` 和 `/privacy` 均返回 200。App 内的帮助与隐私外链已改为新域名；岩馆内嵌页面只能导航到安装包内的 `gympack://local`。1.2.0 (9) 已签名归档、上传并完成出口合规，归档内确认版本 9、GymPack 与新 URL；构建 9 和首个终生会员内购已在同一个审核提交中正式送审，均显示“等待审核”。提交 ID：`f851acda-7e1b-4c10-aaca-b5de4e7caeba`，提交时间 2026-11-13 08:16（中国时间）。现有 1.0.0 的商店素材仍会在 1.2.0 发布前展示；Apple 不允许在缺少 1.0.0 英语截图时把 App 的主要语言从简体中文切成英语，但 1.2.0 的两种商店语言内容都已是英文。
+2026-11-13：按用户要求，1.1.0 (5) 的审核提交已取消，App Store Connect 显示“被开发者拒绝”；版本记录改为 1.2.0。1.2.0 的简体中文和英语（美国）商店文案、更新说明、关键词、技术支持 URL 和中／大屏 iPhone 截图均已改成英文。两种语言的隐私政策 URL 均改为 `https://betabuddy.dozycat.ai/privacy`，会员内购的两种商店本地化也都使用英文。英文支持与隐私站点已部署在 Cloudflare 静态 Worker `betabuddy-support`，`https://betabuddy.dozycat.ai` 和 `/privacy` 均返回 200。App 内的帮助与隐私外链已改为新域名；岩馆内嵌页面只能导航到安装包内的 `gympack://local`。1.2.0 (9) 已签名归档、上传并完成出口合规，归档内确认版本 9、GymPack 与新 URL；构建 9 和首个终生会员内购已在同一个审核提交中正式送审，均显示“等待审核”，提交时间 2026-11-13 08:16（中国时间）。现有 1.0.0 的商店素材仍会在 1.2.0 发布前展示；Apple 不允许在缺少 1.0.0 英语截图时把 App 的主要语言从简体中文切成英语，但 1.2.0 的两种商店语言内容都已是英文。
 
 2026-11-13：1.2.0 (8) 已签名归档并上传 App Store Connect，Apple 处理完成；出口合规答复已保存，构建状态“准备提交”。攀爬册顶部以“会员权益”引导到详情页，明确区分购买后立即获得的岩点会员标识和仍在计划中的功能；购买按钮直接调用 StoreKit 2 的系统购买流程。主按钮、播放等控件采用岩点轮廓。英文界面定向 UI 测试通过，归档内 GymPack 1.2.1 清单与本地安装包 SHA-256 一致。首个内购的审核截图已换成新版会员页，审核备注已同步并显示“已保存”。1.1.0 仍显示“正在审核”，1.2.0 暂无法建立商店版本。Apple 账户密码／Face ID 验证由系统及设备设置决定，App 不能跳过。
 
@@ -84,7 +84,7 @@ App Store IPA 导出受阻：命令行和 Xcode Organizer 均报无账户、缺�
 
 ## 商店送审历史（2026-11-13 13:37）
 
-**当时正式版为 1.0.0；1.2.0 (10) 与终生会员内购已联合提交，均等待 Apple 审核。** 当前提交 ID：`d559c99f-190c-43e0-99f0-c77d22159051`；[审核记录](https://appstoreconnect.apple.com/apps/6809249574/distribution/reviewsubmissions/details/d559c99f-190c-43e0-99f0-c77d22159051)。构建 9 曾被拒绝，其[旧提交](https://appstoreconnect.apple.com/apps/6809249574/distribution/reviewsubmissions/details/f851acda-7e1b-4c10-aaca-b5de4e7caeba)已撤回。下方构建 3–5 为 1.1.0 历史记录，该版本的审核已取消。
+**当时正式版为 1.0.0；1.2.0 (10) 与终生会员内购已联合提交，均等待 Apple 审核。** 构建 9 曾被拒绝，其旧提交已撤回。下方构建 3–5 为 1.1.0 历史记录，该版本的审核已取消。
 
 - 构建 3（2026-11-12 23:35 CST 上传成功）：四个入口的界面，只有简体中文。
 - 构建 4：两个入口——岩馆在前，攀爬册在后，导入并入攀爬册；支持简体中文、繁体中文、英语、日语、韩语。已上传，不提审。
