@@ -426,7 +426,6 @@ final class LivePose {
         guard let points = result?.landmarks.first, points.count == 33 else { return (nil, seconds) }
         return (points.map { [Double($0.x), Double($0.y), $0.visibility?.doubleValue ?? 0] }, seconds)
     }
-    var averageSeconds: Double { samples > 1 ? total / Double(samples - 1) : 0 }
 }
 
 /// What handing preview frames to the capture page costs, for the local log and for tests.
