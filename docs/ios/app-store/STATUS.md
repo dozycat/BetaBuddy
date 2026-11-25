@@ -22,6 +22,10 @@
 
 App Store IPA 导出受阻：命令行和 Xcode Organizer 均报无账户、缺少分发证书；已实际查看 Xcode Apple Accounts 页面为空，等待登录。真机相机验收尚未做。支持站点源文件与静态页面已补齐相机及定位说明，线上尚未部署。详情和产物位置见 [release-1.7.0.md](release-1.7.0.md)。分支 `codex/release-1.7.0` 本机保留，未推送。
 
+2026-11-22 20:22（中国时间）：**iOS 1.6.0 (18) 与现有终生会员权益说明更新已联合提交 App Store 正式审核**，Connect 确认「已提交 2 个项目」。[审核记录](https://appstoreconnect.apple.com/apps/6809249574/distribution/reviewsubmissions/details/18dff318-770c-400e-99e2-bff0f0a90b13)，提交 ID `18dff318-770c-400e-99e2-bff0f0a90b13`。发布设置为审核通过后自动发布、立即向所有用户供应更新。当前正式版为 1.5.0；1.6.0 尚未获批上架。
+
+简体中文与英语（美国）商店文案、更新说明和审核备注已保存，两种商店各增加猫攀爬及单一保存界面截图（中尺寸组共 6 张）。现有会员商品五种本地化增加猫攀爬权益，实际会员页截图已上传。构建 ID `695c203e-9126-4440-b882-85fa4c09f51f`。送审凭证在本机忽略目录 `ios/build/1.6.0/appstore-submitted.png`。两个猫预设 UI 测试另行复跑通过（1 个测试，0 失败），测试截图关闭首次操作提示。此次未更改商品价格或销售地区。支持站点源文件已更新但尚未部署；偶发镜头失控仍未确认根因，不宣称修复。
+
 2026-11-22 19:58（中国时间）：**1.6.0 (18) 已通过 Xcode Organizer 成功上传至 App Store Connect**。归档分发记录显示 `uploadEvent.state=success`、`uploadedBuildNumber=18`、错误与警告均为空；ContentDelivery 日志确认 `UPLOAD SUCCEEDED with no errors`。尚未确认 Apple 处理完成，尚未关联商店版本或提交正式审核。上传期间 Mac 再次锁屏；Chrome 发布页刷新后仍显示 Apple 登录表单，已请用户指出已登录的窗口。正式发布未完成。
 
 2026-11-22：1.6.0 (18) 已完成猫攀爬会员限制、单一保存操作及 GymPack 1.8.0 接入。Mac 核心 10/10、iOS 单元/集成 52 项（1 项可选片段跳过）、导航/会员/保存及两种猫播放 UI 验证通过。签名归档已生成；CLI 上传失败（Failed to Use Accounts），尚未上传、尚未提交审核。等待 Mac 解锁及 App Store Connect 登录后，用 Xcode Organizer 上传并提交自动发布。详情见 [release-1.6.0.md](release-1.6.0.md)。
