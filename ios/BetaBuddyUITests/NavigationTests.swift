@@ -31,7 +31,9 @@ final class NavigationTests: XCTestCase {
         details.tap()
         XCTAssertTrue(app.staticTexts["Lifetime member badge in Logbook"].waitForExistence(timeout:5))
         XCTAssertTrue(app.buttons["buyLifetime"].exists || app.buttons["retryMembershipProduct"].exists)
-        XCTAssertTrue(app.staticTexts["Human climbing at BANANA+ Kerry and Logbook are free. More gyms and cat climbing require lifetime membership."].exists)
+        // The free gym's name comes from the installed pack.
+        let free = NSPredicate(format: "label BEGINSWITH 'Human climbing at ' AND label ENDSWITH ' and Logbook are free. More gyms and cat climbing require lifetime membership.'")
+        XCTAssertTrue(app.staticTexts.matching(free).firstMatch.exists)
         XCTAssertTrue(app.buttons["restoreLifetime"].exists)
         let offer = XCTAttachment(screenshot: app.screenshot())
         offer.name = "Membership offer"

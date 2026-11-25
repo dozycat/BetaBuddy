@@ -111,6 +111,8 @@ final class MembershipTests: XCTestCase {
         defer { storeKit.clearTransactions() }
         let membership = MembershipStore()
         await membership.load()
+        let free = try XCTUnwrap(pack.manifest.freeVenueID)
+        let premium = try XCTUnwrap(pack.manifest.venues.first { $0.id != free }).id
         let gym = GymSession(status: .ready(pack))
         let observer = membership.$isMember.sink { gym.updateMembership($0) }
         defer { observer.cancel(); gym.webView?.configuration.userContentController.removeScriptMessageHandler(forName: GymSession.handlerName) }
@@ -120,29 +122,28 @@ final class MembershipTests: XCTestCase {
                   let state = try? await web.evaluateJavaScript("window.BetaBuddyGym?.state()") as? [String: Any] else { return false }
             return state["venue"] as? String == id && state["ready"] as? Bool == true
         }
-        try await waitUntil { await venueIs("banana-kerry") }
+        try await waitUntil { await venueIs(free) }
         let web = try XCTUnwrap(gym.webView)
         let lockedCount = try await web.evaluateJavaScript("document.querySelectorAll('#venuelist [data-membership]').length") as? Int
         XCTAssertEqual(lockedCount, pack.manifest.venues.count - 1)
-        _ = try await web.evaluateJavaScript("document.querySelector('#venuelist [data-venue=\"dome-xuhui\"]').click()")
+        _ = try await web.evaluateJavaScript("document.querySelector('#venuelist [data-venue=\"\(premium)\"]').click()")
         try await waitUntil { gym.showingMembership }
-        let stillFree = await venueIs("banana-kerry")
+        let stillFree = await venueIs(free)
         XCTAssertTrue(stillFree)
         gym.cancelMembershipRequest()
         gym.showingMembership = false
         // A direct venue URL must also pass the native membership check.
-        let premium = pack.manifest.venues.first { $0.id == "dome-xuhui" }!
-        XCTAssertFalse(gym.authorize(pack.entryURL(hintSeen: true, extraQuery: "venue=\(premium.id)")))
+        XCTAssertFalse(gym.authorize(pack.entryURL(hintSeen: true, extraQuery: "venue=\(premium)")))
         await membership.purchase()
         XCTAssertTrue(membership.isMember)
-        try await waitUntil { await venueIs("dome-xuhui") }
+        try await waitUntil { await venueIs(premium) }
         XCTAssertFalse(gym.showingMembership)
         gym.languageChanged()
-        try await waitUntil { await venueIs("dome-xuhui") }
+        try await waitUntil { await venueIs(premium) }
         let transaction = try XCTUnwrap(storeKit.allTransactions().first)
         try storeKit.refundTransaction(identifier: transaction.identifier)
         try await waitUntil { !membership.isMember }
-        try await waitUntil { await venueIs("banana-kerry") }
-        XCTAssertFalse(gym.authorize(pack.entryURL(hintSeen: true, extraQuery: "venue=dome-xuhui")))
+        try await waitUntil { await venueIs(free) }
+        XCTAssertFalse(gym.authorize(pack.entryURL(hintSeen: true, extraQuery: "venue=\(premium)")))
     }
 }

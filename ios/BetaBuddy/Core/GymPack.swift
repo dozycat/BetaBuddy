@@ -15,27 +15,34 @@ struct GymManifest: Decodable, Equatable, Sendable {
         /// The venue's own name and its names per language; only used to recognise a directory gym.
         var name: String?
         var names: [String: String]?
+        /// Short names per language, for naming the venue in native text.
+        var shortNames: [String: String]?
+        /// Marks the pack's default venue when the manifest has no top-level `defaultVenue`.
+        var `default`: Bool?
         /// This venue's ids in the offline gym directory, when the pack knows them.
         var directoryIds: [String]?
     }
     var venues: [Venue] = []
     var catCode: String?
-    // The original venue remains free, even if a future pack changes its default.
-    static let freeVenueID = "banana-kerry"
-    static func requiresMembership(venueID: String) -> Bool { venueID != freeVenueID }
+    /// The manifest's `defaultVenue`.
+    var defaultVenue: String?
+    /// The venue whose human climbing is free: the pack's default venue. Every other venue needs the
+    /// lifetime membership; with no venue list at all, any venue a URL names does.
+    var freeVenueID: String? { defaultVenue ?? venues.first { $0.default == true }?.id ?? venues.first?.id }
+    func requiresMembership(venueID: String) -> Bool { venueID != freeVenueID }
 
     func requiresMembership(for url: URL) -> Bool {
         let query = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
         for item in query {
             guard let value = item.value, !value.isEmpty else { continue }
             if item.name == "species", value == "cat" { return true }
-            if item.name == "venue", Self.requiresMembership(venueID: value) { return true }
+            if item.name == "venue", requiresMembership(venueID: value) { return true }
             if ["route", "wall"].contains(item.name), value.contains("/"),
-               Self.requiresMembership(venueID: String(value.split(separator: "/", omittingEmptySubsequences: false)[0])) { return true }
+               requiresMembership(venueID: String(value.split(separator: "/", omittingEmptySubsequences: false)[0])) { return true }
         }
         let path = url.standardized.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         return path == catCode || path == "cat.js" || path.hasPrefix("catplans.")
-            || venues.contains { ($0.catFiles ?? []).contains(path) || (Self.requiresMembership(venueID: $0.id) && $0.files.contains(path)) }
+            || venues.contains { ($0.catFiles ?? []).contains(path) || (requiresMembership(venueID: $0.id) && $0.files.contains(path)) }
     }
     static let supportedSchema = 1
     var schema: Int
@@ -74,6 +81,7 @@ struct GymManifest: Decodable, Equatable, Sendable {
         }
         venues = try first([Venue].self, "venues") ?? []
         catCode = try first(String.self, "catCode")
+        defaultVenue = try? first(String.self, "defaultVenue")
         schema = try first(Int.self, "schema", "schemaVersion", "schema_version") ?? 1
         packVersion = try required(first(String.self, "packVersion", "pack_version", "version"), "packVersion")
         generatedAt = try required(first(String.self, "generatedAt", "generated_at"), "generatedAt")
@@ -268,6 +276,23 @@ extension GymManifest {
         if let name = gymNameLocalized[language], !name.isEmpty { return name }
         return gymName
     }
+
+    /// A venue's short name in the interface language, falling back to its full names.
+    func venueName(_ venue: Venue, language: String = AppLanguage.current) -> String {
+        for name in [venue.shortNames?[language], venue.names?[language], venue.name] {
+            if let name, !name.isEmpty { return name }
+        }
+        return venue.id
+    }
+    /// Name of the free venue, or of the pack's gym when it lists no venues.
+    func freeVenueName(language: String = AppLanguage.current) -> String {
+        guard let venue = venues.first(where: { $0.id == freeVenueID }) else { return displayName(language: language) }
+        return venueName(venue, language: language)
+    }
+    /// Names of the venues the membership unlocks, in manifest order.
+    func memberVenueNames(language: String = AppLanguage.current) -> [String] {
+        venues.filter { requiresMembership(venueID: $0.id) }.map { venueName($0, language: language) }
+    }
 }
 
 // MARK: - Video analysis page
@@ -304,12 +329,9 @@ extension GymPack {
 }
 
 extension GymManifest {
-    /// The pack's venue a gym from the offline directory stands for, or `nil` when it is not one
-    /// of them. The directory and the pack share no key, so this goes by name: a directory entry is
-    /// written “brand（branch）”, and it is taken to be a venue when exactly one venue's name carries
-    /// both parts. Anything less certain is left out; the capture page then works without a venue.
-    /// The pack's venue for a gym chosen from the directory: by the directory id when the pack lists
-    /// it, by name otherwise (older packs, hand-typed names).
+    /// The pack's venue for a gym chosen from the directory, or `nil` when it is not one of them:
+    /// by the directory id when the pack lists it, by name otherwise (older packs, hand-typed names).
+    /// Anything less certain is left out; the capture page then works without a venue.
     func venueID(gymID: String?, name: String?) -> String? {
         if let gymID, !gymID.isEmpty {
             let listed = venues.filter { ($0.directoryIds ?? []).contains(gymID) }
@@ -320,6 +342,8 @@ extension GymManifest {
         return venueID(forGymNamed: name)
     }
 
+    /// A directory entry is written “brand（branch）”; it is taken to be a venue when exactly one
+    /// venue's name carries both parts.
     func venueID(forGymNamed name: String?) -> String? {
         func plain(_ text: String) -> String {
             String(text.lowercased().unicodeScalars.filter { CharacterSet.alphanumerics.contains($0) })

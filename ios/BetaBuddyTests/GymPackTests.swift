@@ -37,17 +37,20 @@ final class GymPackTests: XCTestCase {
      "entry":"index.html","files":[{"path":"index.html","sha256":"aa","bytes":7},{"path":"data/scene.bin","sha256":"bb","bytes":7}]}
     """
 
+    private let free = "free-gym"
+
     private func multiVenuePack() throws -> GymPack {
-        let json = manifest.replacingOccurrences(of: #""schema":1"#, with: #""schema":1,"venues":[{"id":"banana-kerry","files":["index.html"]},{"id":"dome-xuhui","files":["data/scene.bin"]}]"#)
+        let json = manifest.replacingOccurrences(of: #""schema":1"#, with: #""schema":1,"defaultVenue":""# + free + #"","venues":[{"id":""# + free + #"","files":["index.html"]},{"id":"extra-gym","files":["data/scene.bin"]}]"#)
         return try GymPack(directory: writePack(manifest: json))
     }
 
     func testAdditionalVenueGateCoversLinksAndResources() throws {
         let pack = try multiVenuePack()
-        for suffix in ["?venue=dome-xuhui", "?route=dome-xuhui%2Froute", "?wall=dome-xuhui%2Froof", "?venue=banana-kerry&route=dome-xuhui/r", "?venue=future-gym", "?route=/malformed"] {
+        XCTAssertEqual(pack.manifest.freeVenueID, free)
+        for suffix in ["?venue=extra-gym", "?route=extra-gym%2Froute", "?wall=extra-gym%2Fwall", "?venue=\(free)&route=extra-gym/r", "?venue=future-gym", "?route=/malformed"] {
             XCTAssertTrue(pack.manifest.requiresMembership(for: URL(string: "gympack://local/index.html" + suffix)!), suffix)
         }
-        for suffix in ["", "?venue=banana-kerry", "?route=baishan-green", "?wall=banana-kerry/baishan"] {
+        for suffix in ["", "?venue=\(free)", "?route=wall-green", "?wall=\(free)/wall"] {
             XCTAssertFalse(pack.manifest.requiresMembership(for: URL(string: "gympack://local/index.html" + suffix)!), suffix)
         }
         var member = false
@@ -72,7 +75,7 @@ final class GymPackTests: XCTestCase {
     func testCatGateCoversManifestAssetsURLsAndRevocation() throws {
         let assets = ["index.html", "cat.js", "catplans.0.js", "data/custom-cat.js", "data/custom-plans.js"]
         let json: [String: Any] = ["schema": 1, "packVersion": "1.8.0", "generatedAt": "2026-11-21", "gymName": "Fixture", "routeCount": 1,
-            "catCode": "data/custom-cat.js", "venues": [["id": "banana-kerry", "files": ["index.html"], "catFiles": ["data/custom-plans.js"]]],
+            "catCode": "data/custom-cat.js", "venues": [["id": free, "files": ["index.html"], "catFiles": ["data/custom-plans.js"]]],
             "files": assets.map { ["path": $0, "sha256": "aa"] }]
         let pack = try GymPack(directory: writePack(manifest: String(decoding: JSONSerialization.data(withJSONObject: json), as: UTF8.self), files: assets))
         var member = false
@@ -99,7 +102,7 @@ final class GymPackTests: XCTestCase {
 
     func testCancelledPaywallDoesNotOpenPremiumVenue() throws {
         let session = GymSession(status: .ready(try multiVenuePack()))
-        let premium = URL(string: "gympack://local/index.html?venue=dome-xuhui")!
+        let premium = URL(string: "gympack://local/index.html?venue=extra-gym")!
         XCTAssertFalse(session.authorize(premium))
         XCTAssertTrue(session.showingMembership)
         XCTAssertEqual(session.pendingMemberURL, premium)

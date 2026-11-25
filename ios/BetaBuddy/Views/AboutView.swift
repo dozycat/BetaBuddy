@@ -92,6 +92,20 @@ struct AboutView: View {
 struct MembershipOfferView: View {
     @EnvironmentObject private var membership: MembershipStore
     @Environment(\.dismiss) private var dismiss
+    /// Gym names come from the installed pack; the repository names none.
+    private let manifest = GymPack.current?.manifest
+
+    private var freeText: Text {
+        if let manifest { Text("\(manifest.freeVenueName())的人物攀爬与攀爬册免费使用；更多岩馆和猫攀爬需终生会员解锁。") }
+        else { Text("默认岩馆的人物攀爬与攀爬册免费使用；更多岩馆和猫攀爬需终生会员解锁。") }
+    }
+    private var gymsText: Text {
+        let names = manifest?.memberVenueNames() ?? []
+        if names.isEmpty { return Text("解锁后续新增岩馆的线路与攀爬推演。") }
+        let list = ListFormatter()
+        list.locale = AppLanguage.locale
+        return Text("解锁\(list.string(from: names) ?? names.joined(separator: ", "))及后续新增岩馆的线路与攀爬推演。")
+    }
 
     var body: some View {
         PaperPage {
@@ -104,15 +118,13 @@ struct MembershipOfferView: View {
                 Text("终生会员").font(BB.display(38))
                 Text("一次购买，支持 BetaBuddy 继续迭代。")
                     .font(.title3.bold())
-                Text("香蕉嘉里的人物攀爬与攀爬册免费使用；更多岩馆和猫攀爬需终生会员解锁。")
-                    .foregroundStyle(BB.muted)
+                freeText.foregroundStyle(BB.muted)
             }
             VStack(alignment:.leading,spacing:16) {
                 SectionLabel(title:"购买后立即获得",trailing:"AVAILABLE NOW")
                     .accessibilityIdentifier("membershipBenefitsNow")
                 Label("解锁更多岩馆", systemImage: "map.fill").font(.headline)
-                Text("解锁 DOME 徐汇万科及后续新增岩馆的线路与攀爬推演。")
-                    .foregroundStyle(BB.muted)
+                gymsText.foregroundStyle(BB.muted)
                 Label("让猫来爬", systemImage: "pawprint.fill").font(.headline)
                 Text("两种猫、两种岩点模式，观看猫的攀爬动作回放。已有会员无需再次购买。")
                     .foregroundStyle(BB.muted)

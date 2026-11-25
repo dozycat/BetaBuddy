@@ -64,7 +64,7 @@ final class GymSession: NSObject, ObservableObject, WKNavigationDelegate, WKScri
     let status: GymPack.Status
     @Published private(set) var phase = Phase.idle
     @Published private(set) var webView: WKWebView?
-    /// Last route picked in the page. Kept for linking a recorded climb to a route (id and name only).
+    /// Last route picked in the page (id and name only), reopened after a language change when the page cannot report its state.
     @Published private(set) var selectedRoute: GymRoute?
     /// Bumped when the page asks for the app's settings (`openSettings`).
     @Published private(set) var settingsRequests = 0
@@ -122,7 +122,7 @@ final class GymSession: NSObject, ObservableObject, WKNavigationDelegate, WKScri
     private func decorateVenueList() {
         webView?.evaluateJavaScript("window.__betaBuddySetMembership?.(\(isMember));")
         let label = String(localized: "会员解锁", bundle: AppLanguage.bundle)
-        let ids = pack?.manifest.venues.filter { GymManifest.requiresMembership(venueID: $0.id) }.map(\.id) ?? []
+        let ids = pack.map { manifest in manifest.manifest.venues.filter { manifest.manifest.requiresMembership(venueID: $0.id) }.map(\.id) } ?? []
         guard let data = try? JSONSerialization.data(withJSONObject: ["ids": ids, "label": label, "member": isMember]),
               let json = String(data: data, encoding: .utf8) else { return }
         webView?.evaluateJavaScript("""
