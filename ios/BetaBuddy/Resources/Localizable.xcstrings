@@ -307,40 +307,6 @@
         }
       }
     },
-    "一次购买，永久拥有尊贵终生会员标识。后续训练建议和新岩馆数据推出后，也将向终生会员开放。": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Buy once to unlock a lifetime member badge. Future training suggestions and new gym data will also be available to lifetime members when released."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "一度の購入で終身会員バッジを利用できます。今後公開されるトレーニング提案と新しいジムデータも終身会員向けに提供予定です。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "한 번 구매하면 평생 회원 배지를 사용할 수 있습니다. 향후 출시될 훈련 추천과 새 암장 데이터도 평생 회원에게 제공될 예정입니다."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "一次购买，永久拥有尊贵终生会员标识。后续训练建议和新岩馆数据推出后，也将向终生会员开放。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "購買一次，永久擁有尊貴終生會員標識。後續推出的訓練建議和新岩館資料也將開放給終生會員。"
-          }
-        }
-      }
-    },
     "下一次，我想…": {
       "localizations": {
         "en": {
@@ -715,40 +681,6 @@
         }
       }
     },
-    "分析时请保持应用在前台。视频和模型都在手机上处理；iCloud 原片可能需由系统先下载。": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Keep the app in the foreground while it analyzes. The video and the model stay on your phone; an iCloud original may need to be downloaded by the system first."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "解析中はアプリを前面のままにしてください。動画もモデルも端末内で処理します。iCloud にある元の映像は、先にシステムがダウンロードすることがあります。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "분석하는 동안 앱을 화면에 띄워 두세요. 영상과 모델은 모두 기기에서 처리합니다. iCloud에 있는 원본은 시스템이 먼저 내려받을 수 있습니다."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "分析时请保持应用在前台。视频和模型都在手机上处理；iCloud 原片可能需由系统先下载。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "分析時請讓 App 保持在前景。影片和模型都在手機上處理；iCloud 上的原片可能需要系統先下載。"
-          }
-        }
-      }
-    },
     "分析边界": {
       "localizations": {
         "en": {
@@ -1119,40 +1051,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "後退零點一秒"
-          }
-        }
-      }
-    },
-    "回看精度": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Replay detail"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "解析の細かさ"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "분석 정밀도"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "回看精度"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "回看精度"
           }
         }
       }
@@ -1565,40 +1463,6 @@
         }
       }
     },
-    "岩馆与攀爬册仍可免费使用；会员购买是可选的。": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gym and Logbook remain free to use; membership is optional."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ジムとログブックは引き続き無料で利用でき、会員購入は任意です。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "암장과 로그북은 계속 무료로 사용할 수 있으며 회원 구매는 선택 사항입니다."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "岩馆与攀爬册仍可免费使用；会员购买是可选的。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "岩館與攀爬冊仍可免費使用；會員購買為選擇性項目。"
-          }
-        }
-      }
-    },
     "岩馆数据不完整": {
       "localizations": {
         "en": {
@@ -1939,40 +1803,6 @@
         }
       }
     },
-    "开始本地分析": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Analyze on this iPhone"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "この iPhone で解析"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이 iPhone에서 분석"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "开始本地分析"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "開始本機分析"
-          }
-        }
-      }
-    },
     "恢复购买": {
       "localizations": {
         "en": {
@@ -2037,74 +1867,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "手機溫度偏高，已停止分析。稍後可以重新開始。"
-          }
-        }
-      }
-    },
-    "找线路或难度": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Search by name or grade"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "名前やグレードで検索"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이름이나 난이도로 검색"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "找线路或难度"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "找路線或難度"
-          }
-        }
-      }
-    },
-    "把这一趟，\n变成下一次的灵感。": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Turn this go\ninto the next idea."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "このトライを、\n次のヒントに。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이번 시도를\n다음 아이디어로."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "把这一趟，\n变成下一次的灵感。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "把這一趟，\n變成下一次的靈感。"
           }
         }
       }
@@ -2245,40 +2007,6 @@
         }
       }
     },
-    "支持独立开发，现在获得会员标识。": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Support independent development and get a member badge today."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "個人開発を応援し、今すぐ会員バッジを受け取れます。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "독립 개발을 응원하고 지금 회원 배지를 받으세요."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "支持独立开发，现在获得会员标识。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "支持獨立開發，現在即可獲得會員標識。"
-          }
-        }
-      }
-    },
     "数据包格式（%lld）比这个版本的应用新。请更新应用。": {
       "localizations": {
         "en": {
@@ -2411,40 +2139,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "檔案"
-          }
-        }
-      }
-    },
-    "新岩馆数据": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "New gym data"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "新しいジムデータ"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "새 암장 데이터"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "新岩馆数据"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "新岩館資料"
           }
         }
       }
@@ -2823,40 +2517,6 @@
         }
       }
     },
-    "未来计划": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Planned for later"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "今後の予定"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "향후 계획"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "未来计划"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "未來計畫"
-          }
-        }
-      }
-    },
     "未标级": {
       "localizations": {
         "en": {
@@ -3163,40 +2823,6 @@
         }
       }
     },
-    "正在读懂\n你的这一趟。": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Reading\nyour climb."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "このトライを\n読み取っています。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이번 등반을\n읽는 중."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "正在读懂\n你的这一趟。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "正在讀懂\n你的這一趟。"
-          }
-        }
-      }
-    },
     "没有找到可恢复的终生会员购买。": {
       "localizations": {
         "en": {
@@ -3227,40 +2853,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "沒有找到可回復的終生會員購買。"
-          }
-        }
-      }
-    },
-    "没有白爬的一趟。": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No go is wasted."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "無駄なトライはない。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "헛된 시도는 없다."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "没有白爬的一趟。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "沒有白爬的一趟。"
           }
         }
       }
@@ -3363,40 +2955,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "筆記未能儲存：%@"
-          }
-        }
-      }
-    },
-    "第一趟，\n从这里开始。": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Your first climb\nstarts here."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "最初のトライは、\nここから。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "첫 등반은\n여기서부터."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "第一趟，\n从这里开始。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "第一趟，\n從這裡開始。"
           }
         }
       }
@@ -3537,40 +3095,6 @@
         }
       }
     },
-    "视频留在手机里 · 无需账号": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Videos stay on your phone · no account"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "動画は端末内に · アカウント不要"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "영상은 기기에만 · 계정 불필요"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "视频留在手机里 · 无需账号"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "影片留在手機裡 · 不需要帳號"
-          }
-        }
-      }
-    },
     "视频超过 20 分钟。请先在相册中裁剪。": {
       "localizations": {
         "en": {
@@ -3707,74 +3231,6 @@
         }
       }
     },
-    "解锁终生会员 ·": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Unlock lifetime membership ·"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "終身会員を購入 ·"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "평생 회원 잠금 해제 ·"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "解锁终生会员 ·"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "解鎖終生會員 ·"
-          }
-        }
-      }
-    },
-    "训练建议": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Training suggestions"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "トレーニングの提案"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "훈련 제안"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "训练建议"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "訓練建議"
-          }
-        }
-      }
-    },
     "记住一个感受（可选）": {
       "localizations": {
         "en": {
@@ -3839,40 +3295,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "記錄攀爬"
-          }
-        }
-      }
-    },
-    "记录第一趟": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Log your first climb"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "最初のトライを記録"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "첫 등반 기록하기"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "记录第一趟"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "記錄第一趟"
           }
         }
       }
@@ -3975,40 +3397,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "設定與關於"
-          }
-        }
-      }
-    },
-    "试试其他筛选条件或搜索词。": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Try another filter or search term."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "別の絞り込みや検索語を試してください。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "다른 필터나 검색어를 써 보세요."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "试试其他筛选条件或搜索词。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "試試其他篩選條件或搜尋字詞。"
           }
         }
       }
@@ -4217,40 +3605,6 @@
         }
       }
     },
-    "这一趟已保存": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Climb saved"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "保存しました"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "등반 저장됨"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "这一趟已保存"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "這一趟已儲存"
-          }
-        }
-      }
-    },
     "这一趟的名字": {
       "localizations": {
         "en": {
@@ -4349,40 +3703,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "這個版本沒有內建岩館資料。場館模型、路線和攀爬模擬隨正式安裝檔提供，不在公開原始碼裡。"
-          }
-        }
-      }
-    },
-    "这些功能尚未上线，推出时间与具体内容可能调整。": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "These features are not available yet. Timing and details may change."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "これらの機能はまだ提供していません。公開時期や内容は変更される場合があります。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이 기능은 아직 제공되지 않습니다. 출시 시기와 세부 내용은 변경될 수 있습니다."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "这些功能尚未上线，推出时间与具体内容可能调整。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "這些功能尚未推出，上線時間與具體內容可能調整。"
           }
         }
       }
@@ -4519,40 +3839,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "適合單人、全身入鏡、固定機位的影片；單段 0.5 秒–20 分鐘，最大 500 MB。建議先在「照片」裡裁掉無關的片段。"
-          }
-        }
-      }
-    },
-    "选一段攀爬视频，在手机上回看骨架和动作细节，把感受和下一次想试的 beta 留下来。": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pick a climbing video, replay the skeleton and the details on your phone, and note how it felt and the beta you want to try next."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "クライミングの動画を選んで、端末上でスケルトンと動きを見直し、感じたことと次に試したいムーブを残しましょう。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "등반 영상을 골라 기기에서 스켈레톤과 동작을 다시 보고, 느낀 점과 다음에 시도할 베타를 남겨 두세요."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "选一段攀爬视频，在手机上回看骨架和动作细节，把感受和下一次想试的 beta 留下来。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "選一段攀爬影片，在手機上回看骨架和動作細節，把感受和下一次想試的 beta 留下來。"
           }
         }
       }
@@ -5509,40 +4795,6 @@
         }
       }
     },
-    "按自己的节奏收好：抱石、难度，或一个还想再试的计划。": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "按自己的节奏收好：抱石、难度，或一个还想再试的计划。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "按自己的節奏收好：抱石、難度，或一個還想再試的計畫。"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Keep climbs your way: bouldering, routes, or a project you want to try again."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ボルダー、ルート、また挑みたい課題。自分らしく整理しよう。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "볼더링, 루트, 다시 도전하고 싶은 프로젝트. 나만의 방식으로 모아 보세요."
-          }
-        }
-      }
-    },
     "文件夹": {
       "localizations": {
         "zh-Hans": {
@@ -5985,40 +5237,6 @@
         }
       }
     },
-    "筛选这一趟": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "筛选这一趟"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "篩選這一趟"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Filter climbs"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "トライを絞り込む"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "등반 필터"
-          }
-        }
-      }
-    },
     "清除筛选": {
       "localizations": {
         "zh-Hans": {
@@ -6083,40 +5301,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "루트, 난이도, 암장 찾기"
-          }
-        }
-      }
-    },
-    "岩馆 · 难度 · 时间": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "岩馆 · 难度 · 时间"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "岩館 · 難度 · 時間"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gym · Grade · Date"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ジム · グレード · 日付"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "암장 · 난이도 · 날짜"
           }
         }
       }
@@ -6563,40 +5747,6 @@
         }
       }
     },
-    "请保持应用在前台，完成后自动保存。": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Keep the app open. Your climb saves when analysis finishes."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "アプリを開いたままにしてください。解析が終わると自動保存されます。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "앱을 열어 두세요. 분석이 끝나면 자동으로 저장됩니다."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "请保持应用在前台，完成后自动保存。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "請保持 App 在前景，完成後自動儲存。"
-          }
-        }
-      }
-    },
     "还没有攀爬记录": {
       "localizations": {
         "en": {
@@ -6835,40 +5985,6 @@
         }
       }
     },
-    "保存这一趟": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "保存这一趟"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "儲存這一趟"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Save this climb"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "このトライを保存"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이번 등반 저장"
-          }
-        }
-      }
-    },
     "正在保存视频…": {
       "localizations": {
         "zh-Hans": {
@@ -7035,40 +6151,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "영상을 먼저 저장하고 화면을 나가도 분석을 계속해요. 시스템이 백그라운드 작업을 중지하면 다음에 앱을 열 때 다시 분석해요."
-          }
-        }
-      }
-    },
-    "等待返回应用后重新分析。": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "等待返回应用后重新分析。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "等待返回應用程式後重新分析。"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Analysis will restart when you return to the app."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "アプリに戻ると解析をやり直します。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "앱으로 돌아오면 다시 분석해요."
           }
         }
       }
@@ -7376,76 +6458,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "회원 전용"
-          }
-        }
-      }
-    },
-    "解锁更多岩馆，并获得终生会员标识。": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "解锁更多岩馆，并获得终生会员标识。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "解鎖更多岩館，並獲得終生會員標識。"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Unlock more gyms and receive a lifetime member badge."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "より多くのジムと永久メンバーバッジをアンロック。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "더 많은 암장과 평생 회원 배지를 이용하세요."
-          }
-        }
-      }
-    },
-    "香蕉嘉里与攀爬册免费使用；更多岩馆需终生会员解锁。": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "香蕉嘉里与攀爬册免费使用；更多岩馆需终生会员解锁。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "香蕉嘉里與攀爬冊免費使用；更多岩館需終生會員解鎖。"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "BANANA+ Kerry and Logbook are free. Lifetime membership unlocks additional gyms."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "BANANA+ ケリーとクライムログは無料です。追加のジムは永久メンバーシップで利用できます。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "BANANA+ 케리와 등반 일지는 무료입니다. 추가 암장은 평생 회원으로 이용할 수 있습니다."
           }
         }
       }
