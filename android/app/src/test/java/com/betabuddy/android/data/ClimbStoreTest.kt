@@ -19,7 +19,7 @@ class ClimbStoreTest {
     private val analysis = PoseAnalysis(emptyList(), 0, 1.0, 1.0)
 
     @Before fun setUp() { root = File(Files.createTempDirectory("betabuddy-store").toFile(), "BetaBuddy") }
-    @After fun tearDown() { root.parentFile.deleteRecursively() }
+    @After fun tearDown() { root.parentFile?.deleteRecursively() }
 
     private fun staged(): File = File(root.parentFile, "fixture.mov").apply { writeBytes(byteArrayOf(0, 1, 2)) }
 
@@ -161,7 +161,6 @@ class ClimbStoreTest {
         assertFalse(store.loadFailed)
         val climb = store.climbs.first()
         assertEquals("旧记录", climb.title)
-        assertEquals(climb.dateMillis, climb.climbedAtMillis)
         assertNull(climb.folderId)
         assertNull(climb.gymId)
         assertTrue(store.archive.value.folders.isEmpty())
@@ -172,7 +171,8 @@ class ClimbStoreTest {
         // No world landmarks in old records: the skeleton still plays, the analysis page needs pose recognition again.
         assertNull(climb.analysis.frames[0].world)
         assertFalse(climb.analysis.hasWorldLandmarks)
-        assertEquals(1_752_307_200_000L, climb.dateMillis) // 774000000 s after 2001-01-01 = 2025-07-12T08:00:00Z
+        // No climbing date of its own: the record date stands in. 774000000 s after 2001-01-01 = 2025-07-12T08:00:00Z
+        assertEquals(1_752_307_200_000L, climb.climbedAtMillis)
         store.update(climb, "改过", false)
         val rewritten = File(root, "archive.json").readText()
         for (retired in listOf("training", "futureField", "moments", "processingSeconds", "\"world\"")) assertFalse(retired, rewritten.contains(retired))

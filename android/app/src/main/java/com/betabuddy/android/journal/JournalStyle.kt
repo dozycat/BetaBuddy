@@ -19,13 +19,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -105,35 +102,6 @@ internal fun GlyphButton(
                     drawRect(BB.Ink, Offset(w * 0.08f, h * 0.08f), Size(w * 0.14f, h * 0.84f))
                 }
             }
-        }
-    }
-}
-
-/** Original vector poster shown while analysing: dotted wall, a dashed line and a few holds. */
-@Composable
-internal fun ClimbingArt(modifier: Modifier = Modifier) {
-    Canvas(modifier.clearAndSetSemantics { }) {
-        val w = size.width
-        val h = size.height
-        for (row in 0..10) for (column in 0..10) {
-            drawCircle(BB.Ink.copy(alpha = 0.13f), 1.dp.toPx(), Offset(column * w / 10, row * h / 10))
-        }
-        val route = Path().apply {
-            moveTo(w * 0.18f, h * 0.93f)
-            cubicTo(w * 0.92f, h * 0.70f, w * 0.15f, h * 0.45f, w * 0.80f, h * 0.08f)
-        }
-        drawPath(
-            route, BB.Ink.copy(alpha = 0.3f),
-            style = Stroke(1.5.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 6.dp.toPx()))),
-        )
-        val holds = listOf(
-            Triple(Offset(w * 0.77f, h * 0.17f), BB.Lavender, 0.23f), Triple(Offset(w * 0.26f, h * 0.38f), BB.Ink, 0.19f),
-            Triple(Offset(w * 0.71f, h * 0.75f), BB.Lavender, 0.16f), Triple(Offset(w * 0.30f, h * 0.91f), BB.Ink, 0.20f),
-        )
-        for ((center, color, width) in holds) {
-            val hold = Size(w * width, h * 0.09f)
-            drawRoundRect(color, Offset(center.x - hold.width / 2, center.y - hold.height / 2), hold, CornerRadius(12.dp.toPx()))
-            drawCircle(BB.Paper.copy(alpha = 0.6f), 2.dp.toPx(), center)
         }
     }
 }

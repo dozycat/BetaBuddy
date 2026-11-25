@@ -32,7 +32,7 @@ class CaptureTest {
         assertEquals(listOf("cut_top", "start_unclear"), a.issues.map { it.code })
         assertEquals(listOf(true, false), a.issues.map { it.blocking })
         assertEquals(CaptureAssessment.Issue("cut_top", true, "back"), a.hint)
-        assertEquals(CaptureBox(0.0, 0.06, 1.0, 0.85), a.wall!!.copy(height = Math.round(a.wall!!.height * 100) / 100.0))
+        assertEquals(CaptureBox(0.0, 0.06, 1.0, 0.85), a.wall!!.copy(height = Math.round(a.wall.height * 100) / 100.0))
         assertEquals(listOf("yellow", "blue"), a.palette.map { it.key })
         assertEquals(listOf(40, 110, 255), a.palette[1].rgb)   // rounded and kept within a byte
         assertEquals(listOf(9, 4), a.palette.map { it.count })
@@ -210,11 +210,8 @@ class CaptureTest {
 
     @Test fun fieldOfView() {
         // A sensor 6.4 mm wide behind a 4.8 mm lens.
-        val long = CaptureMotion.fieldOfView(6.4, 4.8)!!
-        assertEquals(67.38, long, 0.01)
-        assertEquals(41.11, CaptureMotion.uprightFieldOfView(long, 16.0, 9.0)!!, 0.01)
+        assertEquals(67.38, CaptureMotion.fieldOfView(6.4, 4.8)!!, 0.01)
         assertNull(CaptureMotion.fieldOfView(0.0, 4.8)); assertNull(CaptureMotion.fieldOfView(6.4, Double.NaN))
-        assertNull(CaptureMotion.uprightFieldOfView(0.5, 16.0, 9.0)); assertNull(CaptureMotion.uprightFieldOfView(180.0, 16.0, 9.0)); assertNull(CaptureMotion.uprightFieldOfView(60.0, 0.0, 9.0))
     }
 
     @Test fun theFieldOfViewIsThatOfTheStreamDelivered() {

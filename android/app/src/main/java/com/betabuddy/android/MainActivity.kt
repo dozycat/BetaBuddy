@@ -3,26 +3,26 @@ package com.betabuddy.android
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
-import androidx.lifecycle.lifecycleScope
-import com.betabuddy.android.journal.AnalysisService
-import com.betabuddy.android.journal.JournalGraph
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import com.betabuddy.android.capture.CaptureDebug
 import com.betabuddy.android.capture.CaptureFrameInfo
 import com.betabuddy.android.capture.GymLocator
 import com.betabuddy.android.gym.GymDebugOptions
-import java.io.File
 import com.betabuddy.android.gym.GymViewModel
+import com.betabuddy.android.journal.AnalysisService
+import com.betabuddy.android.journal.JournalGraph
 import com.betabuddy.android.ui.nav.AppShell
 import com.betabuddy.android.ui.nav.Tabs
 import com.betabuddy.android.ui.theme.BetaBuddyTheme
+import java.io.File
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * The single activity. AppCompat is here for one thing: the per-app language setting

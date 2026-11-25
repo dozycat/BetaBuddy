@@ -39,9 +39,6 @@ object LanguageTags {
         }
     }
 
-    /** The first preferred language the app has; English when none of them is supported. */
-    fun resolve(preferred: List<String>): String = preferred.firstNotNullOfOrNull(::match) ?: FALLBACK
-
     /** Each language's own name for itself, shown as is in the language setting. */
     fun nativeName(code: String): String = when (code) {
         ZH_HANS -> "简体中文"

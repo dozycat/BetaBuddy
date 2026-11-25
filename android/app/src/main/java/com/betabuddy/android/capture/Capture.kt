@@ -8,7 +8,6 @@ import kotlin.math.atan
 import kotlin.math.atan2
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
-import kotlin.math.tan
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -382,15 +381,6 @@ object CaptureMotion {
         if (!x.isFinite() || !y.isFinite() || !z.isFinite()) return null
         if (sqrt(x * x + y * y) <= 0.3) return 0.0
         return Math.toDegrees(atan2(x, -y))
-    }
-
-    /**
-     * The field of view across the long side of the picture is what a camera's sensor size and focal
-     * length give. The frames are upright, so their horizontal field of view is the one across the short side.
-     */
-    fun uprightFieldOfView(sensorDegrees: Double, longSide: Double, shortSide: Double): Double? {
-        if (!sensorDegrees.isFinite() || sensorDegrees <= 1 || sensorDegrees >= 179 || longSide <= 0 || shortSide <= 0) return null
-        return Math.toDegrees(2 * atan(tan(Math.toRadians(sensorDegrees) / 2) * shortSide / longSide))
     }
 
     /**

@@ -312,9 +312,9 @@ class CaptureScreenTest {
         shot("22-saved-after-interruption")
         val saved = newClimbs().single()
         assertFalse(saved.capture!!.summary!!.ok)
-        assertEquals(listOf("too_dark"), saved.capture!!.summary!!.issues)
-        assertNull("no analysis page in this pack, so none is asked for", saved.capture!!.analysisQueued)
-        assertNull(saved.capture!!.colorKey)
+        assertEquals(listOf("too_dark"), saved.capture.summary.issues)
+        assertNull("no analysis page in this pack, so none is asked for", saved.capture.analysisQueued)
+        assertNull(saved.capture.colorKey)
         // Nobody in the picture: pose recognition says so, and the record stays.
         await("captureAnalysisMessage", 90)
         assertNull(store.climbs.first { it.id == saved.id }.pendingAnalysis)
@@ -336,7 +336,7 @@ class CaptureScreenTest {
         await("captureSaved", 40)
         assertEquals(context.getString(R.string.capture_stop_limit, CaptureLimits.MAX_MINUTES), text("captureStopReason"))
         val saved = newClimbs().single()
-        assertNull(saved.capture!!.packVersion); assertFalse(saved.capture!!.hasPlan); assertNull(saved.capture!!.analysisQueued)
+        assertNull(saved.capture!!.packVersion); assertFalse(saved.capture.hasPlan); assertNull(saved.capture.analysisQueued)
         assertEquals("balanced", saved.pendingAnalysis ?: "balanced")
         assertTrue(saved.analysis.duration in 1.5..4.0)
         rule.onNodeWithTag("captureDone").performClick()
@@ -432,8 +432,8 @@ class CaptureScreenTest {
         assertEquals(1, first.capture!!.summary!!.startHands)     // the page's own second guess at a start hand was withdrawn
         assertEquals(StandInPack.VENUE_ID, plan.getValue("meta").jsonObject.getValue("venue").jsonPrimitive.content)
         // The problem is kept by id and its own name; what the page called it in this language, and its grade text, are not.
-        assertEquals("${StandInPack.VENUE_ID}/yellow-01", first.capture!!.routeId); assertEquals("合成线路 黄 1", first.capture!!.routeName)
-        val kept = first.capture!!.summary!!.route!!
+        assertEquals("${StandInPack.VENUE_ID}/yellow-01", first.capture.routeId); assertEquals("合成线路 黄 1", first.capture.routeName)
+        val kept = first.capture.summary.route!!
         assertNull(kept.name); assertNull(kept.grade); assertEquals("合成线路 黄 1", kept.nameZh)
 
         // Another take. The gym is changed and Record pressed before the page has seen a frame for it:
@@ -447,7 +447,7 @@ class CaptureScreenTest {
         rule.waitUntil(30_000) { newClimbs().size == 2 && exists("captureSaved") }
         val second = newClimbs().first { it.id != first.id }
         assertEquals("合成岩馆（西门）", second.gymName)
-        assertFalse(second.capture!!.hasPlan); assertNull(second.capture!!.summary); assertNull(store.capturePlan(second.id)); assertNull(second.capture!!.routeId)
+        assertFalse(second.capture!!.hasPlan); assertNull(second.capture.summary); assertNull(store.capturePlan(second.id)); assertNull(second.capture.routeId)
         closeScreen()
     }
 

@@ -82,7 +82,6 @@ data class Climb(
     val capture: CaptureInfo? = null,
 ) {
     val climbedAtMillis: Long get() = (((climbedAt ?: date) + REFERENCE_DATE_OFFSET_SECONDS) * 1000).toLong()
-    val dateMillis: Long get() = ((date + REFERENCE_DATE_OFFSET_SECONDS) * 1000).toLong()
 
     companion object {
         const val REFERENCE_DATE_OFFSET_SECONDS = 978_307_200.0

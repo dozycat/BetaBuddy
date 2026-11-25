@@ -35,8 +35,6 @@ class GymLocator(context: Context, private val standIn: StandIn? = null) {
     /** A made-up state in place of the system's, for device tests and debug runs: nothing is asked, no location service is touched. */
     data class StandIn(val access: Access = Access.ALLOWED, val fix: Fix? = null, val locating: Boolean = false)
 
-    private val debugFix: Fix? get() = standIn?.fix
-
     private val context = context.applicationContext
     private val preferences = this.context.getSharedPreferences("capture", Context.MODE_PRIVATE)
     private val main = Handler(Looper.getMainLooper())

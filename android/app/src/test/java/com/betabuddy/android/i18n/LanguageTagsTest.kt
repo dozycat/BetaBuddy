@@ -15,13 +15,6 @@ class LanguageTagsTest {
         for (tag in listOf("fr", "de-DE", "es-419", "", "  ", "yue-HK")) assertNull(tag, LanguageTags.match(tag))
     }
 
-    @Test fun firstSupportedPreferenceWinsAndEnglishIsTheFallback() {
-        assertEquals("ja", LanguageTags.resolve(listOf("fr-FR", "ja-JP", "en-US")))
-        assertEquals("zh-Hant", LanguageTags.resolve(listOf("zh-TW")))
-        assertEquals("en", LanguageTags.resolve(listOf("fr-FR", "de-DE")))
-        assertEquals("en", LanguageTags.resolve(emptyList()))
-    }
-
     @Test fun everyLanguageNamesItself() {
         assertEquals(listOf("简体中文", "繁體中文", "English", "日本語", "한국어"), LanguageTags.supported.map(LanguageTags::nativeName))
     }
