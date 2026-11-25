@@ -231,7 +231,6 @@ private fun QualityOption(title: Int, detail: Int, selected: Boolean, onSelect: 
     }
 }
 
-/** Analysis only runs in the foreground, so the screen is kept awake while it does. */
 /** Notification permission is optional; refusing it never blocks local analysis. */
 @Composable
 internal fun rememberAnalysisNotifications(): () -> Unit {
