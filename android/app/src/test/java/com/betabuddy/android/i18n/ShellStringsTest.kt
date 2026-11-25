@@ -1,54 +1,24 @@
 package com.betabuddy.android.i18n
 
-import java.io.File
-import javax.xml.parsers.DocumentBuilderFactory
+import com.betabuddy.android.StringResources
+import com.betabuddy.android.StringResources.folders
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import org.w3c.dom.Element
 
 /**
- * The shell, gym and settings strings (strings.xml) exist in all five languages with matching
- * placeholders and line breaks, and each file names its own language. The logbook's file has
- * the same check in JournalStringsTest. Reads the resource XML directly.
+ * The shell, gym and settings strings (strings.xml) and the folder and filter strings
+ * (strings_album.xml) exist in all five languages with matching placeholders and line breaks,
+ * and each language's strings.xml names its own language. The logbook and camera files have the
+ * same checks in JournalStringsTest and CaptureStringsTest.
  */
 class ShellStringsTest {
-    private val folders = mapOf(
-        "en" to "values", "zh-Hans" to "values-b+zh+Hans", "zh-Hant" to "values-b+zh+Hant", "ja" to "values-ja", "ko" to "values-ko",
-    )
+    private fun load(folder: String, file: String = "strings.xml") = StringResources.load(folder, file)
 
-    private fun load(folder: String, file: String = "strings.xml"): Map<String, String> {
-        val source = File("src/main/res/$folder/$file")
-        assertTrue("Missing ${source.path}", source.isFile)
-        val nodes = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(source).documentElement.childNodes
-        val result = LinkedHashMap<String, String>()
-        for (index in 0 until nodes.length) {
-            val element = nodes.item(index) as? Element ?: continue
-            if (element.tagName == "string") result[element.getAttribute("name")] = element.textContent
-        }
-        return result
-    }
+    // The app name is the one string that is not translated.
+    @Test fun everyStringIsInAllFiveLanguagesWithMatchingPlaceholders() = StringResources.assertComplete("strings.xml", atLeast = 30, untranslated = setOf("app_name"))
 
-    private fun placeholders(text: String) = Regex("%\\d\\$[sd]").findAll(text).map { it.value }.sorted().toList()
-    private fun lines(text: String) = text.split("\\n").size
-
-    @Test fun everyStringIsInAllFiveLanguagesWithMatchingPlaceholders() {
-        val english = load("values")
-        assertTrue(english.size > 30)
-        for ((language, folder) in folders) {
-            val strings = load(folder)
-            // The app name is the one string that is not translated.
-            assertEquals(language, english.keys - "app_name", strings.keys - "app_name")
-            for ((name, text) in strings) {
-                assertTrue("$name / $language", text.isNotBlank())
-                assertEquals("$name / $language", placeholders(english.getValue(name)), placeholders(text))
-                assertEquals("$name / $language", lines(english.getValue(name)), lines(text))
-                assertFalse("$name / $language: unescaped apostrophe", Regex("(?<!\\\\)'").containsMatchIn(text))
-                assertFalse("$name / $language: stray percent", text.replace(Regex("%\\d\\$[sd]"), "").contains('%'))
-            }
-        }
-    }
+    @Test fun everyAlbumStringIsInAllFiveLanguagesWithMatchingPlaceholders() = StringResources.assertComplete("strings_album.xml", atLeast = 20)
 
     @Test fun eachFileNamesItsOwnLanguage() {
         // AppLanguage reads this to know which resource set is on screen.
@@ -64,11 +34,8 @@ class ShellStringsTest {
     }
 
     @Test fun englishAndKoreanContainNoChineseLeftovers() {
-        for (language in listOf("en", "ko")) {
-            for ((name, text) in load(folders.getValue(language))) {
-                assertFalse("$name / $language: $text", text.any { it.code in 0x4E00..0x9FFF })
-            }
-        }
+        StringResources.assertNoChineseLeftovers("strings.xml")
+        StringResources.assertNoChineseLeftovers("strings_album.xml")
     }
 
     @Test fun theSettingsListsEachLanguageInItself() {

@@ -4,12 +4,9 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.Rect
-import android.media.MediaCodec
-import android.media.MediaCodecInfo
-import android.media.MediaFormat
 import android.media.MediaMetadataRetriever
-import android.media.MediaMuxer
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.betabuddy.android.TestClips
 import androidx.test.platform.app.InstrumentationRegistry
 import java.io.File
 import kotlin.math.abs
@@ -27,9 +24,6 @@ import org.junit.runner.RunWith
  * Device tests for decoding and inference, mirroring ios/BetaBuddyTests/VideoAnalyzerTests.swift.
  * They need a device or emulator with an H.264 encoder and decoder. The fixture is Google's
  * MediaPipe sample picture pose.jpg (not a climb, not an accuracy benchmark).
- *
- * NOT RUN YET: written without an Android SDK on the machine. Treat failures here as unverified
- * test code first, product code second.
  */
 @RunWith(AndroidJUnit4::class)
 class VideoAnalyzerInstrumentedTest {
@@ -43,57 +37,11 @@ class VideoAnalyzerInstrumentedTest {
         instrumentation.context.assets.open("pose.jpg").use { BitmapFactory.decodeStream(it) }
 
     /** One second of 30 fps H.264 showing [image] (or black), with the given rotation metadata. */
-    private fun makeVideo(image: Bitmap?, rotation: Int = 0, width: Int = 640, height: Int = 480): File {
-        val file = File(context.cacheDir, "smoke-${System.nanoTime()}.mp4").also { created += it }
-        val format = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, width, height).apply {
-            setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface)
-            setInteger(MediaFormat.KEY_BIT_RATE, 4_000_000)
-            setInteger(MediaFormat.KEY_FRAME_RATE, 30)
-            setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1)
-        }
-        val encoder = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_AVC)
-        encoder.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
-        val surface = encoder.createInputSurface()
-        encoder.start()
-        val muxer = MediaMuxer(file.path, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
-        muxer.setOrientationHint(rotation)
-        val info = MediaCodec.BufferInfo()
-        var track = -1
-        var firstTime = -1L
-        fun drain(untilEnd: Boolean) {
-            while (true) {
-                val index = encoder.dequeueOutputBuffer(info, if (untilEnd) 10_000 else 0)
-                when {
-                    index == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> { track = muxer.addTrack(encoder.outputFormat); muxer.start() }
-                    index >= 0 -> {
-                        val data = encoder.getOutputBuffer(index)!!
-                        if (info.flags and MediaCodec.BUFFER_FLAG_CODEC_CONFIG == 0 && info.size > 0 && track >= 0) {
-                            if (firstTime < 0) firstTime = info.presentationTimeUs
-                            info.presentationTimeUs -= firstTime
-                            muxer.writeSampleData(track, data, info)
-                        }
-                        val end = info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0
-                        encoder.releaseOutputBuffer(index, false)
-                        if (end) return
-                    }
-                    !untilEnd -> return
-                }
-            }
-        }
-        repeat(30) {
-            val canvas = surface.lockCanvas(null)
+    private fun makeVideo(image: Bitmap?, rotation: Int = 0, width: Int = 640, height: Int = 480): File =
+        TestClips.encode(File(context.cacheDir, "smoke-${System.nanoTime()}.mp4").also { created += it }, width, height, frames = 30, rotation) { canvas, _ ->
             canvas.drawColor(Color.BLACK)
             image?.let { canvas.drawBitmap(it, null, Rect(0, 0, width, height), null) }
-            surface.unlockCanvasAndPost(canvas) // timestamped with the clock, so pace the frames
-            Thread.sleep(33)
-            drain(untilEnd = false)
         }
-        encoder.signalEndOfInputStream()
-        drain(untilEnd = true)
-        encoder.stop(); encoder.release(); surface.release()
-        muxer.stop(); muxer.release()
-        return file
-    }
 
     @Test fun savedAnalysisContinuesAfterActivityGoesToBackground() = runBlocking {
         val video = makeVideo(fixture())

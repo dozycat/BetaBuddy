@@ -5,12 +5,8 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
-import android.graphics.Rect
 import android.graphics.RectF
-import android.media.MediaCodec
-import android.media.MediaCodecInfo
-import android.media.MediaFormat
-import android.media.MediaMuxer
+import com.betabuddy.android.TestClips
 import com.betabuddy.android.gym.GymManifest
 import com.betabuddy.android.gym.GymPack
 import com.betabuddy.android.gym.PackWebView
@@ -122,52 +118,6 @@ internal object SyntheticWallClip {
     }
 
     /** Writes the clip and returns it. Frames are stamped by the clock, so this takes [seconds] to run. */
-    fun make(target: File, width: Int = 540, height: Int = 960, seconds: Double = 3.0, photo: Bitmap? = null): File {
-        val format = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, width, height).apply {
-            setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface)
-            setInteger(MediaFormat.KEY_BIT_RATE, 4_000_000)
-            setInteger(MediaFormat.KEY_FRAME_RATE, 30)
-            setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1)
-        }
-        val encoder = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_AVC)
-        encoder.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
-        val surface = encoder.createInputSurface()
-        encoder.start()
-        val muxer = MediaMuxer(target.path, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
-        val info = MediaCodec.BufferInfo()
-        var track = -1
-        var firstTime = -1L
-        fun drain(untilEnd: Boolean) {
-            while (true) {
-                val index = encoder.dequeueOutputBuffer(info, if (untilEnd) 10_000 else 0)
-                when {
-                    index == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> { track = muxer.addTrack(encoder.outputFormat); muxer.start() }
-                    index >= 0 -> {
-                        val data = encoder.getOutputBuffer(index)!!
-                        if (info.flags and MediaCodec.BUFFER_FLAG_CODEC_CONFIG == 0 && info.size > 0 && track >= 0) {
-                            if (firstTime < 0) firstTime = info.presentationTimeUs
-                            info.presentationTimeUs -= firstTime
-                            muxer.writeSampleData(track, data, info)
-                        }
-                        val end = info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0
-                        encoder.releaseOutputBuffer(index, false)
-                        if (end) return
-                    }
-                    !untilEnd -> return
-                }
-            }
-        }
-        repeat((seconds * 30).toInt()) { frame ->
-            val canvas = surface.lockCanvas(Rect(0, 0, width, height))
-            draw(canvas, width, height, frame, photo)
-            surface.unlockCanvasAndPost(canvas)
-            Thread.sleep(33)
-            drain(untilEnd = false)
-        }
-        encoder.signalEndOfInputStream()
-        drain(untilEnd = true)
-        encoder.stop(); encoder.release(); surface.release()
-        muxer.stop(); muxer.release()
-        return target
-    }
+    fun make(target: File, width: Int = 540, height: Int = 960, seconds: Double = 3.0, photo: Bitmap? = null): File =
+        TestClips.encode(target, width, height, frames = (seconds * 30).toInt()) { canvas, frame -> draw(canvas, width, height, frame, photo) }
 }
