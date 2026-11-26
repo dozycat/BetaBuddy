@@ -42,6 +42,12 @@ class AnalysisBridgeTest {
         assertEquals(AnalysisMessage.Seek(0.0), AnalysisMessage.parse("""{"type":"analysisSeek","t":-3}"""))
         assertEquals(AnalysisMessage.Error("some_code"), AnalysisMessage.parse("""{"type":"analysisError","code":"some_code","message":"shown by the page"}"""))
         assertEquals(AnalysisMessage.Error(""), AnalysisMessage.parse("""{"type":"analysisError"}"""))
+        // A page that could not analyse the clip may still say what it made of the climbing style.
+        assertEquals(
+            AnalysisMessage.Error("some_code", "toprope"),
+            AnalysisMessage.parse("""{"type":"analysisError","code":"some_code","discipline":{"kind":"toprope","sure":false}}"""),
+        )
+        assertEquals(AnalysisMessage.Error("some_code"), AnalysisMessage.parse("""{"type":"analysisError","code":"some_code","discipline":{"kind":"unknown"}}"""))
     }
 
     @Test fun resultIsKeptExactlyAsThePageSentIt() {
@@ -170,5 +176,75 @@ class AnalysisBridgeTest {
         // Every batch survives the trip into the page as one string argument.
         val call = AnalysisScript.addPoses(batches[2])
         assertEquals(batches[2], (Json.parseToJsonElement(arguments(call, "addPoses")) as JsonPrimitive).content)
+    }
+
+    @Test fun aResultCarriesTheEditPlanAndTheDisciplineWhenThePageSendsThem() {
+        fun result(extra: String) = AnalysisMessage.parse("""{"type":"analysisResult","id":"A","json":"{}"$extra}""") as AnalysisMessage.Result
+        val bare = result("")
+        assertNull(bare.edit); assertNull(bare.discipline)
+        val full = result(""","edit":{"v":1,"duration":3,"segments":[{"t0":0,"t1":3,"speed":1}],"later":[1]},"discipline":{"kind":"toprope","sure":false}""")
+        // The plan is kept as the page's own text, whatever is in it; the app reads it only when it renders.
+        assertEquals("""{"v":1,"duration":3,"segments":[{"t0":0,"t1":3,"speed":1}],"later":[1]}""", full.edit)
+        assertEquals("toprope", full.discipline)
+        assertEquals("lead", result(""","discipline":{"kind":"lead","sure":true,"why":"x"}""").discipline)
+        for (odd in listOf(""","discipline":{"kind":"speed"}""", ""","discipline":"lead"""", ""","discipline":{"kind":3}""", ""","discipline":{}""")) assertNull(odd, result(odd).discipline)
+        for (odd in listOf(""","edit":"{}"""", ""","edit":[1]""", ""","edit":null""")) assertNull(odd, result(odd).edit)
+    }
+
+    @Test fun beginNamesTheDisciplineOnlyWhenTheUserChoseOne() {
+        fun meta(discipline: String?) = Json.parseToJsonElement(arguments(AnalysisScript.begin("A", 540, 960, null, null, discipline), "begin")).jsonObject
+        assertEquals("lead", meta("lead").getValue("discipline").jsonPrimitive.content)
+        assertFalse(meta(null).containsKey("discipline"))
+        assertFalse(meta("speed").containsKey("discipline"))
+        // The clip's real length goes along when it is known.
+        assertFalse(meta(null).containsKey("duration"))
+        val timed = Json.parseToJsonElement(arguments(AnalysisScript.begin("A", 540, 960, null, null, null, 12.5), "begin")).jsonObject
+        assertEquals(12.5, timed.getValue("duration").jsonPrimitive.double, 0.0)
+        assertFalse(Json.parseToJsonElement(arguments(AnalysisScript.begin("A", 540, 960, null, null, null, Double.NaN), "begin")).jsonObject.containsKey("duration"))
+    }
+
+    @Test fun anErrorMayStillCarryAnEditPlan() {
+        fun error(extra: String) = AnalysisMessage.parse("""{"type":"analysisError","code":"no_plane","message":"x"$extra}""") as AnalysisMessage.Error
+        assertNull(error("").edit)
+        val planned = error(""","edit":{"v":1,"duration":3,"cameraMode":"track","segments":[{"t0":0,"t1":3,"speed":1}]},"discipline":{"kind":"lead","sure":false}""")
+        assertEquals("no_plane", planned.code)
+        // Kept as the page's own text, like the one that comes with a result.
+        assertEquals("""{"v":1,"duration":3,"cameraMode":"track","segments":[{"t0":0,"t1":3,"speed":1}]}""", planned.edit)
+        assertEquals("lead", planned.discipline)
+        for (odd in listOf(""","edit":"{}"""", ""","edit":[1]""", ""","edit":null""")) assertNull(odd, error(odd).edit)
+        // The same limit as with a result: something far too long to be a plan is left out, the error stands.
+        val huge = error(""","edit":{"v":1,"pad":"${"x".repeat(4 * 1024 * 1024)}"}""")
+        assertNull(huge.edit); assertEquals("no_plane", huge.code)
+    }
+
+    @Test fun trackFramesAreOnlyHandedToAPageThatTakesThem() {
+        val script = AnalysisScript.addTrackFrame(2.5, "QUJD\"x")
+        // Guarded like every call: on a page without the function it evaluates to false, and nothing is thrown.
+        assertTrue(script, script.startsWith("window.BetaBuddyAnalysis && typeof window.BetaBuddyAnalysis.addTrackFrame === 'function' ? "))
+        assertEquals("2.5,\"QUJD\\\"x\"", arguments(script, "addTrackFrame"))
+        assertEquals("0.0,\"\"", arguments(AnalysisScript.addTrackFrame(Double.NaN, ""), "addTrackFrame"))
+        // What the web view reports back: only a plain false means the page has no such call.
+        assertTrue(AnalysisScript.refused("false")); assertTrue(AnalysisScript.refused(" false\n"))
+        for (other in listOf("true", "null", null, "", "\"false\"")) assertFalse(other, AnalysisScript.refused(other))
+    }
+
+    @Test fun trackFramesCoverTheWholeClipAtThreeASecondUpToNineHundred() {
+        assertTrue(AnalysisFeed.trackTimes(0.0).isEmpty()); assertTrue(AnalysisFeed.trackTimes(Double.NaN).isEmpty())
+        val short = AnalysisFeed.trackTimes(10.0)
+        assertEquals(30, short.size)
+        assertEquals(1.0 / 6, short.first(), 1e-9); assertEquals(10 - 1.0 / 6, short.last(), 1e-9)
+        assertEquals(1.0 / 3, short[1] - short[0], 1e-9)
+        assertEquals(1, AnalysisFeed.trackTimes(0.2).size)
+        // Five minutes is exactly nine hundred; twenty minutes is still nine hundred, further apart.
+        assertEquals(900, AnalysisFeed.trackTimes(300.0).size)
+        val long = AnalysisFeed.trackTimes(1200.0)
+        assertEquals(900, long.size)
+        assertEquals(1200.0 / 900, long[1] - long[0], 1e-9)
+        assertTrue(long.last() < 1200.0)
+        // Shorter side 270, same shape, never enlarged.
+        assertEquals(270 to 480, AnalysisFeed.frameSize(1080, 1920, AnalysisFeed.TRACK_SHORT_SIDE))
+        assertEquals(480 to 270, AnalysisFeed.frameSize(1920, 1080, AnalysisFeed.TRACK_SHORT_SIDE))
+        assertEquals(200 to 300, AnalysisFeed.frameSize(200, 300, AnalysisFeed.TRACK_SHORT_SIDE))
+        assertEquals(540 to 960, AnalysisFeed.frameSize(1080, 1920))
     }
 }

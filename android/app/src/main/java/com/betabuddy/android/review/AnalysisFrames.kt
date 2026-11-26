@@ -25,7 +25,10 @@ internal object AnalysisFrames {
      * with its time. Times the decoder has no picture for are skipped. Returns how many were
      * delivered; zero when the file cannot be read. Runs off the main thread and stops when cancelled.
      */
-    suspend fun extract(video: File, times: List<Double>, width: Int, height: Int, onFrame: suspend (time: Double, jpegBase64: String) -> Unit): Int =
+    suspend fun extract(
+        video: File, times: List<Double>, width: Int, height: Int, quality: Int = JPEG_QUALITY,
+        onFrame: suspend (time: Double, jpegBase64: String) -> Unit,
+    ): Int =
         withContext(Dispatchers.IO) {
             val retriever = MediaMetadataRetriever()
             var delivered = 0
@@ -37,7 +40,7 @@ internal object AnalysisFrames {
                     coroutineContext.ensureActive()
                     val frame = runCatching { frameAt(retriever, time, width, height) }.getOrNull() ?: continue
                     output.reset()
-                    val encoded = frame.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, output)
+                    val encoded = frame.compress(Bitmap.CompressFormat.JPEG, quality, output)
                     frame.recycle()
                     if (!encoded) continue
                     onFrame(time, Base64.encodeToString(output.toByteArray(), Base64.NO_WRAP))

@@ -86,6 +86,9 @@ dependencies {
 
     // Logbook: video playback and on-device pose estimation.
     implementation(libs.androidx.media3.exoplayer)
+    // Auto edit: the clip is re-encoded on the device; nothing is uploaded.
+    implementation(libs.androidx.media3.transformer)
+    implementation(libs.androidx.media3.effect)
     implementation(libs.mediapipe.tasks.vision)
 
     // The in-app camera. Video only: no audio source is ever attached.

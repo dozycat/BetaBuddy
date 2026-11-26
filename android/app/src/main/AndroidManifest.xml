@@ -83,6 +83,21 @@
             android:exported="false"
             android:foregroundServiceType="dataSync|mediaProcessing" />
 
+        <!--
+            Sharing a rendered edit: the system share sheet is handed a content URI for that one
+            file in the app's cache, with read access for the app the user picks. Not exported, no
+            storage permission, and nothing but the cache's edits directory can be named.
+        -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.edits"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/edit_file_paths" />
+        </provider>
+
         <!-- Lets AppCompat persist the in-app language choice on Android 12 and below. -->
         <service
             android:name="androidx.appcompat.app.AppLocalesMetadataHolderService"

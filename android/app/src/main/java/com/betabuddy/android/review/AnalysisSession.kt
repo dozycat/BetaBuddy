@@ -16,10 +16,13 @@ import com.betabuddy.android.journal.JournalViewModel
 import com.betabuddy.android.pose.FrameGeometry
 import com.betabuddy.android.pose.VideoAnalyzer
 import java.io.File
+import kotlin.coroutines.resume
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -31,7 +34,8 @@ import kotlinx.coroutines.withContext
  *
  * - The page says it is ready → a saved result is shown as it is; without one the page is given
  *   pictures taken from the clip right now and the stored poses, and told to run.
- * - A result arrives (again after every adjustment the user makes in the page) → saved over the last one.
+ * - A result arrives (again after every adjustment the user makes in the page) → saved over the last
+ *   one, together with the plan for an automatic edit and the discipline the page judged, when it sent them.
  * - The page asks for a moment of the clip → [onSeek]. An error → the page explains; nothing is saved.
  *
  * Main thread only. [scope] must run on the main thread and end with the screen.
@@ -128,7 +132,7 @@ internal class AnalysisSession(
                 // After showing a saved result the page no longer names the record; it is still this one.
                 is AnalysisMessage.Result -> if (message.id.isEmpty() || message.id == climbId) {
                     scope.launch {
-                        val saved = saving.withLock { model.saveAnalysisResult(climbId, message.json, message.climber, message.capture) }
+                        val saved = saving.withLock { model.saveAnalysisResult(climbId, message.json, message.climber, message.capture, message.edit, message.discipline) }
                             .onFailure { Log.e(TAG, "result not saved", it) }
                         onOutcome?.invoke(saved.isSuccess)
                     }
@@ -137,6 +141,11 @@ internal class AnalysisSession(
                 // The page is already showing why. Nothing is saved and the page stays open.
                 is AnalysisMessage.Error -> {
                     Log.i(TAG, "analysis page could not analyse: ${message.code}")
+                    // No result, but what the page made of the climbing style is kept as a guess.
+                    message.discipline?.let { guess -> scope.launch { model.setAutomaticDiscipline(climbId, guess) } }
+                    // Nor is a plan for an automatic edit lost for want of a result. An error without one
+                    // leaves a plan stored earlier where it is.
+                    message.edit?.let { plan -> scope.launch { model.saveEditPlan(climbId, plan) } }
                     onOutcome?.invoke(false)
                 }
                 // Anything else is ignored, except a script error before the page ever came up.
@@ -184,7 +193,7 @@ internal class AnalysisSession(
             val (width, height) = FrameGeometry.displaySize(info.width, info.height, info.rotation)
             val (frameWidth, frameHeight) = AnalysisFeed.frameSize(width, height)
             // A record made with the in-app camera brings the capture page's plan; any other has none.
-            host?.evaluate(AnalysisScript.begin(climbId, width, height, model.analysisClimber(), model.capturePlan(climbId)))
+            host?.evaluate(AnalysisScript.begin(climbId, width, height, model.analysisClimber(), model.capturePlan(climbId), model.chosenDiscipline(climbId), duration))
             var index = 0
             val delivered = AnalysisFrames.extract(video, AnalysisFeed.frameTimes(duration), frameWidth, frameHeight) { time, jpeg ->
                 withContext(Dispatchers.Main) { host?.evaluate(AnalysisScript.addFrame(index++, time, jpeg)) }
@@ -194,12 +203,44 @@ internal class AnalysisSession(
                 onOutcome?.invoke(false)
                 return
             }
+            sendTrackFrames(duration, width, height)
             val stored = poses()
             for (batch in withContext(Dispatchers.Default) { AnalysisFeed.poseBatches(stored) }) host?.evaluate(AnalysisScript.addPoses(batch))
             host?.evaluate(AnalysisScript.run())
         } finally {
             preparing = false
         }
+    }
+
+    /**
+     * The small, frequent pictures of the whole clip that newer packs take after the stills: upright
+     * like them, made off the main thread and kept only in memory. A page without the call says so
+     * on the first one, and no more are made. If they cannot be made the page simply gets none: they
+     * are an extra, and the analysis goes on without them.
+     */
+    private suspend fun sendTrackFrames(duration: Double, width: Int, height: Int) {
+        val (trackWidth, trackHeight) = AnalysisFeed.frameSize(width, height, AnalysisFeed.TRACK_SHORT_SIDE)
+        try {
+            AnalysisFrames.extract(video, AnalysisFeed.trackTimes(duration), trackWidth, trackHeight, AnalysisFeed.TRACK_JPEG_QUALITY) { time, jpeg ->
+                val taken = withContext(Dispatchers.Main) { taken(AnalysisScript.addTrackFrame(time, jpeg)) }
+                if (!taken) throw NotWanted()
+            }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: NotWanted) {
+            // An older pack: nothing more to send.
+        } catch (error: Exception) {
+            Log.i(TAG, "no track frames: ${error.javaClass.simpleName}")
+        }
+    }
+
+    private class NotWanted : Exception()
+
+    /** Runs [script] in the page and tells whether the page took the call. A page that is gone took nothing. */
+    private suspend fun taken(script: String): Boolean = suspendCancellableCoroutine { continuation ->
+        val page = host
+        if (page == null) continuation.resume(false)
+        else page.evaluate(script) { answer -> if (continuation.isActive) continuation.resume(!AnalysisScript.refused(answer)) }
     }
 
     private companion object {

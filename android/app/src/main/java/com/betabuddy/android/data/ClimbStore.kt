@@ -10,7 +10,8 @@ import kotlinx.serialization.json.Json
 
 /**
  * Local records: one JSON index plus the original clip and a thumbnail per climb, for a climb
- * the pack's analysis page has worked on, that page's result (`<id>.analysis.json`), and for a climb
+ * the pack's analysis page has worked on, that page's result (`<id>.analysis.json`) and, when it
+ * gave one, its plan for an automatic edit (`<id>.edit.json`), and for a climb
  * made with the in-app camera, the capture page's plan (`<id>.capture.json`). All inside
  * [root] (an app-private directory). Counterpart of ios/BetaBuddy/Core/ClimbStore.swift.
  *
@@ -40,7 +41,7 @@ class ClimbStore(val root: File) {
             }
             // Left behind only if a write was interrupted before the rename.
             file("$INDEX_NAME.tmp").delete()
-            root.listFiles { _, name -> name.endsWith("$ANALYSIS_RESULT_SUFFIX.tmp") || name.endsWith("$CAPTURE_PLAN_SUFFIX.tmp") }?.forEach { it.delete() }
+            root.listFiles { _, name -> name.endsWith("$ANALYSIS_RESULT_SUFFIX.tmp") || name.endsWith("$CAPTURE_PLAN_SUFFIX.tmp") || name.endsWith("$EDIT_PLAN_SUFFIX.tmp") }?.forEach { it.delete() }
         } catch (error: Exception) {
             canWrite = false // Never overwrite an unreadable archive with an empty one.
             loadFailed = true
@@ -89,6 +90,8 @@ class ClimbStore(val root: File) {
         nowMillis: Long = System.currentTimeMillis(),
         gymId: String? = null, gymName: String? = null, climbedAtMillis: Long? = null, folderId: String? = null, pendingAnalysis: String? = null,
         capture: CaptureInfo? = null, capturePlan: String? = null,
+        /** What the user chose when saving, if anything. */
+        discipline: String? = null,
     ): Climb {
         if (!canWrite) throw IOException("The archive could not be read and is kept as it is")
         val id = newId()
@@ -103,6 +106,7 @@ class ClimbStore(val root: File) {
             gymId = gymId, gymName = gymName?.trim()?.prefix(120)?.takeIf { it.isNotEmpty() },
             climbedAt = climbedAtMillis?.let(Climb::dateFromMillis), folderId = validFolder(folderId), pendingAnalysis = pendingAnalysis,
             capture = capture?.copy(hasPlan = !capturePlan.isNullOrEmpty()),
+            discipline = discipline?.takeIf(Discipline::valid),
         )
         var moved = false
         try {
@@ -120,13 +124,14 @@ class ClimbStore(val root: File) {
         }
     }
 
-    /** Removes the record, then its clip, thumbnail and saved analysis result. */
+    /** Removes the record, then its clip, thumbnail, saved analysis result and edit plan. */
     @Synchronized
     fun delete(climb: Climb) {
         persist(state.value.copy(climbs = state.value.climbs.filterNot { it.id == climb.id }))
         owned(climb.videoName)?.delete()
         owned(climb.thumbnailName)?.delete()
         analysisResultFile(climb.id)?.delete()
+        editPlanFile(climb.id)?.delete()
         capturePlanFile(climb.id)?.delete()
     }
 
@@ -215,6 +220,47 @@ class ClimbStore(val root: File) {
     @Synchronized
     fun discardAnalysisResult(id: String) {
         analysisResultFile(id)?.delete()
+        editPlanFile(id)?.delete()
+    }
+
+    // The analysis page's plan for an automatic edit. The page's own format: kept as it arrived.
+
+    private fun editPlanFile(id: String): File? = owned(id + EDIT_PLAN_SUFFIX)
+
+    /** The plan exactly as the page handed it over, or null when there is none. */
+    fun editPlan(id: String): String? = try {
+        editPlanFile(id)?.takeIf { it.isFile }?.readText(Charsets.UTF_8)
+    } catch (error: IOException) {
+        null
+    }
+
+    /**
+     * Every result of the page replaces the plan: [plan] is what came with it, null when it came
+     * without one (the plan of an earlier result then goes). Nothing is written for a record that is gone.
+     */
+    @Synchronized
+    fun saveEditPlan(id: String, plan: String?) {
+        if (state.value.climbs.none { it.id == id }) return
+        val target = editPlanFile(id) ?: throw IOException("Unusable record id")
+        if (plan.isNullOrEmpty()) { target.delete(); return }
+        if (!canWrite) throw IOException("The archive could not be read and is kept as it is")
+        writeAtomically(target, plan.toByteArray(Charsets.UTF_8))
+    }
+
+    /**
+     * What the analysis page judged the climb to be. Kept only while the user has not chosen one
+     * themselves, and never at the cost of a grade the user marked: when the record's grade is of
+     * the other scale the judgement is not stored at all, and everything stays as it was.
+     */
+    @Synchronized
+    fun setAutomaticDiscipline(id: String, discipline: String) {
+        if (!Discipline.valid(discipline)) return
+        val climb = state.value.climbs.firstOrNull { it.id == id } ?: return
+        if (climb.chosenDiscipline != null) return
+        if (GradeScale.fitting(climb.grade, discipline) != climb.grade) return
+        val next = climb.copy(discipline = discipline, disciplineAuto = true)
+        if (next == climb) return
+        persist(state.value.copy(climbs = state.value.climbs.map { if (it.id == id) next else it }))
     }
 
     @Synchronized
@@ -252,15 +298,22 @@ class ClimbStore(val root: File) {
         ))
     }
 
+    /**
+     * [discipline] is what the user chose in the sheet, or null when they left it alone (an
+     * automatic one then stays automatic). A grade that is not of the chosen discipline's scale is
+     * stored as "no grade".
+     */
     @Synchronized
-    fun organize(climb: Climb, grade: String, gymId: String?, gymName: String?, climbedAtMillis: Long, folderId: String?) {
+    fun organize(climb: Climb, grade: String, gymId: String?, gymName: String?, climbedAtMillis: Long, folderId: String?, discipline: String? = null) {
         validFolder(folderId)
+        require(discipline == null || Discipline.valid(discipline)) { "Unknown discipline" }
         val current = state.value
         require(current.climbs.any { it.id == climb.id }) { "Unknown climb" }
         persist(current.copy(climbs = current.climbs.map {
-            if (it.id == climb.id) it.copy(grade = grade, gymId = gymId,
+            if (it.id == climb.id) it.copy(grade = if (discipline == null) grade else GradeScale.fitting(grade, discipline), gymId = gymId,
                 gymName = gymName?.trim()?.prefix(120)?.takeIf(String::isNotEmpty),
-                climbedAt = Climb.dateFromMillis(climbedAtMillis), folderId = folderId) else it
+                climbedAt = Climb.dateFromMillis(climbedAtMillis), folderId = folderId,
+                discipline = discipline ?: it.discipline, disciplineAuto = if (discipline == null) it.disciplineAuto else null) else it
         }))
     }
 
@@ -298,6 +351,7 @@ class ClimbStore(val root: File) {
         const val INDEX_NAME = "archive.json"
         const val ANALYSIS_RESULT_SUFFIX = ".analysis.json"
         const val CAPTURE_PLAN_SUFFIX = ".capture.json"
+        const val EDIT_PLAN_SUFFIX = ".edit.json"
 
         /** Missing optional fields read as null, unknown fields are ignored, defaults are written. */
         val json = Json { ignoreUnknownKeys = true; explicitNulls = false; encodeDefaults = true }

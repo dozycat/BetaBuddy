@@ -80,7 +80,14 @@ data class Climb(
     val pendingAnalysis: String? = null,
     /** Set for records made with the in-app camera: what was chosen and recognised while framing. */
     val capture: CaptureInfo? = null,
+    /** One of the [Discipline] values, or absent (then the bouldering scale is used wherever a scale is needed). */
+    val discipline: String? = null,
+    /** True while [discipline] is what the analysis page judged from the clip, not what the user chose. */
+    val disciplineAuto: Boolean? = null,
 ) {
+    /** The discipline the user chose themselves; the analysis page is told it and does not judge again. */
+    val chosenDiscipline: String? get() = discipline?.takeIf { disciplineAuto != true && Discipline.valid(it) }
+
     val climbedAtMillis: Long get() = (((climbedAt ?: date) + REFERENCE_DATE_OFFSET_SECONDS) * 1000).toLong()
 
     companion object {
@@ -114,15 +121,10 @@ data class CaptureRoute(
     fun stored(): CaptureRoute = CaptureRoute(id = id, confidence = confidence, nameZh = nameZh)
 
     /**
-     * The grade as one of the values the logbook uses (V0–V12), or null when the page's text is
-     * anything else. Gyms write grades in their own ways; only this form is the same in every language.
+     * The grade as one of the values the logbook uses for a boulder (V0–V16), or null when the page's
+     * text is anything else. Gyms write grades in their own ways; only this form is the same in every language.
      */
-    val albumGrade: String?
-        get() {
-            val text = grade ?: return null
-            val number = text.removePrefix("V").toIntOrNull() ?: return null
-            return text.takeIf { number in 0..12 && it == "V$number" }
-        }
+    val albumGrade: String? get() = grade?.takeIf { it in GradeScale.boulder }
 }
 
 /**
@@ -205,6 +207,30 @@ data class Archive(
 
 /** Stored sentinel for a climb without a grade. Kept as is so archives stay readable on both platforms. */
 const val UNGRADED_VALUE = "未标级"
+
+/** How a climb was done, as stored: the raw value, never its display text. */
+object Discipline {
+    const val BOULDER = "boulder"
+    const val TOPROPE = "toprope"
+    const val LEAD = "lead"
+    val all = listOf(BOULDER, TOPROPE, LEAD)
+    fun valid(value: String?): Boolean = value in all
+}
+
+/**
+ * The grades a climb can be marked with. The scale follows the discipline: V grades on a boulder,
+ * YDS on a rope. Stored as these raw strings; the user marks the grade, nothing infers it.
+ */
+object GradeScale {
+    val boulder: List<String> = (0..16).map { "V$it" }
+    val rope: List<String> = (5..9).map { "5.$it" } + (10..14).flatMap { number -> "abcd".map { "5.$number$it" } }
+
+    /** A record without a discipline uses the bouldering scale. */
+    fun values(discipline: String?): List<String> = if (discipline == Discipline.TOPROPE || discipline == Discipline.LEAD) rope else boulder
+
+    /** [grade] if it belongs to the scale of [discipline] (or is "no grade"), else "no grade". */
+    fun fitting(grade: String, discipline: String?): String = if (grade == UNGRADED_VALUE || grade in values(discipline)) grade else UNGRADED_VALUE
+}
 
 /** Four decimal places are enough for stored landmarks and keep the archive small. */
 fun rounded4(value: Double): Double = Math.round(value * 10_000) / 10_000.0

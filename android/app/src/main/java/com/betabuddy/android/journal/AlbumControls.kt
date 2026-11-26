@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import com.betabuddy.android.R
 import com.betabuddy.android.data.Climb
 import com.betabuddy.android.data.ClimbFolder
+import com.betabuddy.android.data.GradeScale
 import com.betabuddy.android.ui.theme.BB
 import java.time.Instant
 import java.time.LocalDate
@@ -183,17 +184,21 @@ internal fun OrganizeDialog(climb: Climb, model: JournalViewModel, onClose: () -
     var date by rememberSaveable { mutableStateOf(climb.climbedAtMillis) }
     var folder by rememberSaveable { mutableStateOf(climb.folderId) }
     var grade by rememberSaveable { mutableStateOf(climb.grade) }
+    var discipline by rememberSaveable { mutableStateOf(climb.discipline) }
+    // Only a choice made here counts as the user's; one the analysis page judged stays automatic until touched.
+    var chosen by rememberSaveable { mutableStateOf(false) }
     var error by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     AlertDialog(onDismissRequest = { if (!busy) onClose() }, containerColor = BB.Paper, title = { Text(stringResource(R.string.album_organize)) }, text = {
         Column(Modifier.verticalScroll(rememberScrollState())) {
-            GradePicker(grade) { grade = it }
+            DisciplinePicker(discipline) { discipline = it; chosen = true; grade = GradeScale.fitting(grade, it) }
+            GradePicker(grade, discipline) { grade = it }
             MetadataFields(model, gymId, gymName, date, folder, { id, name -> gymId = id; gymName = name }, { date = it }, { folder = it })
             if (error) Text(stringResource(R.string.album_save_error), color = DangerColor)
         }
     }, confirmButton = { TextButton(enabled = !busy, onClick = {
-        busy = true; scope.launch { model.organize(climb, grade, gymId, gymName, date, folder).fold(onSuccess = { onClose() }, onFailure = { error = true }); busy = false }
+        busy = true; scope.launch { model.organize(climb, grade, gymId, gymName, date, folder, discipline.takeIf { chosen }).fold(onSuccess = { onClose() }, onFailure = { error = true }); busy = false }
     }) { Text(stringResource(R.string.album_save)) } }, dismissButton = { TextButton(enabled = !busy, onClick = onClose) { Text(stringResource(R.string.album_cancel)) } })
 }
 

@@ -352,4 +352,118 @@ class ClimbStoreTest {
         store.replaceAnalysis(climb, analysis.copy(sampledFrames = 9))
         assertEquals(before, File(root, "archive.json").readText())
     }
+
+    // Discipline, grade scales and the plan for an automatic edit
+
+    @Test fun gradeScalesFollowTheDiscipline() {
+        assertEquals("V0", GradeScale.boulder.first()); assertEquals("V16", GradeScale.boulder.last()); assertEquals(17, GradeScale.boulder.size)
+        assertEquals(listOf("5.5", "5.6", "5.7", "5.8", "5.9", "5.10a", "5.10b", "5.10c", "5.10d", "5.11a"), GradeScale.rope.take(10))
+        assertEquals("5.14d", GradeScale.rope.last()); assertEquals(25, GradeScale.rope.size)
+        assertEquals(GradeScale.boulder, GradeScale.values(null)); assertEquals(GradeScale.boulder, GradeScale.values(Discipline.BOULDER))
+        assertEquals(GradeScale.rope, GradeScale.values(Discipline.TOPROPE)); assertEquals(GradeScale.rope, GradeScale.values(Discipline.LEAD))
+        assertEquals("V4", GradeScale.fitting("V4", null)); assertEquals(UNGRADED_VALUE, GradeScale.fitting("V4", Discipline.LEAD))
+        assertEquals("5.11c", GradeScale.fitting("5.11c", Discipline.TOPROPE)); assertEquals(UNGRADED_VALUE, GradeScale.fitting("5.11c", Discipline.BOULDER))
+        assertEquals(UNGRADED_VALUE, GradeScale.fitting(UNGRADED_VALUE, Discipline.LEAD))
+        assertTrue(Discipline.valid("lead")); assertFalse(Discipline.valid("speed")); assertFalse(Discipline.valid(null))
+    }
+
+    @Test fun theUsersDisciplineIsNeverReplacedByAnAutomaticOne() {
+        val store = ClimbStore(root)
+        val climb = store.saveFixture(grade = UNGRADED_VALUE)
+        assertNull(climb.discipline); assertNull(climb.chosenDiscipline)
+        // The page's judgement is kept as automatic.
+        store.setAutomaticDiscipline(climb.id, Discipline.LEAD)
+        var saved = ClimbStore(root).climbs.single()
+        assertEquals(Discipline.LEAD, saved.discipline); assertEquals(true, saved.disciplineAuto); assertNull(saved.chosenDiscipline)
+        // A later judgement replaces an automatic one; something that is not a discipline is ignored.
+        store.setAutomaticDiscipline(climb.id, Discipline.BOULDER)
+        store.setAutomaticDiscipline(climb.id, "speed")
+        assertEquals(Discipline.BOULDER, store.climbs.single().discipline)
+        // Organizing without touching the choice leaves it automatic.
+        store.organize(saved, "V5", null, null, 1_000_000, null)
+        saved = store.climbs.single()
+        assertEquals(true, saved.disciplineAuto); assertEquals("V5", saved.grade)
+        // The user's own choice: stored as theirs, the grade brought to its scale, and never overwritten.
+        store.organize(saved, "V5", null, null, 1_000_000, null, Discipline.TOPROPE)
+        saved = ClimbStore(root).climbs.single()
+        assertEquals(Discipline.TOPROPE, saved.discipline); assertNull(saved.disciplineAuto); assertEquals(Discipline.TOPROPE, saved.chosenDiscipline)
+        assertEquals(UNGRADED_VALUE, saved.grade)
+        store.organize(saved, "5.10b", null, null, 1_000_000, null, Discipline.TOPROPE)
+        store.setAutomaticDiscipline(climb.id, Discipline.BOULDER)
+        saved = ClimbStore(root).climbs.single()
+        assertEquals(Discipline.TOPROPE, saved.discipline); assertEquals("5.10b", saved.grade)
+        try { store.organize(saved, "V1", null, null, 0, null, "speed"); fail() } catch (expected: IllegalArgumentException) { }
+        // Chosen when saving: the user's from the start.
+        val chosen = store.save("b", "x", "5.9", false, "", staged(), ByteArray(0), analysis, discipline = Discipline.LEAD)
+        assertEquals(Discipline.LEAD, chosen.chosenDiscipline)
+        store.setAutomaticDiscipline("no-such-record", Discipline.LEAD)
+    }
+
+    @Test fun anAutomaticDisciplineNeverCostsAGradeTheUserMarked() {
+        val store = ClimbStore(root)
+        // A V grade, and the page says rope: the guess is not stored, the grade and the (absent) discipline stay.
+        val boulder = store.saveFixture(title = "a", grade = "V4")
+        store.setAutomaticDiscipline(boulder.id, Discipline.TOPROPE)
+        store.setAutomaticDiscipline(boulder.id, Discipline.LEAD)
+        var saved = ClimbStore(root).climbs.first { it.id == boulder.id }
+        assertEquals("V4", saved.grade); assertNull(saved.discipline); assertNull(saved.disciplineAuto)
+        // The same scale is no conflict: the guess is stored and the grade is untouched.
+        store.setAutomaticDiscipline(boulder.id, Discipline.BOULDER)
+        saved = ClimbStore(root).climbs.first { it.id == boulder.id }
+        assertEquals("V4", saved.grade); assertEquals(Discipline.BOULDER, saved.discipline); assertEquals(true, saved.disciplineAuto)
+        // The other direction: a rope grade under an automatic "lead", and the page now says boulder.
+        val rope = store.saveFixture(title = "b", grade = UNGRADED_VALUE)
+        store.setAutomaticDiscipline(rope.id, Discipline.LEAD)
+        store.organize(store.climbs.first { it.id == rope.id }, "5.11a", null, null, 1_000_000, null)
+        store.setAutomaticDiscipline(rope.id, Discipline.BOULDER)
+        saved = ClimbStore(root).climbs.first { it.id == rope.id }
+        assertEquals("5.11a", saved.grade); assertEquals(Discipline.LEAD, saved.discipline); assertEquals(true, saved.disciplineAuto)
+        // Between the two rope disciplines the scale is the same, so the guess may change.
+        store.setAutomaticDiscipline(rope.id, Discipline.TOPROPE)
+        saved = ClimbStore(root).climbs.first { it.id == rope.id }
+        assertEquals("5.11a", saved.grade); assertEquals(Discipline.TOPROPE, saved.discipline)
+        // Only the user's own change of discipline clears a grade of the other scale.
+        store.organize(saved, saved.grade, null, null, 1_000_000, null, Discipline.BOULDER)
+        saved = ClimbStore(root).climbs.first { it.id == rope.id }
+        assertEquals(UNGRADED_VALUE, saved.grade); assertEquals(Discipline.BOULDER, saved.chosenDiscipline)
+    }
+
+    @Test fun recordsWrittenBeforeDisciplinesReadAsBefore() {
+        val store = ClimbStore(root)
+        store.saveFixture()
+        val text = store.file(ClimbStore.INDEX_NAME).readText()
+        assertFalse(text.contains("discipline"))   // absent, not null: older builds and iOS read the same index
+        assertNull(ClimbStore(root).climbs.single().discipline)
+    }
+
+    @Test fun theEditPlanIsKeptAsItCameAndGoesWithTheResultAndTheRecord() {
+        val store = ClimbStore(root)
+        val climb = store.saveFixture()
+        val plan = """{"v":1,"duration":3,"segments":[{"t0":0,"t1":3,"speed":1}],"someday":true}"""
+        assertNull(store.editPlan(climb.id))
+        store.saveAnalysisResult(climb.id, "{}")
+        store.saveEditPlan(climb.id, plan)
+        assertEquals(plan, ClimbStore(root).editPlan(climb.id))
+        assertTrue(store.file(climb.id + ClimbStore.EDIT_PLAN_SUFFIX).isFile)
+        // Every result replaces it; a result without a plan removes the last one.
+        store.saveEditPlan(climb.id, plan.replace("3", "4"))
+        assertEquals(plan.replace("3", "4"), store.editPlan(climb.id))
+        store.saveEditPlan(climb.id, null)
+        assertNull(store.editPlan(climb.id))
+        // Analysing again starts without the old plan.
+        store.saveEditPlan(climb.id, plan)
+        store.discardAnalysisResult(climb.id)
+        assertNull(store.editPlan(climb.id)); assertNull(store.analysisResult(climb.id))
+        // Deleted with the record; nothing is written for a record that is gone.
+        store.saveEditPlan(climb.id, plan)
+        val file = store.file(climb.id + ClimbStore.EDIT_PLAN_SUFFIX)
+        store.delete(climb)
+        assertFalse(file.exists())
+        store.saveEditPlan(climb.id, plan)
+        assertFalse(file.exists())
+        // A write that was interrupted leaves nothing behind after the next start.
+        File(root, "X.edit.json.tmp").writeText("half")
+        ClimbStore(root)
+        assertFalse(File(root, "X.edit.json.tmp").exists())
+    }
 }

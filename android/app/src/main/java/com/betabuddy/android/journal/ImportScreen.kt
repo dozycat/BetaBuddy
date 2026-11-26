@@ -4,6 +4,8 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,9 +14,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -33,16 +39,21 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.betabuddy.android.R
+import com.betabuddy.android.data.Discipline
+import com.betabuddy.android.data.GradeScale
 import com.betabuddy.android.data.UNGRADED_VALUE
 import com.betabuddy.android.pose.AnalysisQuality
 import com.betabuddy.android.ui.common.BBIcons
@@ -52,8 +63,11 @@ import com.betabuddy.android.ui.common.PaperPage
 import com.betabuddy.android.ui.common.Stamp
 import com.betabuddy.android.ui.theme.BB
 
-/** Stored grade values: the "no grade" sentinel, then V0–V12. Set by the user; never inferred. */
-internal val gradeValues: List<String> = listOf(UNGRADED_VALUE) + (0..12).map { "V$it" }
+/** Stored grade values of a boulder: the "no grade" sentinel, then V0–V16. Set by the user; never inferred. */
+internal val gradeValues: List<String> = gradeValues(null)
+
+/** The grades to choose from for a climb of [discipline]: "no grade", then that discipline's scale. */
+internal fun gradeValues(discipline: String?): List<String> = listOf(UNGRADED_VALUE) + GradeScale.values(discipline)
 
 /**
  * Pick a video, edit its time and tags, then save it. Pose recognition waits for “Analyse this attempt”.
@@ -64,6 +78,8 @@ internal fun ImportScreen(model: JournalViewModel, onClose: () -> Unit, onSaved:
     var title by rememberSaveable { mutableStateOf("") }
     var grade by rememberSaveable { mutableStateOf(UNGRADED_VALUE) }
     var sent by rememberSaveable { mutableStateOf(false) }
+    // Not chosen until the user chooses; the analysis page may judge it later.
+    var discipline by rememberSaveable { mutableStateOf<String?>(null) }
     var gymId by rememberSaveable { mutableStateOf<String?>(null) }
     var gymName by rememberSaveable { mutableStateOf("") }
     var climbedOn by rememberSaveable { mutableStateOf(System.currentTimeMillis()) }
@@ -130,7 +146,8 @@ internal fun ImportScreen(model: JournalViewModel, onClose: () -> Unit, onSaved:
                         placeholder = { Text(stringResource(R.string.journal_import_name_hint), color = BB.Muted) },
                         modifier = Modifier.fillMaxWidth().testTag("climbTitle"),
                     )
-                    GradePicker(grade) { grade = it }
+                    DisciplinePicker(discipline) { discipline = it; grade = GradeScale.fitting(grade, it) }
+                    GradePicker(grade, discipline) { grade = it }
                     ClimbDateTimeField(climbedOn) { climbedOn = it }
                     Text(stringResource(if (state.recordingDateMillis != null) R.string.journal_recording_date_found else R.string.journal_recording_date_missing), style = BB.Caption, color = BB.Muted)
                     TextButton(onClick = { organizing = !organizing }) { Text(stringResource(R.string.album_optional_tags)) }
@@ -140,7 +157,7 @@ internal fun ImportScreen(model: JournalViewModel, onClose: () -> Unit, onSaved:
                 }
                 BigButton(
                     stringResource(R.string.journal_save_climb),
-                    { model.saveVideo(title, grade, sent, "", AnalysisQuality.BALANCED, defaultTitle, gymId, gymName, climbedOn, folderId) },
+                    { model.saveVideo(title, grade, sent, "", AnalysisQuality.BALANCED, defaultTitle, gymId, gymName, climbedOn, folderId, discipline = discipline) },
                     Modifier.testTag("startAnalysis"),
                     enabled = state.staged != null && !state.importing,
                 )
@@ -156,8 +173,30 @@ internal fun ImportScreen(model: JournalViewModel, onClose: () -> Unit, onSaved:
     }
 }
 
+/**
+ * Bouldering, top rope or lead, as three segments of one control. Nothing is selected until the
+ * user picks one (or the analysis page has judged it). The grade picker follows the choice.
+ */
 @Composable
-internal fun GradePicker(grade: String, onSelect: (String) -> Unit) {
+internal fun DisciplinePicker(selected: String?, modifier: Modifier = Modifier, onSelect: (String) -> Unit) {
+    val label = stringResource(R.string.journal_discipline_label)
+    val shape = RoundedCornerShape(14.dp)
+    Row(
+        modifier.fillMaxWidth().clip(shape).border(1.dp, BB.Ink.copy(alpha = 0.35f), shape).selectableGroup().semantics { contentDescription = label },
+    ) {
+        for (value in Discipline.all) {
+            val chosen = selected == value
+            Box(
+                Modifier.weight(1f).defaultMinSize(minHeight = 48.dp).background(if (chosen) BB.Ink else Color.Transparent)
+                    .selectable(selected = chosen, role = Role.RadioButton, onClick = { onSelect(value) }).padding(horizontal = 6.dp).testTag("discipline-$value"),
+                contentAlignment = Alignment.Center,
+            ) { Text(disciplineText(value), style = BB.Subheadline, fontWeight = FontWeight.SemiBold, color = if (chosen) BB.Paper else BB.Ink, maxLines = 1) }
+        }
+    }
+}
+
+@Composable
+internal fun GradePicker(grade: String, discipline: String? = null, onSelect: (String) -> Unit) {
     var open by remember { mutableStateOf(false) }
     Row(
         Modifier.fillMaxWidth().defaultMinSize(minHeight = 48.dp).clickable(role = Role.DropdownList) { open = true },
@@ -170,7 +209,7 @@ internal fun GradePicker(grade: String, onSelect: (String) -> Unit) {
                 Text(" ▾", style = BB.Subheadline)
             }
             DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = BB.Paper) {
-                for (value in gradeValues) {
+                for (value in gradeValues(discipline)) {
                     DropdownMenuItem(text = { Text(gradeText(value), color = BB.Ink) }, onClick = { onSelect(value); open = false })
                 }
             }

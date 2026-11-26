@@ -74,4 +74,18 @@
     <string name="journal_analysis_background">Analyzing. You can leave this page.</string>
     <string name="journal_analysis_deferred">Analysis will restart when you return to the app.</string>
     <string name="journal_analysis_waiting">Waiting to analyze…</string>
+
+    <!-- Discipline, and the automatic edit made from the analysis page's plan -->
+    <string name="journal_discipline_boulder">Bouldering</string>
+    <string name="journal_discipline_toprope">Top rope</string>
+    <string name="journal_discipline_lead">Lead</string>
+    <string name="journal_discipline_label">Climbing style</string>
+    <string name="journal_edit_open">Auto edit</string>
+    <string name="journal_edit_remove_passers">Remove passers-by</string>
+    <string name="journal_edit_slow">Slow motion</string>
+    <string name="journal_edit_camera">Camera moves</string>
+    <string name="journal_edit_share">Share video</string>
+    <string name="journal_edit_working">Editing…</string>
+    <string name="journal_edit_failed">Couldn’t make the edit: %1$s. Try again.</string>
+    <string name="journal_edit_note">Edited automatically; may be off.</string>
 </resources>

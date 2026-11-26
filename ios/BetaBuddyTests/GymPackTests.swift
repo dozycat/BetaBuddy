@@ -317,6 +317,13 @@ final class GymPackTests: XCTestCase {
         XCTAssertNil(AnalysisMessage(body:["type":"analysisSeek","t":"soon"]))
         XCTAssertNil(AnalysisMessage(body:["type":"analysisSeek","t":Double.infinity]))
         XCTAssertEqual(AnalysisMessage(body:["type":"analysisError","code":"synthetic","message":"m"]),.failed(code:"synthetic",message:"m"))
+        // A page that could not analyse the clip may still say what it made of the climbing style.
+        XCTAssertEqual(AnalysisMessage(body:["type":"analysisError","code":"synthetic","discipline":["kind":"toprope","sure":false]]),
+                       .failed(code:"synthetic",discipline:DisciplineGuess(kind:.toprope,sure:false)))
+        XCTAssertEqual(AnalysisMessage(body:["type":"analysisError","code":"synthetic","discipline":["kind":"unknown"]]),.failed(code:"synthetic"))
+        // …and may still hand over a render plan (following the climber), kept as JSON text.
+        guard case .failed(_, _, _, let edit)? = AnalysisMessage(body:["type":"analysisError","code":"synthetic","edit":["v":1,"cameraMode":"track"]]) else { return XCTFail("not a failure") }
+        XCTAssertEqual(edit, #"{"cameraMode":"track","v":1}"#)
         XCTAssertEqual(AnalysisMessage(body:["type":"error","message":"boom"]),.pageError("boom"))
         // Progress is the page's own to show; unknown types and other shapes are ignored.
         XCTAssertNil(AnalysisMessage(body:["type":"analysisProgress","stage":"s","fraction":0.5]))
@@ -330,6 +337,10 @@ final class GymPackTests: XCTestCase {
     }
     func testAnalysisCommandsEncodeTheirArguments() throws {
         XCTAssertTrue(AnalysisCommand.run.script.contains("BetaBuddyAnalysis.run()"))
+        // Small stills for finding the climber by motion: a pack without the call is asked nothing.
+        let track = AnalysisCommand.addTrackFrame(time: 1.23456, jpegBase64: "QUJD").script
+        XCTAssertTrue(track.contains(#"typeof window.BetaBuddyAnalysis.addTrackFrame === 'function'"#))
+        XCTAssertTrue(track.contains(#"BetaBuddyAnalysis.addTrackFrame(1.2346,"QUJD")"#))
         let begin = AnalysisCommand.begin(id:"7F9619FF",width:1080,height:1920,climber:["height":171]).script
         XCTAssertTrue(begin.contains(#""id":"7F9619FF""#))
         XCTAssertTrue(begin.contains(#""w":1080"#))

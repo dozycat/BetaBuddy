@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The one place the share sheet can be handed a file from: rendered edits in the app's cache. -->
+<paths>
+    <cache-path name="edits" path="edits/" />
+</paths>

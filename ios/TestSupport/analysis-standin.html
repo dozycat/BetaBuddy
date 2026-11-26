@@ -6,21 +6,35 @@
 (() => {
   'use strict';
   const post = message => { try { window.webkit.messageHandlers.gym.postMessage(message); } catch (error) {} };
-  let meta = null, frames = 0, poses = 0;
+  let meta = null, frames = 0, poses = 0, duration = 0;
   window.BetaBuddyAnalysis = {
-    begin(m) { meta = m; frames = 0; poses = 0; },
-    addFrame() { frames += 1; },
-    addPoses(list) { poses += (typeof list === 'string' ? JSON.parse(list) : list).length; },
+    begin(m) { meta = m; frames = 0; poses = 0; duration = 0; },
+    addFrame(index, t) { frames += 1; duration = Math.max(duration, +t || 0); },
+    addPoses(list) {
+      const batch = typeof list === 'string' ? JSON.parse(list) : list;
+      poses += batch.length;
+      for (const pose of batch) duration = Math.max(duration, +pose.t || 0);
+    },
     run() {
       if (!meta) return;
       if (!poses) return post({ type: 'analysisError', code: 'no_poses', message: 'no poses' });
       // Like a real page from 1.9.2 on: says whether the capture plan could be used. A plan that is not the stand-in's own JSON counts as unreadable.
       let use;
       if (meta.capture !== undefined) { try { use = JSON.parse(meta.capture).standIn ? { used: true, start: 'plan', finish: 'video' } : { used: false, reason: 'mismatch' }; } catch (error) { use = { used: false, reason: 'unreadable' }; } }
-      post({ type: 'analysisResult', id: meta.id, climber: { height: 170 }, ...(use ? { capture: use } : {}),
-             json: JSON.stringify({ v: 1, standIn: true, w: meta.w, h: meta.h, frames, poses, capture: meta.capture === undefined ? null : meta.capture }) });
+      // Like a page that sends a render plan and what the clip looks like. Both are made up: a fixed
+      // box, the second half at half speed, a slow push in. The user's own discipline is echoed back.
+      const d = Math.floor((meta.duration > 0 ? meta.duration : duration) * 10) / 10;   // The clip's real length, when the app says it.
+      const edit = d >= 1 ? { v: 1, duration: d, trim: [0, d],
+        segments: [{ t0: 0, t1: d / 2, speed: 1, kind: 'run' }, { t0: d / 2, t1: d, speed: 0.5, kind: 'slow' }],
+        camera: [{ t: 0, cx: 0.5, cy: 0.5, s: 1 }, { t: d, cx: 0.5, cy: 0.4, s: 1.5 }],
+        keep: { feather: 0.03, boxes: [{ t: 0, b: [[0.3, 0.2, 0.4, 0.6]] }, { t: d, b: [[0.3, 0.15, 0.4, 0.6]] }] },
+        plate: { times: Array.from({ length: 9 }, (_, i) => +(d * i / 8).toFixed(2)) } } : null;
+      const discipline = meta.discipline ? { kind: meta.discipline, sure: true } : { kind: 'toprope', sure: false };
+      post({ type: 'analysisResult', id: meta.id, climber: { height: 170 }, ...(use ? { capture: use } : {}), ...(edit ? { edit } : {}), discipline,
+             json: JSON.stringify({ v: 1, standIn: true, w: meta.w, h: meta.h, frames, poses, capture: meta.capture === undefined ? null : meta.capture,
+                                    discipline: meta.discipline === undefined ? null : meta.discipline, duration: meta.duration === undefined ? null : meta.duration }) });
     },
-    show() {}, setClimber() {}, state() { return { meta, frames, poses }; }
+    show() {}, setClimber() {}, state() { return { meta, frames, poses, duration }; }
   };
   post({ type: 'analysisReady', packVersion: '0.0.0-standin' });
 })();

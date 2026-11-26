@@ -33,13 +33,17 @@ enum SyntheticWallClip {
     }
 
     /// Writes the clip to a temporary file and returns it. The caller removes it.
-    static func make(width: Int = 540, height: Int = 960, seconds: Double = 3, fps: Int32 = 30, photo: CGImage? = nil) async throws -> URL {
+    /// `overlay` draws on top of each frame (Core Graphics coordinates, y from the bottom), for things that move.
+    /// `transform` is stored with the track, as a phone does for a clip it recorded turned.
+    static func make(width: Int = 540, height: Int = 960, seconds: Double = 3, fps: Int32 = 30, photo: CGImage? = nil,
+                     transform: CGAffineTransform = .identity, overlay: ((CGContext, Int) -> Void)? = nil) async throws -> URL {
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("synthetic-wall-\(UUID()).mov")
         let writer = try AVAssetWriter(outputURL: url, fileType: .mov)
         let input = AVAssetWriterInput(mediaType: .video, outputSettings: [AVVideoCodecKey: AVVideoCodecType.h264, AVVideoWidthKey: width, AVVideoHeightKey: height])
         let adaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: input, sourcePixelBufferAttributes: [
             kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32ARGB, kCVPixelBufferWidthKey as String: width, kCVPixelBufferHeightKey as String: height,
             kCVPixelBufferCGImageCompatibilityKey as String: true, kCVPixelBufferCGBitmapContextCompatibilityKey as String: true])
+        input.transform = transform
         writer.add(input)
         guard writer.startWriting() else { throw writer.error ?? CocoaError(.fileWriteUnknown) }
         writer.startSession(atSourceTime: .zero)
@@ -54,6 +58,7 @@ enum SyntheticWallClip {
             if let context = CGContext(data: CVPixelBufferGetBaseAddress(buffer), width: width, height: height, bitsPerComponent: 8, bytesPerRow: CVPixelBufferGetBytesPerRow(buffer),
                                        space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.noneSkipFirst.rawValue) {
                 draw(in: context, width: width, height: height, frame: frame, photo: photo)
+                overlay?(context, frame)
             }
             CVPixelBufferUnlockBaseAddress(buffer, [])
             guard adaptor.append(buffer, withPresentationTime: CMTime(value: Int64(frame), timescale: fps)) else { throw writer.error ?? CocoaError(.fileWriteUnknown) }

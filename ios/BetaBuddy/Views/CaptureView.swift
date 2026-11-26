@@ -394,7 +394,8 @@ struct CaptureView: View {
                 Menu {
                     Picker("线路难度", selection: Binding(get: { session.grade }, set: { session.pickGrade($0) })) {
                         Text("未标级").tag(ungradedValue)
-                        ForEach(0..<13) { Text(verbatim: "V\($0)").tag("V\($0)") }
+                        // The camera records boulder problems: the logbook's bouldering scale, no discipline choice here.
+                        ForEach(GradeScale.boulder, id: \.self) { Text(verbatim: $0).tag($0) }
                     }
                 } label: {
                     HStack(spacing: 6) {

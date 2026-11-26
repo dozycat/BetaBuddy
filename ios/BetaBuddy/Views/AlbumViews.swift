@@ -146,12 +146,42 @@ struct AlbumMetadataFields: View {
     }
 }
 
+/// Bouldering, top rope or lead. Picking one with the other grade scale puts the grade back to ungraded.
+struct DisciplinePicker: View {
+    @Binding var discipline: Discipline
+    @Binding var grade: String
+    var picked: () -> Void = {}
+    var body: some View {
+        Picker("攀爬方式", selection: Binding(get: { discipline }, set: { discipline = $0; grade = GradeScale.kept(grade, for: $0); picked() })) {
+            Text("抱石").tag(Discipline.boulder)
+            Text("顶绳").tag(Discipline.toprope)
+            Text("先锋").tag(Discipline.lead)
+        }.pickerStyle(.segmented).accessibilityIdentifier("climbStyle")
+    }
+}
+
+/// The grades of the discipline's scale. A grade written in another form by an older build stays selectable.
+struct GradePicker: View {
+    @Binding var grade: String
+    var discipline: Discipline
+    var body: some View {
+        Picker("线路难度", selection: $grade) {
+            Text("未标级").tag(ungradedValue)
+            ForEach(GradeScale.grades(for: discipline), id: \.self) { Text(verbatim: $0).tag($0) }
+            if grade != ungradedValue && !GradeScale.grades(for: discipline).contains(grade) { Text(verbatim: grade).tag(grade) }
+        }
+    }
+}
+
 struct OrganizeClimbView: View {
     @EnvironmentObject private var store: ClimbStore
     @Environment(\.dismiss) private var dismiss
     let climb: Climb
     @State private var title: String
     @State private var grade: String
+    @State private var discipline: Discipline
+    /// The user picked a discipline here; one they only looked at stays as it was.
+    @State private var disciplinePicked = false
     @State private var gymId: String?
     @State private var gymName: String
     @State private var climbedAt: Date
@@ -160,6 +190,7 @@ struct OrganizeClimbView: View {
     init(climb: Climb) {
         self.climb = climb
         _title = State(initialValue: climb.title); _grade = State(initialValue: climb.grade)
+        _discipline = State(initialValue: climb.style ?? .boulder)
         _gymId = State(initialValue: climb.gymId); _gymName = State(initialValue: climb.gymName ?? "")
         _climbedAt = State(initialValue: climb.climbingDate); _folderId = State(initialValue: climb.folderId)
     }
@@ -168,11 +199,8 @@ struct OrganizeClimbView: View {
             Form {
                 Section {
                     TextField("这一趟的名字", text: $title)
-                    Picker("线路难度", selection: $grade) {
-                        Text("未标级").tag(ungradedValue)
-                        ForEach(0..<13) { Text(verbatim: "V\($0)").tag("V\($0)") }
-                        if grade != ungradedValue && !(0..<13).map({ "V\($0)" }).contains(grade) { Text(verbatim: grade).tag(grade) }
-                    }
+                    DisciplinePicker(discipline: $discipline, grade: $grade) { disciplinePicked = true }
+                    GradePicker(grade: $grade, discipline: discipline)
                 }
                 Section { AlbumMetadataFields(gymId: $gymId, gymName: $gymName, climbedAt: $climbedAt, folderId: $folderId) }
                 if let error { Text(verbatim: error).foregroundStyle(.red) }
@@ -183,7 +211,8 @@ struct OrganizeClimbView: View {
                     ToolbarItem(placement: .confirmationAction) {
                         Button("保存") {
                             do {
-                                try store.organize(climb, title: title, grade: grade, gymId: gymId, gymName: gymName, climbedAt: climbedAt, folderId: folderId)
+                                try store.organize(climb, title: title, grade: grade, gymId: gymId, gymName: gymName, climbedAt: climbedAt, folderId: folderId,
+                                                   discipline: disciplinePicked ? discipline : nil)
                                 dismiss()
                             } catch { self.error = error.localizedDescription }
                         }

@@ -15,6 +15,8 @@ import com.betabuddy.android.data.Climb
 import com.betabuddy.android.data.ClimbFolder
 import com.betabuddy.android.data.ClimbStore
 import com.betabuddy.android.data.PoseAnalysis
+import com.betabuddy.android.edit.EditFiles
+import com.betabuddy.android.edit.EditPlan
 import com.betabuddy.android.pose.FrameGeometry
 import com.betabuddy.android.pose.ImportRules
 import java.util.Locale
@@ -67,6 +69,8 @@ internal object JournalGraph {
     fun store(context: Context): ClimbStore = store ?: synchronized(this) {
         store ?: run {
             val created = ClimbStore(root(context))
+            // Rendered edits are remade on demand; whatever the last run left in the cache goes.
+            EditFiles.clearAll(context)
             // Left over from the last run: unfinished imports go; a clip the camera recorded that
             // never reached the logbook is taken in if it can be played.
             val app = context.applicationContext
@@ -133,6 +137,10 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
     /** That climb, once its pose recognition has finished with data the analysis page can use. */
     val poseReady: StateFlow<String?> = poseReadyState.asStateFlow()
 
+    private val editRevisionState = MutableStateFlow(0)
+    /** Changes whenever a stored edit plan may have changed; screens read the plan again then. */
+    val editRevision: StateFlow<Int> = editRevisionState.asStateFlow()
+
     private val queueMessageState = MutableStateFlow<Map<String, UiMessage>>(emptyMap())
     /** How the analysis a camera record asked for ended, per record, for as long as the app runs. */
     val queueMessages: StateFlow<Map<String, UiMessage>> = queueMessageState.asStateFlow()
@@ -192,7 +200,7 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun saveVideo(title: String, grade: String, sent: Boolean, note: String, quality: AnalysisQuality, defaultTitle: String, gymId: String? = null, gymName: String? = null, climbedAtMillis: Long? = null, folderId: String? = null, analyze: Boolean = false) {
+    fun saveVideo(title: String, grade: String, sent: Boolean, note: String, quality: AnalysisQuality, defaultTitle: String, gymId: String? = null, gymName: String? = null, climbedAtMillis: Long? = null, folderId: String? = null, analyze: Boolean = false, discipline: String? = null) {
         val state = importState.value
         val video = state.staged ?: return
         if (state.busy || state.importing) return
@@ -209,7 +217,7 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
                 ensureActive()
                 // Commit the clip and durable request before starting optional inference.
                 val climb = withContext(Dispatchers.IO) {
-                    store().save(title, defaultTitle, grade, sent, note, video, thumbnail, analysis, gymId = gymId, gymName = gymName, climbedAtMillis = climbedAtMillis, folderId = folderId, pendingAnalysis = if (analyze) quality.name.lowercase(Locale.ROOT) else null)
+                    store().save(title, defaultTitle, grade, sent, note, video, thumbnail, analysis, gymId = gymId, gymName = gymName, climbedAtMillis = climbedAtMillis, folderId = folderId, pendingAnalysis = if (analyze) quality.name.lowercase(Locale.ROOT) else null, discipline = discipline)
                 }
                 if (analyze) AnalysisService.start(getApplication())
                 importState.update { it.copy(staged = null, savedId = climb.id) }
@@ -243,8 +251,9 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
     suspend fun deleteFolder(id: String): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching { store().deleteFolder(id) }
     }
-    suspend fun organize(climb: Climb, grade: String, gymId: String?, gymName: String?, climbedAtMillis: Long, folderId: String?): Result<Unit> = withContext(Dispatchers.IO) {
-        runCatching { store().organize(climb, grade, gymId, gymName, climbedAtMillis, folderId) }
+    /** [discipline] is the user's choice, or null when they did not touch it. */
+    suspend fun organize(climb: Climb, grade: String, gymId: String?, gymName: String?, climbedAtMillis: Long, folderId: String?, discipline: String? = null): Result<Unit> = withContext(Dispatchers.IO) {
+        runCatching { store().organize(climb, grade, gymId, gymName, climbedAtMillis, folderId, discipline) }
     }
 
     // Review
@@ -255,8 +264,8 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
 
     suspend fun delete(climb: Climb): Result<Unit> {
         AnalysisService.cancel(getApplication(), climb.id)
-        return withContext(Dispatchers.IO) { runCatching { store().delete(climb) } }
-            .onSuccess { resultsState.update { ids -> ids - climb.id } }
+        return withContext(Dispatchers.IO) { runCatching { store().delete(climb); EditFiles.clear(getApplication(), climb.id) } }
+            .onSuccess { resultsState.update { ids -> ids - climb.id }; editRevisionState.update { it + 1 } }
     }
 
     /** The service owns inference, so leaving this screen or activity does not stop it. */
@@ -318,13 +327,33 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
      * Keeps what the page handed back: the result next to the clip, replacing an earlier one, and
      * the body measurements it used in this phone's preferences for the next analysis.
      */
-    suspend fun saveAnalysisResult(id: String, json: String, climber: String?, planUse: CapturePlanUse? = null): Result<Unit> = withContext(Dispatchers.IO) {
+    suspend fun saveAnalysisResult(
+        id: String, json: String, climber: String?, planUse: CapturePlanUse? = null,
+        /** The page's plan for an automatic edit, kept as it came; a result without one removes the last. */
+        edit: String? = null,
+        /** What the page judged the climb to be. Kept only while the user has not said so themselves. */
+        discipline: String? = null,
+    ): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
             if (store().saveAnalysisResult(id, json)) resultsState.update { it + id }
+            store().saveEditPlan(id, edit)
+            editRevisionState.update { it + 1 }
+            if (discipline != null) store().setAutomaticDiscipline(id, discipline)
             // Whether the page went by the capture plan is kept with the record, as the page said it.
             if (planUse != null) store().setPlanUse(id, planUse)
             if (climber != null) preferences.edit { putString(KEY_ANALYSIS_CLIMBER, climber) }
         }
+    }
+
+    /** What the page made of the climbing style when it could not analyse the clip. Never replaces the user's choice. */
+    /** A plan for an automatic edit that came without a result (the page could not analyse, but could still plan an edit). */
+    suspend fun saveEditPlan(id: String, plan: String) {
+        withContext(Dispatchers.IO) { runCatching { store().saveEditPlan(id, plan) } }
+        editRevisionState.update { it + 1 }
+    }
+
+    suspend fun setAutomaticDiscipline(id: String, discipline: String) {
+        withContext(Dispatchers.IO) { runCatching { store().setAutomaticDiscipline(id, discipline) } }
     }
 
     /** The capture page's plan for a record made with the in-app camera, or null. */
@@ -342,7 +371,14 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
     suspend fun discardAnalysisResult(id: String) {
         withContext(Dispatchers.IO) { runCatching { store().discardAnalysisResult(id) } }
         resultsState.update { it - id }
+        editRevisionState.update { it + 1 }
     }
+
+    /** The stored plan for an automatic edit, when there is one this build can use. */
+    suspend fun editPlan(id: String): EditPlan? = withContext(Dispatchers.IO) { EditPlan.parse(store().editPlan(id)) }
+
+    /** The discipline the user chose for this record themselves, or null. */
+    suspend fun chosenDiscipline(id: String): String? = withContext(Dispatchers.IO) { store().archive.value.climbs.firstOrNull { it.id == id }?.chosenDiscipline }
 
     /** JSON text of the body measurements the page last used, or null before the first result. */
     suspend fun analysisClimber(): String? = withContext(Dispatchers.IO) { preferences.getString(KEY_ANALYSIS_CLIMBER, null) }

@@ -367,15 +367,25 @@ enum AnalysisMessage: Equatable, Sendable {
     case ready
     /// `id` is the record id given in `begin`, or empty when the page was showing a saved result.
     /// `capture` says whether the capture plan was used, when the page says so (packs from 1.9.2 on, records made with the camera).
-    case result(id: String, json: String, climber: [String: Double], capture: CapturePlanUse? = nil)
+    /// `edit` is the render plan that came with the result, as JSON text, and `discipline` what the page made of the clip; both only from packs that send them.
+    case result(id: String, json: String, climber: [String: Double], capture: CapturePlanUse? = nil, edit: String? = nil, discipline: DisciplineGuess? = nil)
     case seek(Double)
     /// The page could not analyse the clip and is showing its own explanation.
     /// `message` is the page's own explanation, kept for the local log only: the page shows it itself.
-    case failed(code: String, message: String = "")
+    /// `discipline`: what the page made of the clip even though it could not analyse it (hand-held rope footage, for one),
+    /// and `edit` a render plan it could still make (following the climber); both only from packs that send them.
+    case failed(code: String, message: String = "", discipline: DisciplineGuess? = nil, edit: String? = nil)
     /// A script error. Before `ready` it means the page never came up.
     case pageError(String)
 
     static let maximumResultLength = 8_000_000
+
+    /// A render plan as the page gave it, as JSON text; whether this build can render it is decided when it is read.
+    private static func edit(_ value: Any?) -> String? {
+        guard let plan = value as? [String: Any], JSONSerialization.isValidJSONObject(plan),
+              let data = try? JSONSerialization.data(withJSONObject: plan, options: [.sortedKeys]), data.count <= EditPlan.maximumLength else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
 
     init?(body: Any) {
         guard let body = body as? [String: Any], let type = body["type"] as? String else { return nil }
@@ -389,11 +399,13 @@ enum AnalysisMessage: Equatable, Sendable {
                 guard let number = value as? NSNumber, CFGetTypeID(number) != CFBooleanGetTypeID(), number.doubleValue.isFinite else { continue }
                 climber[key] = number.doubleValue
             }
-            self = .result(id: String((body["id"] as? String ?? "").prefix(80)), json: json, climber: climber, capture: CapturePlanUse(body: body["capture"]))
+            self = .result(id: String((body["id"] as? String ?? "").prefix(80)), json: json, climber: climber, capture: CapturePlanUse(body: body["capture"]),
+                           edit: Self.edit(body["edit"]), discipline: DisciplineGuess(body: body["discipline"]))
         case "analysisSeek":
             guard let time = (body["t"] as? NSNumber)?.doubleValue, time.isFinite else { return nil }
             self = .seek(max(0, time))
-        case "analysisError": self = .failed(code: String((body["code"] as? String ?? "").prefix(80)), message: String((body["message"] as? String ?? "").prefix(300)))
+        case "analysisError": self = .failed(code: String((body["code"] as? String ?? "").prefix(80)), message: String((body["message"] as? String ?? "").prefix(300)),
+                                             discipline: DisciplineGuess(body: body["discipline"]), edit: Self.edit(body["edit"]))
         case "error": self = .pageError(String((body["message"] as? String ?? "").prefix(300)))
         default: return nil   // Progress and anything newer: the page shows it itself.
         }
@@ -403,9 +415,13 @@ enum AnalysisMessage: Equatable, Sendable {
 /// App → analysis page calls on `window.BetaBuddyAnalysis`.
 enum AnalysisCommand: Sendable {
     /// `capture` is the capture page's plan for a record made with the in-app camera, handed back as it was stored.
-    case begin(id: String, width: Int, height: Int, climber: [String: Double]?, capture: String? = nil)
+    /// `discipline` is the user's own choice, when they made one; the page then does not guess.
+    /// `duration` is the clip's real length in seconds, for pages that plan against it.
+    case begin(id: String, width: Int, height: Int, climber: [String: Double]?, capture: String? = nil, discipline: Discipline? = nil, duration: Double? = nil)
     case addFrame(index: Int, time: Double, jpegBase64: String)
     case addPoses([PoseFrame])
+    /// A small, frequent still for finding the climber by motion; packs without the call ignore it.
+    case addTrackFrame(time: Double, jpegBase64: String)
     case run
     case show(String)
 
@@ -417,6 +433,8 @@ enum AnalysisCommand: Sendable {
         var h: Int
         var climber: [String: Double]?
         var capture: String?
+        var discipline: String?
+        var duration: Double?
     }
     private struct Pose: Encodable {
         var t: Double
@@ -433,8 +451,9 @@ enum AnalysisCommand: Sendable {
 
     var script: String {
         let (function, arguments): (String, [String]) = switch self {
-        case .begin(let id, let width, let height, let climber, let capture):
-            ("begin", [Self.literal(Meta(id: id, w: width, h: height, climber: climber?.isEmpty == false ? climber : nil, capture: capture?.isEmpty == false ? capture : nil))])
+        case .begin(let id, let width, let height, let climber, let capture, let discipline, let duration):
+            ("begin", [Self.literal(Meta(id: id, w: width, h: height, climber: climber?.isEmpty == false ? climber : nil, capture: capture?.isEmpty == false ? capture : nil,
+                                         discipline: discipline?.rawValue, duration: duration.flatMap { $0.isFinite && $0 > 0 ? rounded4($0) : nil }))])
         case .addFrame(let index, let time, let jpegBase64):
             ("addFrame", [Self.literal(index), Self.literal(rounded4(time)), Self.literal(jpegBase64)])
         case .addPoses(let frames):
@@ -444,6 +463,8 @@ enum AnalysisCommand: Sendable {
                 guard let world = frame.world, world.count == 33, frame.joints.count == 33, world.allSatisfy({ $0.count == 4 }) else { return nil }
                 return Pose(t: rounded4(frame.time), img: zip(frame.joints, world).map { $0.x.isFinite && $0.y.isFinite ? [$0.x, $0.y, $1[3]] : [0, 0, 0] }, lm: world)
             })])
+        case .addTrackFrame(let time, let jpegBase64):
+            ("addTrackFrame", [Self.literal(rounded4(time)), Self.literal(jpegBase64)])
         case .run: ("run", [])
         case .show(let json): ("show", [Self.literal(json)])
         }

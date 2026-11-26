@@ -173,6 +173,14 @@ actor VideoAnalyzer {
         return stills
     }
 
+    /// Small, frequent upright stills of the whole clip (about three a second, shorter side 270), for
+    /// the page to find the climber in a wide fixed shot by what moves. In memory only, like `stills`.
+    func trackStills(url: URL, perSecond: Double = 3, limit: Int = 900) async throws -> ClipStills {
+        let duration = try await AVURLAsset(url: url).load(.duration).seconds
+        guard duration.isFinite, duration > 0 else { throw AnalysisError.invalidVideo }
+        return try await stills(url: url, count: min(limit, max(8, Int(duration * perSecond))), width: 270, quality: 0.5)
+    }
+
     func recordingDate(url: URL) async -> Date? {
         let asset = AVURLAsset(url: url)
         guard let item = try? await asset.load(.creationDate) else { return nil }

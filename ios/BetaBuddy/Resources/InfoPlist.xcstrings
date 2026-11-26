@@ -42,31 +42,31 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Record your climb, check the camera position and save it on this iPhone. The picture and the recording do not leave the device."
+            "value": "Record your climb, check the camera position and save it on this iPhone. The recording stays on this device unless you share it yourself."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "クライミングを撮影し、この iPhone 上でカメラ位置を確認して保存します。映像と録画がデバイスの外に出ることはありません。"
+            "value": "クライミングを撮影し、この iPhone 上でカメラ位置を確認して保存します。録画は、自分で共有しないかぎりこのデバイスの外に出ません。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "등반을 촬영하고, 이 iPhone에서 카메라 위치를 확인해 저장합니다. 화면과 녹화본은 기기 밖으로 나가지 않습니다."
+            "value": "등반을 촬영하고, 이 iPhone에서 카메라 위치를 확인해 저장합니다. 녹화본은 직접 공유하지 않는 한 이 기기 밖으로 나가지 않습니다."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "拍下你的攀爬，在这台 iPhone 上检查机位并保存。画面和录像不会离开设备。"
+            "value": "拍下你的攀爬，在这台 iPhone 上检查机位并保存。录像只保存在这台设备上，除非你自己分享出去。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "拍下你的攀爬，在這支 iPhone 上檢查機位並儲存。畫面和錄影不會離開裝置。"
+            "value": "拍下你的攀爬，在這支 iPhone 上檢查機位並儲存。錄影只儲存在這部裝置上，除非你自己分享出去。"
           }
         }
       }

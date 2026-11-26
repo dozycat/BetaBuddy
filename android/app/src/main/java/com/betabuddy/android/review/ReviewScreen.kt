@@ -29,6 +29,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
@@ -57,6 +58,9 @@ import com.betabuddy.android.R
 import com.betabuddy.android.capture.CaptureColourLabel
 import com.betabuddy.android.data.Climb
 import com.betabuddy.android.data.clockText
+import com.betabuddy.android.edit.EditPlan
+import com.betabuddy.android.edit.EditScreen
+import com.betabuddy.android.edit.EditSession
 import com.betabuddy.android.gym.GymPack
 import com.betabuddy.android.i18n.AppLanguage
 import com.betabuddy.android.journal.DangerColor
@@ -112,6 +116,10 @@ internal fun ReviewScreen(climb: Climb, model: JournalViewModel, analysisPack: G
     val poseReady by model.poseReady.collectAsState()
     var analysisOpen by rememberSaveable(climb.id) { mutableStateOf(false) }
     val stage = remember { BringIntoViewRequester() }
+    // The plan for an automatic edit that came with the analysis result, when this build can use it.
+    val editRevision by model.editRevision.collectAsState()
+    val editPlan by produceState<EditPlan?>(null, climb.id, editRevision) { value = model.editPlan(climb.id) }
+    var editOpen by rememberSaveable(climb.id) { mutableStateOf(false) }
     // Poses the page can use → open it. Otherwise recognise the pose first; the page opens when that is done.
     val usablePoses = remember(analysis) { analysis.hasWorldLandmarks }
     val startAnalysis: () -> Unit = {
@@ -221,6 +229,10 @@ internal fun ReviewScreen(climb: Climb, model: JournalViewModel, analysisPack: G
                 } else {
                     BigButton(stringResource(R.string.journal_analysis_start), startAnalysis, Modifier.testTag("analyzeAttempt"), enabled = awaitingPose != climb.id)
                 }
+                // With or without a saved result: the page can hand over a plan for a clip it could not analyse.
+                if (editPlan != null) {
+                    OutlineButton(stringResource(R.string.journal_edit_open), Modifier.fillMaxWidth().testTag("openEdit")) { playback.pause(); editOpen = true }
+                }
                 Text(stringResource(R.string.journal_analysis_note), style = BB.Caption, color = BB.Muted)
             }
         }
@@ -264,6 +276,14 @@ internal fun ReviewScreen(climb: Climb, model: JournalViewModel, analysisPack: G
             )
         }
         AnalysisScreen(session, onDone = { analysisOpen = false })
+    }
+
+    editPlan?.let { plan ->
+        if (editOpen) {
+            val mainScope = rememberMainScope()
+            val session = remember(climb.id, plan) { EditSession(context, climb.id, model.videoFile(climb), plan, mainScope) }
+            EditScreen(session, onDone = { editOpen = false })
+        }
     }
 
     if (confirmDelete) {

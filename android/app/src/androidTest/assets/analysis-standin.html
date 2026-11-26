@@ -1,21 +1,31 @@
 <!doctype html>
 <meta charset="utf-8">
 <title>analysis page stand-in</title>
-<!-- Test stand-in for a pack's analysis page: it analyses nothing and hands back what it was given. Not shipped. -->
+<!-- Test stand-in for a pack's analysis page: it analyses nothing and hands back what it was given, with a made-up edit plan and discipline. Not shipped. -->
 <script>
 (() => {
   'use strict';
   const post = message => { try { window.webkit.messageHandlers.gym.postMessage(message); } catch (error) {} };
-  let meta = null, frames = 0, poses = 0;
+  let meta = null, frames = 0, poses = 0, last = 0, tracks = 0, order = '';
   window.BetaBuddyAnalysis = {
-    begin(m) { meta = m; frames = 0; poses = 0; },
-    addFrame() { frames += 1; },
+    begin(m) { meta = m; frames = 0; poses = 0; last = 0; tracks = 0; order = 'b'; },
+    addFrame(index, t) { frames += 1; if (t > last) last = t; if (!order.endsWith('f')) order += 'f'; },
+    addTrackFrame(t, jpeg) { tracks += 1; if (!order.endsWith('t')) order += 't'; },
     addPoses(list) { poses += (typeof list === 'string' ? JSON.parse(list) : list).length; },
     run() {
       if (!meta) return;
       if (!poses) return post({ type: 'analysisError', code: 'no_poses', message: 'no poses' });
-      post({ type: 'analysisResult', id: meta.id, climber: { height: 170 },
-             json: JSON.stringify({ v: 1, standIn: true, w: meta.w, h: meta.h, frames, poses, capture: meta.capture === undefined ? null : meta.capture }) });
+      // A made-up plan for an automatic edit and a made-up discipline: fixed numbers, nothing looked at.
+      const duration = Math.max(1, last);
+      const edit = { v: 1, duration, trim: [0, duration],
+        segments: [{ t0: 0, t1: duration / 2, speed: 1, kind: 'run' }, { t0: duration / 2, t1: duration, speed: 0.5, kind: 'slow' }],
+        camera: [{ t: 0, cx: 0.5, cy: 0.5, s: 1 }, { t: duration, cx: 0.5, cy: 0.4, s: 1.5 }],
+        keep: { feather: 0.03, boxes: [{ t: 0, b: [[0.3, 0.2, 0.4, 0.7]] }, { t: duration, b: [[0.3, 0.2, 0.4, 0.7]] }] },
+        plate: { times: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9].map(f => f * duration) }, marks: [] };
+      const discipline = meta.discipline ? { kind: meta.discipline, sure: true } : { kind: 'toprope', sure: false };
+      post({ type: 'analysisResult', id: meta.id, climber: { height: 170 }, edit, discipline,
+             json: JSON.stringify({ v: 1, standIn: true, w: meta.w, h: meta.h, frames, poses, tracks, order: order + 'r', capture: meta.capture === undefined ? null : meta.capture,
+                                    discipline: meta.discipline === undefined ? null : meta.discipline }) });
     },
     show() {}, setClimber() {}, state() { return { meta, frames, poses }; }
   };

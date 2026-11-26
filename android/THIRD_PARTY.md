@@ -6,6 +6,8 @@ Android 版用到的第三方代码和文件。版本固定在 `gradle/libs.vers
 
 - **Pose Landmarker Full float16，版本 1** — Google MediaPipe 模型包，`app/src/main/assets/pose_landmarker_full.task`，与 `ios/BetaBuddy/Resources/` 里的是同一个文件：https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task 。SHA-256 `5134a3aad27a58b93da0088d431f366da362b44e3ccfbe3462b3827a839011b1`（`PoseModelTest` 校验）。权重未改动。
 
+- **EfficientDet-Lite2 int8，版本 1** — Google MediaPipe 模型库里的目标检测模型（COCO 类别，这里只用「person」一类），`app/src/main/assets/efficientdet_lite2.tflite`：https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite2/int8/1/efficientdet_lite2.tflite （带版本号的地址，不是 `latest`）。7,515,971 字节，SHA-256 `b3f50554cb0ea559e90328845f7d9ba4d13c8bff372914d24e06bc8bb72fa896`（`PassersTest` 校验，运行时加载前再校验一次）。Apache 2.0，权重未改动。自动剪辑「消除路人」时在设备上用 CPU 找画面里的人，由应用里已有的 MediaPipe Tasks Vision 的 `ObjectDetector` 运行，没有新增 SDK。选型：在模拟器上拿同一张示例图缩到不同大小比过 Lite0（int8、float32）和 Lite2（int8、float16、float32）：Lite2 对小的人更稳，int8 与 float 的结果几乎一样而耗时不到一半、文件是三分之一。这只是一张图上的比较，不是准确率评测。
+
 - **岩馆目录里的坐标**（`app/src/main/assets/gyms-cn.json` 的 `lat`、`lon`、`coordPrecision`）— 取自 OpenStreetMap（经 Nominatim 和 Overpass API；按每家馆标注的精度，可能是岩馆点位、建筑、名录来源写的最近地铁站，或区县、城市中心），© OpenStreetMap contributors，Open Database License 1.0：https://www.openstreetmap.org/copyright 。坐标字段适用 ODbL，不适用本项目的 MIT 许可；用到这些坐标的界面要标注 OpenStreetMap。馆名和地址来自目录的其他来源，见 `docs/gym-directory.md`。
 
 ## 只用于测试、不进安装包
@@ -19,7 +21,8 @@ Android 版用到的第三方代码和文件。版本固定在 `gradle/libs.vers
 | AndroidX：core-ktx、appcompat、activity-compose、lifecycle、navigation-compose、webkit | 应用骨架、应用内语言、岩馆的 `WebViewAssetLoader` | Apache 2.0 |
 | Jetpack Compose（BOM）：ui、foundation、material3 | 界面 | Apache 2.0 |
 | AndroidX Media3 ExoPlayer | 攀爬册回看时播放本地视频 | Apache 2.0 |
-| MediaPipe Tasks Vision | 设备上的姿态识别 | Apache 2.0 |
+| AndroidX Media3 Transformer、Effect（与 ExoPlayer 同版本 1.11.1） | 自动剪辑：在设备上按剪辑计划重新编码（变速、裁切、用干净底图盖掉路人），不写声音 | Apache 2.0 |
+| MediaPipe Tasks Vision | 设备上的姿态识别；自动剪辑里找画面中的人（`ObjectDetector`） | Apache 2.0 |
 | AndroidX CameraX 1.7.0：camera-core、camera-camera2、camera-lifecycle、camera-video、camera-view | 应用内相机：预览、不带声音的录像、给机位检查用的小帧 | Apache 2.0 |
 | kotlinx-serialization-json、kotlinx-coroutines | 本地存档、清单解析、后台任务 | Apache 2.0 |
 | 测试：JUnit 4、AndroidX Test（runner、ext-junit）、Compose ui-test-junit4（连带 Espresso） | 只在测试里，不进安装包 | EPL 1.0 / Apache 2.0 |
@@ -27,6 +30,8 @@ Android 版用到的第三方代码和文件。版本固定在 `gradle/libs.vers
 MediaPipe Tasks 依赖 Google 的 datatransport 库（SDK 自己的使用统计上报）、firebase-encoders、Flogger、Guava 和 protobuf-javalite。datatransport 的 Manifest 会带进来 `INTERNET` 和 `ACCESS_NETWORK_STATE` 两个权限和三个组件；应用的 Manifest 把它们全部移除。没有联网权限它发不出去；没有后端发现服务它连一条事件都不会存下来。
 
 Media3 的 Manifest 会带进来 `ACCESS_NETWORK_STATE` 和 `WAKE_LOCK`（码率估计和后台播放用），回看本地文件用不到，也已移除。AppCompat 带来的 EmojiCompat 启动时会向系统字体服务要新的表情字体，应用不用它，初始化项已移除。合并后，除了应用自己声明的几条（本地分析服务、可选通知、相机、位置——大致和精确一起声明，由用户在系统的询问里选），依赖带进来而留下的唯一一条权限是 AndroidX Core 自动加的 `<应用 ID>.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`：签名级，只有应用自己能持有，不涉及用户数据。
+
+Media3 Transformer 和 Effect 的 Manifest 里只有 `minSdkVersion`，不带权限、服务、广播接收器或内容提供者；它们连带进来的只有 kotlinx-coroutines-guava，并把 concurrent-futures 提到 1.2.0（都是 Apache 2.0）。Transformer 在 Android 15 起可以向系统的媒体指标服务（`MediaMetricsManager`，本机服务）登记一次导出，应用用 `setUsePlatformDiagnostics(false)` 关掉了；导出只读应用自己的文件、只写应用的缓存目录。分享剪出来的视频用 AndroidX Core 自带的 `FileProvider`（authority `<应用 ID>.edits`，不导出，只能给出缓存里 `edits/` 目录下的文件，按次授予读权限），不需要存储权限。
 
 CameraX 连带进来的库：camera-common、camera-camera2-pipe、featurecombinationquery、viewfinder-core、Dagger（连带 jakarta.inject-api）、atomicfu、concurrent-futures-ktx、core-backported-fixes、tracing-ktx、auto-value-annotations、media3-muxer（与 ExoPlayer 同版本），并把 exifinterface 提到 1.4.2、tracing 提到 1.3.0；全部是 Apache 2.0，都不联网。它的 Manifest 合并进来的只有一个 `androidx.camera.core.impl.MetadataHolderService`（不导出、默认停用，CameraX 用它的 meta-data 找到 Camera2 实现），没有权限，也没有上报组件。应用自己声明 `CAMERA`（用户打开相机时才问）以及 `ACCESS_COARSE_LOCATION` 和 `ACCESS_FINE_LOCATION`（用户点「按距离找附近的岩馆」时一起问，Android 12 起系统让用户选精确还是大致，应用两种都能用；位置来自平台自带的 `LocationManager`，没有引入 Google Play 服务的定位库）；不声明 `RECORD_AUDIO`，录像从不打开声音，Manifest 里另有一条 `tools:node="remove"` 防止以后的依赖把它带进来。
 

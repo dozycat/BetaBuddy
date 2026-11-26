@@ -6,6 +6,10 @@ POSE MODEL
 
 Pose Landmarker Full (float16, version 1), a Google MediaPipe model bundle. Apache License 2.0. The weights are unmodified.
 
+PEOPLE DETECTOR MODEL
+
+EfficientDet-Lite2 (int8, version 1), an object detection model from the Google MediaPipe model storage, used on the device to find people in a clip when an automatic edit removes passers-by. Apache License 2.0. The weights are unmodified.
+
 GYM DIRECTORY COORDINATES
 
 The approximate coordinates in the bundled gym directory, used to order gyms by distance, are derived from OpenStreetMap. © OpenStreetMap contributors, available under the Open Database License 1.0: https://www.openstreetmap.org/copyright
@@ -70,8 +74,8 @@ androidx.compose.ui:ui-unit:1.12.1
 androidx.compose.ui:ui-util-android:1.12.1
 androidx.compose.ui:ui-util:1.12.1
 androidx.compose.ui:ui:1.12.1
-androidx.concurrent:concurrent-futures-ktx:1.1.0
-androidx.concurrent:concurrent-futures:1.1.0
+androidx.concurrent:concurrent-futures-ktx:1.2.0
+androidx.concurrent:concurrent-futures:1.2.0
 androidx.core:core-backported-fixes:1.0.0
 androidx.core:core-ktx:1.19.1
 androidx.core:core-viewtree:1.0.0
@@ -112,9 +116,11 @@ androidx.media3:media3-container:1.11.1
 androidx.media3:media3-database:1.11.1
 androidx.media3:media3-datasource:1.11.1
 androidx.media3:media3-decoder:1.11.1
+androidx.media3:media3-effect:1.11.1
 androidx.media3:media3-exoplayer:1.11.1
 androidx.media3:media3-extractor:1.11.1
 androidx.media3:media3-muxer:1.11.1
+androidx.media3:media3-transformer:1.11.1
 androidx.navigation:navigation-common-android:2.10.2
 androidx.navigation:navigation-common:2.10.2
 androidx.navigation:navigation-compose-android:2.10.2
@@ -172,6 +178,7 @@ org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0
 org.jetbrains.kotlinx:kotlinx-coroutines-bom:1.11.0
 org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.11.0
 org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0
+org.jetbrains.kotlinx:kotlinx-coroutines-guava:1.11.0
 org.jetbrains.kotlinx:kotlinx-serialization-bom:1.13.0
 org.jetbrains.kotlinx:kotlinx-serialization-core-jvm:1.13.0
 org.jetbrains.kotlinx:kotlinx-serialization-core:1.13.0

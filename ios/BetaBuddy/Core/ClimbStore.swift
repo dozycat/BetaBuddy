@@ -21,6 +21,9 @@ final class ClimbStore: ObservableObject {
     static let analysisResultSuffix = ".analysis.json"
     /// The capture page's plan for a record made with the in-app camera (`<id>.capture.json`), kept as the page gave it.
     static let capturePlanSuffix = ".capture.json"
+    /// Records that have a render plan from the analysis page (`<id>.edit.json`), kept as the page gave it.
+    @Published private(set) var editPlans: Set<UUID> = []
+    static let editPlanSuffix = ".edit.json"
     static let analysisClimberKey = "analysisClimber"
     private let defaults: UserDefaults
 
@@ -40,6 +43,7 @@ final class ClimbStore: ObservableObject {
             }
             let names = (try? FileManager.default.contentsOfDirectory(atPath: self.root.path)) ?? []
             analysisResults = Set(names.compactMap { $0.hasSuffix(Self.analysisResultSuffix) ? UUID(uuidString: String($0.dropLast(Self.analysisResultSuffix.count))) : nil })
+            editPlans = Set(names.compactMap { $0.hasSuffix(Self.editPlanSuffix) ? UUID(uuidString: String($0.dropLast(Self.editPlanSuffix.count))) : nil })
         } catch {
             canWrite = false // Never overwrite an unreadable archive with an empty one.
             self.error = String(localized: "本地记录无法读取，已保留原文件。请检查存储空间或重新启动。", bundle: AppLanguage.bundle)
@@ -58,7 +62,7 @@ final class ClimbStore: ObservableObject {
 
     /// `capture` and `capturePlan` come from the in-app camera. The clip, its thumbnail, the plan and
     /// the record are all on disk when this returns; nothing is analysed here.
-    func save(title: String, grade: String, sent: Bool, note: String, stagedVideo: URL, thumbnail: Data, analysis: PoseAnalysis, gymId: String? = nil, gymName: String? = nil, climbedAt: Date? = nil, folderId: UUID? = nil, pendingAnalysis: String? = nil, capture: CaptureInfo? = nil, capturePlan: String? = nil) throws -> Climb {
+    func save(title: String, grade: String, sent: Bool, note: String, stagedVideo: URL, thumbnail: Data, analysis: PoseAnalysis, gymId: String? = nil, gymName: String? = nil, climbedAt: Date? = nil, folderId: UUID? = nil, pendingAnalysis: String? = nil, capture: CaptureInfo? = nil, capturePlan: String? = nil, discipline: Discipline? = nil) throws -> Climb {
         let id = UUID()
         var capture = capture
         capture?.hasPlan = capturePlan?.isEmpty == false
@@ -66,7 +70,7 @@ final class ClimbStore: ObservableObject {
         capture?.summary = summary
         let videoName = "\(id).\(stagedVideo.pathExtension.isEmpty ? "mov" : stagedVideo.pathExtension)"
         let thumbnailName = "\(id).jpg"
-        let climb = Climb(id: id, date: Date(), title: String(title.trimmingCharacters(in: .whitespacesAndNewlines).prefix(60)), grade: grade, sent: sent, note: String(note.prefix(1000)), videoName: videoName, thumbnailName: thumbnailName, analysis: analysis, gymId: gymId, gymName: cleanGymName(gymName), climbedAt: climbedAt, folderId: validFolder(folderId), pendingAnalysis: pendingAnalysis, capture: capture)
+        let climb = Climb(id: id, date: Date(), title: String(title.trimmingCharacters(in: .whitespacesAndNewlines).prefix(60)), grade: grade, sent: sent, note: String(note.prefix(1000)), videoName: videoName, thumbnailName: thumbnailName, analysis: analysis, gymId: gymId, gymName: cleanGymName(gymName), climbedAt: climbedAt, folderId: validFolder(folderId), pendingAnalysis: pendingAnalysis, capture: capture, discipline: discipline?.rawValue)
         do {
             try FileManager.default.moveItem(at: stagedVideo, to: file(videoName))
             try FileManager.default.setAttributes([.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication], ofItemAtPath: file(videoName).path)
@@ -97,7 +101,10 @@ final class ClimbStore: ObservableObject {
         try? FileManager.default.removeItem(at: file(climb.thumbnailName))
         try? FileManager.default.removeItem(at: analysisResultFile(climb.id))
         try? FileManager.default.removeItem(at: capturePlanFile(climb.id))
+        try? FileManager.default.removeItem(at: editPlanFile(climb.id))
+        EditFiles.remove(for: climb.id)
         analysisResults.remove(climb.id)
+        editPlans.remove(climb.id)
     }
 
     // MARK: Records made with the in-app camera
@@ -168,6 +175,43 @@ final class ClimbStore: ObservableObject {
     func discardAnalysisResult(_ climb: Climb) {
         try? FileManager.default.removeItem(at: analysisResultFile(climb.id))
         analysisResults.remove(climb.id)
+        try? saveEditPlan(nil, for: climb.id)
+    }
+
+    // MARK: Render plan and discipline that come with a result
+
+    private func editPlanFile(_ id: UUID) -> URL { file("\(id)" + Self.editPlanSuffix) }
+
+    /// The plan that came with the latest result, when it is one this build can render.
+    func editPlan(for climb: Climb) -> EditPlan? {
+        guard editPlans.contains(climb.id), let json = try? String(contentsOf: editPlanFile(climb.id), encoding: .utf8) else { return nil }
+        return EditPlan(json: json)
+    }
+
+    /// Kept as the page gave it, next to the result it came with. A result without a plan removes the old one.
+    func saveEditPlan(_ json: String?, for id: UUID) throws {
+        guard let json, !json.isEmpty, archive.climbs.contains(where: { $0.id == id }) else {
+            try? FileManager.default.removeItem(at: editPlanFile(id))
+            EditFiles.remove(for: id)
+            editPlans.remove(id)
+            return
+        }
+        guard canWrite else { throw CocoaError(.fileWriteNoPermission) }
+        try Data(json.utf8).write(to: editPlanFile(id), options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+        editPlans.insert(id)
+    }
+
+    /// What the analysis page made of the clip. The user's own choice is never replaced; neither is
+    /// a grade they marked on the other scale, which says as much as a choice would.
+    func setAutomaticDiscipline(_ kind: Discipline, for id: UUID) throws {
+        var next = archive
+        guard let index = next.climbs.firstIndex(where: { $0.id == id }) else { return }
+        let climb = next.climbs[index]
+        guard climb.chosenStyle == nil, climb.discipline != kind.rawValue || climb.disciplineAuto != true,
+              GradeScale.kept(climb.grade, for: kind) == climb.grade else { return }
+        next.climbs[index].discipline = kind.rawValue
+        next.climbs[index].disciplineAuto = true
+        try persist(next)
     }
 
     /// Body measurements the analysis page last used, so the next analysis starts from them.
@@ -211,11 +255,17 @@ final class ClimbStore: ObservableObject {
         try persist(next)
     }
 
-    func organize(_ climb: Climb, title: String, grade: String, gymId: String?, gymName: String?, climbedAt: Date, folderId: UUID?) throws {
+    /// `discipline` is given only when the user picked one in the form; it is theirs from then on.
+    /// A grade of the other scale is cleared.
+    func organize(_ climb: Climb, title: String, grade: String, gymId: String?, gymName: String?, climbedAt: Date, folderId: UUID?, discipline: Discipline? = nil) throws {
         var next = archive
         guard let index = next.climbs.firstIndex(where: { $0.id == climb.id }) else { return }
         next.climbs[index].title = String(title.trimmingCharacters(in: .whitespacesAndNewlines).prefix(60))
-        next.climbs[index].grade = grade
+        if let discipline {
+            next.climbs[index].discipline = discipline.rawValue
+            next.climbs[index].disciplineAuto = nil
+        }
+        next.climbs[index].grade = GradeScale.kept(grade, for: next.climbs[index].style)
         next.climbs[index].gymId = gymId
         next.climbs[index].gymName = cleanGymName(gymName)
         next.climbs[index].climbedAt = climbedAt

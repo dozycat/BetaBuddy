@@ -74,4 +74,18 @@
     <string name="journal_analysis_background">正在分析，可離開此頁面。</string>
     <string name="journal_analysis_deferred">等待返回應用程式後重新分析。</string>
     <string name="journal_analysis_waiting">等待分析…</string>
+
+    <!-- Discipline, and the automatic edit made from the analysis page's plan -->
+    <string name="journal_discipline_boulder">抱石</string>
+    <string name="journal_discipline_toprope">頂繩</string>
+    <string name="journal_discipline_lead">先鋒</string>
+    <string name="journal_discipline_label">攀爬方式</string>
+    <string name="journal_edit_open">自動剪輯</string>
+    <string name="journal_edit_remove_passers">消除路人</string>
+    <string name="journal_edit_slow">慢動作</string>
+    <string name="journal_edit_camera">推拉鏡頭</string>
+    <string name="journal_edit_share">分享影片</string>
+    <string name="journal_edit_working">正在剪輯…</string>
+    <string name="journal_edit_failed">沒能剪出來：%1$s，可以再試一次。</string>
+    <string name="journal_edit_note">自動剪輯，可能剪錯。</string>
 </resources>

@@ -65,7 +65,7 @@ final class CaptureTests: XCTestCase {
         XCTAssertEqual(CaptureAssessment.Route(id: "wall-07", nameZh: "合成线路 7").title, "合成线路 7")
         XCTAssertEqual(CaptureAssessment.Route(id: "wall-07").title, "wall-07")
         // Only a grade the album itself uses is ever filled in; gyms write grades in many other ways.
-        for (text, expected) in [("V0", "V0"), ("V12", "V12"), ("V13", nil), ("v3", nil), ("V03", nil), ("V3+", nil), ("紫条 11–12", nil), ("", nil)] as [(String, String?)] {
+        for (text, expected) in [("V0", "V0"), ("V12", "V12"), ("V16", "V16"), ("V17", nil), ("v3", nil), ("V03", nil), ("V3+", nil), ("紫条 11–12", nil), ("", nil)] as [(String, String?)] {
             XCTAssertEqual(CaptureAssessment.Route(id: "r", grade: text).albumGrade, expected, text)
         }
         XCTAssertNil(CaptureAssessment.Route(id: "r").albumGrade)

@@ -69,6 +69,9 @@ struct ReviewView: View {
     /// Pose recognition was started from “分析这一趟”; open the analysis page when it finishes.
     @State private var openAfterPose = false
     @State private var seekAfterAnalysis: Double?
+    /// The render plan that came with the saved analysis, when this build can render it.
+    @State private var editPlan: EditPlan?
+    @State private var editing = false
     var climb: Climb
     private var current: Climb { store.climbs.first { $0.id == climb.id } ?? climb }
     /// Shown only when the installed pack carries the analysis page.
@@ -137,12 +140,18 @@ struct ReviewView: View {
                     AnalysisView(pack: pack, climb: current, store: store) { time in seekAfterAnalysis = time; analysing = false }
                 }
             }
+            .fullScreenCover(isPresented: $editing) {
+                if let editPlan { EditView(climb: current, plan: editPlan, source: store.file(climb.videoName)) }
+            }
+            .onChange(of: store.editPlans.contains(climb.id)) { _, _ in editPlan = store.editPlan(for: current) }
+            // A fresh result may bring another plan under the same name.
+            .onChange(of: analysing) { _, open in if !open { editPlan = store.editPlan(for: current) } }
             .onChange(of: current.pendingAnalysis) { _, pending in
                 guard pending == nil, openAfterPose else { return }
                 openAfterPose = false
                 if current.analysis.hasWorldLandmarks { playback.pause(); analysing = true }
             }
-            .onAppear { sent = current.sent; playback.load(store.file(climb.videoName)) }
+            .onAppear { sent = current.sent; editPlan = store.editPlan(for: current); playback.load(store.file(climb.videoName)) }
             .onDisappear { playback.unload() }
             .onChange(of:sent) { _, value in
                 guard value != current.sent else { return }
@@ -215,10 +224,17 @@ struct ReviewView: View {
                     VStack(spacing: 8) { savedAnalysisButtons(expanded: true) }
                 }
             } else {
-                Button { startAnalysis() } label: { Text("分析这一趟").frame(maxWidth: .infinity) }
-                    .buttonStyle(RouteButtonStyle())
-                    .disabled(openAfterPose && current.pendingAnalysis != nil)
-                    .accessibilityIdentifier("analyseClimb")
+                HStack(spacing: 12) {
+                    Button { startAnalysis() } label: { Text("分析这一趟").frame(maxWidth: .infinity) }
+                        .buttonStyle(RouteButtonStyle())
+                        .disabled(openAfterPose && current.pendingAnalysis != nil)
+                        .accessibilityIdentifier("analyseClimb")
+                    // The page could not analyse this clip but still made a plan (following the climber).
+                    if editPlan != nil {
+                        Button { playback.pause(); editing = true } label: { Text("自动剪辑") }
+                            .buttonStyle(RouteButtonStyle(tone: .lime)).accessibilityIdentifier("autoEdit")
+                    }
+                }
             }
             if store.analysisResults.contains(climb.id), current.capture?.planUse?.used == false {
                 Text(verbatim: CaptureText.planNotUsed).font(.caption).foregroundStyle(BB.muted).fixedSize(horizontal: false, vertical: true)
@@ -232,6 +248,10 @@ struct ReviewView: View {
     private func savedAnalysisButtons(expanded: Bool) -> some View {
         Button { playback.pause(); analysisQueue.cancel(climb.id); analysing = true } label: { Text("看分析").frame(maxWidth: .infinity) }
             .buttonStyle(RouteButtonStyle()).accessibilityIdentifier("viewAnalysis")
+        if editPlan != nil {
+            Button { playback.pause(); editing = true } label: { Text("自动剪辑").frame(maxWidth: expanded ? .infinity : nil) }
+                .buttonStyle(RouteButtonStyle(tone: .lime)).accessibilityIdentifier("autoEdit")
+        }
         Button { store.discardAnalysisResult(current); startAnalysis() } label: {
             Text("重新分析").frame(maxWidth: expanded ? .infinity : nil)
         }.buttonStyle(RouteButtonStyle(tone: .paper)).accessibilityIdentifier("analyseAgain")

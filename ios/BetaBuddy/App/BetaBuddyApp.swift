@@ -41,6 +41,8 @@ struct BetaBuddyApp: App {
     @StateObject private var language = LanguageSettings()
     @StateObject private var membership = MembershipStore()
     init() {
+        // Edits a run that ended with the edit page open left behind; they are made again on demand.
+        try? FileManager.default.removeItem(at: EditFiles.root)
         let store = ClimbStore()
         _store = StateObject(wrappedValue: store)
         _analysisQueue = StateObject(wrappedValue: AnalysisQueue(store: store))

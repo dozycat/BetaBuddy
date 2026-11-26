@@ -3,7 +3,7 @@
 Kotlin + Jetpack Compose 原生应用，Android 8.0（API 26）及以上，竖屏，只有浅色。和 iOS 版是同一个产品，全部离线：
 
 - **岩馆**：场馆数据包里的 3D 页面（线路、推演），装在 `WebView` 里离线加载；没有数据包的构建显示「这个构建没有内置岩馆数据」。
-- **攀爬册**：主按钮「拍一趟」用应用内相机录一趟，取景时由数据包的拍摄页面检查机位、认颜色和岩点；也可以从系统照片选择器导入。保存在先；点「分析这一趟」时先做姿态识别（MediaPipe Pose Landmarker Full，设备上、CPU），在本地前台服务里排队做完；回看只有画面、时间轴、0.1 秒步进、慢放和完攀开关，不叠骨架、不写笔记；姿态识别只是「分析这一趟」的第一步。「分析这一趟」由数据包里的分析页面完成，应用内相机拍的记录在姿态识别之后自动排队分析。文件夹、岩馆 / 难度 / 日期组合筛选、随应用打包的全国岩馆目录。
+- **攀爬册**：主按钮「拍一趟」用应用内相机录一趟，取景时由数据包的拍摄页面检查机位、认颜色和岩点；也可以从系统照片选择器导入。保存在先；点「分析这一趟」时先做姿态识别（MediaPipe Pose Landmarker Full，设备上、CPU），在本地前台服务里排队做完；回看只有画面、时间轴、0.1 秒步进、慢放和完攀开关，不叠骨架、不写笔记；姿态识别只是「分析这一趟」的第一步。「分析这一趟」由数据包里的分析页面完成，应用内相机拍的记录在姿态识别之后自动排队分析。分析页面随结果给了剪辑计划的记录，回看页多一个「自动剪辑」：按计划在手机上剪出一段（慢镜头与回放、推拉镜头、能消干净时消除路人），循环预览，可以经系统分享面板把这段视频发出去。记录可以标抱石 / 顶绳 / 先锋（分析页面也会判断），难度选择器跟着换体系。文件夹、岩馆 / 难度 / 日期组合筛选、随应用打包的全国岩馆目录。
 - **设置与关于**：应用内选语言（「跟随系统」加简体中文、繁体中文、英语、日语、韩语，立即生效），本地与分析边界说明、内置隐私政策、开源许可。
 
 产品介绍见[仓库首页](../../README.md)，Android 上的设计与和 iOS 的差异见 [design.md](design.md)，数据包接口见 [../ios/gym-design.md](../ios/gym-design.md)。
@@ -65,9 +65,9 @@ python3 android/scripts/check-resources.py   # 资源 XML、五种语言的键�
 | Compose BOM | 2026.09.00 | |
 | core-ktx / activity-compose / appcompat | 1.19.1 / 1.13.0 / 1.8.0 | |
 | lifecycle / navigation-compose / webkit | 2.11.0 / 2.10.2 / 1.18.0 | |
-| Media3 ExoPlayer | 1.11.1 | |
+| Media3 ExoPlayer / Transformer / Effect | 1.11.1 | 回看播放；自动剪辑的重新编码与 OpenGL 效果，三个同一版本 |
 | CameraX（camera-core / camera2 / lifecycle / video / view） | 1.7.0 | 应用内相机 |
-| MediaPipe Tasks Vision | 0.10.35 | 0.10 线的最后一个版本 |
+| MediaPipe Tasks Vision | 0.10.35 | 0.10 线的最后一个版本；姿态识别，以及自动剪辑里找人（`ObjectDetector`） |
 | kotlinx-serialization-json / kotlinx-coroutines | 1.13.0 / 1.11.0 | |
 
 选这一组的依据：
@@ -106,6 +106,7 @@ android/
   gradle/wrapper/, gradlew, gradlew.bat
   scripts/install-gym-pack.sh          校验并安装 / 移除场馆数据包
   scripts/check-resources.py           不依赖 SDK 的资源与 Manifest 检查
+  scripts/edit-backtest.sh             拿自己的一段片子和剪辑计划在设备上跑一遍自动剪辑，取回成片、报告和对照图
   THIRD_PARTY.md
   app/
     build.gradle.kts, proguard-rules.pro
@@ -122,6 +123,7 @@ android/
       journal/                         攀爬册：列表、导入、文件夹与筛选、文字、岩馆目录与距离、姿态识别服务、相机开关
       pose/                            解码、姿态识别、几何
       review/                          回看：播放；分析页面的宿主；拍过的记录的分析队列
+      edit/                            自动剪辑：读剪辑计划、时间与镜头的换算、谁能被消掉、找人、渲染、剪辑页面、缓存文件与分享
       data/                            记录的数据结构与本地存储
     src/main/res/
       values*/strings.xml              导航、岩馆、设置的文字
@@ -131,13 +133,15 @@ android/
       raw*/privacy_policy.txt          内置隐私政策（简中、繁中、英）
       xml/locales_config.xml           应用支持的语言
       xml/data_extraction_rules.xml    不进云备份，也不随换机迁移
+      xml/edit_file_paths.xml          分享剪出来的视频时 FileProvider 能给出的唯一目录（缓存里的 edits/）
     src/main/assets/
       pose_landmarker_full.task        姿态模型
+      efficientdet_lite2.tflite        找人的检测模型（自动剪辑消除路人时用）
       gyms-cn.json                     全国岩馆目录（来源与覆盖见 docs/gym-directory.md）
       licenses/                        第三方许可全文（设置里可以查看）
       gympack/                         场馆数据包（被忽略，由脚本装入）
     src/test/                          JVM 单元测试（纯 Kotlin，不依赖 Android 类）
-    src/androidTest/                   设备测试：解码与推理；拍摄界面（替身页面、画出来的墙）
+    src/androidTest/                   设备测试：解码与推理；拍摄界面（替身页面、画出来的墙）；自动剪辑（合成的片子与计划、按颜色找方块的替身、真模型一例）
 ```
 
 ## 与 iOS 的对应
@@ -160,6 +164,7 @@ android/
 | `Core/CaptureSession.swift`、`Views/CaptureView.swift` | `capture/CaptureSession.kt`、`capture/CaptureScreen.kt`、`capture/CaptureGymSheet.kt` |
 | `Core/GymLocator.swift` | `journal/GymDirectory.kt`（目录与距离）、`capture/GymLocator.kt`（取一次位置） |
 | `Core/AnalysisQueue.swift` | `journal/CameraGate.kt`、`review/AnalysisQueue.kt` |
+| 自动剪辑与攀爬方式（iOS 的文件见 `docs/ios/`） | `edit/EditPlan.kt`、`EditTimeline.kt`、`Passers.kt`、`PeopleFinder.kt`、`EditRenderer.kt`、`EditEffect.kt`、`EditScreen.kt`、`EditFiles.kt`；`data/Models.kt` 里的 `Discipline`、`GradeScale` |
 | `TestSupport/`（替身页面、合成的墙） | `src/androidTest/assets/*-standin.html`、`src/androidTest/.../capture/StandIns.kt` |
 | `Resources/Localizable.xcstrings` | `res/values*/strings*.xml` |
 | `Resources/PrivacyPolicy.<语言>.txt` | `res/raw*/privacy_policy.txt` |
@@ -215,19 +220,52 @@ adb shell "am start -n $A --ei initialTab 1 --ez openCapture true \
 
 只记实际做过的；没做的列在「尚未验证」里。
 
-### 当前代码（数据包 1.9.8）
+### 当前代码（数据包 1.10.0，加上自动剪辑与攀爬方式）
 
-在一台 Apple 芯片的 Mac 上，JDK 17，Android SDK 平台 37、Build-Tools 36.0.0，工作区里装着数据包 1.9.8（安装脚本逐个核对了清单里文件的 SHA-256）：
+在一台 Apple 芯片的 Mac 上，JDK 17，Android SDK 平台 37、Build-Tools 36.0.0，工作区里装着数据包 1.10.0：
 
 | 命令 | 结果 |
 | --- | --- |
-| `python3 android/scripts/check-resources.py` | 通过：259 条文字 × 5 种语言（回看去掉骨架和笔记之后） |
-| `./gradlew :app:testDebugUnitTest` | 144 个测试全部通过 |
+| `python3 android/scripts/check-resources.py` | 通过：271 条文字 × 5 种语言 |
+| `./gradlew :app:testDebugUnitTest` | 188 个测试全部通过 |
 | `./gradlew :app:assembleDebug :app:lintDebug` | 通过；lint 0 error（warning 是固定版本的更新提示、复数资源建议、KTX 写法之类） |
 | `./gradlew :app:compileDebugAndroidTestKotlin` | 设备测试能编译 |
-| `./gradlew :app:connectedDebugAndroidTest`（Android 15 模拟器，`-camera-back virtualscene -qemu -append "arm64.nosme"`） | 22 个里 20 个运行并通过，2 个要真从系统取位置的跳过 |
+| `./gradlew :app:assembleRelease` | 通过（R8 与资源压缩）；`aapt2 dump permissions` 列出的权限与上面的权限表一致，新增的组件只有不导出的 `FileProvider` |
+| `./gradlew :app:connectedDebugAndroidTest`（Android 15 模拟器，`-camera-back virtualscene -qemu -append "arm64.nosme"`） | 37 个：最近一遍全套 33 个通过、3 个跳过（2 个要真从系统取位置，1 个要给片子才跑的 `EditBacktest`）、1 个没过——`CaptureScreenTest` 里量应用自己的编码器帧率的那一条量到每秒 7.3 帧，当时这台 Mac 的负载很高，单独重跑通过。更早的几遍里「空间不足 / 太短」那一条有两遍等界面超时，单独跑和整类跑都通过，原因没有查清。测试里切应用语言的命令原来不等它执行完就启动界面，机器慢时界面会在测试中途被重建（落在岩馆、英语）；现在等命令结束、设置生效再启动 |
 
-设备测试（`CaptureScreenTest` 13 个、`VideoAnalyzerInstrumentedTest` 9 个）在这一轮整理之后的代码上重跑过，只在 Android 15 模拟器上；没有真机。Release 包上一次是在更早的代码上跑的，见下一节。
+设备测试是 `CaptureScreenTest` 13 个、`VideoAnalyzerInstrumentedTest` 9 个、`EditRendererTest` 11 个、`EditScreenTest` 2 个，另有一个平时跳过的 `EditBacktest`（见下面「拿真实片子跑过的」），这一轮只在 Android 15 模拟器上跑过；没有真机。自动剪辑的设备测试做了这些（片子和计划都是合成的：灰墙、顶上一条蓝杠、一个往上走的绿方块当攀爬者、一个横着走的洋红方块当路人；找人用按颜色找方块的替身）：
+
+- 输出在每个抽查的时刻显示的正是计划要的源时刻（原速、0.5 倍、2 倍和一段往回的回放），方向是正的；带旋转信息、横着存的片子也一样。
+- 镜头窗口的位置和放大倍数与计划一致；「推拉镜头」关掉回到整幅画面。
+- 路人在所有抽查的帧里都不见了，攀爬者在；「消除路人」关掉时不找人、路人在。
+- 攀爬者在一处停了大半段片子、之后路人走过那里：换上去的是墙，不是攀爬者的残影（把「每张画面不计自己时刻的 `keep` 框」关掉重跑，这一条会失败）。
+- 路人的路线穿过攀爬者：路人在所有抽查的帧里都完整地在，一个也没被消。
+- 路人从一个留下来的人身上走过（一个更小、来回走动、只在中间一段被替身「认出」的黄方块）：路人和这个人在所有抽查的帧里都完整地在，一个也没被消（把「不盖到留下来的人」这条检查关掉重跑，会失败）。
+- 原速的片段接了三段，输出的帧数和源里这一段的帧数一样（±3）；慢放一帧不少；2 倍速的片段大约是一半。
+- 取消后同一个渲染器还能再用；不是视频的文件被拒绝；换一个开关不重新找人。
+- 随应用打包的检测模型在一张画出来的画面上（MediaPipe 的示例照片缩小后贴在灰墙前）找到了人，空墙上没找到。只说明模型能加载、能跑，不说明找路人的效果。
+- 剪辑页面：三个开关都出现、渲染完开始播放（从 `TextureView` 取图核对不是黑的）、换开关后重新渲染且只留新文件、`FileProvider` 给出的 `content://` 地址读出来就是这个文件、点「完成」后缓存目录清空。回看页：存着没有计划的结果时没有「自动剪辑」按钮，存上计划后出现，点开能渲染（这一条要构建里有带分析页面的数据包，没有时跳过）。
+- 拍摄流程的测试里，替身分析页面随结果交回一份编出来的计划和「顶绳」的判断：计划原样存下、能读；这条记录用户标过 V 级难度，所以这个判断没有存，攀爬方式和难度都没变（自动的判断从不动用户标的难度）。
+
+Release 包这一轮只编译、看了权限和组件，没有在设备上跑；更早的代码上跑过的见下一节。
+
+#### 拿真实片子跑过的
+
+`android/scripts/edit-backtest.sh <视频> <plan.json> <输出目录>` 把一段片子和一份剪辑计划放进应用自己的缓存（经 Debug 包的 `run-as`，不涉及存储权限），用随应用打包的检测模型跑可选的设备测试 `EditBacktest`（不给片子时跳过），取回三段成片（开关全开、全关、只开消除路人）、一份报告（找到并跟住了谁、每个人消掉还是留下以及为什么、底图有多少像素是有的、每一步用了多久）和一张对照图（原片与「只开消除路人」在这一趟里 8 个时刻的并排，需要 ffmpeg）。片子和产物都放在仓库之外。计划文件写着没有计划（`{"edit": null}`）时脚本直接说明并停下。
+
+到现在只跑过一段真实的片子，在 Android 15 模拟器上（4 核，软件渲染的 OpenGL）：
+
+- 片子：1080×1920、30 fps、16.5 秒，一个人爬抱石，画面里没有路人；片子本身是剪过的，开头和结尾各有一个别的镜头。
+- 数据包 1.10.0 对这段片子不给剪辑计划（因为片子里有切换镜头），所以应用里这条记录不会有「自动剪辑」按钮。为了让渲染和找人仍然在真实画面上跑一遍，用的是一份手工写的计划：`keep` 框取自这段片子的姿态关键点的包围框，`trim`、一段 0.5 倍慢放、一个 1.4 倍的镜头窗口和 20 个底图时刻都是随手定的。**这不是数据包的计划**，只用来走通原生这一侧。
+- 找人：15.1 秒里跟出 12 条轨迹。一条是攀爬者（1.97–14.63 秒，92 次），其余 11 条是攀爬者身上或身边的零碎框（多数只出现一两次），以及结尾那个别的镜头里的东西；12 条全都碰到 `keep` 框，所以没有候选、没有做底图、没有人被消掉。
+- 结果：「只开消除路人」与「全关」两段成片逐字节相同；对照图上 8 个时刻原片和成片看不出差别，方向和时间对得上。没有任何东西被错消——也因为这段片子里本来就没有能消的人，**消除路人本身在真实画面上还没有被检验过**。
+- 耗时（模拟器）：找人 11.2 秒；每次导出 13–14 秒；第一次全开的渲染合计 25.3 秒，之后换开关每次 13 秒左右。成片 1920×1080（带旋转标记，播放时是竖的）、453 帧、约 16 MB。
+
+有路人的片子还没有找到，所以**「消除路人」这次不开放**：`EditOptions.REMOVAL_OFFERED` 关着，剪辑页不显示这个开关，剪辑时不加载检测模型；代码、测试和模型文件都留着。
+
+2026-11-26 关掉之后的复跑：`check-resources.py` 通过；单元测试 183 个通过；`assembleDebug`、`lintDebug`、`compileDebugAndroidTestKotlin` 通过；剪辑这一组设备测试（`EditRendererTest`、`EditScreenTest`、平时跳过的 `EditBacktest`）在 Android 15 模拟器上 14 个里 13 个通过、1 个跳过，剪辑页上确认没有「消除路人」开关。完整设备测试这一轮没有重跑。模拟器要按下面「模拟器」一节带 `arm64.nosme` 启动，不带的话 MediaPipe 的任何模型（包括原有的姿态识别）都会以非法指令崩溃。
+
+顶绳和先锋：数据包对 8 段下载来的真实绳攀片子的判断见 `docs/ios/validation.md` 同一天的记录（顶绳 6 段认出、都标不确定，先锋 2 段没认出）；这些片子没有在 Android 应用里走过，Android 这边只有 `analysisError` 带 `discipline` 的消息解析单元测试。
 
 ### 模拟器上做过的
 
@@ -244,6 +282,12 @@ adb shell "am start -n $A --ei initialTab 1 --ez openCapture true \
 
 ### 尚未验证
 
+- **自动剪辑在真实的片子上**：除了合成的片子，只在模拟器上跑过一段没有路人的真实片子，而且用的是手工写的计划（见上面「拿真实片子跑过的」）。数据包 1.10.0 给出的真实计划没有在 Android 上渲染过；真实场景里找路人的效果（远处的小人、背对镜头、被遮挡）、底图在真实灯光下对不对得上、放大圈和羽化合不合适，都没有看过——那一段片子里没有人被消掉，所以这些一样也没碰到。那一次检测模型在攀爬者身上和身边多报了十来个零碎的框；它们都碰到 `keep` 框所以没有后果，但同样的零碎框落在别处时会被当成「留下来的人」，挡住从旁边走过的路人不被消掉，这一点有多常见还不知道。检测模型的选型只在模拟器上拿一张示例图比过。
+- **自动剪辑的耗时、内存和发热**：模拟器上 3 秒 360×640 的片子几秒钟；真机上 1080p、几十秒的片子要多久（找人大约每秒片子 8 次推理，加一遍导出）、会不会被系统因内存回收、硬件编码器对输出尺寸和帧率的限制，都不知道。HDR 片子、60 fps 片子、带编辑列表（第一帧时间不是 0）的片子没有试过；Android 10 以下 HDR 转 SDR 走不了 OpenGL 的那条路没有试过。
+- **自动剪辑在 Release 包上**：只编译过。R8 之后 Transformer、着色器和 `ObjectDetector` 的路径没有在设备上跑过。
+- **分享视频**：只核对了 `FileProvider` 的地址能读出文件；没有真的经系统分享面板发给另一个应用。分享之后马上点「完成」（文件被删）时对方还读不读得到，没有试过。
+- **剪辑页面、导入页和「整理这一趟」里的三段选择**：只有英语的截图看过剪辑页面和回看页的按钮；攀爬方式的三段选择和按体系换的难度选择器没有截图看过，繁体中文、日语、韩语下三个开关的文字会不会折行、最大字号、TalkBack 都没有看过。
+- **数据包 1.10.0 的分析页面在 Android 上**：这一轮没有打开过；真实结果里的 `edit` / `discipline` 只由替身页面走通了接口。
 - **去掉骨架和笔记之后的回看页、导入页**：只跑了单元测试、`assembleDebug`、`lintDebug` 和设备测试的编译；没有在模拟器上打开看过排版（尤其是窄屏上时间、三个按钮和速度在一行里放不放得下）。
 - **任何真机。** 相机预览与录像在各厂商相机上的表现、视场角和姿态传感器的数值、发热与过热中止、内存、硬件解码器、HDR 视频、长片子的取帧和存档写入耗时；应用自己的编码器在真机上会不会被用到、用到时的帧率。
 - **数据包 1.9.6–1.9.8 的分析页面在 Android 上**（一步一步的几屏、剪纸小人、这一趟的建议）：没有在 Android 模拟器或真机上打开过；Android 这边只确认了这些文件装进了 APK。
@@ -292,12 +336,12 @@ cd android
 ./gradlew :app:connectedDebugAndroidTest          # 需要连着设备或开着模拟器
 ```
 
-预期：资源检查通过；单元测试全部通过；lint 没有 error；权限与上面的权限表一致；设备测试 22 个里 20 个运行并通过、2 个要真从系统取位置的跳过。设备测试会往应用的外部文件目录写各个状态的截图（`capture-shots/`），用 `adb shell am instrument` 直接跑（不经 Gradle 卸载应用）就能 `adb pull` 出来；截图不进仓库。然后用 Release 包在设备上走一遍：
+预期：资源检查通过；单元测试全部通过；lint 没有 error；权限与上面的权限表一致；设备测试 37 个里 34 个运行并通过，跳过的 3 个是 2 个要真从系统取位置的和 1 个要给片子才跑的 `EditBacktest`（没有带分析页面的数据包时，回看页那一条自动剪辑的测试也跳过）。设备测试会往应用的外部文件目录写各个状态的截图（`capture-shots/`、`edit-shots/`），用 `adb shell am instrument` 直接跑（不经 Gradle 卸载应用）就能 `adb pull` 出来；截图不进仓库。然后用 Release 包在设备上走一遍：
 
 1. 不装数据包的构建：落在岩馆，显示「这个构建没有内置岩馆数据」；底部齿轮、右上角按钮都能进「设置与关于」，隐私政策和开源许可能打开；拍摄界面能录能存；回看页没有「分析这一趟」。
 2. 装了数据包的构建：说明页只出现一次 → 场景出现、能转动缩放、选线 → 切到攀爬册再回来不重载 → 页面菜单里打开原生设置 → 换一种语言，返回后页面是新语言并回到刚才的线路 → 开不开飞行模式表现一致。
 3. 语言：五种语言加「跟随系统」逐个选；杀掉应用重开仍是所选语言；系统语言设成五种之外的语言时界面是英语。
-4. 攀爬册导入：一段竖拍、一段横拍 → 保存 → 回看一打开就有画面、步进、慢放 → 完攀开关、分享文字 → 「分析这一趟」→ 删除。
+4. 攀爬册导入：一段竖拍、一段横拍 → 选抱石 / 顶绳 / 先锋，难度选择器跟着换 → 保存 → 回看一打开就有画面、步进、慢放 → 完攀开关、分享文字 → 「分析这一趟」→ 「自动剪辑」：等它剪完、循环播放，三个开关各关一次，有路人走过的片子看被消的人是不是全程都消了、没被消的是不是全程都在，「分享视频」发给另一个应用 → 「完成」→ 删除。
 5. 分析这一趟：没识别过姿态的记录点「分析这一趟」→ 先跑姿态识别 → 自动进入分析页面 →「正在准备画面…」→ 页面显示结果 → 页面里请求看视频里的某一刻，回看停在那一刻 →「看分析」和「重新分析」→ 杀掉应用重开，「看分析」直接显示保存的结果 → 删除记录后 `filesDir/BetaBuddy/` 里没有这条记录的结果文件。
 6. 拍一趟：第一次出现相机询问（拒绝一次，看说明卡片和「改从相册导入」；再从系统设置里打开）→ 对着墙：提示、色块、岩点描边 → 选颜色、点一下标起步和结束 → 岩馆（「按距离找附近的岩馆」）→ 录 → 停 →「已保存到攀爬册」→ 放着等「看分析」→ 录像中按 Home、来电、锁屏各试一次，回来都应该已经保存。
 

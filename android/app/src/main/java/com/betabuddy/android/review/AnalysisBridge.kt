@@ -2,6 +2,7 @@ package com.betabuddy.android.review
 
 import com.betabuddy.android.data.CapturePlanShift
 import com.betabuddy.android.data.CapturePlanUse
+import com.betabuddy.android.data.Discipline
 import com.betabuddy.android.data.PoseFrame
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -28,18 +29,30 @@ sealed interface AnalysisMessage {
      * A finished result. [json] is the page's own format and is stored exactly as received.
      * [climber] is the JSON text of the body measurements the page used, to start the next analysis from.
      */
-    data class Result(val id: String, val json: String, val climber: String?, val capture: CapturePlanUse? = null) : AnalysisMessage
+    data class Result(
+        val id: String, val json: String, val climber: String?, val capture: CapturePlanUse? = null,
+        /** The page's plan for an automatic edit, as the JSON text it sent, or null when it sent none. Stored as it is. */
+        val edit: String? = null,
+        /** What the page judged the climb to be (one of the `Discipline` values), or null when it could not tell. */
+        val discipline: String? = null,
+    ) : AnalysisMessage
 
     /** The user asked to see this moment of the clip. Seconds. */
     data class Seek(val time: Double) : AnalysisMessage
 
-    /** The page could not analyse the clip and is already showing why. */
-    data class Error(val code: String) : AnalysisMessage
+    /**
+     * The page could not analyse the clip and is already showing why. [discipline] is what it still
+     * made of the climbing style (one of the `Discipline` values), from packs that send it. [edit] is
+     * a plan for an automatic edit it could still make, as the JSON text it sent, stored as it is.
+     */
+    data class Error(val code: String, val discipline: String? = null, val edit: String? = null) : AnalysisMessage
 
     companion object {
         // A result carries a picture and runs to a couple of hundred kilobytes; anything far beyond that is not one.
         private const val MAX_LENGTH = 8 * 1024 * 1024
         private const val MAX_CLIMBER_LENGTH = 2_000
+        // A plan is a list of times and boxes: tens of kilobytes for a long clip.
+        private const val MAX_EDIT_LENGTH = 4 * 1024 * 1024
 
         /**
          * Parses the JSON text of one message. Progress reports (the page draws its own), unknown
@@ -64,27 +77,35 @@ sealed interface AnalysisMessage {
                         }
                         CapturePlanUse(used, text("reason"), text("start"), text("finish"), shift)
                     }
-                    Result(string("id").orEmpty(), result, climber, capture)
+                    val edit = (body["edit"] as? JsonObject)?.toString()?.takeIf { it.length <= MAX_EDIT_LENGTH }
+                    val discipline = ((body["discipline"] as? JsonObject)?.get("kind") as? JsonPrimitive)?.takeIf { it.isString }?.content?.takeIf(Discipline::valid)
+                    Result(string("id").orEmpty(), result, climber, capture, edit, discipline)
                 }
                 "analysisSeek" -> {
                     val time = (body["t"] as? JsonPrimitive)?.takeIf { !it.isString }?.doubleOrNull
                     if (time != null && time.isFinite()) Seek(maxOf(0.0, time)) else null
                 }
-                "analysisError" -> Error(string("code").orEmpty().take(60))
+                "analysisError" -> Error(
+                    string("code").orEmpty().take(60),
+                    ((body["discipline"] as? JsonObject)?.get("kind") as? JsonPrimitive)?.takeIf { it.isString }?.content?.takeIf(Discipline::valid),
+                    (body["edit"] as? JsonObject)?.toString()?.takeIf { it.length <= MAX_EDIT_LENGTH },
+                )
                 else -> null
             }
         }
     }
 }
 
-/** App → page calls: `window.BetaBuddyAnalysis.begin / addFrame / addPoses / run / show`. */
+/** App → page calls: `window.BetaBuddyAnalysis.begin / addFrame / addTrackFrame / addPoses / run / show`. */
 object AnalysisScript {
     /**
      * [id] is the record's id, [width] × [height] the clip as displayed, [climber] the JSON text an
      * earlier result came with. [capture] is the capture page's plan for a record made with the
-     * in-app camera, handed back as the text it was stored as.
+     * in-app camera, handed back as the text it was stored as. [discipline] is what the user chose
+     * for this record, if they did; the page then does not judge it again. [duration] is how long
+     * the clip really is, in seconds.
      */
-    fun begin(id: String, width: Int, height: Int, climber: String?, capture: String? = null): String {
+    fun begin(id: String, width: Int, height: Int, climber: String?, capture: String? = null, discipline: String? = null, duration: Double? = null): String {
         val measurements = climber?.let { text -> try { Json.parseToJsonElement(text) as? JsonObject } catch (error: Exception) { null } }
         val meta = buildJsonObject {
             put("id", id)
@@ -92,12 +113,25 @@ object AnalysisScript {
             put("h", height)
             if (measurements != null) put("climber", measurements)
             if (!capture.isNullOrEmpty()) put("capture", capture)
+            if (Discipline.valid(discipline)) put("discipline", discipline)
+            if (duration != null && duration.isFinite() && duration > 0) put("duration", duration)
         }
         return call("begin", literal(meta.toString()))
     }
 
     fun addFrame(index: Int, time: Double, jpegBase64: String): String =
         call("addFrame", "$index,${JsonPrimitive(finite(time))},${string(jpegBase64)}")
+
+    /**
+     * One of the small, frequent pictures of the whole clip that newer packs take besides the
+     * stills: seconds into the clip, and the JPEG. The call evaluates to `false` on a page that has
+     * no such function (see [refused]); nothing more needs sending then.
+     */
+    fun addTrackFrame(time: Double, jpegBase64: String): String =
+        call("addTrackFrame", "${JsonPrimitive(finite(time))},${string(jpegBase64)}")
+
+    /** True when what a call evaluated to says the page has no such function. */
+    fun refused(answer: String?): Boolean = answer?.trim() == "false"
 
     /** [batch] is the JSON text of an array from [AnalysisFeed.poseBatches]; the page parses it. */
     fun addPoses(batch: String): String = call("addPoses", string(batch))
@@ -123,6 +157,12 @@ object AnalysisFeed {
     const val FRAME_WIDTH = 540
     const val POSE_BATCH = 40
 
+    /** The small pictures of the whole clip (`addTrackFrame`): this many a second, this size, this JPEG quality, at most this many. */
+    const val TRACK_RATE = 3.0
+    const val TRACK_SHORT_SIDE = 270
+    const val TRACK_JPEG_QUALITY = 50
+    const val TRACK_MAX_FRAMES = 900
+
     /** The page needs at least this many pictures to work with. */
     const val MIN_FRAMES = 5
 
@@ -137,12 +177,22 @@ object AnalysisFeed {
     }
 
     /**
-     * Size of a picture for the page: the shorter side is [FRAME_WIDTH] (never upscaled), same shape
+     * Times of the small pictures of the whole clip: evenly spread, about [TRACK_RATE] a second, and
+     * fewer a second once that would be more than [TRACK_MAX_FRAMES].
+     */
+    fun trackTimes(duration: Double): List<Double> {
+        if (!duration.isFinite() || duration <= 0) return emptyList()
+        val count = Math.ceil(duration * TRACK_RATE).toInt().coerceIn(1, TRACK_MAX_FRAMES)
+        return List(count) { index -> (index + 0.5) * duration / count }
+    }
+
+    /**
+     * Size of a picture for the page: the shorter side is [shortSide] (never upscaled), same shape
      * as the displayed clip, so a landscape clip keeps as much detail as a portrait one.
      */
-    fun frameSize(displayWidth: Int, displayHeight: Int): Pair<Int, Int> {
+    fun frameSize(displayWidth: Int, displayHeight: Int, shortSide: Int = FRAME_WIDTH): Pair<Int, Int> {
         val shorter = minOf(displayWidth, displayHeight).coerceAtLeast(1)
-        val scale = minOf(1.0, FRAME_WIDTH.toDouble() / shorter)
+        val scale = minOf(1.0, shortSide.toDouble() / shorter)
         return maxOf(1, Math.round(displayWidth * scale).toInt()) to maxOf(1, Math.round(displayHeight * scale).toInt())
     }
 

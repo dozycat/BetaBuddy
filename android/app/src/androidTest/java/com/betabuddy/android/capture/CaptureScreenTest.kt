@@ -107,8 +107,14 @@ class CaptureScreenTest {
      */
     private fun setLanguage(language: String?) {
         if (android.os.Build.VERSION.SDK_INT >= 33) {
-            instrumentation.uiAutomation.executeShellCommand("cmd locale set-app-locales ${context.packageName} --locales ${language ?: "\"\""}").close()
-            Thread.sleep(500)
+            // The command runs on its own; its output is read to the end so that it has finished, and then
+            // the setting is waited for. Launching before it lands would have the activity rebuilt mid-test.
+            val output = instrumentation.uiAutomation.executeShellCommand("cmd locale set-app-locales ${context.packageName} --locales ${language ?: "\"\""}")
+            android.os.ParcelFileDescriptor.AutoCloseInputStream(output).use { it.readBytes() }
+            val locales = context.getSystemService(android.app.LocaleManager::class.java)
+            val deadline = System.currentTimeMillis() + 5_000
+            while (System.currentTimeMillis() < deadline && locales.applicationLocales.toLanguageTags() != language.orEmpty()) Thread.sleep(50)
+            Thread.sleep(300)
         } else {
             instrumentation.runOnMainSync { AppLanguage.select(language) }
         }
@@ -277,6 +283,19 @@ class CaptureScreenTest {
         val result = Json.parseToJsonElement(store.analysisResult(saved.id)!!).jsonObject
         assertEquals("the plan reaches the analysis page as it was stored", store.capturePlan(saved.id), result.getValue("capture").jsonPrimitive.content)
         assertTrue(result.getValue("poses").jsonPrimitive.content.toInt() > 0)
+        // The small pictures of the whole clip came too, about three a second, after the stills and before the run.
+        val tracks = result.getValue("tracks").jsonPrimitive.content.toInt()
+        assertTrue("track frames: $tracks for ${saved.analysis.duration} s", tracks >= (saved.analysis.duration * 2).toInt() && tracks <= (saved.analysis.duration * 3).toInt() + 2)
+        assertEquals("bftr", result.getValue("order").jsonPrimitive.content)
+        // What came with the result is kept too: the plan for an automatic edit as the page sent it. The
+        // user had chosen no discipline, so the page was told none and judged one itself ("toprope"); but
+        // the user had marked a V grade, and a guess never costs a grade: it is not stored, and the grade stays.
+        assertTrue(result.getValue("discipline") is kotlinx.serialization.json.JsonNull)
+        val edit = com.betabuddy.android.edit.EditPlan.parse(store.editPlan(saved.id))!!
+        assertTrue(edit.hasKeep && edit.hasSlowMotion && edit.hasCamera)
+        assertEquals(2, edit.segments.size)
+        assertNull(done.discipline); assertNull(done.disciplineAuto)
+        assertEquals("V4", done.grade)
 
         rule.onNodeWithTag("captureAgain").performClick()
         await("capturePrompt")

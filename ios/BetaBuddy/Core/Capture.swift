@@ -58,10 +58,10 @@ struct CaptureAssessment: Equatable, Sendable {
         }
         /// What to call it on screen: its name, else its own name, else its id.
         var title: String { name ?? nameZh ?? id }
-        /// The grade as one of the values the album uses (V0–V12), or `nil` when the page's text is
-        /// anything else. Gyms write grades in their own ways; only this form is the same in every language.
+        /// The grade as one of the values the album's bouldering scale uses (V0–V16), or `nil` when the
+        /// page's text is anything else. Gyms write grades in their own ways; only this form is the same in every language.
         var albumGrade: String? {
-            guard let grade, grade.hasPrefix("V"), let number = Int(grade.dropFirst()), (0...12).contains(number), grade == "V\(number)" else { return nil }
+            guard let grade, GradeScale.boulder.contains(grade) else { return nil }
             return grade
         }
         init?(body: Any?) {

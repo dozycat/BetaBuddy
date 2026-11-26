@@ -109,9 +109,9 @@ class CaptureTest {
 
     @Test fun onlyAPlainVGradeIsTakenForTheLogbook() {
         fun grade(text: String?) = com.betabuddy.android.data.CaptureRoute("r", grade = text).albumGrade
-        assertEquals("V0", grade("V0")); assertEquals("V3", grade("V3")); assertEquals("V12", grade("V12"))
+        assertEquals("V0", grade("V0")); assertEquals("V3", grade("V3")); assertEquals("V12", grade("V12")); assertEquals("V16", grade("V16"))
         // Gyms write grades in their own ways; anything else is shown as it is and never filled in.
-        for (other in listOf(null, "", "V13", "V-1", "V03", "v3", "V3+", "V3-4", " V3", "6A", "紫条 11–12", "V", "VB")) assertNull(other, grade(other))
+        for (other in listOf(null, "", "V17", "V-1", "5.10a", "V03", "v3", "V3+", "V3-4", " V3", "6A", "紫条 11–12", "V", "VB")) assertNull(other, grade(other))
     }
 
     @Test fun otherMessages() {

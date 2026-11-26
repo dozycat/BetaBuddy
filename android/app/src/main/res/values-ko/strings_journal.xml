@@ -74,4 +74,18 @@
     <string name="journal_analysis_background">분석 중이에요. 이 화면을 나가도 괜찮아요.</string>
     <string name="journal_analysis_deferred">앱으로 돌아오면 다시 분석해요.</string>
     <string name="journal_analysis_waiting">분석 대기 중…</string>
+
+    <!-- Discipline, and the automatic edit made from the analysis page's plan -->
+    <string name="journal_discipline_boulder">볼더링</string>
+    <string name="journal_discipline_toprope">톱로프</string>
+    <string name="journal_discipline_lead">리드</string>
+    <string name="journal_discipline_label">등반 방식</string>
+    <string name="journal_edit_open">자동 편집</string>
+    <string name="journal_edit_remove_passers">행인 지우기</string>
+    <string name="journal_edit_slow">슬로 모션</string>
+    <string name="journal_edit_camera">카메라 워크</string>
+    <string name="journal_edit_share">영상 공유</string>
+    <string name="journal_edit_working">편집 중…</string>
+    <string name="journal_edit_failed">편집하지 못했습니다: %1$s. 다시 시도해 주세요.</string>
+    <string name="journal_edit_note">자동으로 편집해서 어긋날 수 있어요.</string>
 </resources>

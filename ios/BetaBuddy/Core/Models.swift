@@ -59,6 +59,13 @@ struct Climb: Codable, Identifiable, Sendable {
     var pendingAnalysis: String? = nil
     /// Set for records made with the in-app camera: what was chosen and recognised while framing.
     var capture: CaptureInfo? = nil
+    /// `Discipline` raw value, or absent. Kept as text so a value a newer build wrote does not make the archive unreadable.
+    var discipline: String? = nil
+    /// The discipline came from the analysis page, not from the user; a later result may replace it.
+    var disciplineAuto: Bool? = nil
+    var style: Discipline? { discipline.flatMap(Discipline.init(rawValue:)) }
+    /// What the user chose themselves, for handing to the analysis page.
+    var chosenStyle: Discipline? { disciplineAuto == true ? nil : style }
     var climbingDate: Date { climbedAt ?? date }
     var gymKey: String {
         if let id = gymId, !id.isEmpty { return "id:" + id }

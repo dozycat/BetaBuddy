@@ -48,7 +48,7 @@ final class ImportModel: ObservableObject {
         hasRecordingDate = date != nil
         if let date { climbedAt = date }
     }
-    func run(store:ClimbStore,title:String,grade:String,sent:Bool,gymId:String?,gymName:String,climbedAt:Date,folderId:UUID?) {
+    func run(store:ClimbStore,title:String,grade:String,sent:Bool,gymId:String?,gymName:String,climbedAt:Date,folderId:UUID?,discipline:Discipline? = nil) {
         guard !busy, let url = selectedURL else { return }
         busy = true; error = nil
         work = Task {
@@ -57,7 +57,7 @@ final class ImportModel: ObservableObject {
                 let analysis = try await analyzer.videoSummary(url: url)
                 let thumbnail = try await analyzer.thumbnail(url:url)
                 try Task.checkCancellation()
-                saved = try store.save(title:title,grade:grade,sent:sent,note:"",stagedVideo:url,thumbnail:thumbnail,analysis:analysis,gymId:gymId,gymName:gymName,climbedAt:climbedAt,folderId:folderId,pendingAnalysis:nil)
+                saved = try store.save(title:title,grade:grade,sent:sent,note:"",stagedVideo:url,thumbnail:thumbnail,analysis:analysis,gymId:gymId,gymName:gymName,climbedAt:climbedAt,folderId:folderId,pendingAnalysis:nil,discipline:discipline)
                 selectedURL = nil
                 try? FileManager.default.removeItem(at:url)
             } catch is CancellationError {
@@ -81,6 +81,9 @@ struct ImportView: View {
     @State private var files = false
     @State private var title = ""
     @State private var grade = ungradedValue
+    @State private var discipline = Discipline.boulder
+    /// Left alone, the record has no discipline and the analysis may fill one in.
+    @State private var disciplinePicked = false
     @State private var sent = false
     @State private var gymId: String?
     @State private var gymName = ""
@@ -174,13 +177,11 @@ struct ImportView: View {
             VStack(alignment:.leading,spacing:14) {
                 Text("这一趟的名字").font(.caption.bold())
                 TextField("例如：周日的紫色线路",text:$title).textFieldStyle(.roundedBorder).accessibilityIdentifier("climbTitle")
+                DisciplinePicker(discipline: $discipline, grade: $grade) { disciplinePicked = true }
                 HStack {
                     Text("线路难度").font(.subheadline)
                     Spacer()
-                    Picker("线路难度",selection:$grade) {
-                        Text("未标级").tag(ungradedValue)
-                        ForEach(0..<13) { Text(verbatim:"V\($0)").tag("V\($0)") }
-                    }.tint(BB.ink)
+                    GradePicker(grade: $grade, discipline: discipline).tint(BB.ink)
                 }
                 Toggle("这趟完攀了",isOn:$sent).tint(BB.ink)
             }
@@ -197,7 +198,7 @@ struct ImportView: View {
         }
     }
     private func save() {
-        model.run(store:store,title:title,grade:grade,sent:sent,gymId:gymId,gymName:gymName,climbedAt:model.climbedAt,folderId:folderId)
+        model.run(store:store,title:title,grade:grade,sent:sent,gymId:gymId,gymName:gymName,climbedAt:model.climbedAt,folderId:folderId,discipline:disciplinePicked ? discipline : nil)
     }
     @ViewBuilder
     private func sourceButtons(expanded: Bool) -> some View {

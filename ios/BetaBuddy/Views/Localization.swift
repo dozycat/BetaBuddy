@@ -2,9 +2,6 @@ import SwiftUI
 
 // Display text for values that are stored language-independently or in the source language.
 
-/// Stored sentinel for a climb without a grade. Kept as is so existing archives stay readable.
-let ungradedValue = "未标级"
-
 func gradeText(_ grade: String) -> String {
     grade == ungradedValue ? String(localized: "未标级", bundle: AppLanguage.bundle) : grade
 }

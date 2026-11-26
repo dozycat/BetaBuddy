@@ -1,6 +1,7 @@
 name: BetaBuddy
 options:
   bundleIdPrefix: com.betabuddy
+  postGenCommand: sh scripts/patch-schemes.sh
   deploymentTarget:
     iOS: '17.0'
   developmentLanguage: zh-Hans
@@ -30,7 +31,7 @@ targets:
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
         INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
         INFOPLIST_KEY_NSPhotoLibraryUsageDescription: 选择攀爬视频，在这台 iPhone 上分析动作。
-        INFOPLIST_KEY_NSCameraUsageDescription: 拍下你的攀爬，在这台 iPhone 上检查机位并保存。画面和录像不会离开设备。
+        INFOPLIST_KEY_NSCameraUsageDescription: 拍下你的攀爬，在这台 iPhone 上检查机位并保存。录像只保存在这台设备上，除非你自己分享出去。
         INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: 按距离推荐附近的岩馆。位置只在这台 iPhone 上使用，不保存，也不会离开设备。
         LOCALIZATION_PREFERS_STRING_CATALOGS: YES
         SWIFT_EMIT_LOC_STRINGS: YES
@@ -89,7 +90,12 @@ targets:
   BetaBuddyUITests:
     type: bundle.ui-testing
     platform: iOS
-    sources: [BetaBuddyUITests, TestSupport]
+    sources:
+      - BetaBuddyUITests
+      - TestSupport
+      # A photo of a person, so that pose recognition finds someone in the drawn clip.
+      - path: BetaBuddyTests/Fixtures/pose.jpg
+        buildPhase: resources
     dependencies:
       - target: BetaBuddy
     settings:
@@ -100,6 +106,10 @@ schemes:
     build:
       targets:
         BetaBuddy: all
+    run:
+      # Xcode's Thread Performance Checker crashes in its own bookkeeping while Core Image renders on
+      # several threads (the edit renderer); it is a debugging aid and not part of the shipped app.
+      disableThreadPerformanceChecker: true
     test:
       targets: [BetaBuddyTests, BetaBuddyUITests]
   BetaBuddyStoreKit:
@@ -108,5 +118,6 @@ schemes:
         BetaBuddy: all
     run:
       storeKitConfiguration: StoreKit/Lifetime.storekit
+      disableThreadPerformanceChecker: true
     test:
       targets: [BetaBuddyTests, BetaBuddyUITests]
