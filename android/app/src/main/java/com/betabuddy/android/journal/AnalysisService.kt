@@ -41,7 +41,7 @@ class AnalysisService : Service() {
     override fun onCreate() {
         super.onCreate()
         val manager = getSystemService(NotificationManager::class.java)
-        manager.createNotificationChannel(NotificationChannel(CHANNEL, getString(R.string.journal_analyze_skeleton), NotificationManager.IMPORTANCE_LOW))
+        manager.createNotificationChannel(NotificationChannel(CHANNEL, getString(R.string.journal_analysis_start), NotificationManager.IMPORTANCE_LOW))
         // Pose recognition gives way to the camera: the running one is stopped, its request is kept.
         scope.launch { CameraGate.open.collect { open -> if (open) active?.cancel() } }
         val notification = notification()
@@ -134,7 +134,7 @@ class AnalysisService : Service() {
         val stop = PendingIntent.getService(this, 1, Intent(this, AnalysisService::class.java).setAction(CANCEL).putExtra(CLIMB_ID, activeId), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         return Notification.Builder(this, CHANNEL)
             .setSmallIcon(R.drawable.ic_launcher_monochrome)
-            .setContentTitle(getString(R.string.journal_analyze_skeleton))
+            .setContentTitle(getString(R.string.journal_analysis_start))
             .setContentText(getString(R.string.journal_analysis_background))
             .setContentIntent(open).setOngoing(true).setOnlyAlertOnce(true)
             .setProgress(100, ((progress ?: 0.0) * 100).toInt(), progress == null)

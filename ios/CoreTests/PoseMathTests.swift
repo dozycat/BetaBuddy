@@ -26,10 +26,6 @@ final class PoseMathTests: XCTestCase {
         pose.joints[23].x = 0.5; pose.joints[23].confidence = 0.59
         XCTAssertFalse(pose.hasReliableTorso)
     }
-    func testSkeletonConnectionsStayInsideTheLandmarkSet() {
-        XCTAssertFalse(PoseMath.connections.isEmpty)
-        XCTAssertTrue(PoseMath.connections.allSatisfy { (0..<33).contains($0.0) && (0..<33).contains($0.1) && $0.0 != $0.1 })
-    }
     func testArchiveRoundTripPreservesPoseAndWorldLandmarks() throws {
         var pose = frame()
         pose.world = (0..<33).map { [rounded4(Double($0) / 7), -0.25, 0.123456, 0.9] }

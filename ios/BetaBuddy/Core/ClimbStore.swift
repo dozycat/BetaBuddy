@@ -293,7 +293,7 @@ final class ClimbStore: ObservableObject {
                 #endif
                 // replaceAnalysis merges into the latest record, preserving edits made while running.
                 try replaceAnalysis(climb, analysis: result)
-                analysisMessages[climb.id] = String(localized: "骨架分析已更新。", bundle: AppLanguage.bundle)
+                analysisMessages[climb.id] = nil
             } catch is CancellationError {
                 // Explicit stop clears the request; expiration keeps it for the next foreground.
             } catch {

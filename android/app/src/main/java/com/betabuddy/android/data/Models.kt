@@ -47,7 +47,7 @@ data class PoseAnalysis(
     val hasWorldLandmarks: Boolean
         get() = frames.any { it.hasWorldLandmarks }
 
-    /** Binary search. A stale skeleton is never drawn across missing detections. */
+    /** Binary search. A pose is never carried across missing detections. */
     fun nearestFrame(time: Double): PoseFrame? {
         var low = 0
         var high = frames.size

@@ -4,7 +4,6 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,13 +12,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -38,7 +33,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -55,7 +49,6 @@ import com.betabuddy.android.ui.common.BBIcons
 import com.betabuddy.android.ui.common.BigButton
 import com.betabuddy.android.ui.common.ColorCard
 import com.betabuddy.android.ui.common.PaperPage
-import com.betabuddy.android.ui.common.SectionLabel
 import com.betabuddy.android.ui.common.Stamp
 import com.betabuddy.android.ui.theme.BB
 
@@ -63,24 +56,20 @@ import com.betabuddy.android.ui.theme.BB
 internal val gradeValues: List<String> = listOf(UNGRADED_VALUE) + (0..12).map { "V$it" }
 
 /**
- * Pick a video, edit its time and tags, then save it. Pose analysis is optional.
+ * Pick a video, edit its time and tags, then save it. Pose recognition waits for “Analyse this attempt”.
  */
 @Composable
 internal fun ImportScreen(model: JournalViewModel, onClose: () -> Unit, onSaved: (String) -> Unit) {
     val state by model.import.collectAsState()
-    val requestNotifications = rememberAnalysisNotifications()
     var title by rememberSaveable { mutableStateOf("") }
     var grade by rememberSaveable { mutableStateOf(UNGRADED_VALUE) }
     var sent by rememberSaveable { mutableStateOf(false) }
-    var note by rememberSaveable { mutableStateOf("") }
     var gymId by rememberSaveable { mutableStateOf<String?>(null) }
     var gymName by rememberSaveable { mutableStateOf("") }
     var climbedOn by rememberSaveable { mutableStateOf(System.currentTimeMillis()) }
     var folderId by rememberSaveable { mutableStateOf<String?>(null) }
     var organizing by rememberSaveable { mutableStateOf(false) }
-    var analyze by rememberSaveable { mutableStateOf(false) }
     var appliedVideo by rememberSaveable { mutableStateOf<String?>(null) }
-    var quality by rememberSaveable { mutableStateOf(AnalysisQuality.BALANCED) }
     val defaultTitle = stringResource(R.string.journal_default_title) // in the language shown at save time
 
     // The system photo picker returns only the item the user chose; no storage permission is requested.
@@ -148,25 +137,13 @@ internal fun ImportScreen(model: JournalViewModel, onClose: () -> Unit, onSaved:
                     if (organizing) MetadataFields(model, gymId, gymName, climbedOn, folderId,
                         { id, name -> gymId = id; gymName = name }, { climbedOn = it }, { folderId = it }, showDate = false)
                     SwitchRow(stringResource(R.string.journal_sent_toggle), sent) { sent = it }
-                    OutlinedTextField(
-                        value = note, onValueChange = { note = it.take(1000) }, minLines = 2, maxLines = 4,
-                        placeholder = { Text(stringResource(R.string.journal_import_note_hint), color = BB.Muted) },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-                SwitchRow(stringResource(R.string.journal_analyze_after_save), analyze) { analyze = it }
-                if (analyze) Column(Modifier.selectableGroup(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    SectionLabel(stringResource(R.string.journal_quality_label), "SAME FULL MODEL")
-                    QualityOption(R.string.journal_quality_balanced, R.string.journal_quality_balanced_detail, quality == AnalysisQuality.BALANCED) { quality = AnalysisQuality.BALANCED }
-                    QualityOption(R.string.journal_quality_detailed, R.string.journal_quality_detailed_detail, quality == AnalysisQuality.DETAILED) { quality = AnalysisQuality.DETAILED }
                 }
                 BigButton(
                     stringResource(R.string.journal_save_climb),
-                    { if (analyze) requestNotifications(); model.saveVideo(title, grade, sent, note, quality, defaultTitle, gymId, gymName, climbedOn, folderId, analyze) },
+                    { model.saveVideo(title, grade, sent, "", AnalysisQuality.BALANCED, defaultTitle, gymId, gymName, climbedOn, folderId) },
                     Modifier.testTag("startAnalysis"),
                     enabled = state.staged != null && !state.importing,
                 )
-                Text(stringResource(R.string.journal_import_foreground_note), style = BB.Caption, color = BB.Muted)
             }
         }
         state.error?.let { error ->
@@ -212,22 +189,6 @@ internal fun SwitchRow(label: String, checked: Boolean, onChange: (Boolean) -> U
             checked = checked, onCheckedChange = null,
             colors = SwitchDefaults.colors(checkedThumbColor = BB.Paper, checkedTrackColor = BB.Ink, uncheckedThumbColor = BB.Ink, uncheckedTrackColor = BB.Paper, uncheckedBorderColor = BB.Ink),
         )
-    }
-}
-
-@Composable
-private fun QualityOption(title: Int, detail: Int, selected: Boolean, onSelect: () -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(if (selected) BB.Lavender else CardColor)
-            .selectable(selected = selected, role = Role.RadioButton, onClick = onSelect).padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(stringResource(title), style = BB.Subheadline, fontWeight = FontWeight.Bold)
-            Text(stringResource(detail), style = BB.Caption, color = BB.Muted)
-        }
-        // Selection is a mark as well as a colour.
-        Text(if (selected) "●" else "○", style = BB.Headline)
     }
 }
 

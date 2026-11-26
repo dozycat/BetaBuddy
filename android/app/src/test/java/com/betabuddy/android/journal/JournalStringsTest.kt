@@ -11,7 +11,7 @@ import org.junit.Test
 class JournalStringsTest {
     private val file = "strings_journal.xml"
 
-    @Test fun everyStringIsInAllFiveLanguagesWithMatchingPlaceholders() = StringResources.assertComplete(file, atLeast = 80)
+    @Test fun everyStringIsInAllFiveLanguagesWithMatchingPlaceholders() = StringResources.assertComplete(file, atLeast = 65)
 
     @Test fun englishAndKoreanContainNoChineseLeftovers() = StringResources.assertNoChineseLeftovers(file)
 

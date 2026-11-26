@@ -46,7 +46,7 @@ struct AboutView: View {
             Text("姿态模型随安装包提供。没有模型下载，没有账号，也没有云端 AI。导入的视频与分析记录保存在应用内，并排除在系统云备份之外。").foregroundStyle(BB.muted)
             Divider()
             SectionLabel(title:"分析边界",trailing:"KEEP IT HONEST")
-            Text("33 个关键点用于骨架回放。遮挡、镜头移动、多人入镜会影响结果。")
+            Text("33 个关键点只用于分析这一趟。遮挡、镜头移动、多人入镜会影响结果。")
             Text("适合单人、全身入镜、固定机位的视频；单段 0.5 秒–20 分钟，最大 500 MB。建议先在相册里裁掉无关片段。").foregroundStyle(BB.muted)
             Divider()
             if let pack = GymPack.current {

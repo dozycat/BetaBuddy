@@ -5,12 +5,10 @@ import android.view.TextureView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -21,7 +19,6 @@ import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
@@ -79,18 +76,14 @@ import com.betabuddy.android.journal.text
 import com.betabuddy.android.ui.common.BBIcons
 import com.betabuddy.android.ui.common.BigButton
 import com.betabuddy.android.ui.common.CircleIconButton
-import com.betabuddy.android.ui.common.ColorCard
 import com.betabuddy.android.ui.common.PaperPage
-import com.betabuddy.android.ui.common.SectionLabel
-import com.betabuddy.android.ui.common.Stamp
 import com.betabuddy.android.ui.theme.BB
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * Replay of one climb: original or skeleton, timeline, 0.1 s steps, 0.5× slow motion, the way into
- * the pack's analysis page when the build has one, then the note for next time. Counterpart of
- * ReviewView on iOS.
+ * Replay of one climb: the clip, timeline, 0.1 s steps, 0.5× slow motion, whether it was sent, and
+ * the way into the pack's analysis page when the build has one. Counterpart of ReviewView on iOS.
  *
  * [analysisPack] is the gym pack in this build, if any. Only a pack that lists an analysis page
  * gives this screen its "Analyse this attempt" button.
@@ -104,11 +97,8 @@ internal fun ReviewScreen(climb: Climb, model: JournalViewModel, analysisPack: G
     val reanalysisState by model.reanalysis.collectAsState()
     val requestNotifications = com.betabuddy.android.journal.rememberAnalysisNotifications()
     val reanalysis = reanalysisState.takeIf { it.climbId == climb.id }
-    var skeleton by rememberSaveable(climb.id) { mutableStateOf(climb.analysis.sampledFrames > 0) }
     var slow by rememberSaveable(climb.id) { mutableStateOf(false) }
-    var note by rememberSaveable(climb.id) { mutableStateOf(climb.note) }
     var sent by rememberSaveable(climb.id) { mutableStateOf(climb.sent) }
-    var savedNotice by remember(climb.id) { mutableStateOf(false) }
     var organize by remember(climb.id) { mutableStateOf(false) }
     if (organize) OrganizeDialog(climb, model) { organize = false }
     var confirmDelete by remember(climb.id) { mutableStateOf(false) }
@@ -155,21 +145,19 @@ internal fun ReviewScreen(climb: Climb, model: JournalViewModel, analysisPack: G
             Text(stringResource(R.string.journal_review_title), style = BB.Headline)
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Stamp("THE REPLAY")
-            Spacer(Modifier.weight(1f))
+            Text(climb.title, style = BB.Title, modifier = Modifier.weight(1f))
             // A record made with the in-app camera: the colour chosen then, as a swatch without a name.
-            CaptureColourLabel(climb, Modifier.padding(end = 10.dp))
+            CaptureColourLabel(climb, Modifier.padding(horizontal = 10.dp))
             Text(gradeText(climb.grade), style = BB.display(28.sp), maxLines = 1)
         }
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(climb.title, style = BB.Title)
             Text(java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT, appLocale()).format(java.util.Date(climb.climbedAtMillis)), style = BB.Caption, color = BB.Muted)
             if (!climb.gymName.isNullOrBlank()) Text(climb.gymName, style = BB.Caption, color = BB.Muted)
             OutlineButton(stringResource(R.string.album_organize), onClick = { organize = true })
         }
 
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            VideoStage(playback, climb, skeleton && analysis.sampledFrames > 0, Modifier.bringIntoViewRequester(stage))
+            VideoStage(playback, climb, Modifier.bringIntoViewRequester(stage))
             val duration = maxOf(0.1, analysis.duration)
             val positionLabel = stringResource(R.string.journal_review_position_cd)
             Slider(
@@ -198,10 +186,7 @@ internal fun ReviewScreen(climb: Climb, model: JournalViewModel, analysisPack: G
                 GlyphButton(Glyph.StepForward, stringResource(R.string.journal_review_forward_step_cd), {
                     playback.pause(); playback.seek(minOf(analysis.duration, playback.time + 0.1))
                 })
-            }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.weight(1f)) { SwitchRow(stringResource(R.string.journal_review_skeleton), skeleton && analysis.sampledFrames > 0) { skeleton = it && analysis.sampledFrames > 0 } }
-                Spacer(Modifier.width(16.dp))
+                Spacer(Modifier.width(8.dp))
                 Text(
                     stringResource(if (slow) R.string.journal_review_slow else R.string.journal_review_normal_speed),
                     style = BB.Caption, fontWeight = FontWeight.Bold,
@@ -209,6 +194,14 @@ internal fun ReviewScreen(climb: Climb, model: JournalViewModel, analysisPack: G
                         .clickable(role = Role.Button) { slow = !slow; playback.setSlow(slow) }
                         .padding(horizontal = 14.dp, vertical = 14.dp),
                 )
+            }
+            SwitchRow(stringResource(R.string.journal_sent_toggle), sent) { value ->
+                sent = value
+                scope.launch {
+                    model.saveNote(climb, climb.note, value)
+                        .onSuccess { failure = null }
+                        .onFailure { sent = !value; failure = UiMessage(R.string.journal_note_save_failed, it.localizedMessage ?: it.javaClass.simpleName) }
+                }
             }
         }
         playback.failure?.let { Text(stringResource(it), style = BB.Caption, color = DangerColor) }
@@ -232,37 +225,16 @@ internal fun ReviewScreen(climb: Climb, model: JournalViewModel, analysisPack: G
             }
         }
 
-        // Pose recognition: the skeleton on the replay, and what the analysis page starts from.
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            if (climb.pendingAnalysis != null) {
-                Text(stringResource(if (reanalysis?.busy == true) R.string.journal_analysis_background else R.string.journal_analysis_waiting), style = BB.Caption, color = BB.Muted)
-                ProgressBar(reanalysis?.progress ?: 0.0)
-                OutlineButton(stringResource(R.string.journal_reanalyze_stop)) { model.cancelReanalysis(climb) }
-            } else {
-                OutlineButton(stringResource(if (analysis.sampledFrames == 0) R.string.journal_analyze_skeleton else R.string.journal_reanalyze)) { playback.pause(); requestNotifications(); model.reanalyze(climb) }
-            }
-            reanalysis?.message?.let {
-                Text(it.text(), style = BB.Caption, color = BB.Muted, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
-            }
-            if (analysis.sampledFrames == 0) Text(stringResource(R.string.journal_not_analyzed), style = BB.Caption, color = BB.Muted)
-        }
-
-        ColorCard(BB.Lavender, cornerRadius = 22.dp, padding = 20.dp, spacing = 16.dp) {
-            SectionLabel(stringResource(R.string.journal_note_title), "YOUR NOTE")
-            OutlinedTextField(
-                value = note, onValueChange = { note = it.take(1000); savedNotice = false }, minLines = 3, maxLines = 6,
-                placeholder = { Text(stringResource(R.string.journal_note_hint), color = BB.Muted) },
-                modifier = Modifier.fillMaxWidth().testTag("reviewNote"),
-            )
-            SwitchRow(stringResource(R.string.journal_sent_toggle), sent) { sent = it; savedNotice = false }
-            FilledButton(
-                stringResource(if (savedNotice) R.string.journal_note_saved else R.string.journal_note_save),
-                Modifier.testTag("saveNote").semantics { liveRegion = LiveRegionMode.Polite },
-            ) {
-                scope.launch {
-                    model.saveNote(climb, note, sent)
-                        .onSuccess { savedNotice = true; failure = null }
-                        .onFailure { failure = UiMessage(R.string.journal_note_save_failed, it.localizedMessage ?: it.javaClass.simpleName) }
+        // Pose recognition, the first step of the analysis: progress while it runs, and how it ended.
+        if (climb.pendingAnalysis != null || reanalysis?.message != null) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                if (climb.pendingAnalysis != null) {
+                    Text(stringResource(if (reanalysis?.busy == true) R.string.journal_analysis_background else R.string.journal_analysis_waiting), style = BB.Caption, color = BB.Muted)
+                    ProgressBar(reanalysis?.progress ?: 0.0)
+                    OutlineButton(stringResource(R.string.journal_reanalyze_stop)) { model.cancelReanalysis(climb) }
+                }
+                reanalysis?.message?.let {
+                    Text(it.text(), style = BB.Caption, color = BB.Muted, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
                 }
             }
         }
@@ -317,35 +289,21 @@ internal fun ReviewScreen(climb: Climb, model: JournalViewModel, analysisPack: G
 }
 
 /**
- * The picture and the skeleton share one box with the picture's own aspect ratio, centred in a
- * black stage (aspect-fit). The player draws into a TextureView that fills that box, with rotation
- * already applied by the decoder, so overlay coordinates and pixels line up by construction.
+ * The picture in a box with its own aspect ratio, centred in a black stage (aspect-fit). The player
+ * draws into a TextureView that fills that box, with rotation already applied by the decoder.
  */
 @Composable
-private fun VideoStage(playback: Playback, climb: Climb, skeleton: Boolean, modifier: Modifier = Modifier) {
-    val analysis = climb.analysis
+private fun VideoStage(playback: Playback, climb: Climb, modifier: Modifier = Modifier) {
     BoxWithConstraints(
         modifier.fillMaxWidth().height(340.dp).clip(RoundedCornerShape(20.dp)).background(Color.Black),
     ) {
-        // Until the player reports its size, use the aspect ratio the analysis saw (same orientation rule).
-        val aspect = playback.videoAspect ?: analysis.aspectRatio
+        // Until the player reports its size, use the aspect ratio saved with the record (same orientation rule).
+        val aspect = playback.videoAspect ?: climb.analysis.aspectRatio
         val (width, height) = OverlayGeometry.fit(maxWidth.value, maxHeight.value, aspect)
-        Box(Modifier.align(Alignment.Center).size(width.dp, height.dp)) {
-            AndroidView(
-                factory = { viewContext -> TextureView(viewContext).also { playback.attach(it) } },
-                onRelease = { playback.detach(it) },
-                modifier = Modifier.fillMaxSize(),
-            )
-            if (skeleton) SkeletonOverlay(analysis, playback.time, Modifier.fillMaxSize())
-        }
-        val badge = when {
-            !skeleton -> "ORIGINAL"
-            analysis.nearestFrame(playback.time) == null -> stringResource(R.string.journal_review_no_pose_badge)
-            else -> "33 POINTS / LOCAL"
-        }
-        Text(
-            badge, style = BB.mono(10.sp, FontWeight.Bold),
-            modifier = Modifier.align(Alignment.TopStart).padding(12.dp).clip(CircleShape).background(BB.Lime).padding(9.dp),
+        AndroidView(
+            factory = { viewContext -> TextureView(viewContext).also { playback.attach(it) } },
+            onRelease = { playback.detach(it) },
+            modifier = Modifier.align(Alignment.Center).size(width.dp, height.dp),
         )
     }
 }

@@ -55,7 +55,6 @@
 		99F7A8890E725F89F85A2030 /* CoreImage.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A68FFDAADCD794A3E2BA9EB4 /* CoreImage.framework */; };
 		9AA3934B0C6312A0A59C93B7 /* VideoAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70CE35583F94C8C3EE53F2E /* VideoAnalyzer.swift */; };
 		A12147024A4CA862D346FE8B /* GymView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85F50739B83E9927D442985F /* GymView.swift */; };
-		A5C72DB499BCC606758BA91C /* PoseMath.swift in Sources */ = {isa = PBXBuildFile; fileRef = D223147C2D7F097ECD8149E6 /* PoseMath.swift */; };
 		A5F04A407DAACC93DBF3EB71 /* JournalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC6B978A0067117F43BF8620 /* JournalView.swift */; };
 		A625CD0F2C4E73A1A4A92E12 /* CaptureDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB1FE3CE91016E84266DD392 /* CaptureDiagnostics.swift */; };
 		A6CCE212361BF1F9111BB557 /* MembershipTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 098503FA49B611AD0616C62D /* MembershipTests.swift */; };
@@ -173,7 +172,6 @@
 		C2073A4BFD1C596095049FD6 /* ClimbStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClimbStore.swift; sourceTree = "<group>"; };
 		C614D6B39B02159288ECC886 /* CatUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatUITests.swift; sourceTree = "<group>"; };
 		CB1FE3CE91016E84266DD392 /* CaptureDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureDiagnostics.swift; sourceTree = "<group>"; };
-		D223147C2D7F097ECD8149E6 /* PoseMath.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoseMath.swift; sourceTree = "<group>"; };
 		DBB55650FA0E8706EEAE41DD /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
 		E1A3BE34FB4FA4B89AE39B85 /* AlbumViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlbumViews.swift; sourceTree = "<group>"; };
 		E77E582DB0FAEFA48FF81EE2 /* ImportSaveUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportSaveUITests.swift; sourceTree = "<group>"; };
@@ -316,7 +314,6 @@
 				9BCB614C8820A5FA6B1BC001 /* GymLocator.swift */,
 				83D8408323F334B43C989559 /* GymPack.swift */,
 				5952534D2D2EC74A3ACF8282 /* Models.swift */,
-				D223147C2D7F097ECD8149E6 /* PoseMath.swift */,
 				A70CE35583F94C8C3EE53F2E /* VideoAnalyzer.swift */,
 			);
 			path = Core;
@@ -630,7 +627,6 @@
 				CA64D940DD5A8D4DD526465A /* Localization.swift in Sources */,
 				C34B0F291B88E53C70AB0D81 /* MembershipStore.swift in Sources */,
 				64B4F869EFA81EEF760E823D /* Models.swift in Sources */,
-				A5C72DB499BCC606758BA91C /* PoseMath.swift in Sources */,
 				057EFDAB6648F3C43421E1D4 /* ReviewView.swift in Sources */,
 				9AA3934B0C6312A0A59C93B7 /* VideoAnalyzer.swift in Sources */,
 			);

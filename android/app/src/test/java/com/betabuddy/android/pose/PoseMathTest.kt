@@ -12,7 +12,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** The rules the skeleton on the replay rests on. */
+/** Rules for the recognised poses and the saved analysis. */
 class PoseMathTest {
     private fun frame(time: Double = 0.0) = PoseFrame(time, List(33) { Joint(0.5, 0.5, 1.0) })
 
@@ -54,11 +54,6 @@ class PoseMathTest {
         assertFalse(Joint(Double.NaN, 0.5, 1.0).valid)
         assertFalse(PoseFrame(0.0, List(32) { Joint(0.5, 0.5, 1.0) }).hasReliableTorso)
         assertFalse(PoseFrame(0.0, emptyList()).hasReliableTorso)
-    }
-
-    @Test fun skeletonJoinsOnlyBodyLandmarks() {
-        assertEquals(18, PoseMath.connections.size)
-        assertTrue(PoseMath.connections.all { (a, b) -> a in 11..32 && b in 11..32 && a != b })
     }
 
     @Test fun nearestFrameStopsAtTheGapLimit() {

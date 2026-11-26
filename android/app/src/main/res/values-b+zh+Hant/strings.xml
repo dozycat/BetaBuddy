@@ -44,7 +44,7 @@
     <string name="about_free">全部功能免費 · 無 App 內購買 · 無訂閱 · 無廣告</string>
     <string name="about_local">姿態模型隨安裝檔提供。不下載模型，沒有帳號，也沒有雲端 AI。匯入的影片與分析記錄儲存在 App 內，不納入系統雲端備份。</string>
     <string name="about_limits_title">分析邊界</string>
-    <string name="about_limits_body">33 個關鍵點用於骨架回放。遮擋、鏡頭移動、多人入鏡都會影響結果。</string>
+    <string name="about_limits_body">33 個關鍵點只用於分析這一趟。遮擋、鏡頭移動、多人入鏡都會影響結果。</string>
     <string name="about_video_requirements">適合單人、全身入鏡、固定機位的影片；單段 0.5–180 秒，最大 500 MB。建議先在相簿裡裁掉無關的片段。</string>
     <string name="about_gym_pack_line">%1$s · %2$d 條路線 · 資料版本 %3$s（%4$s）</string>
     <string name="about_gym_missing">這個版本沒有內建岩館資料。場館模型、路線和攀爬模擬隨正式安裝檔提供，不在公開原始碼裡。</string>

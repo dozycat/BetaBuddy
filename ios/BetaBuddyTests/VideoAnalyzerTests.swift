@@ -71,7 +71,7 @@ final class VideoAnalyzerTests: XCTestCase {
         XCTAssertTrue(model.hasRecordingDate)
         XCTAssertEqual(model.climbedAt, ISO8601DateFormatter().date(from: "2024-03-02T06:35:00Z"))
         let store = ClimbStore(root: root)
-        model.run(store: store, title: "No person required", grade: "V2", sent: false, note: "Keep", quality: .balanced, gymId: nil, gymName: "", climbedAt: model.climbedAt, folderId: nil, analyze: false)
+        model.run(store: store, title: "No person required", grade: "V2", sent: false, gymId: nil, gymName: "", climbedAt: model.climbedAt, folderId: nil)
         for _ in 0..<1000 { if !model.busy { break }; try await Task.sleep(for: .milliseconds(20)) }
         XCTAssertFalse(model.busy)
         XCTAssertNil(model.error)

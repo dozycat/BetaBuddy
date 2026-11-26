@@ -3,7 +3,7 @@
 Kotlin + Jetpack Compose 原生应用，Android 8.0（API 26）及以上，竖屏，只有浅色。和 iOS 版是同一个产品，全部离线：
 
 - **岩馆**：场馆数据包里的 3D 页面（线路、推演），装在 `WebView` 里离线加载；没有数据包的构建显示「这个构建没有内置岩馆数据」。
-- **攀爬册**：主按钮「拍一趟」用应用内相机录一趟，取景时由数据包的拍摄页面检查机位、认颜色和岩点；也可以从系统照片选择器导入。保存在先，姿态识别（MediaPipe Pose Landmarker Full，设备上、CPU）在本地前台服务里排队做完；回看有骨架叠加、0.1 秒步进和慢放。「分析这一趟」由数据包里的分析页面完成，应用内相机拍的记录在姿态识别之后自动排队分析。文件夹、岩馆 / 难度 / 日期组合筛选、随应用打包的全国岩馆目录。
+- **攀爬册**：主按钮「拍一趟」用应用内相机录一趟，取景时由数据包的拍摄页面检查机位、认颜色和岩点；也可以从系统照片选择器导入。保存在先；点「分析这一趟」时先做姿态识别（MediaPipe Pose Landmarker Full，设备上、CPU），在本地前台服务里排队做完；回看只有画面、时间轴、0.1 秒步进、慢放和完攀开关，不叠骨架、不写笔记；姿态识别只是「分析这一趟」的第一步。「分析这一趟」由数据包里的分析页面完成，应用内相机拍的记录在姿态识别之后自动排队分析。文件夹、岩馆 / 难度 / 日期组合筛选、随应用打包的全国岩馆目录。
 - **设置与关于**：应用内选语言（「跟随系统」加简体中文、繁体中文、英语、日语、韩语，立即生效），本地与分析边界说明、内置隐私政策、开源许可。
 
 产品介绍见[仓库首页](../../README.md)，Android 上的设计与和 iOS 的差异见 [design.md](design.md)，数据包接口见 [../ios/gym-design.md](../ios/gym-design.md)。
@@ -17,7 +17,7 @@ Kotlin + Jetpack Compose 原生应用，Android 8.0（API 26）及以上，竖�
 | 权限 | 用途 | 什么时候问 |
 | --- | --- | --- |
 | `FOREGROUND_SERVICE`、`FOREGROUND_SERVICE_DATA_SYNC`、`FOREGROUND_SERVICE_MEDIA_PROCESSING` | 姿态识别的本地前台服务（Android 15+ 用 `mediaProcessing`，更早的系统用 `dataSync`） | 不需要询问 |
-| `POST_NOTIFICATIONS` | 通知栏里显示分析进度，可选 | Android 13+，用户要分析骨架时（导入时选了「保存后分析骨架」或在回看页点分析）且还没允许；拒绝不影响分析 |
+| `POST_NOTIFICATIONS` | 通知栏里显示分析进度，可选 | Android 13+，分析这一趟时还没允许；拒绝不影响分析 |
 | `CAMERA` | 应用内相机，只录画面 | 第一次打开拍摄界面时 |
 | `ACCESS_COARSE_LOCATION`、`ACCESS_FINE_LOCATION` | 在拍摄界面按距离给内置岩馆目录排序，取一次、不保存 | 点「按距离找附近的岩馆」时一起问，Android 12+ 由用户选精确或大致 |
 
@@ -121,7 +121,7 @@ android/
       capture/                         应用内相机：拍摄页面的消息、画面来源（CameraX / 文件）、取帧、录像、拍摄界面、岩馆建议、取一次位置
       journal/                         攀爬册：列表、导入、文件夹与筛选、文字、岩馆目录与距离、姿态识别服务、相机开关
       pose/                            解码、姿态识别、几何
-      review/                          回看：播放与骨架叠加；分析页面的宿主；拍过的记录的分析队列
+      review/                          回看：播放；分析页面的宿主；拍过的记录的分析队列
       data/                            记录的数据结构与本地存储
     src/main/res/
       values*/strings.xml              导航、岩馆、设置的文字
@@ -151,9 +151,9 @@ android/
 | `Core/AppLanguage.swift` | `i18n/LanguageTags.kt`、`i18n/AppLanguage.kt` |
 | `Views/AboutView.swift` | `settings/SettingsScreens.kt` |
 | `Core/Models.swift`、`ClimbStore.swift` | `data/Models.kt`、`data/ClimbStore.kt`、`data/CaptureSweep.kt` |
-| `Core/PoseMath.swift`、`VideoAnalyzer.swift` | `pose/PoseMath.kt`、`pose/VideoAnalyzer.kt`、`pose/AnalysisTypes.kt` |
+| `Core/VideoAnalyzer.swift` | `pose/VideoAnalyzer.kt`、`pose/AnalysisTypes.kt` |
 | `Views/JournalView.swift`、`ImportView.swift` | `journal/JournalScreen.kt`、`journal/ImportScreen.kt`、`journal/AlbumControls.kt`、`journal/AlbumFilters.kt` |
-| `Views/ReviewView.swift` | `review/ReviewScreen.kt`、`review/Playback.kt`、`review/SkeletonOverlay.kt` |
+| `Views/ReviewView.swift` | `review/ReviewScreen.kt`、`review/Playback.kt` |
 | `Views/AnalysisView.swift` | `review/AnalysisScreen.kt`、`review/AnalysisSession.kt`、`review/AnalysisBridge.kt`、`review/AnalysisFrames.kt` |
 | `Core/Capture.swift`、`Views/CaptureText.swift` | `capture/Capture.kt`、`capture/CaptureText.kt` |
 | `Core/CaptureSource.swift` | `capture/CaptureSource.kt`、`capture/FileCaptureSource.kt`、`capture/CapturePipeline.kt`、`capture/FrameRecorder.kt`、`capture/RecorderSwitch.kt` |
@@ -221,8 +221,8 @@ adb shell "am start -n $A --ei initialTab 1 --ez openCapture true \
 
 | 命令 | 结果 |
 | --- | --- |
-| `python3 android/scripts/check-resources.py` | 通过：276 条文字 × 5 种语言 |
-| `./gradlew :app:testDebugUnitTest` | 146 个测试全部通过 |
+| `python3 android/scripts/check-resources.py` | 通过：259 条文字 × 5 种语言（回看去掉骨架和笔记之后） |
+| `./gradlew :app:testDebugUnitTest` | 144 个测试全部通过 |
 | `./gradlew :app:assembleDebug :app:lintDebug` | 通过；lint 0 error（warning 是固定版本的更新提示、复数资源建议、KTX 写法之类） |
 | `./gradlew :app:compileDebugAndroidTestKotlin` | 设备测试能编译 |
 | `./gradlew :app:connectedDebugAndroidTest`（Android 15 模拟器，`-camera-back virtualscene -qemu -append "arm64.nosme"`） | 22 个里 20 个运行并通过，2 个要真从系统取位置的跳过 |
@@ -244,6 +244,7 @@ adb shell "am start -n $A --ei initialTab 1 --ez openCapture true \
 
 ### 尚未验证
 
+- **去掉骨架和笔记之后的回看页、导入页**：只跑了单元测试、`assembleDebug`、`lintDebug` 和设备测试的编译；没有在模拟器上打开看过排版（尤其是窄屏上时间、三个按钮和速度在一行里放不放得下）。
 - **任何真机。** 相机预览与录像在各厂商相机上的表现、视场角和姿态传感器的数值、发热与过热中止、内存、硬件解码器、HDR 视频、长片子的取帧和存档写入耗时；应用自己的编码器在真机上会不会被用到、用到时的帧率。
 - **数据包 1.9.6–1.9.8 的分析页面在 Android 上**（一步一步的几屏、剪纸小人、这一趟的建议）：没有在 Android 模拟器或真机上打开过；Android 这边只确认了这些文件装进了 APK。
 - 这一轮整理之后的 Release 包：只编译过，没有重跑；设备测试只在 Android 15 模拟器上重跑过，Android 12 模拟器上没有。
@@ -296,7 +297,7 @@ cd android
 1. 不装数据包的构建：落在岩馆，显示「这个构建没有内置岩馆数据」；底部齿轮、右上角按钮都能进「设置与关于」，隐私政策和开源许可能打开；拍摄界面能录能存；回看页没有「分析这一趟」。
 2. 装了数据包的构建：说明页只出现一次 → 场景出现、能转动缩放、选线 → 切到攀爬册再回来不重载 → 页面菜单里打开原生设置 → 换一种语言，返回后页面是新语言并回到刚才的线路 → 开不开飞行模式表现一致。
 3. 语言：五种语言加「跟随系统」逐个选；杀掉应用重开仍是所选语言；系统语言设成五种之外的语言时界面是英语。
-4. 攀爬册导入：一段竖拍、一段横拍 → 保存 → 分析骨架 → 回看一打开就有画面、骨架与人重合、步进、慢放 → 笔记、完攀、分享文字 → 删除。
+4. 攀爬册导入：一段竖拍、一段横拍 → 保存 → 回看一打开就有画面、步进、慢放 → 完攀开关、分享文字 → 「分析这一趟」→ 删除。
 5. 分析这一趟：没识别过姿态的记录点「分析这一趟」→ 先跑姿态识别 → 自动进入分析页面 →「正在准备画面…」→ 页面显示结果 → 页面里请求看视频里的某一刻，回看停在那一刻 →「看分析」和「重新分析」→ 杀掉应用重开，「看分析」直接显示保存的结果 → 删除记录后 `filesDir/BetaBuddy/` 里没有这条记录的结果文件。
 6. 拍一趟：第一次出现相机询问（拒绝一次，看说明卡片和「改从相册导入」；再从系统设置里打开）→ 对着墙：提示、色块、岩点描边 → 选颜色、点一下标起步和结束 → 岩馆（「按距离找附近的岩馆」）→ 录 → 停 →「已保存到攀爬册」→ 放着等「看分析」→ 录像中按 Home、来电、锁屏各试一次，回来都应该已经保存。
 

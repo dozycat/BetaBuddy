@@ -56,40 +56,14 @@ struct PlayerSurface: UIViewRepresentable {
     func updateUIView(_ view:Surface,context:Context) { view.playerLayer.player = player }
 }
 
-struct SkeletonOverlay: View {
-    var analysis: PoseAnalysis
-    var time: Double
-    var body: some View {
-        Canvas { context,size in
-            guard let frame = analysis.nearestFrame(to:time) else { return }
-            let width = min(size.width,size.height*analysis.aspectRatio)
-            let height = width/analysis.aspectRatio
-            let origin = CGPoint(x:(size.width-width)/2,y:(size.height-height)/2)
-            func point(_ joint:Joint) -> CGPoint { CGPoint(x:origin.x+joint.x*width,y:origin.y+joint.y*height) }
-            for (a,b) in PoseMath.connections where frame.joints.count == 33 && frame.joints[a].valid && frame.joints[b].valid {
-                var line = Path(); line.move(to:point(frame.joints[a])); line.addLine(to:point(frame.joints[b]))
-                context.stroke(line,with:.color(.black.opacity(0.6)),style:StrokeStyle(lineWidth:5,lineCap:.round))
-                context.stroke(line,with:.color(BB.lime),style:StrokeStyle(lineWidth:2.5,lineCap:.round))
-            }
-            for joint in frame.joints.dropFirst(11) where joint.valid {
-                let p = point(joint)
-                context.fill(Path(ellipseIn:CGRect(x:p.x-3,y:p.y-3,width:6,height:6)),with:.color(.white))
-            }
-        }.allowsHitTesting(false).accessibilityHidden(true)
-    }
-}
-
 struct ReviewView: View {
     @EnvironmentObject private var store: ClimbStore
     @EnvironmentObject private var analysisQueue: AnalysisQueue
     @Environment(\.dismiss) private var dismiss
     @StateObject private var playback = Playback()
-    @State private var skeleton = false
     @State private var slow = false
-    @State private var note = ""
     @State private var sent = false
     @State private var confirmDelete = false
-    @State private var savedNotice = false
     @State private var organizing = false
     @State private var analysing = false
     /// Pose recognition was started from “分析这一趟”; open the analysis page when it finishes.
@@ -101,7 +75,8 @@ struct ReviewView: View {
     private var analysisPack: GymPack? { GymPack.current.flatMap { $0.supportsAnalysis ? $0 : nil } }
     private var report: String {
         let status = current.sent ? String(localized: "已完攀", bundle: AppLanguage.bundle) : String(localized: "还在尝试", bundle: AppLanguage.bundle)
-        return "BetaBuddy · \(current.displayTitle)\n\(gradeText(current.grade)) · \(status) · \(clockText(current.analysis.duration))\n\(current.note)"
+        let head = "BetaBuddy · \(current.displayTitle)\n\(gradeText(current.grade)) · \(status) · \(clockText(current.analysis.duration))"
+        return current.note.isEmpty ? head : head + "\n" + current.note
     }
     var body: some View {
         PaperPage {
@@ -122,6 +97,7 @@ struct ReviewView: View {
             } else {
                 replay
             }
+            Toggle("这趟完攀了", isOn: $sent).tint(BB.ink).accessibilityIdentifier("sentToggle")
             if analysisPack != nil { analysisEntry }
             if current.pendingAnalysis != nil {
                 VStack(alignment: .leading, spacing: 12) {
@@ -134,27 +110,6 @@ struct ReviewView: View {
             if let message = store.analysisMessages[climb.id] {
                 Text(verbatim: message).font(.caption).foregroundStyle(BB.muted)
             }
-            VStack(alignment: .leading, spacing: 16) {
-                SectionLabel(title: "下一次，我想…")
-                TextField("只记一个想尝试的改变", text: $note, axis: .vertical)
-                    .lineLimit(3...6).padding(14)
-                    .background(.white.opacity(0.65), in: RoundedRectangle(cornerRadius: 12))
-                Toggle("这趟完攀了", isOn: $sent).tint(BB.ink)
-                Button {
-                    do { try store.update(climb, note: note, sent: sent); savedNotice = true }
-                    catch { store.error = String(localized: "笔记未能保存：\(error.localizedDescription)", bundle: AppLanguage.bundle) }
-                } label: {
-                    Text(savedNotice ? "已保存 ✓" : "保存复盘").frame(maxWidth: .infinity)
-                }.buttonStyle(RouteButtonStyle())
-            }.padding(20).background(BB.lavender, in: RoundedRectangle(cornerRadius: 22))
-            // Without the analysis page the skeleton is still worth having on its own.
-            if analysisPack == nil && current.analysis.sampledFrames == 0 && current.pendingAnalysis == nil {
-                Text("尚未分析，可随时分析骨架。").font(.caption).foregroundStyle(BB.muted)
-                Button("分析骨架") {
-                    do { try store.requestAnalysis(current) }
-                    catch { store.error = error.localizedDescription }
-                }.buttonStyle(RouteButtonStyle(tone: .paper))
-            }
         }.navigationTitle("动作回看").navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -162,13 +117,6 @@ struct ReviewView: View {
                         Button { playback.pause(); organizing = true } label: {
                             Label("整理这一趟", systemImage: "folder")
                         }.accessibilityIdentifier("organizeClimb")
-                        Button {
-                            playback.pause()
-                            do { try store.requestAnalysis(current) }
-                            catch { store.error = error.localizedDescription }
-                        } label: {
-                            Label(current.analysis.sampledFrames == 0 ? "分析骨架" : "重新分析骨架", systemImage: "arrow.clockwise")
-                        }.disabled(current.pendingAnalysis != nil)
                         ShareLink(item: report) { Label("分享复盘文字", systemImage: "square.and.arrow.up") }
                         Button("删除这一趟", role: .destructive) { confirmDelete = true }
                             .accessibilityIdentifier("deleteClimb")
@@ -194,10 +142,13 @@ struct ReviewView: View {
                 openAfterPose = false
                 if current.analysis.hasWorldLandmarks { playback.pause(); analysing = true }
             }
-            .onAppear { skeleton = current.analysis.sampledFrames > 0; note = current.note; sent = current.sent; playback.load(store.file(climb.videoName)) }
+            .onAppear { sent = current.sent; playback.load(store.file(climb.videoName)) }
             .onDisappear { playback.unload() }
-            .onChange(of:note) { _,_ in savedNotice = false }
-            .onChange(of:sent) { _,_ in savedNotice = false }
+            .onChange(of:sent) { _, value in
+                guard value != current.sent else { return }
+                do { try store.update(climb, note: current.note, sent: value) }
+                catch { store.error = String(localized: "未能保存：\(error.localizedDescription)", bundle: AppLanguage.bundle) }
+            }
             .confirmationDialog("删除原片、分析和笔记？此操作无法撤销。",isPresented:$confirmDelete,titleVisibility:.visible) {
                 Button("删除这一趟",role:.destructive) {
                     do { playback.unload(); try store.delete(climb); dismiss() }
@@ -213,36 +164,28 @@ struct ReviewView: View {
     }
     private var replay: some View {
         VStack(spacing: 12) {
-            ZStack(alignment: .topLeading) {
-                PlayerSurface(player: playback.player)
-                if skeleton && current.analysis.sampledFrames > 0 { SkeletonOverlay(analysis: current.analysis, time: playback.time) }
-                if skeleton && current.analysis.sampledFrames > 0 && current.analysis.nearestFrame(to: playback.time) == nil {
-                    Text("暂未可靠识别").font(.caption.bold())
-                        .padding(.horizontal, 12).padding(.vertical, 8)
-                        .background(BB.paper, in: Capsule()).padding(12)
-                }
-            }.frame(height: 340).clipShape(RoundedRectangle(cornerRadius: 20))
+            PlayerSurface(player: playback.player)
+                .frame(height: 340).clipShape(RoundedRectangle(cornerRadius: 20))
             Slider(value: Binding(get: { playback.time }, set: { playback.pause(); playback.seek($0) }),
                    in: 0...max(0.1, current.analysis.duration))
                 .tint(BB.ink).accessibilityLabel("视频进度")
-            Text(verbatim: clockText(playback.time) + " / " + clockText(current.analysis.duration))
-                .font(.system(.caption, design: .monospaced)).monospacedDigit().foregroundStyle(BB.muted)
-                .accessibilityIdentifier("playbackClock")
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 16) { transportButtons }.fixedSize(horizontal: true, vertical: false)
-                VStack(spacing: 8) { transportButtons }
+            HStack(spacing: 4) {
+                Text(verbatim: clockText(playback.time) + " / " + clockText(current.analysis.duration))
+                    .font(.system(.caption, design: .monospaced)).monospacedDigit().foregroundStyle(BB.muted)
+                    .lineLimit(1).minimumScaleFactor(0.7)
+                    .accessibilityIdentifier("playbackClock")
+                Spacer(minLength: 4)
+                transportButtons
+                Spacer(minLength: 4)
+                speedButton
             }.buttonStyle(.plain)
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 20) { playbackOptions }.fixedSize(horizontal: true, vertical: false)
-                VStack(alignment: .leading, spacing: 8) { playbackOptions }
-            }.frame(maxWidth: .infinity, alignment: .leading)
         }
     }
     @ViewBuilder
     private var transportButtons: some View {
         Button { playback.pause(); playback.seek(max(0, playback.time - 0.1)) } label: {
-            Text(verbatim: "−0.1s").font(.callout.monospacedDigit())
-                .padding(.horizontal, 8).frame(minWidth: 48, minHeight: 48).contentShape(Rectangle())
+            Image(systemName: "backward.frame.fill").font(.callout)
+                .frame(width: 44, height: 48).contentShape(Rectangle())
         }.accessibilityLabel("后退零点一秒")
         Button { playback.toggle(duration: current.analysis.duration) } label: {
             Image(systemName: playback.playing ? "pause.fill" : "play.fill")
@@ -250,22 +193,19 @@ struct ReviewView: View {
                 .background(BB.lime, in: HoldShape()).contentShape(Rectangle())
         }.accessibilityLabel(playback.playing ? Text("暂停") : Text("播放"))
         Button { playback.pause(); playback.seek(min(current.analysis.duration, playback.time + 0.1)) } label: {
-            Text(verbatim: "+0.1s").font(.callout.monospacedDigit())
-                .padding(.horizontal, 8).frame(minWidth: 48, minHeight: 48).contentShape(Rectangle())
+            Image(systemName: "forward.frame.fill").font(.callout)
+                .frame(width: 44, height: 48).contentShape(Rectangle())
         }.accessibilityLabel("前进零点一秒")
     }
-    @ViewBuilder
-    private var playbackOptions: some View {
-        Toggle("骨架", isOn: $skeleton).disabled(current.analysis.sampledFrames == 0).font(.subheadline.bold()).tint(BB.ink).fixedSize()
-            .frame(minHeight: 44)
+    private var speedButton: some View {
         Button {
             slow.toggle(); playback.rate = slow ? 0.5 : 1
             if playback.playing { playback.player.rate = playback.rate }
         } label: {
-            Text(slow ? "0.5× 慢放" : "1× 原速").font(.subheadline.bold())
-                .padding(.horizontal, 14).padding(.vertical, 10).frame(minHeight: 44)
-                .background(BB.lavender, in: Capsule()).contentShape(Rectangle())
-        }.buttonStyle(.plain)
+            Text(verbatim: slow ? "0.5×" : "1×").font(.subheadline.bold().monospacedDigit())
+                .padding(.horizontal, 12).frame(minWidth: 48, minHeight: 44)
+                .background(slow ? BB.lime : BB.lavender, in: Capsule()).contentShape(Rectangle())
+        }.buttonStyle(.plain).accessibilityLabel(slow ? Text("0.5× 慢放") : Text("1× 原速"))
     }
     private var analysisEntry: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -284,7 +224,7 @@ struct ReviewView: View {
                 Text(verbatim: CaptureText.planNotUsed).font(.caption).foregroundStyle(BB.muted).fixedSize(horizontal: false, vertical: true)
                     .accessibilityIdentifier("planNotUsed")
             }
-            Text("从这段视频里认出这条线的岩点，一步一步标出你的手点和脚点，用小人跟着你的动作走一遍，并从这一趟里量出几条建议。自动识别，可能认错，不是教练意见；全程在本机完成。")
+            Text("自动识别，可能认错。")
                 .font(.caption).foregroundStyle(BB.muted).fixedSize(horizontal: false, vertical: true)
         }
     }

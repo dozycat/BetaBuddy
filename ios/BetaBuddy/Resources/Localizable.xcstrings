@@ -137,6 +137,40 @@
         }
       }
     },
+    "33 个关键点只用于分析这一趟。遮挡、镜头移动、多人入镜会影响结果。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The 33 keypoints are used only to analyse an attempt. Occlusion, camera movement and other people in frame all affect results."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "33 個のキーポイントはトライの分析にだけ使います。隠れ、カメラの動き、複数人の映り込みは結果に影響します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "33개의 키포인트는 시도를 분석하는 데만 씁니다. 가림, 카메라 움직임, 여러 사람이 찍힌 영상은 결과에 영향을 줍니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "33 个关键点只用于分析这一趟。遮挡、镜头移动、多人入镜会影响结果。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "33 個關鍵點只用於分析這一趟。遮擋、鏡頭移動、多人入鏡都會影響結果。"
+          }
+        }
+      }
+    },
     "“不同身材怎么爬”是模型推演，不是教练建议，不保证动作可行或安全。": {
       "localizations": {
         "en": {
@@ -307,40 +341,6 @@
         }
       }
     },
-    "下一次，我想…": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Next go, I want to…"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "次のトライでは…"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "다음 시도에는…"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "下一次，我想…"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "下一次，我想…"
-          }
-        }
-      }
-    },
     "今天的攀爬": {
       "localizations": {
         "en": {
@@ -473,40 +473,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "例如：週日的紫色路線"
-          }
-        }
-      }
-    },
-    "保存复盘": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Save notes"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "メモを保存"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "메모 저장"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "保存复盘"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "儲存筆記"
           }
         }
       }
@@ -983,40 +949,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "原片無法播放，請檢查影片檔案。"
-          }
-        }
-      }
-    },
-    "只记一个想尝试的改变": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Write down one thing to try differently"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "変えてみたいことを一つだけ"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "바꿔 보고 싶은 것 하나만 적기"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "只记一个想尝试的改变"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "只記一個想嘗試的改變"
           }
         }
       }
@@ -1663,40 +1595,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "已儲存的攀爬：%lld。可在每筆記錄中刪除原片和分析；移除 App 會刪除本機記錄。需要保留的筆記文字可透過分享匯出。"
-          }
-        }
-      }
-    },
-    "已保存 ✓": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Saved ✓"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "保存しました ✓"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "저장됨 ✓"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已保存 ✓"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已儲存 ✓"
           }
         }
       }
@@ -2415,40 +2313,6 @@
         }
       }
     },
-    "暂未可靠识别": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "NO RELIABLE POSE"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "姿勢を検出できません"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "자세 검출 불안정"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "暂未可靠识别"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "暫未可靠辨識"
-          }
-        }
-      }
-    },
     "最高 10 帧/秒 · 较少计算": {
       "localizations": {
         "en": {
@@ -2547,6 +2411,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "未標級"
+          }
+        }
+      }
+    },
+    "未能保存：%@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t save: %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存できませんでした：%@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "저장하지 못했습니다: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未能保存：%@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未能儲存：%@"
           }
         }
       }
@@ -2925,40 +2823,6 @@
         }
       }
     },
-    "笔记未能保存：%@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Couldn’t save your notes: %@"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "メモを保存できませんでした：%@"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "메모를 저장하지 못했습니다: %@"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "笔记未能保存：%@"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "筆記未能儲存：%@"
-          }
-        }
-      }
-    },
     "线路难度": {
       "localizations": {
         "en": {
@@ -3057,6 +2921,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "終生會員已解鎖"
+          }
+        }
+      }
+    },
+    "自动识别，可能认错。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recognised automatically; may be wrong."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動で認識するため、間違えることがあります。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자동으로 인식해서 틀릴 수 있어요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自动识别，可能认错。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動辨識，可能認錯。"
           }
         }
       }
@@ -3227,40 +3125,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "解鎖終生會員"
-          }
-        }
-      }
-    },
-    "记住一个感受（可选）": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "One thing you felt (optional)"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "感じたことを一つ（任意）"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "느낀 점 하나(선택)"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "记住一个感受（可选）"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "記住一個感受（選填）"
           }
         }
       }
@@ -3877,40 +3741,6 @@
         }
       }
     },
-    "重新分析骨架": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Re-analyze skeleton"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "スケルトンを再解析"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "스켈레톤 다시 분석"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "重新分析骨架"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "重新分析骨架"
-          }
-        }
-      }
-    },
     "重新加载": {
       "localizations": {
         "en": {
@@ -4111,74 +3941,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "非官方整理，與場館沒有合作或授權關係。"
-          }
-        }
-      }
-    },
-    "骨架": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Skeleton"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "スケルトン"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "스켈레톤"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "骨架"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "骨架"
-          }
-        }
-      }
-    },
-    "骨架分析已更新。": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Skeleton analysis updated."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "スケルトンの解析を更新しました。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "스켈레톤 분석을 갱신했습니다."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "骨架分析已更新。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "骨架分析已更新。"
           }
         }
       }
@@ -5475,40 +5237,6 @@
         }
       }
     },
-    "分析设置": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Analysis options"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "解析設定"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "분석 설정"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "分析设置"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "分析設定"
-          }
-        }
-      }
-    },
     "导入": {
       "localizations": {
         "en": {
@@ -5951,40 +5679,6 @@
         }
       }
     },
-    "保存后分析骨架": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "保存后分析骨架"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "儲存後分析骨架"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Analyze skeleton after saving"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "保存後に骨格を解析"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "저장 후 골격 분석"
-          }
-        }
-      }
-    },
     "正在保存视频…": {
       "localizations": {
         "zh-Hans": {
@@ -6019,40 +5713,6 @@
         }
       }
     },
-    "分析骨架": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "分析骨架"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "分析骨架"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Analyze skeleton"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "骨格を解析"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "골격 분석"
-          }
-        }
-      }
-    },
     "正在分析，可离开此页面。": {
       "localizations": {
         "zh-Hans": {
@@ -6083,74 +5743,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "분석 중이에요. 이 화면을 나가도 괜찮아요."
-          }
-        }
-      }
-    },
-    "尚未分析，可随时分析骨架。": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "尚未分析，可随时分析骨架。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "尚未分析，可隨時分析骨架。"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Not analyzed yet. You can analyze the skeleton anytime."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "まだ解析していません。骨格はいつでも解析できます。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "아직 분석하지 않았어요. 언제든 골격을 분석할 수 있어요."
-          }
-        }
-      }
-    },
-    "视频先保存，分析可在离开页面后继续。系统暂停后台任务时，下次打开应用会重新分析。": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "视频先保存，分析可在离开页面后继续。系统暂停后台任务时，下次打开应用会重新分析。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "影片先儲存，分析可在離開頁面後繼續。系統暫停背景工作時，下次開啟應用程式會重新分析。"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The video is saved first. Analysis continues after you leave this page. If the system stops background work, analysis restarts when you next open the app."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "動画を先に保存し、画面を離れても解析を続けます。システムがバックグラウンド処理を停止した場合、次回アプリを開くと解析をやり直します。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "영상을 먼저 저장하고 화면을 나가도 분석을 계속해요. 시스템이 백그라운드 작업을 중지하면 다음에 앱을 열 때 다시 분석해요."
           }
         }
       }
@@ -6291,40 +5883,6 @@
         }
       }
     },
-    "从这段视频里认出这条线的岩点，一步一步标出你的手点和脚点，用小人跟着你的动作走一遍，并从这一趟里量出几条建议。自动识别，可能认错，不是教练意见；全程在本机完成。": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Finds this problem’s holds in the clip, walks through your hand and foot holds move by move with a figure that follows your moves, and gives a few tips measured from this attempt. It’s auto-detected, can be wrong and isn’t coaching advice. Everything stays on this device."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "この動画からこの課題のホールドを読み取り、手と足のホールドを1手ずつ、あなたの動きをなぞる人形と一緒に示し、このトライから測ったヒントをいくつか出します。自動認識なので間違えることがあり、コーチの助言ではありません。すべて端末内で処理します。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이 영상에서 이 문제의 홀드를 읽어 손과 발 홀드를 한 무브씩, 내 동작을 따라 움직이는 인형과 함께 보여 주고, 이번 시도에서 잰 팁 몇 가지를 알려 줍니다. 자동 인식이라 틀릴 수 있고, 코치의 조언이 아닙니다. 모든 처리는 기기 안에서 이루어집니다."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "从这段视频里认出这条线的岩点，一步一步标出你的手点和脚点，用小人跟着你的动作走一遍，并从这一趟里量出几条建议。自动识别，可能认错，不是教练意见；全程在本机完成。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "從這段影片裡認出這條線的岩點，一步一步標出你的手點和腳點，用小人跟著你的動作走一遍，並從這一趟裡量出幾條建議。自動識別，可能認錯，不是教練意見；全程在本機完成。"
-          }
-        }
-      }
-    },
     "正在准备画面…": {
       "localizations": {
         "en": {
@@ -6389,40 +5947,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "分析頁面沒有開啟"
-          }
-        }
-      }
-    },
-    "33 个关键点用于骨架回放。遮挡、镜头移动、多人入镜会影响结果。": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "33 keypoints drive the skeleton replay. Occlusion, camera movement and other people in frame all affect results."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "33 個のキーポイントをスケルトン再生に使います。隠れ、カメラの動き、複数人の映り込みは結果に影響します。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "33개의 키포인트로 스켈레톤을 재생합니다. 가림, 카메라 움직임, 여러 사람이 찍힌 영상은 결과에 영향을 줍니다."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "33 个关键点用于骨架回放。遮挡、镜头移动、多人入镜会影响结果。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "33 個關鍵點用於骨架回放。遮擋、鏡頭移動、多人入鏡都會影響結果。"
           }
         }
       }

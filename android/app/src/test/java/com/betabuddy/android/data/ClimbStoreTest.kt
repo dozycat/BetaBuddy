@@ -168,7 +168,7 @@ class ClimbStoreTest {
         assertEquals(4, climb.analysis.sampledFrames)
         assertEquals(2.0, climb.analysis.duration, 0.0)
         assertEquals(0.25, climb.analysis.frames[0].joints[0].y, 0.0)
-        // No world landmarks in old records: the skeleton still plays, the analysis page needs pose recognition again.
+        // No world landmarks in old records: the record still opens, the analysis page needs pose recognition again.
         assertNull(climb.analysis.frames[0].world)
         assertFalse(climb.analysis.hasWorldLandmarks)
         // No climbing date of its own: the record date stands in. 774000000 s after 2001-01-01 = 2025-07-12T08:00:00Z

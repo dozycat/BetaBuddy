@@ -44,7 +44,7 @@
     <string name="about_free">모든 기능 무료 · 인앱 구입 없음 · 구독 없음 · 광고 없음</string>
     <string name="about_local">자세 추정 모델은 앱에 들어 있습니다. 모델 다운로드도, 계정도, 클라우드 AI도 없습니다. 가져온 영상과 분석 기록은 앱 안에 저장되며 시스템 클라우드 백업에서 제외됩니다.</string>
     <string name="about_limits_title">분석의 한계</string>
-    <string name="about_limits_body">33개의 키포인트로 스켈레톤을 재생합니다. 가림, 카메라 움직임, 여러 사람이 찍힌 영상은 결과에 영향을 줍니다.</string>
+    <string name="about_limits_body">33개의 키포인트는 시도를 분석하는 데만 씁니다. 가림, 카메라 움직임, 여러 사람이 찍힌 영상은 결과에 영향을 줍니다.</string>
     <string name="about_video_requirements">한 명의 전신이 나오고 카메라가 고정된 영상에 맞습니다. 영상 하나당 0.5–180초, 최대 500MB입니다. 관계없는 부분은 먼저 갤러리 앱에서 잘라 주세요.</string>
     <string name="about_gym_pack_line">%1$s · 문제 %2$d개 · 데이터 버전 %3$s (%4$s)</string>
     <string name="about_gym_missing">이 빌드에는 암장 데이터가 없습니다. 암장 모델, 문제, 등반 시뮬레이션은 정식 배포 앱에 들어 있으며 공개 소스에는 없습니다.</string>

@@ -9,14 +9,12 @@ final class NavigationTests: XCTestCase {
         app.buttons["tabJournal"].tap()
         app.buttons["importClimb"].tap()
         XCTAssertTrue(app.datePickers["climbedAt"].waitForExistence(timeout: 5))
-        let toggle = app.switches["analyzeAfterSaving"]
-        if !toggle.isHittable { app.swipeUp() }
-        XCTAssertEqual(toggle.value as? String, "0")
+        XCTAssertFalse(app.switches["analyzeAfterSaving"].exists)
         XCTAssertEqual(app.buttons["saveClimb"].label, "Save")
         XCTAssertFalse(app.buttons["importDone"].exists)
         XCTAssertFalse(app.buttons["startAnalysis"].exists)
         let screenshot = XCTAttachment(screenshot: app.screenshot())
-        screenshot.name = "Import with editable time and optional analysis"
+        screenshot.name = "Import with editable time"
         screenshot.lifetime = .keepAlways
         add(screenshot)
     }

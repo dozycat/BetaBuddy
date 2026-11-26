@@ -44,7 +44,7 @@
     <string name="about_free">全機能無料 · 課金なし · サブスクなし · 広告なし</string>
     <string name="about_local">姿勢推定モデルはアプリに同梱されています。モデルのダウンロードも、アカウントも、クラウド AI もありません。読み込んだ動画と解析結果はアプリ内に保存され、システムのクラウドバックアップには含まれません。</string>
     <string name="about_limits_title">解析の限界</string>
-    <string name="about_limits_body">33 個のキーポイントをスケルトン再生に使います。隠れ、カメラの動き、複数人の映り込みは結果に影響します。</string>
+    <string name="about_limits_body">33 個のキーポイントはトライの分析にだけ使います。隠れ、カメラの動き、複数人の映り込みは結果に影響します。</string>
     <string name="about_video_requirements">1 人の全身が映った、固定カメラの動画に向いています。1 本あたり 0.5〜180 秒、最大 500 MB。関係のない部分は先にギャラリーアプリでトリミングしてください。</string>
     <string name="about_gym_pack_line">%1$s · %2$d 課題 · データ版 %3$s（%4$s）</string>
     <string name="about_gym_missing">このビルドにはジムのデータがありません。ジムのモデル、課題、登りのシミュレーションは配信版のアプリに同梱され、公開ソースには含まれません。</string>

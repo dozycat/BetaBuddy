@@ -1,14 +1,9 @@
 package com.betabuddy.android.review
 
-import com.betabuddy.android.data.Joint
-import com.betabuddy.android.data.PoseFrame
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class OverlayGeometryTest {
-    private fun frame(time: Double) = PoseFrame(time, List(33) { Joint(0.5, 0.5, 1.0) })
-
     @Test fun pictureIsFittedInsideTheStage() {
         // Portrait clip in a wide stage: pillarboxed, full height.
         val (w, h) = OverlayGeometry.fit(360f, 340f, 9.0 / 16)
@@ -22,16 +17,4 @@ class OverlayGeometryTest {
         assertEquals(0f to 0f, OverlayGeometry.fit(0f, 340f, 1.0))
     }
 
-    @Test fun lowConfidenceAndOutOfFramePointsAreNotDrawn() {
-        val full = frame(0.0)
-        assertEquals(18, OverlayGeometry.bones(full).size)
-        assertEquals(22, OverlayGeometry.points(full).size) // 33 minus the 11 face points
-        val joints = full.joints.toMutableList()
-        joints[15] = Joint(0.5, 0.5, 0.3)   // left wrist unsure
-        joints[28] = Joint(0.5, 1.2, 1.0)   // right ankle below the picture
-        val partial = PoseFrame(0.0, joints)
-        assertEquals(18 - 1 - 3, OverlayGeometry.bones(partial).size) // 13–15, and 26–28, 28–30, 28–32
-        assertEquals(20, OverlayGeometry.points(partial).size)
-        assertTrue(OverlayGeometry.bones(PoseFrame(0.0, emptyList())).isEmpty())
-    }
 }

@@ -48,7 +48,7 @@ final class ImportModel: ObservableObject {
         hasRecordingDate = date != nil
         if let date { climbedAt = date }
     }
-    func run(store:ClimbStore,title:String,grade:String,sent:Bool,note:String,quality:AnalysisQuality,gymId:String?,gymName:String,climbedAt:Date,folderId:UUID?,analyze:Bool) {
+    func run(store:ClimbStore,title:String,grade:String,sent:Bool,gymId:String?,gymName:String,climbedAt:Date,folderId:UUID?) {
         guard !busy, let url = selectedURL else { return }
         busy = true; error = nil
         work = Task {
@@ -57,8 +57,7 @@ final class ImportModel: ObservableObject {
                 let analysis = try await analyzer.videoSummary(url: url)
                 let thumbnail = try await analyzer.thumbnail(url:url)
                 try Task.checkCancellation()
-                saved = try store.save(title:title,grade:grade,sent:sent,note:note,stagedVideo:url,thumbnail:thumbnail,analysis:analysis,gymId:gymId,gymName:gymName,climbedAt:climbedAt,folderId:folderId,pendingAnalysis:analyze ? quality.rawValue : nil)
-                if analyze { store.resumeAnalysis() }
+                saved = try store.save(title:title,grade:grade,sent:sent,note:"",stagedVideo:url,thumbnail:thumbnail,analysis:analysis,gymId:gymId,gymName:gymName,climbedAt:climbedAt,folderId:folderId,pendingAnalysis:nil)
                 selectedURL = nil
                 try? FileManager.default.removeItem(at:url)
             } catch is CancellationError {
@@ -83,12 +82,9 @@ struct ImportView: View {
     @State private var title = ""
     @State private var grade = ungradedValue
     @State private var sent = false
-    @State private var note = ""
     @State private var gymId: String?
     @State private var gymName = ""
-    @State private var analyze = false
     @State private var folderId: UUID?
-    @State private var quality = AnalysisQuality.balanced
     var body: some View {
         NavigationStack {
             PaperPage {
@@ -187,7 +183,6 @@ struct ImportView: View {
                     }.tint(BB.ink)
                 }
                 Toggle("这趟完攀了",isOn:$sent).tint(BB.ink)
-                TextField("记住一个感受（可选）",text:$note,axis:.vertical).textFieldStyle(.roundedBorder).lineLimit(2...4)
             }
             DatePicker("攀爬时间", selection: $model.climbedAt, displayedComponents: [.date, .hourAndMinute])
                 .accessibilityIdentifier("climbedAt")
@@ -199,32 +194,10 @@ struct ImportView: View {
                     AlbumMetadataFields(gymId: $gymId, gymName: $gymName, climbedAt: $model.climbedAt, folderId: $folderId, showsDate: false)
                 }.padding(.top, 12)
             }.tint(BB.ink)
-            Toggle("保存后分析骨架", isOn: $analyze).tint(BB.ink).accessibilityIdentifier("analyzeAfterSaving")
-            if analyze {
-                DisclosureGroup("分析设置") {
-                    VStack(alignment: .leading, spacing: 12) {
-                    ForEach(AnalysisQuality.allCases) { option in
-                        Button { quality = option } label: {
-                            HStack {
-                                VStack(alignment:.leading,spacing:4) {
-                                    Text(verbatim:option.title).font(.subheadline.bold())
-                                    Text(verbatim:option.subtitle).font(.caption).foregroundStyle(BB.muted)
-                                }
-                                Spacer()
-                                Image(systemName:quality == option ? "checkmark.circle.fill" : "circle")
-                            }.padding(16).background(quality == option ? BB.lavender : .white.opacity(0.5),in:RoundedRectangle(cornerRadius:16))
-                        }.buttonStyle(.plain)
-                    }
-                    Text("视频先保存，分析可在离开页面后继续。系统暂停后台任务时，下次打开应用会重新分析。")
-                        .font(.caption).foregroundStyle(BB.muted)
-                    }.padding(.top, 12)
-                }
-            }
-
         }
     }
     private func save() {
-        model.run(store:store,title:title,grade:grade,sent:sent,note:note,quality:quality,gymId:gymId,gymName:gymName,climbedAt:model.climbedAt,folderId:folderId,analyze:analyze)
+        model.run(store:store,title:title,grade:grade,sent:sent,gymId:gymId,gymName:gymName,climbedAt:model.climbedAt,folderId:folderId)
     }
     @ViewBuilder
     private func sourceButtons(expanded: Bool) -> some View {

@@ -30,12 +30,12 @@ Android：
 
 ```
 ios/BetaBuddy/App/        BetaBuddyApp.swift：入口、两个入口的导航（0 岩馆，1 攀爬册）；MembershipStore（StoreKit）
-ios/BetaBuddy/Core/       Models、PoseMath、VideoAnalyzer、AnalysisQueue、ClimbStore、GymPack、AppLanguage、Capture*（应用内拍摄）、GymLocator
+ios/BetaBuddy/Core/       Models、VideoAnalyzer、AnalysisQueue、ClimbStore、GymPack、AppLanguage、Capture*（应用内拍摄）、GymLocator
 ios/BetaBuddy/Views/      DesignSystem、BrandMark、Journal、Album、Import、Review、Analysis、Capture、About、Gym、Localization
 ios/BetaBuddy/Resources/  图标、pose_landmarker_full.task、gyms-cn.json、Localizable.xcstrings、InfoPlist.xcstrings、PrivacyInfo、PrivacyPolicy.<语言>.txt、Licenses
 ios/BetaBuddyTests/       模拟器上的单元与集成测试
 ios/BetaBuddyUITests/     界面冒烟测试
-ios/CoreTests/            Mac 上可跑的核心测试（Package.swift 只含 Models、PoseMath 与 Capture）
+ios/CoreTests/            Mac 上可跑的核心测试（Package.swift 只含 Models 与 Capture）
 ios/TestSupport/          两个测试包共用：画出来的墙、合成数据包、拍摄与分析页面的替身（合成数据，不识别任何东西）
 ios/StoreKit/             终生会员的本地 StoreKit 配置
 ios/LocalMediaPipe/       SDK 指标上报工厂的空实现
@@ -45,7 +45,7 @@ android/app/src/main/java/com/betabuddy/android/
   ui/theme、ui/common     BB 颜色与字体、公共组件、BBIcons
   ui/nav/AppShell.kt      两个入口（0 岩馆，1 攀爬册）、底部导航与齿轮、设置页的导航
   gym/                    GymManifest、GymPack、GymMessage（纯 Kotlin）、GymSession、GymScreen、PackWebView
-  journal/ pose/ review/ data/   攀爬册：列表、导入与后台分析服务、VideoAnalyzer 与 PoseMath、回看与分析页面、ClimbStore
+  journal/ pose/ review/ data/   攀爬册：列表、导入与后台分析服务、VideoAnalyzer、回看与分析页面、ClimbStore
   capture/                应用内拍摄：相机与取景判断（判断在数据包的页面里做）、选岩馆与 GymLocator、先保存再分析
   settings/ i18n/         设置与关于、隐私政策、AppLanguage
 android/app/src/main/res/ values*/strings.xml（导航、岩馆、设置）、strings_journal.xml、strings_album.xml、strings_capture.xml、raw*/privacy_policy.txt、xml/

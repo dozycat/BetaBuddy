@@ -47,7 +47,7 @@
     <string name="about_free">Everything is free · no purchases · no subscription · no ads</string>
     <string name="about_local">The pose model ships inside the app. No model downloads, no account, no cloud AI. Imported videos and analysis stay inside the app and are excluded from system cloud backups.</string>
     <string name="about_limits_title">Limits of the analysis</string>
-    <string name="about_limits_body">33 keypoints drive the skeleton replay. Occlusion, camera movement and other people in frame all affect results.</string>
+    <string name="about_limits_body">The 33 keypoints are used only to analyse an attempt. Occlusion, camera movement and other people in frame all affect results.</string>
     <string name="about_video_requirements">Works with videos of one climber, whole body in frame, from a fixed camera: 0.5–180 seconds, up to 500 MB each. Trim anything else in your gallery app first.</string>
     <!-- Gym name, route count, pack version, pack date. -->
     <string name="about_gym_pack_line">%1$s · %2$d problems · pack %3$s (%4$s)</string>
