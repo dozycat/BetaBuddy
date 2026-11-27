@@ -1,23 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="library_title">相册自动收录</string>
-    <string name="library_heading">把相册里的攀爬收好</string>
-    <string name="library_description">开启后，在 App 打开时检查你授权的视频，将识别到的攀爬复制到攀爬册。原片不改动，视频不上传。</string>
+    <string name="library_title">扫相册</string>
     <string name="library_enable">自动收录</string>
-    <string name="library_access_error">请允许访问相册，也可以只选择部分视频。</string>
+    <string name="library_access_error">需要相册权限</string>
     <string name="library_settings">打开系统设置</string>
-    <string name="library_selected">只检查你已授权的视频。</string>
-    <string name="library_reselect">调整可访问的视频</string>
+    <string name="library_reselect">授权范围</string>
     <string name="library_running">正在检查相册…</string>
-    <string name="library_progress">已检查 %1$d / %2$d 个视频</string>
+    <string name="library_progress">%1$d / %2$d</string>
     <string name="library_stop">停止检查</string>
-    <string name="library_imported">本次已收录 %1$d 个视频</string>
-    <string name="library_scan">检查新视频</string>
-    <string name="library_unavailable">%1$d 个视频暂未处理。云端原片需先在相册下载，下载后可重试。</string>
-    <string name="library_grouping">按视频拍摄日、室内或室外及推荐岩馆整理。推荐只使用视频已有的位置；识别和推荐可能有误，可在记录中修改。</string>
-    <string name="library_deletion">删除攀爬册中的记录后，不会自动再次收录。手动导入仍然可用。</string>
+    <string name="library_imported">已收录 %1$d</string>
+    <string name="library_scan">扫描</string>
+    <string name="library_unavailable">待处理 %1$d</string>
     <string name="library_scan_error">自动收录暂时不可用，请稍后重试。</string>
-    <string name="library_suggested">环境和岩馆由自动识别推荐，请核对。</string>
+    <string name="library_suggested">推荐</string>
     <string name="library_unknown">未确定</string>
     <string name="library_indoor">室内</string>
     <string name="library_environment">攀爬环境</string>

@@ -215,7 +215,7 @@ struct OrganizeClimbView: View {
                         if value == .outdoor { gymId = nil; gymName = "" }
                     }
                     if climb.environmentAuto == true || climb.gymAuto == true {
-                        Text("环境和岩馆由自动识别推荐，请核对。").font(.caption).foregroundStyle(BB.muted)
+                        Text("推荐").font(.caption).foregroundStyle(BB.muted)
                     }
                 }
                 Section { AlbumMetadataFields(gymId: $gymId, gymName: $gymName, climbedAt: $climbedAt, folderId: $folderId) }

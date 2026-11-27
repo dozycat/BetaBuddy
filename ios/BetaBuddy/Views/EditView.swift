@@ -124,7 +124,6 @@ struct EditView: View {
                 Button {} label: { Text("分享视频").frame(maxWidth: .infinity) }
                     .buttonStyle(RouteButtonStyle()).disabled(true).opacity(0.4)
             }
-            Text("自动剪辑，可能剪错。").font(.caption).foregroundStyle(BB.muted)
         }.padding(20).background(BB.paper.ignoresSafeArea()).foregroundStyle(BB.ink)
             .onAppear { session.start() }
             .onDisappear { session.close() }

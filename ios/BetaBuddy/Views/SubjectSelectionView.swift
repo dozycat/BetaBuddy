@@ -91,6 +91,7 @@ final class SubjectSelectionSession: ObservableObject {
 struct SubjectSelectionView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @StateObject private var session: SubjectSelectionSession
     @StateObject private var playback = Playback()
     @State private var saveError: String?
@@ -112,19 +113,11 @@ struct SubjectSelectionView: View {
         NavigationStack {
             GeometryReader { layout in
                 VStack(spacing: 0) {
-                    subjectStage.frame(height: min(390, layout.size.height * (adjustingRegion ? 0.38 : 0.55)))
+                    subjectStage.frame(height: min(520, layout.size.height * (adjustingRegion ? 0.38 : (dynamicTypeSize.isAccessibilitySize ? 0.48 : 0.72))))
                         .padding(.horizontal,20).padding(.top,12)
                     PaperPage(spacing:16) {
-                        if !drawingRegion {
-                            Text("拖到看清人物的位置，点选要跟踪的人。遮挡后认不准时，可在新的位置再点一次纠正。")
-                                .font(.subheadline).foregroundStyle(BB.muted)
-                        }
-                        Button(drawingRegion ? "取消圈选" : "未圈到？手动圈选") {
-                            playback.pause(); session.stop(); drawingRegion.toggle(); adjustingRegion = false
-                            if !drawingRegion { session.prepare() }
-                        }.buttonStyle(.plain).accessibilityIdentifier("drawSubjectRegion")
                         if drawingRegion {
-                            Button("微调圈线") { adjustingRegion.toggle() }.buttonStyle(.plain).accessibilityIdentifier("adjustSubjectRegion")
+                            Button("微调") { adjustingRegion.toggle() }.buttonStyle(.plain).accessibilityIdentifier("adjustSubjectRegion")
                                 .accessibilityAddTraits(adjustingRegion ? .isSelected : [])
                             if adjustingRegion {
                                 adjustment("左右位置", value: Binding(get: { draft.x }, set: { draft.x = $0 }), range: 0...max(0.0001,1-draft.width), enabled: draft.width < 1)
@@ -132,41 +125,33 @@ struct SubjectSelectionView: View {
                                 adjustment("圈线宽度", value: Binding(get: { draft.width }, set: { draft.width = $0; draft.x = min(draft.x,1-$0) }), range: 0.02...1)
                                 adjustment("圈线高度", value: Binding(get: { draft.height }, set: { draft.height = $0; draft.y = min(draft.y,1-$0) }), range: 0.02...1)
                             }
-                            Button("跟踪圈内的人") { playback.pause(); drawingRegion = false; session.refine(draft, at: playback.time) }
+                            Button("跟踪") { playback.pause(); drawingRegion = false; session.refine(draft, at: playback.time) }
                                 .buttonStyle(RouteButtonStyle(tone: .lime)).accessibilityIdentifier("trackSubjectRegion")
-                            Text("拖动圈住人物全身，也可用微调移动和调整圈线。").font(.caption).foregroundStyle(BB.muted)
                         }
                         Slider(value: Binding(get: { playback.time }, set: { playback.pause(); playback.seek($0) }), in: 0...max(0.1, climb.analysis.duration))
                             .tint(BB.ink).accessibilityLabel("视频进度")
-                        HStack {
-                            Button { playback.toggle(duration: climb.analysis.duration) } label: {
-                                Image(systemName: playback.playing ? "pause.fill" : "play.fill").frame(width: 48, height: 44)
-                            }.buttonStyle(.plain).accessibilityLabel(playback.playing ? Text("暂停") : Text("播放"))
-                            Text(verbatim: clockText(playback.time)).monospacedDigit()
-                            Spacer()
-                            Button("自动选择") { playback.pause(); session.automatic() }
-                                .disabled(session.analysis == nil || session.busy).buttonStyle(RouteButtonStyle(tone: .paper))
+                        ViewThatFits(in: .horizontal) {
+                            HStack(spacing: 12) { playbackControls; Spacer(); selectionControls }
+                            VStack(spacing: 12) {
+                                HStack { playbackControls; Spacer() }
+                                HStack { selectionControls; Spacer() }
+                            }
                         }
                         if session.busy {
-                            if session.analysis == nil || session.refining { ProgressView(value: session.progress); Text("正在找视频里的人…") }
+                            if session.analysis == nil || session.refining { ProgressView(value: session.progress).accessibilityLabel("正在找视频里的人…") }
                             else { ProgressView() }
                         } else if let analysis = session.analysis {
-                            if !analysis.hasSelectedSubject { Text("暂未选定人物，请在画面里点选。").foregroundStyle(BB.muted) }
-                            else if selectedID == nil { Text("这一刻未确认人物，不会自动换成别人。").font(.caption).foregroundStyle(BB.muted) }
-                            else { Text(session.anchors.isEmpty ? "自动选中，可点选其他人。" : "已按你的选择跟踪。").font(.caption).foregroundStyle(BB.muted) }
-                            if analysis.hasSelectedSubject && analysis.subject?.picks.contains(where: { $0.personID == nil }) == true {
-                                Text("部分片段尚未确认人物，可拖到那些位置补选。").font(.caption).foregroundStyle(BB.muted)
-                            }
-                            if (analysis.subject?.unresolved ?? 0) > 0 { Text("有选人标记未能对上，请在看清人物的位置重新点选。").font(.caption).foregroundStyle(BB.muted) }
+                            if (analysis.subject?.unresolved ?? 0) > 0 { Text("请重新选人").font(.caption).foregroundStyle(BB.muted) }
+                            else if !analysis.hasSelectedSubject { Text("未选人").foregroundStyle(BB.muted) }
+                            else if selectedID == nil || analysis.subject?.picks.contains(where: { $0.personID == nil }) == true { Text("待补选").font(.caption).foregroundStyle(BB.muted) }
                         }
-                        if store.analysisResults.contains(climb.id) || store.editPlans.contains(climb.id) { Text("更换人物后，需要重新分析。").font(.caption).foregroundStyle(BB.muted) }
                         if let error = saveError ?? session.error {
                             Text(verbatim: error).foregroundStyle(.red)
                             if session.error != nil { Button("再试一次") { session.retry() }.disabled(session.busy).accessibilityIdentifier("retrySubject") }
                         }
                     }.accessibilityIdentifier("subjectControls")
                 }.background(BB.paper)
-            }.navigationTitle("选择攀爬者").navigationBarTitleDisplayMode(.inline)
+            }.navigationTitle("选人").navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) { Button("取消") { dismiss() } }
                     ToolbarItem(placement: .confirmationAction) {
@@ -184,6 +169,40 @@ struct SubjectSelectionView: View {
                 if phase == .active { session.resume() }
                 else { playback.pause(); session.suspend() }
             }
+    }
+
+    private var playbackControls: some View {
+        HStack(spacing: 8) {
+            Button { playback.toggle(duration: climb.analysis.duration) } label: {
+                Image(systemName: playback.playing ? "pause.fill" : "play.fill").frame(width: 48, height: 44)
+            }.buttonStyle(.plain).accessibilityLabel(playback.playing ? Text("暂停") : Text("播放"))
+            Text(verbatim: clockText(playback.time)).monospacedDigit().fixedSize()
+        }
+    }
+
+    private var selectionControls: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 12) { selectionButtons }.fixedSize(horizontal: true, vertical: false)
+            VStack(alignment: .leading, spacing: 12) { selectionButtons }
+        }
+    }
+
+    @ViewBuilder private var selectionButtons: some View {
+        let automatic = !drawingRegion && session.anchors.isEmpty && session.analysis?.hasSelectedSubject == true
+        let manual = drawingRegion || !session.anchors.isEmpty
+        Group {
+            Button("自动") { playback.pause(); session.automatic() }
+                .disabled(session.analysis == nil || session.busy)
+                .buttonStyle(RouteButtonStyle(tone: automatic ? .lime : .paper))
+                .accessibilityIdentifier("automaticSubject")
+                .accessibilityAddTraits(automatic ? .isSelected : [])
+            Button(drawingRegion ? "取消圈选" : "圈选") {
+                playback.pause(); session.stop(); drawingRegion.toggle(); adjustingRegion = false
+                if !drawingRegion { session.prepare() }
+            }.buttonStyle(RouteButtonStyle(tone: manual ? .lime : .paper))
+                .accessibilityIdentifier("drawSubjectRegion")
+                .accessibilityAddTraits(manual ? .isSelected : [])
+        }
     }
 
     private var subjectStage: some View {

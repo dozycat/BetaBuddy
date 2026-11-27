@@ -100,6 +100,11 @@ class LibraryImportTest {
             assertEquals("indoor",saved!!.environment)
             assertTrue(saved!!.environmentAuto == true)
             assertTrue(store.file(saved!!.videoName).isFile)
+            val imported = model!!.state.value.imported
+            assertTrue(imported >= 1)
+            withContext(Dispatchers.Main) { model!!.setActive(false,false); model!!.setActive(true,false) }
+            withTimeout(30_000) { while (model!!.state.value.running) delay(100) }
+            assertEquals(imported,model!!.state.value.imported)
             withContext(Dispatchers.Main) { model!!.retry() }
             withTimeout(30_000) { while (model!!.state.value.running) delay(100) }
             assertEquals(1,store.climbs.count { it.sourceAssetID == source.id })

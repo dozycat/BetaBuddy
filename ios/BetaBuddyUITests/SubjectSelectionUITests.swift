@@ -73,12 +73,12 @@ final class SubjectSelectionUITests: XCTestCase {
             people.firstMatch.tap()
         }
         XCTAssertTrue(app.buttons["saveSubject"].wait(for: \.isEnabled, toEqual: true, timeout: 120))
-        if automatic { XCTAssertTrue(app.staticTexts["自动选中，可点选其他人。"].exists) }
+        if automatic { XCTAssertTrue(app.buttons["automaticSubject"].isSelected) }
         let selected = XCTAttachment(screenshot: app.screenshot())
         selected.name = "Subject outline on the original video"; selected.lifetime = .keepAlways; add(selected)
         app.buttons["saveSubject"].tap()
         XCTAssertTrue(choose.waitForExistence(timeout: 10)); if !choose.isHittable { app.swipeUp() }; choose.tap()
-        XCTAssertTrue(app.staticTexts[automatic ? "自动选中，可点选其他人。" : "已按你的选择跟踪。"].waitForExistence(timeout: 15))
+        XCTAssertTrue(app.buttons[automatic ? "automaticSubject" : "drawSubjectRegion"].wait(for: \.isSelected, toEqual: true, timeout: 15))
         app.buttons["取消"].tap()
         app.buttons["更多操作"].tap(); app.buttons["deleteClimb"].tap(); app.buttons["删除这一趟"].tap()
         XCTAssertFalse(app.staticTexts[String(title)].waitForExistence(timeout: 2))

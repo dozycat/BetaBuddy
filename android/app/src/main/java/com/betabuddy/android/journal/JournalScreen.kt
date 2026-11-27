@@ -8,6 +8,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
@@ -207,8 +208,10 @@ private fun JournalList(
                             Text(group.day.format(java.time.format.DateTimeFormatter.ofLocalizedDate(java.time.format.FormatStyle.MEDIUM)), style = BB.Headline, modifier = Modifier.weight(1f))
                             Text(stringResource(R.string.album_count, group.climbs.size), style = BB.Caption, color = BB.Muted)
                         }
-                        Text(if (group.environment == "outdoor") stringResource(R.string.album_outdoor) else group.gymName ?: stringResource(R.string.album_no_gym), style = BB.Subheadline, color = BB.Muted)
-                        if (group.climbs.any { it.environmentAuto == true || it.gymAuto == true }) Text(stringResource(R.string.library_suggested),style = BB.Caption,color = BB.Muted)
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp),verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(if (group.environment == "outdoor") stringResource(R.string.album_outdoor) else group.gymName ?: stringResource(R.string.album_no_gym), style = BB.Subheadline, color = BB.Muted)
+                            if (group.gymName != null && group.climbs.all { it.gymAuto == true }) Text(stringResource(R.string.library_suggested),style = BB.Caption,color = BB.Muted)
+                        }
                         for (climb in group.climbs) {
                             ClimbRow(climb, model.thumbnailFile(climb)) { onOpen(climb) }
                         }

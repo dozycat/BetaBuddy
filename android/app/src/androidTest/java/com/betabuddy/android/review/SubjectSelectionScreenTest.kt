@@ -54,7 +54,7 @@ class SubjectSelectionScreenTest {
         } }
         open(climb)
         rule.waitUntil(180_000) { runCatching { rule.onNodeWithTag("saveSubject").assertIsEnabled();true }.getOrDefault(false) }
-        rule.onNodeWithText(context.getString(R.string.subject_automatic)).assertExists()
+        rule.onNodeWithTag("automaticSubject").assertIsSelected()
         rule.onNodeWithTag("subjectStage").assertIsDisplayed()
         rule.waitForIdle();instrumentation.waitForIdleSync();Thread.sleep(300)
         val out=File(context.getExternalFilesDir(null),"subject-auto-shots").apply { mkdirs() }
@@ -67,7 +67,7 @@ class SubjectSelectionScreenTest {
         assertTrue(saved.subjectAnchors.isNullOrEmpty());assertFalse(saved.analysis.subject!!.manual)
         assertTrue(saved.analysis.subjectPositions!!.size>=input.sampledFrames*.9)
         open(saved)
-        rule.waitUntil(15_000) { rule.onAllNodesWithText(context.getString(R.string.subject_automatic)).fetchSemanticsNodes().isNotEmpty() }
+        rule.waitUntil(15_000) { runCatching { rule.onNodeWithTag("automaticSubject").assertIsSelected(); true }.getOrDefault(false) }
         rule.onNodeWithText(context.getString(R.string.journal_cancel)).performClick()
         assertEquals(1,store.climbs.first { it.id==climb.id }.subjectRevision)
     }
@@ -126,7 +126,7 @@ class SubjectSelectionScreenTest {
         assertTrue(saved.analysis.subjectPositions!!.size >= input.duration*9)
         assertEquals(bounds[0].toDouble(),saved.subjectAnchors!!.single().bounds.x,.025)
         open(saved)
-        rule.waitUntil(30_000) { runCatching { rule.onNodeWithText(context.getString(R.string.subject_manual)).assertExists(); true }.getOrDefault(false) }
+        rule.waitUntil(30_000) { runCatching { rule.onNodeWithTag("drawSubjectRegion").assertIsSelected(); true }.getOrDefault(false) }
         rule.onNodeWithTag("subjectStage").assertIsDisplayed(); screenshot("reopened.png")
         rule.onNodeWithText(context.getString(R.string.journal_cancel)).performClick()
         assertEquals(1,store.climbs.first { it.id == climb.id }.subjectRevision)
@@ -166,8 +166,8 @@ class SubjectSelectionScreenTest {
         assertEquals(target.id,saved.analysis.subject!!.picks.first().personID)
         assertEquals(1,saved.subjectAnchors!!.size)
         open(saved)
-        rule.waitUntil(30_000) { runCatching { rule.onNodeWithText(context.getString(R.string.subject_manual)).assertExists(); true }.getOrDefault(false) }
-        rule.onNodeWithTag(personTag).assertIsSelected()
+        rule.waitUntil(30_000) { runCatching { rule.onNodeWithTag("drawSubjectRegion").assertIsSelected(); true }.getOrDefault(false) }
+        rule.waitUntil(30_000) { runCatching { rule.onNodeWithTag(personTag).assertIsSelected(); true }.getOrDefault(false) }
         if (args.getString("subjectAnalysis") == null) {
             // Once chosen, only that outline is drawn; another person remains tappable.
             val other = input.people!!.first().candidates.first { it.id != target.id }

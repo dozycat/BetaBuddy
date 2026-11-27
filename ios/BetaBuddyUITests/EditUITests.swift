@@ -89,7 +89,6 @@ final class EditUITests: XCTestCase {
         XCTAssertTrue(app.buttons["editSlow"].waitForExistence(timeout: 10))
         XCTAssertTrue(app.buttons["editCamera"].exists)
         XCTAssertFalse(app.buttons["editRemove"].exists)
-        XCTAssertTrue(app.staticTexts["自动剪辑，可能剪错。"].exists)
         let deadline = Date().addingTimeInterval(120)
         while !share.exists && !error.exists && Date() < deadline { try await Task.sleep(for: .milliseconds(200)) }
         keep(app, "03-edit-first-render")

@@ -216,6 +216,10 @@ adb shell "am start -n $A --ei initialTab 1 --ez openCapture true \
 
 参数只在全新启动时读取，换参数前先 `adb shell am force-stop com.betabuddy.android`。`gymQuery` 原样接在入口 URL 的 `hint`、`lang` 之后，页面自己定义其中的参数。数据包页面可以用 Chrome 的 `chrome://inspect` 调试（只有 Debug 包打开了 WebView 调试）。日志标签：岩馆 `gym`、拍摄界面 `capture`（离开时有一行各环节的平均耗时，每段片子停下时记下是哪个录像器写的）、分析页面 `analysis`；只写本机 logcat。
 
+## 相册、选人与剪辑界面
+
+独立开发分支的入口统一为「扫相册」「选人」「剪辑」。按用户要求去掉常驻说明，选择状态用圈线和按钮高亮表达，剪辑只显示绳线和真实百分比；保留必要错误和无障碍标签。字号增大时视频缩小、控件换行，时间轴及操作区仍可滚动。详细开发验证见 `../ios/camera-library-selection.md`。
+
 ## 验证状态
 
 只记实际做过的；没做的列在「尚未验证」里。

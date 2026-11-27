@@ -1,23 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="library_title">사진 보관함 자동 가져오기</string>
-    <string name="library_heading">사진 속 등반을 모아 보세요</string>
-    <string name="library_description">켜면 앱이 열려 있는 동안 허용한 영상을 확인하고 감지된 등반을 기록에 복사합니다. 원본은 변경하지 않으며 영상을 업로드하지 않습니다.</string>
+    <string name="library_title">앨범 스캔</string>
     <string name="library_enable">자동 가져오기</string>
-    <string name="library_access_error">사진 접근을 허용해 주세요. 일부 영상만 선택할 수도 있습니다.</string>
+    <string name="library_access_error">사진 접근 권한 필요</string>
     <string name="library_settings">설정 열기</string>
-    <string name="library_selected">허용한 영상만 확인합니다.</string>
-    <string name="library_reselect">접근 가능한 영상 변경</string>
+    <string name="library_reselect">허용된 동영상</string>
     <string name="library_running">사진 보관함 확인 중…</string>
-    <string name="library_progress">%1$d개 확인(전체 %2$d개)</string>
+    <string name="library_progress">%1$d / %2$d</string>
     <string name="library_stop">확인 중지</string>
-    <string name="library_imported">이번에 영상 %1$d개를 가져왔습니다</string>
-    <string name="library_scan">새 영상 확인</string>
-    <string name="library_unavailable">영상 %1$d개를 처리하지 못했습니다. 클라우드 원본을 사진 앱에서 다운로드한 뒤 다시 시도하세요.</string>
-    <string name="library_grouping">촬영일, 실내·실외 및 추천 암장별로 정리합니다. 영상에 저장된 위치만 사용하며, 인식이나 추천이 틀리면 기록에서 수정할 수 있습니다.</string>
-    <string name="library_deletion">삭제한 기록은 자동으로 다시 가져오지 않습니다. 수동으로는 가져올 수 있습니다.</string>
+    <string name="library_imported">%1$d개 가져옴</string>
+    <string name="library_scan">스캔</string>
+    <string name="library_unavailable">%1$d개 대기 중</string>
     <string name="library_scan_error">자동 가져오기를 사용할 수 없습니다. 나중에 다시 시도해 주세요.</string>
-    <string name="library_suggested">환경과 암장이 자동으로 추천되었습니다. 확인해 주세요.</string>
+    <string name="library_suggested">추천</string>
     <string name="library_unknown">미확인</string>
     <string name="library_indoor">실내</string>
     <string name="library_environment">등반 환경</string>

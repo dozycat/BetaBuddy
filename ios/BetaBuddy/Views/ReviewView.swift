@@ -102,7 +102,7 @@ struct ReviewView: View {
                 replay
             }
             if SubjectResolver.available {
-                Button { playback.pause(); selectingSubject = true } label: { Label("选择攀爬者", systemImage: "person.crop.circle") }
+                Button { playback.pause(); selectingSubject = true } label: { Label("选人", systemImage: "person.crop.circle") }
                     .buttonStyle(RouteButtonStyle(tone: .paper)).accessibilityIdentifier("chooseSubject")
             }
             Toggle("这趟完攀了", isOn: $sent).tint(BB.ink).accessibilityIdentifier("sentToggle")
@@ -239,7 +239,7 @@ struct ReviewView: View {
                         .accessibilityIdentifier("analyseClimb")
                     // The page could not analyse this clip but still made a plan (following the climber).
                     if editPlan != nil {
-                        Button { playback.pause(); editing = true } label: { Text("自动剪辑") }
+                        Button { playback.pause(); editing = true } label: { Text("剪辑") }
                             .buttonStyle(RouteButtonStyle(tone: .lime)).accessibilityIdentifier("autoEdit")
                     }
                 }
@@ -257,7 +257,7 @@ struct ReviewView: View {
         Button { playback.pause(); analysisQueue.cancel(climb.id); analysing = true } label: { Text("看分析").frame(maxWidth: .infinity) }
             .buttonStyle(RouteButtonStyle()).accessibilityIdentifier("viewAnalysis")
         if editPlan != nil {
-            Button { playback.pause(); editing = true } label: { Text("自动剪辑").frame(maxWidth: expanded ? .infinity : nil) }
+            Button { playback.pause(); editing = true } label: { Text("剪辑").frame(maxWidth: expanded ? .infinity : nil) }
                 .buttonStyle(RouteButtonStyle(tone: .lime)).accessibilityIdentifier("autoEdit")
         }
         Button { store.discardAnalysisResult(current); startAnalysis() } label: {

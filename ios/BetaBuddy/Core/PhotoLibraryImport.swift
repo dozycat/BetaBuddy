@@ -104,6 +104,7 @@ final class PhotoLibraryImport: NSObject, ObservableObject, PHPhotoLibraryChange
     var hasAccess: Bool { authorization == .authorized || authorization == .limited }
 
     func setEnabled(_ value: Bool) async {
+        if value && !enabled { imported = 0 }
         enabled = value
         defaults.set(value, forKey: Self.enabledKey)
         if value {
@@ -119,7 +120,7 @@ final class PhotoLibraryImport: NSObject, ObservableObject, PHPhotoLibraryChange
         authorization = PHPhotoLibrary.authorizationStatus(for: .readWrite)
         updateObserver()
         guard enabled, foreground, hasAccess else { stop(); return }
-        scan()
+        scan(resetCount: false)
     }
     private func updateObserver() {
         let needed = enabled && hasAccess
@@ -133,9 +134,10 @@ final class PhotoLibraryImport: NSObject, ObservableObject, PHPhotoLibraryChange
         }
     }
     func stop() { rescan = false; work?.cancel() }
-    func scan() {
+    func scan(resetCount: Bool = true) {
         guard enabled, hasAccess, foreground, !running, let store, !store.cameraOpen, !store.selectionOpen else { return }
-        running = true; error = nil; checked = 0; imported = 0; unavailable = 0
+        running = true; error = nil; checked = 0; unavailable = 0
+        if resetCount { imported = 0 }
         work = Task { [weak self] in
             guard let self else { return }
             defer {

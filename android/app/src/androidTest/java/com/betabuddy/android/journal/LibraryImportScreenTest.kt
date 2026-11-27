@@ -84,12 +84,12 @@ class LibraryImportScreenTest {
             val thumbnail=awaitNode { it.viewIdResourceName?.endsWith("/icon_thumbnail") == true }
             shot("picker.png"); click(thumbnail)
             click(awaitNode { it.text?.toString()?.startsWith("Allow (") == true })
-            awaitNode { it.packageName == context.packageName && it.text?.toString() == context.getString(R.string.library_heading) }
+            awaitNode { it.packageName == context.packageName && it.text?.toString() == context.getString(R.string.library_title) }
             rule.waitUntil(15_000) { LibraryPermission.access(context) == LibraryAccess.SELECTED }
             val first=runBlocking { LibraryMedia(context).videos() }.map { it.uri }.toSet()
             assertEquals("Only one externally owned video was selected",1,first.size)
             checkHidden(first)
-            rule.onNodeWithText(context.getString(R.string.library_selected)).assertExists()
+            rule.onNodeWithTag("libraryAllowedVideos").assertExists()
             shot("selected.png")
             rule.onNodeWithText(context.getString(R.string.library_reselect)).performScrollTo().performClick()
             click(awaitNode { it.viewIdResourceName?.endsWith("/permission_allow_selected_button") == true })
@@ -97,7 +97,7 @@ class LibraryImportScreenTest {
             val another=tree().filter { it.viewIdResourceName?.endsWith("/icon_thumbnail") == true }[1]
             click(another)
             click(awaitNode { it.text?.toString()?.startsWith("Allow (") == true })
-            awaitNode { it.packageName == context.packageName && it.text?.toString() == context.getString(R.string.library_heading) }
+            awaitNode { it.packageName == context.packageName && it.text?.toString() == context.getString(R.string.library_title) }
             rule.waitUntil(15_000) { runBlocking { LibraryMedia(context).videos() }.size > first.size }
             val expanded=runBlocking { LibraryMedia(context).videos() }.map { it.uri }.toSet()
             assertTrue(expanded.containsAll(first)); assertEquals(2,expanded.size)
@@ -106,7 +106,7 @@ class LibraryImportScreenTest {
             scenario.moveToState(Lifecycle.State.CREATED)
             scenario.moveToState(Lifecycle.State.RESUMED)
             assertEquals(expanded,runBlocking { LibraryMedia(context).videos() }.map { it.uri }.toSet())
-            rule.onNodeWithText(context.getString(R.string.library_selected)).assertExists()
+            rule.onNodeWithTag("libraryAllowedVideos").assertExists()
             shot("expanded.png")
         } finally {
             scenario.onActivity { ViewModelProvider(it)[LibraryImport::class.java].setEnabled(false) }

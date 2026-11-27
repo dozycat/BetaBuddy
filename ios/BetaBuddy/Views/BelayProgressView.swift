@@ -48,7 +48,6 @@ struct BelayProgressView: View {
                     }.animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: fraction)
                 }.frame(width: 140, height: ropeHeight).accessibilityHidden(true)
             }
-            Text("正在剪辑…").font(.headline)
             Text(fraction, format: .percent.precision(.fractionLength(0)))
                 .font(.system(.title2, design: .rounded, weight: .bold)).monospacedDigit()
         }.fixedSize(horizontal: false, vertical: true)

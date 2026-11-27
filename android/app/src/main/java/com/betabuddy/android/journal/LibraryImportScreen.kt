@@ -53,8 +53,6 @@ internal fun LibraryImportScreen(model: LibraryImport, onClose: () -> Unit) {
             TextButton(onClick = onClose) { Text(stringResource(R.string.album_done)) }
         }
         ColorCard(BB.Lime) {
-            Text(stringResource(R.string.library_heading),style = BB.Title)
-            Text(stringResource(R.string.library_description),style = BB.Body)
             Row(Modifier.fillMaxWidth(),verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                 Text(enabledLabel,modifier = Modifier.weight(1f))
                 Switch(state.enabled,onCheckedChange = { enabled ->
@@ -67,27 +65,25 @@ internal fun LibraryImportScreen(model: LibraryImport, onClose: () -> Unit) {
                 TextButton(onClick = { context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}"))) }) { Text(stringResource(R.string.library_settings)) }
             }
             if (state.enabled && state.access == LibraryAccess.SELECTED) {
-                Text(stringResource(R.string.library_selected))
-                TextButton(onClick = { permissions.launch(LibraryPermission.request()) }) { Text(stringResource(R.string.library_reselect)) }
+                TextButton(onClick = { permissions.launch(LibraryPermission.request()) },modifier = Modifier.testTag("libraryAllowedVideos")) { Text(stringResource(R.string.library_reselect)) }
             }
         }
         if (state.enabled && state.access != LibraryAccess.NONE) {
             Column(Modifier.fillMaxWidth().testTag("libraryImportStatus"),verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (state.running) {
-                    Text(stringResource(R.string.library_running),style = BB.Headline)
-                    LinearProgressIndicator(progress = { state.checked.toFloat()/maxOf(1,state.total) },modifier = Modifier.fillMaxWidth())
+                    val progressLabel = stringResource(R.string.library_running)
+                    LinearProgressIndicator(progress = { state.checked.toFloat()/maxOf(1,state.total) },modifier = Modifier.fillMaxWidth().semantics { contentDescription = progressLabel })
                     Text(stringResource(R.string.library_progress,state.checked,state.total))
                     TextButton(onClick = model::stop) { Text(stringResource(R.string.library_stop)) }
                 } else {
-                    Text(stringResource(R.string.library_imported,state.imported),style = BB.Headline)
-                    TextButton(onClick = model::retry,modifier = Modifier.testTag("libraryScan")) { Text(stringResource(R.string.library_scan)) }
+                    Row(Modifier.fillMaxWidth(),horizontalArrangement = Arrangement.SpaceBetween,verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                        Text(stringResource(R.string.library_imported,state.imported),style = BB.Headline)
+                        TextButton(onClick = model::retry,modifier = Modifier.testTag("libraryScan")) { Text(stringResource(R.string.library_scan)) }
+                    }
                 }
                 if (state.unavailable > 0) Text(stringResource(R.string.library_unavailable,state.unavailable),style = BB.Caption,color = BB.Muted)
                 state.error?.let { Text(stringResource(it),color = DangerColor) }
             }
         }
-        Text(stringResource(R.string.library_grouping),style = BB.Caption,color = BB.Muted)
-        Text(stringResource(R.string.library_deletion),style = BB.Caption,color = BB.Muted)
-        Text(GymDirectory.COORDINATE_CREDIT,style = BB.Caption,color = BB.Muted)
     }
 }

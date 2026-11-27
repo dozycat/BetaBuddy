@@ -104,7 +104,7 @@ struct JournalView: View {
                 }
             }
             Button { showingLibrary = true } label: {
-                Label("相册自动收录", systemImage: "photo.on.rectangle.angled").font(.subheadline)
+                Label("扫相册", systemImage: "photo.on.rectangle.angled").font(.subheadline)
             }.buttonStyle(.plain).accessibilityIdentifier("libraryImport")
             folderBar
             if store.climbs.isEmpty {

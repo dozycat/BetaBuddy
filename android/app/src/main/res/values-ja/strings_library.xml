@@ -1,23 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="library_title">写真から自動取り込み</string>
-    <string name="library_heading">写真のクライミング動画をまとめる</string>
-    <string name="library_description">有効にすると、アプリを開いている間に許可した動画を確認し、検出したクライミングを記録にコピーします。元の動画は変更せず、アップロードもしません。</string>
+    <string name="library_title">アルバムをスキャン</string>
     <string name="library_enable">自動取り込み</string>
-    <string name="library_access_error">写真へのアクセスを許可してください。一部の動画だけを選ぶこともできます。</string>
+    <string name="library_access_error">写真へのアクセスが必要</string>
     <string name="library_settings">「設定」を開く</string>
-    <string name="library_selected">許可した動画だけを確認します。</string>
-    <string name="library_reselect">アクセスできる動画を変更</string>
+    <string name="library_reselect">アクセス範囲</string>
     <string name="library_running">写真を確認中…</string>
-    <string name="library_progress">%1$d 本を確認済み（全 %2$d 本）</string>
+    <string name="library_progress">%1$d / %2$d</string>
     <string name="library_stop">確認を停止</string>
-    <string name="library_imported">今回 %1$d 本の動画を取り込みました</string>
-    <string name="library_scan">新しい動画を確認</string>
-    <string name="library_unavailable">%1$d 本の動画を処理できませんでした。クラウドの元動画を写真アプリでダウンロードしてから再試行してください。</string>
-    <string name="library_grouping">撮影日、屋内・屋外、おすすめのジムでまとめます。おすすめには動画に保存された位置情報のみを使用します。認識やおすすめが誤る場合は、記録から変更できます。</string>
-    <string name="library_deletion">削除した記録は自動で再取り込みされません。手動での取り込みは引き続き可能です。</string>
+    <string name="library_imported">%1$d件取り込み済み</string>
+    <string name="library_scan">スキャン</string>
+    <string name="library_unavailable">%1$d件未処理</string>
     <string name="library_scan_error">自動取り込みを利用できません。後でもう一度お試しください。</string>
-    <string name="library_suggested">環境とジムは自動判定による提案です。確認してください。</string>
+    <string name="library_suggested">候補</string>
     <string name="library_unknown">未確定</string>
     <string name="library_indoor">屋内</string>
     <string name="library_environment">環境</string>

@@ -18,6 +18,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.unit.dp
 import com.betabuddy.android.R
 import com.betabuddy.android.ui.theme.BB
@@ -27,10 +28,11 @@ import java.text.NumberFormat
 @Composable
 internal fun BelayProgress(progress: Double) {
     val fraction = if (progress.isFinite()) progress.coerceIn(0.0, 1.0).toFloat() else 0f
+    val label = stringResource(R.string.journal_edit_working)
     BoxWithConstraints {
-        val ropeHeight = (maxHeight - (110 * LocalDensity.current.fontScale).dp).coerceIn(0.dp, 210.dp)
+        val ropeHeight = (maxHeight - (70 * LocalDensity.current.fontScale).dp).coerceIn(0.dp, 210.dp)
         Column(
-            Modifier.semantics(mergeDescendants = true) { progressBarRangeInfo = ProgressBarRangeInfo(fraction, 0f..1f) },
+            Modifier.semantics(mergeDescendants = true) { contentDescription = label; progressBarRangeInfo = ProgressBarRangeInfo(fraction, 0f..1f) },
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
@@ -61,7 +63,6 @@ internal fun BelayProgress(progress: Double) {
                 drawPath(hold, BB.Lime)
                 drawCircle(BB.Ink, 3.dp.toPx(), Offset(left, y))
             }
-            Text(stringResource(R.string.journal_edit_working), style = BB.Subheadline, color = BB.Paper)
             Text(NumberFormat.getPercentInstance().format(fraction), style = BB.Headline, color = BB.Paper)
         }
     }

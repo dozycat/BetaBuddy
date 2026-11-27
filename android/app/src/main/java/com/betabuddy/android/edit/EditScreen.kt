@@ -211,7 +211,6 @@ internal fun EditScreen(session: EditSession, onDone: () -> Unit) {
                 shareTitle, { (state as? EditSession.State.Ready)?.let { EditFiles.share(context, it.file, shareTitle) } },
                 Modifier.testTag("editShare"), enabled = state is EditSession.State.Ready,
             )
-            Text(stringResource(R.string.journal_edit_note), style = BB.Caption, color = BB.Muted, modifier = Modifier.padding(bottom = 12.dp))
         }
     }
 }

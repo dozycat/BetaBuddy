@@ -5,6 +5,75 @@ import XCTest
 
 @MainActor
 final class LibraryImportTests: XCTestCase {
+    /// Run only on a dedicated simulator seeded by simctl, never on a personal library.
+    func testOptionalSystemPhotoScopeAndImport() async throws {
+        #if targetEnvironment(simulator)
+        let env = ProcessInfo.processInfo.environment
+        guard let mode = env["BB_PHOTOS_SCOPE"] else { throw XCTSkip("Dedicated simulator photo scope not supplied") }
+        let fetched = PHAsset.fetchAssets(with: .video, options: nil)
+        let videos = (0..<fetched.count).map { fetched.object(at: $0) }
+        let authorization = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+        if mode == "inventory" {
+            XCTAssertEqual(authorization, .authorized)
+            XCTAssertEqual(videos.count, 3, "Use a clean simulator with exactly the three supplied fixtures")
+            let items = videos.map { ["id": $0.localIdentifier, "duration": $0.duration] as [String: Any] }
+            let data = try JSONSerialization.data(withJSONObject: items, options: [.prettyPrinted, .sortedKeys])
+            let path = try XCTUnwrap(env["BB_PHOTOS_INVENTORY"])
+            try data.write(to: URL(fileURLWithPath: path))
+            return
+        }
+        let allIDs = try XCTUnwrap(env["BB_PHOTOS_ALL_IDS"]).split(separator: ",").map(String.init)
+        let expected = Set((env["BB_PHOTOS_ALLOWED_IDS"] ?? "").split(separator: ",").map(String.init))
+        XCTAssertEqual(authorization, mode == "revoked" ? .denied : .limited)
+        XCTAssertEqual(Set(videos.map(\.localIdentifier)), expected)
+        for id in allIDs {
+            XCTAssertEqual(PHAsset.fetchAssets(withLocalIdentifiers: [id], options: nil).count, expected.contains(id) ? 1 : 0)
+        }
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let suite = "photo-scope-\(UUID())"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite); try? FileManager.default.removeItem(at: root) }
+        let store = ClimbStore(root: root, defaults: defaults)
+        let session = PhotoLibraryImport(store: store, defaults: defaults)
+        if mode == "revoked" {
+            let staged = root.appendingPathComponent("retained.mov")
+            try Data([1, 2, 3]).write(to: staged)
+            let saved = try store.save(title: "Retained", grade: ungradedValue, sent: false, note: "", stagedVideo: staged,
+                thumbnail: Data(), analysis: PoseAnalysis(frames: [], sampledFrames: 0, duration: 1, aspectRatio: 1))
+            await session.setEnabled(true)
+            XCTAssertFalse(session.hasAccess); XCTAssertFalse(session.running)
+            session.setForeground(false); session.setForeground(true)
+            XCTAssertFalse(session.running)
+            XCTAssertEqual(store.climbs.map(\.id), [saved.id])
+            XCTAssertEqual(try Data(contentsOf: store.file(saved.videoName)), Data([1, 2, 3]))
+            await session.setEnabled(false)
+            return
+        }
+        let positiveID = try XCTUnwrap(env["BB_PHOTOS_POSITIVE_ID"])
+        XCTAssertTrue(expected.contains(positiveID))
+        await session.setEnabled(true)
+        do {
+            try await waitForScan(session)
+            XCTAssertNil(session.error); XCTAssertEqual(session.unavailable, 0)
+            XCTAssertEqual(session.total, expected.count)
+            XCTAssertEqual(session.imported, 1)
+            XCTAssertEqual(store.climbs.compactMap(\.sourceAssetID), [positiveID])
+            let climb = try XCTUnwrap(store.climbs.first)
+            XCTAssertEqual(climb.setting, .indoor)
+            XCTAssertTrue(FileManager.default.fileExists(atPath: store.file(climb.videoName).path))
+            let date = try XCTUnwrap(videos.first { $0.localIdentifier == positiveID }?.creationDate)
+            XCTAssertEqual(climb.climbedAt, date)
+            session.setForeground(false); session.setForeground(true)
+            try await waitForScan(session)
+            XCTAssertEqual(session.imported, 1)
+            XCTAssertEqual(store.climbs.compactMap(\.sourceAssetID), [positiveID])
+            XCTAssertEqual(Set(store.archive.libraryLedger.keys), expected)
+            await session.setEnabled(false)
+        } catch { await session.setEnabled(false); throw error }
+        #else
+        throw XCTSkip("System permission fixtures only run in a simulator")
+        #endif
+    }
     func testReceiptsSurviveDeletionAndChangedSourcesButNonmatchesCanBeRetried() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: root) }

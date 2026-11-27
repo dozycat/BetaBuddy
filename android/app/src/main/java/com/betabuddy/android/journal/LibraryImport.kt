@@ -123,7 +123,7 @@ internal class LibraryImport(application: Application) : AndroidViewModel(applic
 
     fun setEnabled(value: Boolean) {
         preferences.edit { putBoolean("enabled",value) }
-        mutable.update { it.copy(enabled = value,error = null) }
+        mutable.update { it.copy(enabled = value,error = null,imported = if(value && !it.enabled) 0 else it.imported) }
         stopped = false
         refresh()
     }
@@ -148,11 +148,11 @@ internal class LibraryImport(application: Application) : AndroidViewModel(applic
         if (!eligible) job?.cancel() else if (job == null) scan()
     }
     fun stop() { stopped = true; job?.cancel(); debounce?.cancel() }
-    fun retry() { stopped = false; refresh() }
+    fun retry() { if(job == null) mutable.update { it.copy(imported = 0) }; stopped = false; refresh() }
     private fun scan() {
         if (job != null || !eligible) return
         changed = false
-        mutable.update { it.copy(running = true,checked = 0,total = 0,imported = 0,unavailable = 0,error = null) }
+        mutable.update { it.copy(running = true,checked = 0,total = 0,unavailable = 0,error = null) }
         job = viewModelScope.launch {
             try {
                 withContext(Dispatchers.IO) { runScan() }

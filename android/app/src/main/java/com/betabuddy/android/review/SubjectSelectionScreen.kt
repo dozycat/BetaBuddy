@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.LinearProgressIndicator
@@ -17,6 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -33,6 +35,8 @@ import com.betabuddy.android.data.*
 import com.betabuddy.android.journal.AnalysisService
 import com.betabuddy.android.journal.JournalViewModel
 import com.betabuddy.android.journal.OutlineButton
+import com.betabuddy.android.journal.Glyph
+import com.betabuddy.android.journal.GlyphButton
 import com.betabuddy.android.journal.SubjectGate
 import com.betabuddy.android.pose.AnalysisQuality
 import com.betabuddy.android.pose.AnalysisError
@@ -148,7 +152,7 @@ internal fun SubjectSelectionScreen(climb: Climb, model: JournalViewModel, onDon
     LifecycleEventEffect(Lifecycle.Event.ON_START) { session.resume() }
     Dialog(onDismissRequest = onDone, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         BoxWithConstraints(Modifier.fillMaxSize().background(BB.Paper).windowInsetsPadding(WindowInsets.safeDrawing)) {
-            val videoHeight = minOf(340.dp,maxHeight*(if (adjusting) .34f else .43f))
+            val videoHeight = minOf(520.dp,maxHeight*(if (adjusting) .34f else if (LocalDensity.current.fontScale >= 1.5f) .44f else .64f))
             Column {
                 Row(Modifier.fillMaxWidth().padding(horizontal=24.dp,vertical=12.dp),horizontalArrangement = Arrangement.SpaceBetween) {
                     OutlineButton(stringResource(R.string.journal_cancel),onClick = onDone)
@@ -208,11 +212,6 @@ internal fun SubjectSelectionScreen(climb: Climb, model: JournalViewModel, onDon
                     }
                 }
                 PaperPage(Modifier.weight(1f),insets=WindowInsets(0,0,0,0),spacing=16.dp) {
-                    if (!drawing) Text(stringResource(R.string.subject_instruction),style = BB.Caption,color = BB.Muted)
-                    OutlineButton(stringResource(if (drawing) R.string.subject_draw_cancel else R.string.subject_draw),Modifier.testTag("drawSubjectRegion"),enabled = !saving) {
-                        playback.pause(); session.stop(); drawing = !drawing; adjusting = false
-                        if (!drawing && session.analysis == null) session.prepare()
-                    }
                     if (drawing) {
                         OutlineButton(stringResource(R.string.subject_draw_adjust),Modifier.testTag("adjustSubjectRegion")) { adjusting = !adjusting }
                         if (adjusting) {
@@ -229,29 +228,33 @@ internal fun SubjectSelectionScreen(climb: Climb, model: JournalViewModel, onDon
                         OutlineButton(stringResource(R.string.subject_draw_track),Modifier.testTag("trackSubjectRegion"),enabled = !session.busy) {
                             playback.pause(); drawing = false; session.refine(draft,playback.time)
                         }
-                        Text(stringResource(R.string.subject_draw_instruction),style = BB.Caption,color = BB.Muted)
                     }
                     val sliderLabel = stringResource(R.string.journal_review_position_cd)
                     Slider(value = playback.time.coerceIn(0.0,duration).toFloat(),onValueChange = { playback.pause(); playback.seek(it.toDouble()) },
                         valueRange = 0f..duration.toFloat(),modifier = Modifier.semantics { contentDescription = sliderLabel })
-                    Row(Modifier.fillMaxWidth(),horizontalArrangement = Arrangement.spacedBy(12.dp),verticalAlignment = Alignment.CenterVertically) {
-                        OutlineButton(stringResource(if (playback.playing) R.string.subject_pause else R.string.subject_play)) { playback.toggle(duration) }
-                        Text(clockText(playback.time),style = BB.Caption,modifier = Modifier.weight(1f))
-                        OutlineButton(stringResource(R.string.subject_auto),enabled = analysis != null && !session.busy) { playback.pause(); session.automatic() }
+                    FlowRow(Modifier.fillMaxWidth(),horizontalArrangement = Arrangement.spacedBy(8.dp),verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        GlyphButton(if(playback.playing) Glyph.Pause else Glyph.Play,stringResource(if (playback.playing) R.string.subject_pause else R.string.subject_play),{ playback.toggle(duration) })
+                        Text(clockText(playback.time),style = BB.Caption,modifier = Modifier.align(Alignment.CenterVertically))
+                        val automatic = !drawing && session.anchors.isEmpty() && analysis?.hasSelectedSubject == true
+                        OutlineButton(stringResource(R.string.subject_auto),Modifier.testTag("automaticSubject").background(if(automatic) BB.Lime else Color.Transparent,RoundedCornerShape(14.dp)).semantics { this.selected = automatic },enabled = analysis != null && !session.busy) { playback.pause(); session.automatic() }
+                        OutlineButton(stringResource(if (drawing) R.string.subject_draw_cancel else R.string.subject_draw),Modifier.testTag("drawSubjectRegion").background(if(drawing || session.anchors.isNotEmpty()) BB.Lime else Color.Transparent,RoundedCornerShape(14.dp)).semantics { this.selected = drawing || session.anchors.isNotEmpty() },enabled = !saving) {
+                            playback.pause(); session.stop(); drawing = !drawing; adjusting = false
+                            if (!drawing && session.analysis == null) session.prepare()
+                        }
                     }
                     val status = when {
-                        session.busy -> R.string.subject_working
+                        session.busy -> null
+                        (analysis?.subject?.unresolved ?: 0) > 0 -> R.string.subject_unresolved
                         analysis?.hasSelectedSubject != true -> R.string.subject_empty
                         selected == null -> R.string.subject_missing
-                        session.anchors.isEmpty() -> R.string.subject_automatic
-                        else -> R.string.subject_manual
+                        analysis.subject?.picks?.any { it.personID == null } == true -> R.string.subject_gaps
+                        else -> null
                     }
-                    Text(stringResource(status),style = BB.Caption,color = BB.Muted,modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
-                    if (session.busy) LinearProgressIndicator(progress = { session.progress.coerceIn(0.0,1.0).toFloat() },modifier = Modifier.fillMaxWidth())
-                    if (analysis?.hasSelectedSubject == true && analysis.subject?.picks?.any { it.personID == null } == true)
-                        Text(stringResource(R.string.subject_gaps),style = BB.Caption,color = BB.Muted)
-                    if ((analysis?.subject?.unresolved ?: 0) > 0) Text(stringResource(R.string.subject_unresolved),style = BB.Caption,color = BB.Muted)
-                    Text(stringResource(R.string.subject_reanalyze),style = BB.Caption,color = BB.Muted)
+                    if (status != null) Text(stringResource(status),style = BB.Caption,color = BB.Muted,modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+                    if (session.busy) {
+                        val progressLabel = stringResource(R.string.subject_working)
+                        LinearProgressIndicator(progress = { session.progress.coerceIn(0.0,1.0).toFloat() },modifier = Modifier.fillMaxWidth().semantics { contentDescription = progressLabel })
+                    }
                     (failure ?: session.error)?.let {
                         Text(it,style = BB.Caption)
                         OutlineButton(stringResource(R.string.subject_retry),enabled = !session.busy) { session.retry() }

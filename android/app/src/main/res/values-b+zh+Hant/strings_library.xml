@@ -1,23 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="library_title">相簿自動收錄</string>
-    <string name="library_heading">把相簿裡的攀爬收好</string>
-    <string name="library_description">開啟後，在 App 開啟時檢查你授權的影片，將辨識到的攀爬複製到攀爬冊。原片不改動，影片不上傳。</string>
+    <string name="library_title">掃相簿</string>
     <string name="library_enable">自動收錄</string>
-    <string name="library_access_error">請允許存取相簿，也可以只選擇部分影片。</string>
+    <string name="library_access_error">需要相簿權限</string>
     <string name="library_settings">打開系統設定</string>
-    <string name="library_selected">只檢查你已授權的影片。</string>
-    <string name="library_reselect">調整可存取的影片</string>
+    <string name="library_reselect">授權範圍</string>
     <string name="library_running">正在檢查相簿…</string>
-    <string name="library_progress">已檢查 %1$d / %2$d 個影片</string>
+    <string name="library_progress">%1$d / %2$d</string>
     <string name="library_stop">停止檢查</string>
-    <string name="library_imported">本次已收錄 %1$d 個影片</string>
-    <string name="library_scan">檢查新影片</string>
-    <string name="library_unavailable">%1$d 個影片暫未處理。雲端原片需先在相簿下載，下載後可重試。</string>
-    <string name="library_grouping">按影片拍攝日、室內或室外及推薦岩館整理。推薦只使用影片已有的位置；辨識和推薦可能有誤，可在記錄中修改。</string>
-    <string name="library_deletion">刪除攀爬冊中的記錄後，不會自動再次收錄。手動匯入仍然可用。</string>
+    <string name="library_imported">已收錄 %1$d</string>
+    <string name="library_scan">掃描</string>
+    <string name="library_unavailable">待處理 %1$d</string>
     <string name="library_scan_error">自動收錄暫時無法使用，請稍後重試。</string>
-    <string name="library_suggested">環境和岩館由自動辨識推薦，請核對。</string>
+    <string name="library_suggested">推薦</string>
     <string name="library_unknown">未確定</string>
     <string name="library_indoor">室內</string>
     <string name="library_environment">攀爬環境</string>
