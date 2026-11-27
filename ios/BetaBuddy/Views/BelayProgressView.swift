@@ -51,6 +51,6 @@ struct BelayProgressView: View {
             Text("正在剪辑…").font(.headline)
             Text(fraction, format: .percent.precision(.fractionLength(0)))
                 .font(.system(.title2, design: .rounded, weight: .bold)).monospacedDigit()
-        }
+        }.fixedSize(horizontal: false, vertical: true)
     }
 }

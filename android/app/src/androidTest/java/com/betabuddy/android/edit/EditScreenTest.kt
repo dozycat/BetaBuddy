@@ -4,6 +4,9 @@ import android.content.Intent
 import android.graphics.Bitmap
 import androidx.activity.compose.setContent
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
@@ -145,6 +148,40 @@ class EditScreenTest {
         rule.waitUntil(10_000) { !exists("editScreen") }
         rule.waitUntil(10_000) { !second.exists() }
         assertTrue(directory.listFiles().isNullOrEmpty())
+    }
+
+    @Test fun writeFailureRetryActualProgressAndCancellation() {
+        val clip = SyntheticWallClip.make(File(context.cacheDir,"edit-recovery-${System.nanoTime()}.mp4").also { created += it },width=720,height=1280,seconds=12.0)
+        val renderPlan = EditPlan.parse("""{"v":1,"duration":12,"trim":[0,12],"segments":[{"t0":0,"t1":12,"speed":0.5}],"camera":[{"t":0,"cx":0.5,"cy":0.5,"s":1},{"t":12,"cx":0.5,"cy":0.5,"s":1.2}]}""")!!
+        val id = "EDIT-RECOVERY-TEST"
+        lateinit var session: EditSession
+        lateinit var directory: File
+        var closed = false
+        scenario = ActivityScenario.launch(Intent(context,MainActivity::class.java).putExtra("initialTab",1).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        scenario!!.onActivity { activity ->
+            directory = EditFiles.directory(context,id).apply { deleteRecursively(); writeText("blocked output") }
+            activity.setContent { BetaBuddyTheme {
+                val scope = rememberMainScope()
+                session = androidx.compose.runtime.remember { EditSession(activity,id,clip,renderPlan,scope) }
+                EditScreen(session) { closed=true; activity.setContent {} }
+            } }
+        }
+        await("editFailed",60); rule.onNodeWithTag("editShare").assertIsNotEnabled(); shot("recovery-failed")
+        assertTrue(directory.delete())
+        rule.onNodeWithTag("editRetry").performClick()
+        rule.waitUntil(60_000) { (session.state as? EditSession.State.Working)?.progress?.let { it > 0 && it < 1 } == true }
+        val progressNodes = rule.onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsProperties.ProgressBarRangeInfo)).fetchSemanticsNodes()
+        assertTrue("Rendered progress must have accessible range information",progressNodes.isNotEmpty())
+        val fraction = progressNodes.first().config[SemanticsProperties.ProgressBarRangeInfo].current
+        assertTrue(fraction in 0f..1f); shot("recovery-working")
+        await("editPreview",180); shot("recovery-ready")
+        assertTrue(directory.listFiles()!!.any { it.length()>1000 })
+        rule.onNodeWithTag("editSlow").performClick()
+        rule.waitUntil(60_000) { session.state is EditSession.State.Working }
+        rule.onNodeWithTag("editDone").performClick()
+        rule.waitUntil(10_000) { closed && !directory.exists() }
+        assertTrue(clip.exists())
+        assertFalse(session.state is EditSession.State.Ready)
     }
 
     /** A clip the page could not analyse but still planned an edit for: no result, and the edit is offered all the same. */

@@ -16,6 +16,7 @@ final class EditSession: ObservableObject {
     private var work: Task<Void, Never>?
     private var closed = false
     private var started = false
+    private var generation = 0
 
     /// The first render, when the page comes up. Coming back from the share sheet does not start another.
     func start() {
@@ -32,6 +33,8 @@ final class EditSession: ObservableObject {
 
     func render() {
         guard !closed else { return }
+        generation += 1
+        let version = generation
         let earlier = work
         earlier?.cancel()
         looper = nil
@@ -47,7 +50,7 @@ final class EditSession: ObservableObject {
             do {
                 let url = try await renderer.render(options: options) { value in
                     Task { @MainActor [weak self] in
-                        guard let self, self.options == options, case .rendering = self.phase else { return }
+                        guard let self, !self.closed, self.generation == version, case .rendering = self.phase else { return }
                         self.phase = .rendering(value)
                     }
                 }
@@ -65,6 +68,7 @@ final class EditSession: ObservableObject {
 
     func close() {
         closed = true
+        generation += 1
         work?.cancel()
         looper = nil
         player.removeAllItems()

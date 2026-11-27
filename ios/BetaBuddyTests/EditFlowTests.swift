@@ -1,6 +1,7 @@
 import XCTest
 import AVFoundation
 import CoreImage
+import SwiftUI
 @testable import BetaBuddy
 
 /// What comes with an analysis result besides the result: the render plan and the discipline.
@@ -39,6 +40,55 @@ final class EditFlowTests: XCTestCase {
         }
     }
     private let plan = #"{"v":1,"duration":4,"trim":[0,4],"segments":[{"t0":0,"t1":4,"speed":0.5}]}"#
+
+    func testBelayProgressFitsCompactAndLargeTypeLayouts() async throws {
+        for (name,size,category) in [
+            ("normal",CGSize(width:360,height:420),ContentSizeCategory.large),
+            ("large-type",CGSize(width:320,height:260),ContentSizeCategory.accessibilityExtraExtraExtraLarge),
+            ("compact",CGSize(width:320,height:140),ContentSizeCategory.large)
+        ] {
+            let host = UIHostingController(rootView: BelayProgressView(progress: 0.42)
+                .environment(\.sizeCategory,category)
+                .frame(width:size.width,height:size.height).background(.black).ignoresSafeArea())
+            let window = UIWindow(frame:CGRect(origin:.zero,size:size))
+            window.rootViewController = host; window.makeKeyAndVisible()
+            host.view.frame = window.bounds; host.view.setNeedsLayout(); host.view.layoutIfNeeded()
+            try await Task.sleep(for:.milliseconds(100))
+            let image = UIGraphicsImageRenderer(size:size).image { _ in host.view.drawHierarchy(in:window.bounds,afterScreenUpdates:true) }
+            let attachment = XCTAttachment(image:image); attachment.name = "Belay progress \(name)"; attachment.lifetime = .keepAlways; add(attachment)
+            window.isHidden = true; window.rootViewController = nil
+        }
+    }
+
+    func testEditSessionRecoversFromWriteFailureAndCancellationCleansUp() async throws {
+        let store = store()
+        let source = try await SyntheticWallClip.make(width: 720, height: 1280, seconds: 12)
+        clips.append(source)
+        let record = try store.save(title: "", grade: ungradedValue, sent: false, note: "", stagedVideo: source, thumbnail: Data(),
+                                    analysis: PoseAnalysis(frames: [], sampledFrames: 0, duration: 12, aspectRatio: 0.5625))
+        let renderPlan = try XCTUnwrap(EditPlan(json: #"{"v":1,"duration":12,"trim":[0,12],"segments":[{"t0":0,"t1":12,"speed":0.5}]}"#))
+        let directory = EditFiles.directory(for: record.id)
+        try FileManager.default.createDirectory(at: directory.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data("blocked output".utf8).write(to: directory)
+        let session = EditSession(climb: record, plan: renderPlan, source: store.file(record.videoName))
+        defer { session.close(); try? store.delete(record) }
+        session.start()
+        await until("write failure") { if case .failed = session.phase { return true }; return false }
+        try FileManager.default.removeItem(at: directory)
+        session.render()
+        await until("real intermediate progress") { if case .rendering(let value) = session.phase { return value > 0 && value < 1 }; return false }
+        await until("recovered export") { if case .ready = session.phase { return true }; return false }
+        guard case .ready(let file) = session.phase else { return XCTFail("No recovered movie") }
+        XCTAssertGreaterThan(try Data(contentsOf: file).count, 1000)
+        session.render()
+        await until("second render started") { if case .rendering(let value) = session.phase { return value > 0 && value < 1 }; return false }
+        session.close()
+        await until("cancelled files removed") { !FileManager.default.fileExists(atPath: directory.path) }
+        try await Task.sleep(for: .milliseconds(300))
+        if case .ready = session.phase { XCTFail("Cancelled render published a movie") }
+        XCTAssertFalse(FileManager.default.fileExists(atPath: directory.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: store.file(record.videoName).path))
+    }
 
     func testAResultBringsItsRenderPlanAndAGuessedDiscipline() async throws {
         let store = store()

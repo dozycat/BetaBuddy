@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.lifecycle.ViewModelProvider
 import androidx.test.core.app.ActivityScenario
 import androidx.test.platform.app.InstrumentationRegistry
@@ -55,7 +56,7 @@ class SubjectSelectionScreenTest {
         } }
         open(climb)
         rule.onNodeWithTag("drawSubjectRegion").performScrollTo().performClick()
-        rule.onNodeWithTag("subjectRegionCanvas").performScrollTo().performTouchInput {
+        rule.onNodeWithTag("subjectRegionCanvas").performTouchInput {
             swipe(Offset(width*bounds[0],height*bounds[1]),Offset(width*(bounds[0]+bounds[2]),height*(bounds[1]+bounds[3])),500)
         }
         val out = File(context.getExternalFilesDir(null),"subject-region-shots").apply { mkdirs() }
@@ -66,10 +67,24 @@ class SubjectSelectionScreenTest {
             }
         }
         screenshot("preview.png")
+        rule.onNodeWithTag("saveSubject").assertIsNotEnabled()
+        if (args.getString("regionAdjust") == "1") {
+            rule.onNodeWithTag("adjustSubjectRegion").performScrollTo().performClick()
+            for ((label,value) in listOf(R.string.subject_draw_width to bounds[2],R.string.subject_draw_height to bounds[3],
+                R.string.subject_draw_horizontal to bounds[0],R.string.subject_draw_vertical to bounds[1])) {
+                rule.onNodeWithContentDescription(context.getString(label)).performScrollTo().performSemanticsAction(SemanticsActions.SetProgress) { it(value) }
+                rule.onNodeWithTag("subjectStage").assertIsDisplayed()
+            }
+            screenshot("adjusting.png")
+        }
         rule.onNodeWithTag("trackSubjectRegion").performScrollTo().performClick()
+        if (args.getString("regionInterrupt") == "1") {
+            scenario!!.moveToState(androidx.lifecycle.Lifecycle.State.CREATED)
+            scenario!!.moveToState(androidx.lifecycle.Lifecycle.State.RESUMED)
+        }
         rule.waitUntil(150_000) { runCatching { rule.onNodeWithTag("saveSubject").assertIsEnabled(); true }.getOrDefault(false) }
-        rule.onNodeWithTag("subjectStage").performScrollTo(); screenshot("tracked.png")
-        rule.onNodeWithTag("saveSubject").performScrollTo().performClick()
+        rule.onNodeWithTag("subjectStage").assertIsDisplayed(); screenshot("tracked.png")
+        rule.onNodeWithTag("saveSubject").performClick()
         rule.waitUntil(10_000) { store.climbs.first { it.id == climb.id }.subjectRevision == 1 }
         val saved = store.climbs.first { it.id == climb.id }
         assertTrue(saved.subjectAnchors!!.single().region)
@@ -77,8 +92,8 @@ class SubjectSelectionScreenTest {
         assertEquals(bounds[0].toDouble(),saved.subjectAnchors!!.single().bounds.x,.025)
         open(saved)
         rule.waitUntil(30_000) { runCatching { rule.onNodeWithText(context.getString(R.string.subject_manual)).assertExists(); true }.getOrDefault(false) }
-        rule.onNodeWithTag("subjectStage").performScrollTo(); screenshot("reopened.png")
-        rule.onNodeWithText(context.getString(R.string.journal_cancel)).performScrollTo().performClick()
+        rule.onNodeWithTag("subjectStage").assertIsDisplayed(); screenshot("reopened.png")
+        rule.onNodeWithText(context.getString(R.string.journal_cancel)).performClick()
         assertEquals(1,store.climbs.first { it.id == climb.id }.subjectRevision)
     }
 
@@ -102,15 +117,15 @@ class SubjectSelectionScreenTest {
         open(climb)
         val personTag = "subject-${target.id}"
         rule.waitUntil(30_000) { runCatching { rule.onAllNodesWithTag(personTag).fetchSemanticsNodes().isNotEmpty() }.getOrDefault(false) }
-        rule.onNodeWithTag(personTag).performScrollTo().performClick()
+        rule.onNodeWithTag(personTag).performClick()
         rule.waitUntil(30_000) { runCatching { rule.onNodeWithTag("saveSubject").assertIsEnabled(); true }.getOrDefault(false) }
         rule.onNodeWithTag(personTag).assertIsSelected()
-        rule.onNodeWithTag("subjectStage").performScrollTo()
+        rule.onNodeWithTag("subjectStage").assertIsDisplayed()
         val out = File(context.getExternalFilesDir(null),"subject-shots").apply { mkdirs() }
         instrumentation.uiAutomation.takeScreenshot()?.let { bitmap ->
             FileOutputStream(File(out,"selected.png")).use { bitmap.compress(Bitmap.CompressFormat.PNG,100,it) }; bitmap.recycle()
         }
-        rule.onNodeWithTag("saveSubject").performScrollTo().performClick()
+        rule.onNodeWithTag("saveSubject").performClick()
         rule.waitUntil(10_000) { store.climbs.first { it.id == climb.id }.subjectRevision == 1 }
         val saved = store.climbs.first { it.id == climb.id }
         assertEquals(target.id,saved.analysis.subject!!.picks.first().personID)
@@ -118,7 +133,7 @@ class SubjectSelectionScreenTest {
         open(saved)
         rule.waitUntil(30_000) { runCatching { rule.onNodeWithText(context.getString(R.string.subject_manual)).assertExists(); true }.getOrDefault(false) }
         rule.onNodeWithTag(personTag).assertIsSelected()
-        rule.onNodeWithText(context.getString(R.string.journal_cancel)).performScrollTo().performClick()
+        rule.onNodeWithText(context.getString(R.string.journal_cancel)).performClick()
         assertEquals(1,store.climbs.first { it.id == climb.id }.subjectRevision)
         assertEquals(target.id,store.climbs.first { it.id == climb.id }.analysis.subject!!.picks.first().personID)
     }

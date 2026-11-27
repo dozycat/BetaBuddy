@@ -78,6 +78,9 @@ final class EditUITests: XCTestCase {
         if !edit.isHittable { app.swipeUp() }
         keep(app, "02-review-with-edit")
         edit.tap()
+        let progress = app.descendants(matching: .any)["editRendering"]
+        XCTAssertTrue(progress.waitForExistence(timeout:10))
+        XCTAssertNotNil(progress.value, "Real progress must be readable by accessibility")
         keep(app, "02b-edit-rendering")
 
         // The page: the switches on offer that the plan has data for (passer-by removal is not offered yet),
