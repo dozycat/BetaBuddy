@@ -11415,37 +11415,37 @@
         }
       }
     },
-    "拖到看清人物的位置，点一下圈线。遮挡后认不准时，可在新的位置再点一次纠正。": {
+    "拖到看清人物的位置，点选要跟踪的人。遮挡后认不准时，可在新的位置再点一次纠正。": {
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "拖到看清人物的位置，点一下圈线。遮挡后认不准时，可在新的位置再点一次纠正。"
+            "value": "拖到看清人物的位置，点选要跟踪的人。遮挡后认不准时，可在新的位置再点一次纠正。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "拖到看清人物的位置，點一下圈線。遮擋後辨識不準時，可在新的位置再點一次修正。"
+            "value": "拖到看清人物的位置，點選要追蹤的人。遮擋後辨識不準時，可在新的位置再點一次修正。"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Scrub to a clear moment and tap an outline. If tracking is uncertain after an obstruction, tap again at a clearer moment to correct it."
+            "value": "Scrub to a clear moment and tap the person to follow. If tracking is uncertain after an obstruction, tap again at a clearer moment to correct it."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "人物がよく見える場面に移動し、輪郭をタップしてください。遮られた後に追跡が不確かな場合は、見える場面でもう一度タップして修正できます。"
+            "value": "人物がよく見える場面に移動し、追跡する人をタップしてください。遮られた後に追跡が不確かな場合は、見える場面でもう一度タップして修正できます。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "사람이 잘 보이는 장면으로 이동해 테두리를 누르세요. 가림 후 추적이 불확실하면 잘 보이는 장면에서 다시 눌러 수정할 수 있습니다."
+            "value": "사람이 잘 보이는 장면으로 이동해 추적할 사람을 누르세요. 가림 후 추적이 불확실하면 잘 보이는 장면에서 다시 눌러 수정할 수 있습니다."
           }
         }
       }

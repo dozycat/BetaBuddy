@@ -90,7 +90,7 @@
     <string name="journal_edit_note">自動編集のため、ずれることがあります。</string>
 
     <string name="subject_title">クライマーを選ぶ</string>
-    <string name="subject_instruction">人物がよく見える場面に移動し、輪郭をタップしてください。遮られた後に追跡が不確かな場合は、見える場面でもう一度タップして修正できます。</string>
+    <string name="subject_instruction">人物がよく見える場面に移動し、追跡する人をタップしてください。遮られた後に追跡が不確かな場合は、見える場面でもう一度タップして修正できます。</string>
     <string name="subject_save">保存</string>
     <string name="subject_auto">自動で選ぶ</string>
     <string name="subject_person">人物 %1$d</string>

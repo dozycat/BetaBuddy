@@ -22,7 +22,8 @@ final class SelectedSubjectEditTests: XCTestCase {
         let first = try XCTUnwrap(selected.people?.first)
         let id = try XCTUnwrap(selected.subject?.picks.first?.personID)
         let candidate = try XCTUnwrap(first.candidates.first { $0.id == id })
-        try store.selectSubject(record,analysis:selected,anchors:[SubjectAnchor(time:first.time,candidate:candidate)])
+        let anchors = selected.subject?.manual == false ? [] : [SubjectAnchor(time:first.time,candidate:candidate)]
+        try store.selectSubject(record,analysis:selected,anchors:anchors)
         try store.setAnalysisQueued(record.id,true)
         let queue = AnalysisQueue(store:store,pack:pack)
         queue.setSuspended(false)

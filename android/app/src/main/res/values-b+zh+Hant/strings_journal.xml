@@ -90,7 +90,7 @@
     <string name="journal_edit_note">自動剪輯，可能剪錯。</string>
 
     <string name="subject_title">選擇攀爬者</string>
-    <string name="subject_instruction">拖到看清人物的位置，點一下圈線。遮擋後辨識不準時，可在新的位置再點一次修正。</string>
+    <string name="subject_instruction">拖到看清人物的位置，點選要追蹤的人。遮擋後辨識不準時，可在新的位置再點一次修正。</string>
     <string name="subject_save">儲存</string>
     <string name="subject_auto">自動選擇</string>
     <string name="subject_person">人物 %1$d</string>

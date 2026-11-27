@@ -90,7 +90,7 @@
     <string name="journal_edit_note">Edited automatically; may be off.</string>
 
     <string name="subject_title">Choose climber</string>
-    <string name="subject_instruction">Scrub to a clear moment and tap an outline. If tracking is uncertain after an obstruction, tap again at a clearer moment to correct it.</string>
+    <string name="subject_instruction">Scrub to a clear moment and tap the person to follow. If tracking is uncertain after an obstruction, tap again at a clearer moment to correct it.</string>
     <string name="subject_save">Save</string>
     <string name="subject_auto">Select automatically</string>
     <string name="subject_person">Person %1$d</string>

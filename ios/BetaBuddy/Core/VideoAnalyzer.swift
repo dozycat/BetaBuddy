@@ -62,13 +62,15 @@ actor VideoAnalyzer {
         let chooseSubject = SubjectResolver.available
         let regions = chooseSubject ? subjectAnchors.filter { $0.region == true } : []
         let passes = Double(1 + regions.count)
+        let recover = chooseSubject && subjectAnchors.isEmpty
+        let initialShare = recover ? 0.7 : 1.0
         options.numPoses = chooseSubject ? 4 : 1
         // MediaPipe defaults: raising these can miss the climber
         // and initialize video tracking on a high-contrast background false positive.
         options.minPoseDetectionConfidence = 0.5
         options.minPosePresenceConfidence = 0.5
         options.minTrackingConfidence = 0.5
-        let landmarker = try PoseLandmarker(options: options)
+        var landmarker: PoseLandmarker? = try PoseLandmarker(options: options)
         let reader = try AVAssetReader(asset: asset)
         let output = AVAssetReaderTrackOutput(track: track, outputSettings: [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA])
         output.alwaysCopiesSampleData = false
@@ -93,7 +95,7 @@ actor VideoAnalyzer {
                                                       maxDimension: quality.maxDimension, context: context)
                 let timestamp = max(lastTimestamp + 1, Int(time * 1000))
                 lastTimestamp = timestamp
-                let result = try landmarker.detect(videoFrame: MPImage(uiImage: UIImage(cgImage: cgImage)), timestampInMilliseconds: timestamp)
+                let result = try landmarker!.detect(videoFrame: MPImage(uiImage: UIImage(cgImage: cgImage)), timestampInMilliseconds: timestamp)
                 sampled += 1
                 var candidates: [SubjectCandidate] = []
                 for (person, points) in result.landmarks.enumerated() where points.count == 33 {
@@ -121,13 +123,15 @@ actor VideoAnalyzer {
                 return (false, time)
             }
             if step.finished { break }
-            if let time = step.time, sampled % 5 == 0 { await progress(min(0.99, time / duration) / passes) }
+            if let time = step.time, sampled % 5 == 0 { await progress(min(0.99, time / duration) / passes * initialShare) }
         }
         try Task.checkCancellation()
         if reader.status == .failed { throw reader.error ?? AnalysisError.invalidVideo }
+        // Recovery uses another detector/decoder; release the full-frame pass first.
+        landmarker = nil
+        reader.cancelReading()
         var analysis = PoseAnalysis(frames: frames, sampledFrames: sampled, duration: duration, aspectRatio: aspect)
         if chooseSubject {
-            guard !regions.isEmpty || people.contains(where: { !$0.candidates.isEmpty }) else { throw AnalysisError.noPose }
             analysis.people = people
             for (index, anchor) in regions.enumerated() {
                 analysis = try await SubjectRegionAnalyzer().refine(url: url, analysis: analysis, bounds: anchor.bounds, at: anchor.time) { value in
@@ -135,9 +139,29 @@ actor VideoAnalyzer {
                 }.analysis
             }
             analysis = try await SubjectResolver().resolve(analysis, anchors: subjectAnchors)
+            if recover && !analysis.hasSelectedSubject {
+                analysis=try await recoverSubject(url:url,analysis:analysis) { value in await progress(0.7+0.3*value) }
+            }
+            guard analysis.hasSubjectCandidates else { throw AnalysisError.noPose }
         } else if frames.count < 3 { throw AnalysisError.noPose }
         await progress(1)
         return analysis
+    }
+
+    /// Also used when Automatic is requested for a cached, unresolved candidate set.
+    func recoverSubject(url: URL, analysis: PoseAnalysis, progress: @escaping @Sendable (Double) async -> Void) async throws -> PoseAnalysis {
+        let worker=SubjectRegionAnalyzer()
+        let proposals=try await worker.discover(url:url,analysis:analysis) { value in await progress(value/3) }
+        let seeds=try await SubjectResolver().proposedRegions(proposals)
+        var result=analysis
+        for (index,seed) in seeds.enumerated() {
+            result=try await worker.refine(url:url,analysis:result,bounds:seed.bounds,at:seed.time) { value in
+                await progress(1.0/3+2.0/3*(Double(index)+value)/Double(seeds.count))
+            }.analysis
+        }
+        result=try await SubjectResolver().resolve(result,anchors:[])
+        await progress(1)
+        return result
     }
 
     static func appearance(image: CGImage, bounds: SubjectBounds) -> [Double] {

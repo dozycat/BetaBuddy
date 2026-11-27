@@ -37,6 +37,41 @@ class SubjectSelectionScreenTest {
     private var record: Climb? = null
     @After fun cleanup() { scenario?.close(); record?.let(store::delete) }
 
+    @Test fun cachedUnresolvedPeopleRecoverAutomaticallyAndSaveWithoutManualAnchor() {
+        val args=InstrumentationRegistry.getArguments()
+        val clip=args.getString("subjectClip");val baseline=args.getString("subjectUnresolved")
+        assumeTrue("Optional unresolved real-video candidates",clip!=null && baseline!=null)
+        val input=ClimbStore.json.decodeFromString<PoseAnalysis>(File(context.filesDir,baseline!!).readText())
+        assertTrue(input.hasSubjectCandidates);assertFalse(input.hasSelectedSubject)
+        val video=File(context.cacheDir,"auto-ui-${System.nanoTime()}.mp4")
+        File(context.filesDir,clip!!).copyTo(video)
+        val climb=store.save("Automatic UI","Automatic UI",UNGRADED_VALUE,false,"",video,byteArrayOf(),input)
+        record=climb
+        scenario=ActivityScenario.launch(Intent(context,MainActivity::class.java).putExtra("initialTab",1))
+        fun open(snapshot:Climb) { scenario!!.onActivity { activity->
+            val model=ViewModelProvider(activity)[JournalViewModel::class.java]
+            activity.setContent { BetaBuddyTheme { SubjectSelectionScreen(snapshot,model) { activity.setContent {} } } }
+        } }
+        open(climb)
+        rule.waitUntil(180_000) { runCatching { rule.onNodeWithTag("saveSubject").assertIsEnabled();true }.getOrDefault(false) }
+        rule.onNodeWithText(context.getString(R.string.subject_automatic)).assertExists()
+        rule.onNodeWithTag("subjectStage").assertIsDisplayed()
+        rule.waitForIdle();instrumentation.waitForIdleSync();Thread.sleep(300)
+        val out=File(context.getExternalFilesDir(null),"subject-auto-shots").apply { mkdirs() }
+        instrumentation.uiAutomation.takeScreenshot()?.let { image->
+            FileOutputStream(File(out,"automatic.png")).use { image.compress(Bitmap.CompressFormat.PNG,100,it) };image.recycle()
+        }
+        rule.onNodeWithTag("saveSubject").performClick()
+        rule.waitUntil(10_000) { store.climbs.first { it.id==climb.id }.subjectRevision==1 }
+        val saved=store.climbs.first { it.id==climb.id }
+        assertTrue(saved.subjectAnchors.isNullOrEmpty());assertFalse(saved.analysis.subject!!.manual)
+        assertTrue(saved.analysis.subjectPositions!!.size>=input.sampledFrames*.9)
+        open(saved)
+        rule.waitUntil(15_000) { rule.onAllNodesWithText(context.getString(R.string.subject_automatic)).fetchSemanticsNodes().isNotEmpty() }
+        rule.onNodeWithText(context.getString(R.string.journal_cancel)).performClick()
+        assertEquals(1,store.climbs.first { it.id==climb.id }.subjectRevision)
+    }
+
     @Test fun drawPreviewTrackSaveAndReopenOnReference() {
         val args = InstrumentationRegistry.getArguments()
         val name = args.getString("subjectClip"); val raw = args.getString("regionBounds")
@@ -133,6 +168,12 @@ class SubjectSelectionScreenTest {
         open(saved)
         rule.waitUntil(30_000) { runCatching { rule.onNodeWithText(context.getString(R.string.subject_manual)).assertExists(); true }.getOrDefault(false) }
         rule.onNodeWithTag(personTag).assertIsSelected()
+        if (args.getString("subjectAnalysis") == null) {
+            // Once chosen, only that outline is drawn; another person remains tappable.
+            val other = input.people!!.first().candidates.first { it.id != target.id }
+            rule.onNodeWithTag("subject-${other.id}").performClick()
+            rule.waitUntil(10_000) { runCatching { rule.onNodeWithTag("subject-${other.id}").assertIsSelected(); true }.getOrDefault(false) }
+        }
         rule.onNodeWithText(context.getString(R.string.journal_cancel)).performClick()
         assertEquals(1,store.climbs.first { it.id == climb.id }.subjectRevision)
         assertEquals(target.id,store.climbs.first { it.id == climb.id }.analysis.subject!!.picks.first().personID)

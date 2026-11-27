@@ -30,6 +30,56 @@ internal class SubjectRegionAnalyzer(context: Context) {
     internal var observationObserver: ((SubjectCandidate,SubjectCandidate,SubjectCandidate,Boolean) -> Unit)? = null
     data class Result(val analysis: PoseAnalysis,val anchor: SubjectAnchor)
 
+    /** Bounded multi-scale observations. The private policy decides which seeds need tracking. */
+    suspend fun discover(video: File,analysis: PoseAnalysis,progress: (Double) -> Unit): List<SubjectSample> = serial.withLock { withContext(worker) {
+        val reader=MediaMetadataRetriever()
+        val options=PoseLandmarker.PoseLandmarkerOptions.builder()
+            .setBaseOptions(BaseOptions.builder().setModelAssetBuffer(VideoAnalyzer.loadModel(context)).setDelegate(Delegate.CPU).build())
+            .setRunningMode(RunningMode.IMAGE).setNumPoses(4).build()
+        var detector: PoseLandmarker? = null
+        val info=VideoAnalyzer.probe(video);val size=FrameGeometry.targetSize(info.width,info.height,1920)
+        try {
+            reader.setDataSource(video.path);detector=PoseLandmarker.createFromOptions(context,options)
+            val count=minOf(60,maxOf(5,ceil(analysis.duration*2).toInt()))
+            (0 until count).map { index ->
+                coroutineContext.ensureActive()
+                if (Build.VERSION.SDK_INT>=29 && context.getSystemService(PowerManager::class.java).currentThermalStatus>=PowerManager.THERMAL_STATUS_CRITICAL)
+                    throw AnalysisException(AnalysisError.OVERHEATED)
+                val time=index.toDouble()/(count-1)*maxOf(0.0,analysis.duration-.1)
+                val image=(if(Build.VERSION.SDK_INT>=27) reader.getScaledFrameAtTime((time*1_000_000).toLong(),MediaMetadataRetriever.OPTION_CLOSEST,size.first,size.second)
+                    else reader.getFrameAtTime((time*1_000_000).toLong(),MediaMetadataRetriever.OPTION_CLOSEST)) ?: throw AnalysisException(AnalysisError.INVALID_VIDEO)
+                try {
+                    val candidates=mutableListOf<SubjectCandidate>()
+                    for (row in 0..2) for (column in 0..2) {
+                        coroutineContext.ensureActive()
+                        val left=(column*.3*image.width).toInt();val top=(row*.3*image.height).toInt()
+                        val right=ceil((column*.3+.4)*image.width).toInt().coerceAtMost(image.width)
+                        val bottom=ceil((row*.3+.4)*image.height).toInt().coerceAtMost(image.height)
+                        val crop=Bitmap.createBitmap(image,left,top,right-left,bottom-top)
+                        try {
+                            val input=BitmapImageBuilder(crop).build()
+                            val result=try { detector!!.detect(input) } finally { input.close() }
+                            for ((person,points) in result.landmarks().withIndex()) {
+                                if(points.size!=33) continue
+                                val joints=points.map { p->Joint(rounded4((left+p.x().toDouble()*(right-left))/image.width),rounded4((top+p.y().toDouble()*(bottom-top))/image.height),rounded4(minOf(p.visibility().orElse(0f),p.presence().orElse(0f)).toDouble())) }
+                                val pose=PoseFrame(time,joints)
+                                if(!pose.hasReliableTorso) continue
+                                val visible=joints.filter { it.valid };val x=visible.minOf { it.x };val y=visible.minOf { it.y }
+                                val box=SubjectBounds(x,y,visible.maxOf { it.x }-x,visible.maxOf { it.y }-y)
+                                if(!box.valid) continue
+                                val torso=listOf(joints[11],joints[12],joints[23],joints[24]);val tx=torso.minOf { it.x };val ty=torso.minOf { it.y }
+                                val colour=appearance(image,SubjectBounds(tx,ty,torso.maxOf { it.x }-tx,torso.maxOf { it.y }-ty))
+                                candidates+=SubjectCandidate("probe-$index-$row-$column-$person",box,colour,pose)
+                            }
+                        } finally { if(crop!==image) crop.recycle() }
+                    }
+                    progress((index+1).toDouble()/count)
+                    SubjectSample(time,candidates)
+                } finally { image.recycle() }
+            }
+        } finally { detector?.close();reader.release() }
+    } }
+
     suspend fun refine(video: File,analysis: PoseAnalysis,bounds: SubjectBounds,time: Double,progress: suspend (Double) -> Unit): Result = serial.withLock {
         require(bounds.valid && analysis.duration.isFinite() && analysis.duration > 0)
         SubjectResolver(context).withPolicy { policy -> withContext(worker) {

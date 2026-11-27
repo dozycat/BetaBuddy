@@ -90,7 +90,7 @@
     <string name="journal_edit_note">자동으로 편집해서 어긋날 수 있어요.</string>
 
     <string name="subject_title">등반자 선택</string>
-    <string name="subject_instruction">사람이 잘 보이는 장면으로 이동해 테두리를 누르세요. 가림 후 추적이 불확실하면 잘 보이는 장면에서 다시 눌러 수정할 수 있습니다.</string>
+    <string name="subject_instruction">사람이 잘 보이는 장면으로 이동해 추적할 사람을 누르세요. 가림 후 추적이 불확실하면 잘 보이는 장면에서 다시 눌러 수정할 수 있습니다.</string>
     <string name="subject_save">저장</string>
     <string name="subject_auto">자동 선택</string>
     <string name="subject_person">사람 %1$d</string>

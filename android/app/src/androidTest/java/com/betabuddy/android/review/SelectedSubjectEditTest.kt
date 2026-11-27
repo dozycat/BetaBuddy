@@ -35,7 +35,7 @@ class SelectedSubjectEditTest {
         val store = JournalGraph.store(context)
         val saved = store.save("Selected edit","Selected edit",UNGRADED_VALUE,false,"",staged,byteArrayOf(),input)
         val person = input.people!!.first().candidates.first { it.id == input.subject!!.picks.first().personID }
-        store.selectSubject(saved,input,listOf(SubjectAnchor(0.0,person)))
+        store.selectSubject(saved,input,if(input.subject?.manual == false) emptyList() else listOf(SubjectAnchor(0.0,person)))
         val scope = CoroutineScope(SupervisorJob()+Dispatchers.Main.immediate)
         var session: AnalysisSession? = null
         var scenario: ActivityScenario<MainActivity>? = null

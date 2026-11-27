@@ -12,6 +12,21 @@ actor SubjectResolver {
         var anchors: [SubjectAnchor]
     }
     struct RegionMatch: Decodable, Sendable { var id: String?; var stop: Bool }
+    func proposedRegions(_ samples: [SubjectSample]) throws -> [SubjectAnchor] {
+        let context=try regionPolicy()
+        let json=String(decoding:try JSONEncoder().encode(Input(samples:samples,anchors:[])),as:UTF8.self)
+        let function=context.evaluateScript("(function(json) { return JSON.stringify(typeof BetaBuddySubject.proposeRegions === 'function' ? BetaBuddySubject.proposeRegions(JSON.parse(json)) : []); })")
+        guard let text=function?.call(withArguments:[json])?.toString(),context.exception == nil else { throw CocoaError(.fileReadCorruptFile) }
+        let picks=try JSONDecoder().decode([SubjectPick].self,from:Data(text.utf8))
+        guard picks.count<=2 else { throw CocoaError(.fileReadCorruptFile) }
+        return try picks.map { pick in
+            guard let sample=samples.first(where:{ abs($0.time-pick.time)<0.0001 }),
+                  let candidate=sample.candidates.first(where:{ $0.id==pick.personID }),candidate.bounds.valid else { throw CocoaError(.fileReadCorruptFile) }
+            // A pose envelope can hug a visible limb; leave image context for the tracker.
+            var region=candidate;region.bounds=candidate.bounds.expanded(by:0.15)
+            return SubjectAnchor(time:sample.time,candidate:region)
+        }
+    }
     private func regionPolicy() throws -> JSContext {
         if let regionContext { return regionContext }
         guard let pack = GymPack.current, let context = JSContext() else { throw CocoaError(.fileReadCorruptFile) }

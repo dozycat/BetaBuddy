@@ -4,9 +4,39 @@ import XCTest
 
 @MainActor
 final class SubjectSelectionTests: XCTestCase {
+    func testOptionalTiledCandidateProbe() async throws {
+        let env=ProcessInfo.processInfo.environment
+        guard let path=env["BB_SUBJECT_CLIP"], let output=env["BB_SUBJECT_PROBE"] else { throw XCTSkip("Local candidate probe not supplied") }
+        let url=URL(fileURLWithPath:path)
+        let summary=try await VideoAnalyzer().videoSummary(url:url)
+        let samples=try await SubjectRegionAnalyzer().discover(url:url,analysis:summary) { _ in }
+        try JSONEncoder().encode(samples).write(to:URL(fileURLWithPath:output))
+        print("Tiled candidate probe: \(samples.reduce(0) { $0+$1.candidates.count }) observations; manual inspection required")
+    }
     func testLegacyAnchorWithoutRegionStillLoads() throws {
         let raw = #"{"time":0,"bounds":{"x":0.1,"y":0.1,"width":0.2,"height":0.6},"appearance":[]}"#
         XCTAssertNil(try JSONDecoder().decode(SubjectAnchor.self, from: Data(raw.utf8)).region)
+    }
+    func testCachedUnresolvedSelectionCanRecoverWithoutManualAnchor() async throws {
+        let env=ProcessInfo.processInfo.environment
+        guard let path=env["BB_SUBJECT_CLIP"],let baseline=env["BB_SUBJECT_BASE"] else { throw XCTSkip("Optional unresolved video observations") }
+        let original=try JSONDecoder().decode(PoseAnalysis.self,from:Data(contentsOf:URL(fileURLWithPath:baseline)))
+        XCTAssertTrue(original.hasSubjectCandidates);XCTAssertFalse(original.hasSelectedSubject)
+        let root=FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at:root) }
+        let store=ClimbStore(root:root)
+        let staged=root.appendingPathComponent("fixture.mp4")
+        try FileManager.default.copyItem(at:URL(fileURLWithPath:path),to:staged)
+        let climb=try store.save(title:"",grade:ungradedValue,sent:false,note:"",stagedVideo:staged,thumbnail:Data(),analysis:original)
+        let session=SubjectSelectionSession(climb:climb,store:store)
+        defer { session.stop() }
+        session.prepare()
+        let deadline=Date().addingTimeInterval(180)
+        while session.busy && Date()<deadline { try await Task.sleep(for:.milliseconds(100)) }
+        XCTAssertFalse(session.busy);XCTAssertNil(session.error)
+        let result=try XCTUnwrap(session.analysis)
+        XCTAssertEqual(result.subject?.manual,false);XCTAssertTrue(session.anchors.isEmpty)
+        XCTAssertGreaterThanOrEqual(result.subjectPositions?.count ?? 0,Int(ceil(Double(original.sampledFrames)*0.9)))
     }
     private func analysis() -> PoseAnalysis {
         let pose = PoseFrame(time: 0, joints: Array(repeating: Joint(x: 0.3, y: 0.4, confidence: 1), count: 33))
@@ -87,6 +117,17 @@ final class SubjectSelectionTests: XCTestCase {
         print("Subject integration: samples=\(result.people?.count ?? 0), selected=\(result.frames.count), seconds=\(Date().timeIntervalSince(start))")
         if let output = ProcessInfo.processInfo.environment["BB_SUBJECT_OUTPUT"] {
             try JSONEncoder().encode(result).write(to: URL(fileURLWithPath: output))
+        }
+        if let path=ProcessInfo.processInfo.environment["BB_SUBJECT_EXPECTED"] {
+            let expected=try JSONDecoder().decode([SubjectPosition].self,from:Data(contentsOf:URL(fileURLWithPath:path)))
+            XCTAssertFalse(expected.isEmpty)
+            let distances=expected.compactMap { reference -> Double? in
+                guard let selected=result.subjectPositions?.min(by:{abs($0.time-reference.time)<abs($1.time-reference.time)}),abs(selected.time-reference.time)<=0.16 else { return nil }
+                return hypot(selected.bounds.x+selected.bounds.width/2-reference.bounds.x-reference.bounds.width/2,selected.bounds.y+selected.bounds.height/2-reference.bounds.y-reference.bounds.height/2)
+            }
+            XCTAssertGreaterThanOrEqual(distances.count,Int(ceil(Double(expected.count)*0.9)),"Target coverage remains incomplete")
+            XCTAssertLessThan(distances.reduce(0,+)/Double(max(1,distances.count)),0.05,"Automatic selection is on a different person")
+            XCTAssertTrue(distances.allSatisfy { $0<0.15 })
         }
     }
     func testCandidateArchiveLoadsOnDemandAndFailedIndexWriteKeepsPreviousSelection() async throws {

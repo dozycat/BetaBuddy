@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import com.betabuddy.android.R
@@ -62,14 +63,20 @@ internal class SubjectSelectionSession(
     fun prepare() = work {
         val serial = generation
         val cached = model.subjectAnalysis(climb.id)
-        val observations = if (cached?.people?.any { it.candidates.isNotEmpty() } == true) cached else
+        val usedCache=cached?.people?.any { it.candidates.isNotEmpty() } == true
+        val observations = if (usedCache) requireNotNull(cached) else
             try { SubjectResolver(context).analyze(model.videoFile(climb),AnalysisQuality.BALANCED,anchors=anchors) { value ->
                 scope.launch { if (serial == generation) progress = value }
             } } catch (failure: AnalysisException) {
                 if (failure.error != AnalysisError.NO_POSE) throw failure
                 climb.analysis.copy(people = emptyList(),peopleReference = null)
             }
-        SubjectResolver(context).resolve(observations,anchors) to anchors
+        val resolver=SubjectResolver(context)
+        var selected=resolver.resolve(observations,anchors)
+        if(usedCache && anchors.isEmpty() && !selected.hasSelectedSubject) selected=resolver.recover(model.videoFile(climb),selected) { value ->
+            scope.launch { if(serial==generation) progress=value }
+        }
+        selected to anchors
     }
 
     fun choose(candidate: SubjectCandidate, time: Double) = resolve(
@@ -77,7 +84,14 @@ internal class SubjectSelectionSession(
     fun automatic() = resolve(emptyList())
     private fun resolve(next: List<SubjectAnchor>) {
         val original = analysis ?: return
-        work { SubjectResolver(context).resolve(original,next) to next }
+        work {
+            val serial=generation;val resolver=SubjectResolver(context)
+            var selected=resolver.resolve(original,next)
+            if(next.isEmpty() && !selected.hasSelectedSubject) selected=resolver.recover(model.videoFile(climb),selected) { value ->
+                scope.launch { if(serial==generation) progress=value }
+            }
+            selected to next
+        }
     }
     fun refine(bounds: SubjectBounds,time: Double) {
         val original = analysis ?: climb.analysis
@@ -161,10 +175,13 @@ internal fun SubjectSelectionScreen(climb: Climb, model: JournalViewModel, onDon
                             val h = maxOf(44.0,height*bounds.height+12).dp
                             Canvas(Modifier.offset((width*(bounds.x+bounds.width/2)).dp-w/2,(height*(bounds.y+bounds.height/2)).dp-h/2)
                                 .size(w,h).testTag("subject-${candidate.id}")
+                                .zIndex(if (chosen) 1f else 0f)
                                 .semantics { contentDescription = label; this.selected = chosen }
                                 .clickable(enabled = !session.busy,role = Role.Button) { playback.pause(); session.choose(candidate,candidate.pose.time) }) {
-                                drawOval(Color.Black.copy(alpha = .75f),style = Stroke(if (chosen) 5.dp.toPx() else 3.dp.toPx()))
-                                drawOval(if (chosen) BB.Lime else Color.White,style = Stroke(if (chosen) 3.dp.toPx() else 1.dp.toPx()))
+                                if (selected == null || chosen) {
+                                    drawOval(Color.Black.copy(alpha = .75f),style = Stroke(if (chosen) 5.dp.toPx() else 3.dp.toPx()))
+                                    drawOval(if (chosen) BB.Lime else Color.White,style = Stroke(if (chosen) 3.dp.toPx() else 1.dp.toPx()))
+                                }
                             }
                         }
                         if (drawing) {

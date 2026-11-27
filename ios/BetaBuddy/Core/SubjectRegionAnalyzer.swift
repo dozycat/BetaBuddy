@@ -6,6 +6,52 @@ import UIKit
 /// a closer view for pose detection; only actual, reliable poses enter movement analysis.
 actor SubjectRegionAnalyzer {
     struct Result: Sendable { var analysis: PoseAnalysis; var anchor: SubjectAnchor }
+    /// Bounded multi-scale discovery. These are observations, not selected people or tracks.
+    func discover(url: URL, analysis: PoseAnalysis, progress: @escaping @Sendable (Double) async -> Void) async throws -> [SubjectSample] {
+        guard let path=Bundle.main.path(forResource:"pose_landmarker_full",ofType:"task") else { throw AnalysisError.missingModel }
+        let options=PoseLandmarkerOptions()
+        options.baseOptions.modelAssetPath=path; options.baseOptions.delegate = .CPU
+        options.runningMode = .image; options.numPoses=4
+        let detector=try PoseLandmarker(options:options)
+        let generator=AVAssetImageGenerator(asset:AVURLAsset(url:url))
+        generator.appliesPreferredTrackTransform=true; generator.maximumSize=CGSize(width:1920,height:1920)
+        generator.requestedTimeToleranceBefore = .zero; generator.requestedTimeToleranceAfter = .zero
+        defer { generator.cancelAllCGImageGeneration() }
+        let count=min(60,max(5,Int(ceil(analysis.duration*2))))
+        var samples:[SubjectSample]=[]
+        for index in 0..<count {
+            try Task.checkCancellation()
+            if ProcessInfo.processInfo.thermalState == .critical { throw AnalysisError.overheated }
+            let wanted=Double(index)/Double(count-1)*max(0,analysis.duration-0.1)
+            let time=wanted
+            let (image,_)=try await generator.image(at:CMTime(seconds:time,preferredTimescale:600))
+            var candidates:[SubjectCandidate]=[]
+            for row in 0..<3 { for column in 0..<3 {
+                try Task.checkCancellation()
+                let found:[SubjectCandidate]=try autoreleasepool {
+                    let rectangle=CGRect(x:Double(column)*0.3*Double(image.width),y:Double(row)*0.3*Double(image.height),width:0.4*Double(image.width),height:0.4*Double(image.height)).integral.intersection(CGRect(x:0,y:0,width:image.width,height:image.height))
+                    guard let crop=image.cropping(to:rectangle) else { return [] }
+                    let result=try detector.detect(image:MPImage(uiImage:UIImage(cgImage:crop)))
+                    return result.landmarks.enumerated().compactMap { person,points in
+                        guard points.count==33 else { return nil }
+                        let joints=points.map { point in Joint(x:rounded4((rectangle.minX+Double(point.x)*rectangle.width)/Double(image.width)),y:rounded4((rectangle.minY+Double(point.y)*rectangle.height)/Double(image.height)),confidence:rounded4(min(point.visibility?.doubleValue ?? 0,point.presence?.doubleValue ?? 0))) }
+                        let pose=PoseFrame(time:time,joints:joints)
+                        guard pose.hasReliableTorso else { return nil }
+                        let visible=joints.filter(\.valid),xs=visible.map(\.x),ys=visible.map(\.y)
+                        let bounds=SubjectBounds(x:xs.min()!,y:ys.min()!,width:xs.max()!-xs.min()!,height:ys.max()!-ys.min()!)
+                        guard bounds.valid else { return nil }
+                        let torso=[joints[11],joints[12],joints[23],joints[24]],tx=torso.map(\.x).min()!,ty=torso.map(\.y).min()!
+                        let colour=VideoAnalyzer.appearance(image:image,bounds:.init(x:tx,y:ty,width:torso.map(\.x).max()!-tx,height:torso.map(\.y).max()!-ty))
+                        return SubjectCandidate(id:"probe-\(index)-\(row)-\(column)-\(person)",bounds:bounds,appearance:colour,pose:pose)
+                    }
+                }
+                candidates.append(contentsOf:found)
+            } }
+            samples.append(.init(time:time,candidates:candidates))
+            await progress(Double(index+1)/Double(count))
+        }
+        return samples
+    }
     func refine(url: URL, analysis: PoseAnalysis, bounds: SubjectBounds, at time: Double,
                 progress: @escaping @Sendable (Double) async -> Void) async throws -> Result {
         guard bounds.valid, let path = Bundle.main.path(forResource: "pose_landmarker_full", ofType: "task") else { throw AnalysisError.missingModel }

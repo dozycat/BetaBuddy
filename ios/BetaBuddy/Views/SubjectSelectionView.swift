@@ -37,7 +37,7 @@ final class SubjectSelectionSession: ObservableObject {
         work = Task {
             defer { if generation == version { busy = false; refining = false } }
             do {
-                let result: PoseAnalysis
+                var result: PoseAnalysis
                 var next = anchors
                 switch operation {
                 case .prepare:
@@ -45,6 +45,9 @@ final class SubjectSelectionSession: ObservableObject {
                     try Task.checkCancellation()
                     if let cached, cached.people?.contains(where: { !$0.candidates.isEmpty }) == true {
                         result = try await SubjectResolver().resolve(cached, anchors: anchors)
+                        if anchors.isEmpty && !result.hasSelectedSubject {
+                            result=try await VideoAnalyzer().recoverSubject(url:source,analysis:result) { [weak self] value in await self?.setProgress(value,version:version) }
+                        }
                     } else {
                         do {
                             result = try await VideoAnalyzer().analyze(url: source, quality: .balanced, subjectAnchors: anchors) { [weak self] value in
@@ -58,6 +61,9 @@ final class SubjectSelectionSession: ObservableObject {
                 case .resolve(let choices):
                     guard let analysis else { return }
                     result = try await SubjectResolver().resolve(analysis, anchors: choices)
+                    if choices.isEmpty && !result.hasSelectedSubject {
+                        result=try await VideoAnalyzer().recoverSubject(url:source,analysis:result) { [weak self] value in await self?.setProgress(value,version:version) }
+                    }
                     next = choices
                 case .refine(let bounds, let time):
                     let refined = try await SubjectRegionAnalyzer().refine(url: source, analysis: analysis ?? climb.analysis, bounds: bounds, at: time) { [weak self] value in
@@ -110,7 +116,7 @@ struct SubjectSelectionView: View {
                         .padding(.horizontal,20).padding(.top,12)
                     PaperPage(spacing:16) {
                         if !drawingRegion {
-                            Text("拖到看清人物的位置，点一下圈线。遮挡后认不准时，可在新的位置再点一次纠正。")
+                            Text("拖到看清人物的位置，点选要跟踪的人。遮挡后认不准时，可在新的位置再点一次纠正。")
                                 .font(.subheadline).foregroundStyle(BB.muted)
                         }
                         Button(drawingRegion ? "取消圈选" : "未圈到？手动圈选") {
@@ -196,10 +202,12 @@ struct SubjectSelectionView: View {
                     } label: {
                         Ellipse().stroke(.black.opacity(0.75), lineWidth: selectedID == candidate.id ? 5 : 3)
                             .overlay(Ellipse().stroke(selectedID == candidate.id ? BB.lime : .white.opacity(0.9), lineWidth: selectedID == candidate.id ? 3 : 1))
+                            .opacity(selectedID == nil || selectedID == candidate.id ? 1 : 0)
                             .contentShape(Rectangle())
                     }.buttonStyle(.plain).disabled(session.busy)
                         .frame(width: max(44, width*rect.width+12), height: max(44, height*rect.height+12))
                         .position(x: origin.x+width*(rect.x+rect.width/2), y: origin.y+height*(rect.y+rect.height/2))
+                        .zIndex(selectedID == candidate.id ? 1 : 0)
                         .accessibilityLabel(Text("人物 \((sample?.candidates.firstIndex { $0.id == candidate.id } ?? 0) + 1)"))
                         .accessibilityAddTraits(selectedID == candidate.id ? .isSelected : [])
                         .accessibilityIdentifier("subject-\(candidate.id)")

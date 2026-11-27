@@ -12,11 +12,13 @@ import com.betabuddy.android.data.PoseAnalysis
 import com.betabuddy.android.data.SubjectAnchor
 import com.betabuddy.android.data.SubjectResolution
 import com.betabuddy.android.data.SubjectSample
+import com.betabuddy.android.data.SubjectPick
 import com.betabuddy.android.data.selecting
 import com.betabuddy.android.gym.GymManifest
 import java.io.ByteArrayInputStream
 import java.io.File
 import kotlin.coroutines.resume
+import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -45,10 +47,11 @@ class SubjectResolver(context: Context) {
         anchors: List<SubjectAnchor>, progress: (Double) -> Unit): PoseAnalysis {
         val regions = anchors.filter { it.region }
         val passes = 1.0 + regions.size
+        val canRecover=anchors.isEmpty()
         var detected = try {
-            VideoAnalyzer(context).analyze(video,quality,cameraClip=cameraClip,collectSubjects=true) { progress(it/passes) }
+            VideoAnalyzer(context).analyze(video,quality,cameraClip=cameraClip,collectSubjects=true) { progress(it/passes*(if(canRecover) .7 else 1.0)) }
         } catch (failure: AnalysisException) {
-            if (failure.error != AnalysisError.NO_POSE || regions.isEmpty()) throw failure
+            if (failure.error != AnalysisError.NO_POSE || (regions.isEmpty() && !canRecover)) throw failure
             val info = VideoAnalyzer.probe(video)
             val size = FrameGeometry.displaySize(info.width,info.height,info.rotation)
             PoseAnalysis(emptyList(),0,requireNotNull(info.durationSeconds),size.first.toDouble()/size.second,people=emptyList())
@@ -58,9 +61,46 @@ class SubjectResolver(context: Context) {
                 progress((index+1+it)/passes)
             }.analysis
         }
-        val result = resolve(detected,anchors)
+        var result = resolve(detected,anchors)
+        if(canRecover && !result.hasSelectedSubject) {
+            result=recover(video,result) { progress(.7+.3*it) }
+        }
+        if(!result.hasSubjectCandidates) throw AnalysisException(AnalysisError.NO_POSE)
         progress(1.0)
         return result
+    }
+
+    internal suspend fun recover(video: File,analysis: PoseAnalysis,progress: (Double) -> Unit): PoseAnalysis {
+        val worker=SubjectRegionAnalyzer(context)
+        val proposals=worker.discover(video,analysis) { progress(it/3) }
+        val seeds=proposedRegions(proposals)
+        var result=analysis
+        for((index,seed) in seeds.withIndex()) {
+            result=worker.refine(video,result,seed.bounds,seed.time) { progress(1.0/3+2.0/3*(index+it)/seeds.size) }.analysis
+        }
+        result=resolve(result,emptyList());progress(1.0)
+        return result
+    }
+
+    internal suspend fun proposedRegions(samples: List<SubjectSample>): List<SubjectAnchor> {
+        val encoded=withPolicy { policy->
+            policy.evaluate("window.__proposal = {samples:[]}; true")
+            for(chunk in samples.chunked(8)) {
+                coroutineContext.ensureActive()
+                val input=withContext(Dispatchers.Default) { json.encodeToString(chunk) }
+                check(policy.evaluate("window.__proposal.samples.push(...JSON.parse(${JSONObject.quote(input)})); true")=="true")
+            }
+            json.decodeFromString<String>(policy.evaluate("JSON.stringify(typeof BetaBuddySubject.proposeRegions === 'function' ? BetaBuddySubject.proposeRegions(window.__proposal) : [])"))
+        }
+        val picks=json.decodeFromString<List<SubjectPick>>(encoded)
+        require(picks.size<=2)
+        return picks.map { pick->
+            val sample=requireNotNull(samples.firstOrNull { kotlin.math.abs(it.time-pick.time)<.0001 })
+            val candidate=requireNotNull(sample.candidates.firstOrNull { it.id==pick.personID })
+            require(candidate.bounds.valid)
+            // Leave image context around a pose envelope that may hug a visible limb.
+            SubjectAnchor(sample.time,candidate.copy(bounds=candidate.bounds.expanded(.15)))
+        }
     }
 
     suspend fun resolve(analysis: PoseAnalysis, anchors: List<SubjectAnchor>): PoseAnalysis = withTimeout(120_000) {
