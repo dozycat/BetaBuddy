@@ -29,6 +29,9 @@
 }
 
 # --- MediaPipe Tasks -------------------------------------------------------------------
+# ONNX Runtime's Java classes are looked up from its JNI runtime.
+-keep class ai.onnxruntime.** { *; }
+
 # The SDK reaches its Java classes from native code and reads protobuf-lite messages by
 # reflection on field names.
 -keep class com.google.mediapipe.** { *; }

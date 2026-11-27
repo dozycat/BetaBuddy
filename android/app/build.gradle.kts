@@ -90,6 +90,7 @@ dependencies {
     implementation(libs.androidx.media3.transformer)
     implementation(libs.androidx.media3.effect)
     implementation(libs.mediapipe.tasks.vision)
+    implementation(libs.onnxruntime.android)
 
     // The in-app camera. Video only: no audio source is ever attached.
     implementation(libs.androidx.camera.core)

@@ -27,7 +27,7 @@
     <string name="journal_import_pick_title">Choose a climbing video</string>
     <string name="journal_import_ready">Video ready</string>
     <string name="journal_import_fetching">Getting the original…</string>
-    <string name="journal_import_requirements">One climber, full body · fixed camera · up to 3 min</string>
+    <string name="journal_import_requirements">One climber, full body · fixed camera · up to 20 min</string>
     <string name="journal_import_pick_action">Choose from gallery</string>
     <string name="journal_import_name_label">Name this climb</string>
     <string name="journal_import_name_hint">e.g. Sunday’s purple problem</string>
@@ -38,7 +38,7 @@
     <string name="journal_import_unavailable">Couldn’t get the video. If the original is kept in the cloud, download it in your gallery app first.</string>
     <string name="journal_error_missing_model">The pose model is missing from this install. Reinstall the app.</string>
     <string name="journal_error_invalid_video">This video can’t be read. Choose an undamaged MOV or MP4 file.</string>
-    <string name="journal_error_too_long">The video is longer than 3 minutes. Trim it to a single climb in your gallery app first.</string>
+    <string name="journal_error_too_long">The video is longer than 20 minutes. Trim it to a single climb in your gallery app first.</string>
     <string name="journal_error_too_large">The video is larger than 500 MB. Trim it or export a smaller version in your gallery app first.</string>
     <string name="journal_error_no_pose">No climber could be found clearly enough. Use a well-lit video of one climber with the whole body in frame.</string>
     <string name="journal_error_overheated">Your phone is hot, so analysis stopped. Try again in a while.</string>

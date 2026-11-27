@@ -208,3 +208,6 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 NATIVE CODE INSIDE MEDIAPIPE
 
 The MediaPipe Tasks native library is built from many open-source projects. Their notices, as distributed by Google with MediaPipe, are reproduced in full after the Apache License.
+
+ONNX Runtime Android 1.23.2 — Microsoft and contributors. MIT license and third-party notices: ONNXRuntime.txt, ONNXRuntime-NOTICE.txt.
+TinyCLIP optional image encoder — Microsoft, MIT (TinyCLIP.txt). Model bundled locally; never downloaded at runtime.

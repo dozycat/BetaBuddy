@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="library_title">Automatic photo import</string>
+    <string name="library_heading">Keep your climbs together</string>
+    <string name="library_description">When enabled, checks videos you allow while the app is open and copies detected climbs into your journal. Originals stay unchanged. Videos are not uploaded.</string>
+    <string name="library_enable">Automatic import</string>
+    <string name="library_access_error">Allow photo access, or choose only some videos.</string>
+    <string name="library_settings">Open Settings</string>
+    <string name="library_selected">Only videos you allow are checked.</string>
+    <string name="library_reselect">Change allowed videos</string>
+    <string name="library_running">Checking your library…</string>
+    <string name="library_progress">Checked %1$d of %2$d videos</string>
+    <string name="library_stop">Stop checking</string>
+    <string name="library_imported">Imported %1$d videos this time</string>
+    <string name="library_scan">Check for new videos</string>
+    <string name="library_unavailable">%1$d videos could not be processed. Download cloud originals in Photos, then try again.</string>
+    <string name="library_grouping">Grouped by filming day, indoors or outdoors, and suggested gym. Suggestions use only the location stored with the video. Detection and suggestions can be wrong; you can edit them in the record.</string>
+    <string name="library_deletion">Deleted journal records will not be imported automatically again. You can still import them manually.</string>
+    <string name="library_scan_error">Automatic import is unavailable. Please try again later.</string>
+    <string name="library_suggested">Environment and gym were suggested automatically. Please check them.</string>
+    <string name="library_unknown">Unknown</string>
+    <string name="library_indoor">Indoors</string>
+    <string name="library_environment">Environment</string>
+    <string name="library_model_missing">This build does not include a matching library recognition model. Manual import is available.</string>
+</resources>

@@ -212,7 +212,7 @@ Debug 构建还可以用 Chrome 的 `chrome://inspect` 连上页面。加载耗�
 
 ## 隐私与存储
 
-- **权限。** Manifest 声明本地分析服务用的 `FOREGROUND_SERVICE`、`FOREGROUND_SERVICE_DATA_SYNC`、`FOREGROUND_SERVICE_MEDIA_PROCESSING`，可选的 `POST_NOTIFICATIONS`，以及应用内相机用的 `CAMERA` 和按距离给岩馆排序用的 `ACCESS_COARSE_LOCATION`、`ACCESS_FINE_LOCATION`（都是用到时才问，两条位置权限一起问、由用户选给哪一种，拒绝后其余功能照常）。不申请麦克风、相册、存储或网络权限，并移除依赖库会合并进来的 `INTERNET`、`ACCESS_NETWORK_STATE` 和 `WAKE_LOCK`。CameraX 合并进来的只有一个不导出、默认停用的 `MetadataHolderService`（它用来找到相机实现），没有权限。另有 AndroidX Core 自动加的一条应用自用的签名级权限。AppCompat 带来的 EmojiCompat 启动项也已移除（它会向系统字体服务要新的表情字体）。
+- **权限。** Manifest 声明本地分析服务用的 `FOREGROUND_SERVICE`、`FOREGROUND_SERVICE_DATA_SYNC`、`FOREGROUND_SERVICE_MEDIA_PROCESSING`，可选的 `POST_NOTIFICATIONS`，以及应用内相机用的 `CAMERA` 和按距离给岩馆排序用的 `ACCESS_COARSE_LOCATION`、`ACCESS_FINE_LOCATION`（都是用到时才问，两条位置权限一起问、由用户选给哪一种，拒绝后其余功能照常）。相册自动收录的可选权限见文末；不申请麦克风或网络权限，并移除依赖库会合并进来的 `INTERNET`、`ACCESS_NETWORK_STATE` 和 `WAKE_LOCK`。CameraX 合并进来的只有一个不导出、默认停用的 `MetadataHolderService`（它用来找到相机实现），没有权限。另有 AndroidX Core 自动加的一条应用自用的签名级权限。AppCompat 带来的 EmojiCompat 启动项也已移除（它会向系统字体服务要新的表情字体）。
 - 岩馆只在本机记两个布尔值（是否读过说明、手势提示是否看过），存在应用私有的 `SharedPreferences` 里。攀爬册的数据在 `filesDir/BetaBuddy/`（索引、原片、缩略图、分析结果文件、剪辑计划、应用内拍摄的记录的拍摄计划；结果和计划里各有一张由画面合成的墙面图），另有 `SharedPreferences` 里分析页面上一次用的身材参数，以及相机的两项设备记录（这台设备要不要用应用自己的编码器、用户是否拒绝过位置）。都不写外部存储。给分析页面和拍摄页面的画面只在内存里。位置只取一次、只用来排序，不保存。
 - **不进备份，也不随换机迁移。** `allowBackup="false"`、`fullBackupContent="false"`；`data_extraction_rules.xml` 把 `<cloud-backup>` 和 `<device-transfer>` 两节的全部数据域都排除（Android 12 起两者分开，`allowBackup` 管不到设备间直传）。
 - **第三方许可全文**随应用打包在 `assets/licenses/`（组件清单、Apache License 2.0、MediaPipe 原生库的全部声明），在「设置与关于」→「开源许可」里离线查看；许可保持英文原文。
@@ -244,3 +244,14 @@ Debug 构建还可以用 Chrome 的 `chrome://inspect` 连上页面。加载耗�
 ## 相册与人物选择开发分支
 
 相册自动收录与多人选择仍在开发，不能视为现有正式版功能。多人候选提取和与 iOS 共用的本地策略已通过基础集成检查；候选带原视频坐标、姿态和粗粒度衣着色样，没有人脸识别或跨视频身份。策略执行的 WebView 不开放网络、文件访问或原生消息桥，结束及取消后销毁。已接入轻量圈线点选、按时刻纠正、自动选择、保存与取消；候选按记录压缩存储，改选递增修订号并使旧结果失效，迟到的姿态及网页结果不能覆盖。常规后台姿态分析在私有策略可用时收集多个候选并自动选择。已选位置与姿态分别送入分析，缺姿态时不捏造动作。手动拖框的局部识别与独立位置追踪尚未移植；真实遮挡和交叉未验收。相册分类、权限和自动导入也仍待实现。完整范围和验证记录见 [相册归集与人物选择](../ios/camera-library-selection.md)。
+
+
+### Development: automatic library import
+
+The logbook's “Automatic photo import” opens an opt-in screen. The scanner runs while the app is resumed, gives way to camera/person selection/analysis, and stops on permission loss or user cancellation. Android 14+ supports selected-video access and a reselection entry; older systems request the video/media permissions they support. Permission requests are triggered by the user's switch, never by app launch. `ACCESS_MEDIA_LOCATION` reads only existing video metadata; this path never calls the device location service.
+
+`LibraryMedia` queries local MediaStore video URIs (not cloud picker providers). Pending/trash items are excluded. Opaque identity includes the MediaStore database version, URI and date-added; the source revision includes generation-modified where available and date/size/duration/dimensions. Re-fetch before committing rejects changed/deleted/revoked items. A bundled, hash-checked ONNX encoder runs serially on CPU and compares embeddings using the private pack's policy. Only matched videos are staged. No domain classification thresholds live in native code.
+
+The copied original, thumbnail, editable capture date/environment/suggested gym and imported receipt are persisted together. A negative receipt expires after source/policy changes; transient failures do not become receipts. Imported receipts survive record deletion to prevent automatic return. A manual import records source identity when the provider can resolve it to readable MediaStore; cloud and opaque picker URIs may not supply a comparable identity. Import limits are 20 minutes / 500 MB on both platforms. Original recording date falls back to video metadata, then import time; staged file modification time is never used. Suggestions and automatic environment are labeled and can be corrected in Organize; grouping is recomputed from record day and gym.
+
+Optional development model installation follows the private pack installation: `android/scripts/install-library-model.sh <library-image-encoder.onnx>`. Without its matching policy/model the app still builds and manual import works; auto import explains what is missing. Runtime and installer verify the exported model checksum. No model is fetched at runtime. Privacy texts and third-party licenses are bundled; online copies have only been edited locally, not deployed by this work.

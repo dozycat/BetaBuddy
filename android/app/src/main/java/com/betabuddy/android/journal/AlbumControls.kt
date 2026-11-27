@@ -179,6 +179,9 @@ internal fun GymPicker(initialName: String, onSelect: (String?, String) -> Unit,
 
 @Composable
 internal fun OrganizeDialog(climb: Climb, model: JournalViewModel, onClose: () -> Unit) {
+    var environment by rememberSaveable { mutableStateOf(climb.environment ?: "unknown") }
+    var environmentChosen by rememberSaveable { mutableStateOf(false) }
+    var gymChosen by rememberSaveable { mutableStateOf(false) }
     var gymId by rememberSaveable { mutableStateOf(climb.gymId) }
     var gymName by rememberSaveable { mutableStateOf(climb.gymName.orEmpty()) }
     var date by rememberSaveable { mutableStateOf(climb.climbedAtMillis) }
@@ -192,13 +195,22 @@ internal fun OrganizeDialog(climb: Climb, model: JournalViewModel, onClose: () -
     val scope = rememberCoroutineScope()
     AlertDialog(onDismissRequest = { if (!busy) onClose() }, containerColor = BB.Paper, title = { Text(stringResource(R.string.album_organize)) }, text = {
         Column(Modifier.verticalScroll(rememberScrollState())) {
+            val environments = listOf("unknown" to stringResource(R.string.library_unknown), "indoor" to stringResource(R.string.library_indoor), "outdoor" to stringResource(R.string.album_outdoor))
+            ChoiceRow(stringResource(R.string.library_environment),environments.firstOrNull { it.first == environment }?.second ?: environments.first().second,environments) {
+                environment = it; environmentChosen = true
+                if (it == "outdoor") { gymId = null; gymName = ""; gymChosen = true }
+            }
+            if (climb.environmentAuto == true || climb.gymAuto == true) Text(stringResource(R.string.library_suggested),style = BB.Caption,color = BB.Muted)
             DisciplinePicker(discipline) { discipline = it; chosen = true; grade = GradeScale.fitting(grade, it) }
             GradePicker(grade, discipline) { grade = it }
-            MetadataFields(model, gymId, gymName, date, folder, { id, name -> gymId = id; gymName = name }, { date = it }, { folder = it })
+            MetadataFields(model, gymId, gymName, date, folder, { id, name ->
+                gymId = id; gymName = name; gymChosen = true
+                if (name.isNotBlank()) { environment = "indoor"; environmentChosen = true }
+            }, { date = it }, { folder = it })
             if (error) Text(stringResource(R.string.album_save_error), color = DangerColor)
         }
     }, confirmButton = { TextButton(enabled = !busy, onClick = {
-        busy = true; scope.launch { model.organize(climb, grade, gymId, gymName, date, folder, discipline.takeIf { chosen }).fold(onSuccess = { onClose() }, onFailure = { error = true }); busy = false }
+        busy = true; scope.launch { model.organize(climb, grade, gymId, gymName, date, folder, discipline.takeIf { chosen },environment.takeIf { environmentChosen },gymChosen).fold(onSuccess = { onClose() }, onFailure = { error = true }); busy = false }
     }) { Text(stringResource(R.string.album_save)) } }, dismissButton = { TextButton(enabled = !busy, onClick = onClose) { Text(stringResource(R.string.album_cancel)) } })
 }
 

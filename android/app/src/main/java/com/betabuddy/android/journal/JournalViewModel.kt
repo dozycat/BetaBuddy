@@ -43,6 +43,7 @@ data class UiMessage(@StringRes val id: Int, val argument: String? = null)
 data class ImportUiState(
     val staged: File? = null,
     val recordingDateMillis: Long? = null,
+    val sourceAssetID: String? = null,
     /** Copying the picked video into private storage. */
     val importing: Boolean = false,
     /** Preparing the thumbnail and committing the saved clip. */
@@ -181,8 +182,9 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
                     VideoStager.stage(getApplication(), uri, JournalGraph.stagingDirectory(getApplication())) { isActive }
                 }
                 val recordingDate = withContext(Dispatchers.IO) { VideoDates.read(getApplication(), uri, staged) }
+                val sourceID = withContext(Dispatchers.IO) { runCatching { LibraryMedia(getApplication()).pickedIdentity(uri) }.getOrNull() }
                 val previous = importState.value.staged
-                importState.update { it.copy(staged = staged, recordingDateMillis = recordingDate, error = null) }
+                importState.update { it.copy(staged = staged, recordingDateMillis = recordingDate, sourceAssetID = sourceID, error = null) }
                 previous?.delete()
             } catch (error: CancellationException) {
                 throw error
@@ -217,7 +219,7 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
                 ensureActive()
                 // Commit the clip and durable request before starting optional inference.
                 val climb = withContext(Dispatchers.IO) {
-                    store().save(title, defaultTitle, grade, sent, note, video, thumbnail, analysis, gymId = gymId, gymName = gymName, climbedAtMillis = climbedAtMillis, folderId = folderId, pendingAnalysis = if (analyze) quality.name.lowercase(Locale.ROOT) else null, discipline = discipline)
+                    store().save(title, defaultTitle, grade, sent, note, video, thumbnail, analysis, gymId = gymId, gymName = gymName, climbedAtMillis = climbedAtMillis, folderId = folderId, pendingAnalysis = if (analyze) quality.name.lowercase(Locale.ROOT) else null, discipline = discipline, sourceAssetID = state.sourceAssetID)
                 }
                 if (analyze) AnalysisService.start(getApplication())
                 importState.update { it.copy(staged = null, savedId = climb.id) }
@@ -252,8 +254,8 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
         runCatching { store().deleteFolder(id) }
     }
     /** [discipline] is the user's choice, or null when they did not touch it. */
-    suspend fun organize(climb: Climb, grade: String, gymId: String?, gymName: String?, climbedAtMillis: Long, folderId: String?, discipline: String? = null): Result<Unit> = withContext(Dispatchers.IO) {
-        runCatching { store().organize(climb, grade, gymId, gymName, climbedAtMillis, folderId, discipline) }
+    suspend fun organize(climb: Climb, grade: String, gymId: String?, gymName: String?, climbedAtMillis: Long, folderId: String?, discipline: String? = null, environment: String? = null, gymChosen: Boolean = false): Result<Unit> = withContext(Dispatchers.IO) {
+        runCatching { store().organize(climb, grade, gymId, gymName, climbedAtMillis, folderId, discipline, environment, gymChosen) }
     }
 
     // Review

@@ -113,8 +113,10 @@ class ClimbStore(val root: File) {
         capture: CaptureInfo? = null, capturePlan: String? = null,
         /** What the user chose when saving, if anything. */
         discipline: String? = null,
+        environment: String? = null, sourceAssetID: String? = null, libraryReceipt: LibraryReceipt? = null,
     ): Climb {
         if (!canWrite) throw IOException("The archive could not be read and is kept as it is")
+        if (sourceAssetID != null && libraryReceipt != null) require(!hasImportedAsset(sourceAssetID)) { "Already imported" }
         val id = newId()
         val extension = stagedVideo.extension.filter { it.isLetterOrDigit() }.ifEmpty { "mp4" }
         val videoName = "$id.$extension"
@@ -128,6 +130,9 @@ class ClimbStore(val root: File) {
             climbedAt = climbedAtMillis?.let(Climb::dateFromMillis), folderId = validFolder(folderId), pendingAnalysis = pendingAnalysis,
             capture = capture?.copy(hasPlan = !capturePlan.isNullOrEmpty()),
             discipline = discipline?.takeIf(Discipline::valid),
+            environment = environment?.takeIf { it in setOf("indoor", "outdoor", "unknown") },
+            environmentAuto = true.takeIf { libraryReceipt != null && environment != null },
+            gymAuto = true.takeIf { libraryReceipt != null && !gymName.isNullOrBlank() }, sourceAssetID = sourceAssetID,
         )
         var moved = false
         try {
@@ -135,7 +140,9 @@ class ClimbStore(val root: File) {
             moved = true
             file(thumbnailName).writeBytes(thumbnail)
             if (climb.capture?.hasPlan == true && capturePlan != null) writeAtomically(file(id + CAPTURE_PLAN_SUFFIX), capturePlan.toByteArray(Charsets.UTF_8))
-            persist(state.value.copy(climbs = state.value.climbs + climb))
+            val ledger = if (sourceAssetID == null) state.value.libraryLedger else state.value.libraryLedger +
+                (sourceAssetID to (libraryReceipt ?: LibraryReceipt("", "", true)).copy(imported = true))
+            persist(state.value.copy(climbs = state.value.climbs + climb, libraryLedger = ledger))
             return state.value.climbs.first { it.id == id }
         } catch (error: Exception) {
             if (moved) runCatching { move(file(videoName), stagedVideo) }
@@ -143,6 +150,18 @@ class ClimbStore(val root: File) {
             file(id + CAPTURE_PLAN_SUFFIX).delete()
             throw error
         }
+    }
+
+    @Synchronized
+    fun hasImportedAsset(id: String): Boolean = state.value.libraryLedger[id]?.imported == true || state.value.climbs.any { it.sourceAssetID == id }
+
+    @Synchronized
+    fun hasHandledAsset(id: String, source: String, classifier: String): Boolean = hasImportedAsset(id) || state.value.libraryLedger[id]?.covers(source, classifier) == true
+
+    @Synchronized
+    fun recordLibraryNonmatch(id: String, source: String, classifier: String) {
+        if (hasImportedAsset(id)) return
+        persist(state.value.copy(libraryLedger = state.value.libraryLedger + (id to LibraryReceipt(source, classifier, false))))
     }
 
     /** Removes the record, then its clip, thumbnail, saved analysis result and edit plan. */
@@ -332,7 +351,7 @@ class ClimbStore(val root: File) {
      * stored as "no grade".
      */
     @Synchronized
-    fun organize(climb: Climb, grade: String, gymId: String?, gymName: String?, climbedAtMillis: Long, folderId: String?, discipline: String? = null) {
+    fun organize(climb: Climb, grade: String, gymId: String?, gymName: String?, climbedAtMillis: Long, folderId: String?, discipline: String? = null, environment: String? = null, gymChosen: Boolean = false) {
         validFolder(folderId)
         require(discipline == null || Discipline.valid(discipline)) { "Unknown discipline" }
         val current = state.value
@@ -341,6 +360,9 @@ class ClimbStore(val root: File) {
             if (it.id == climb.id) it.copy(grade = if (discipline == null) grade else GradeScale.fitting(grade, discipline), gymId = gymId,
                 gymName = gymName?.trim()?.prefix(120)?.takeIf(String::isNotEmpty),
                 climbedAt = Climb.dateFromMillis(climbedAtMillis), folderId = folderId,
+                environment = environment ?: it.environment,
+                environmentAuto = if (environment == null) it.environmentAuto else null,
+                gymAuto = if (gymChosen || gymId != it.gymId || gymName != it.gymName) null else it.gymAuto,
                 discipline = discipline ?: it.discipline, disciplineAuto = if (discipline == null) it.disciplineAuto else null) else it
         }))
     }

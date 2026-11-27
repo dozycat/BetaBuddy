@@ -65,3 +65,6 @@ android/.idea/
 # Gym pack (venue model, routes, solver, web page): installed locally, never committed
 android/app/src/main/assets/gympack/
 android/.gympack.*/
+# Optional locally exported image encoder, validated against the private pack's policy.
+android/app/src/main/assets/library-image-encoder.onnx
+android/app/src/main/assets/.library-model-*

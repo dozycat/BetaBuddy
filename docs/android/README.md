@@ -21,7 +21,7 @@ Kotlin + Jetpack Compose 原生应用，Android 8.0（API 26）及以上，竖�
 | `CAMERA` | 应用内相机，只录画面 | 第一次打开拍摄界面时 |
 | `ACCESS_COARSE_LOCATION`、`ACCESS_FINE_LOCATION` | 在拍摄界面按距离给内置岩馆目录排序，取一次、不保存 | 点「按距离找附近的岩馆」时一起问，Android 12+ 由用户选精确或大致 |
 
-Manifest 用 `tools:node="remove"` 去掉依赖库会合并进来的 `INTERNET`、`ACCESS_NETWORK_STATE`、`WAKE_LOCK`，并防止 `RECORD_AUDIO` 被带进来。合并之后另有 AndroidX Core 自动加的签名级权限 `com.betabuddy.android.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`（只有应用自己能持有）。不申请麦克风、相册、存储或网络权限。`python3 android/scripts/check-resources.py` 按这份名单检查 Manifest。依赖带进来的组件和移除的理由见 [android/THIRD_PARTY.md](../../android/THIRD_PARTY.md)。
+Manifest 用 `tools:node="remove"` 去掉依赖库会合并进来的 `INTERNET`、`ACCESS_NETWORK_STATE`、`WAKE_LOCK`，并防止 `RECORD_AUDIO` 被带进来。合并之后另有 AndroidX Core 自动加的签名级权限 `com.betabuddy.android.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`（只有应用自己能持有）。不申请麦克风或网络权限。相册自动收录默认关闭，启用才请求 `READ_MEDIA_VIDEO`（Android 13+）、`READ_MEDIA_VISUAL_USER_SELECTED`（Android 14+ 可只授权部分视频）、`ACCESS_MEDIA_LOCATION`（视频已有的位置）；Android 12 及以前用 `READ_EXTERNAL_STORAGE`，声明最高 SDK 32。`python3 android/scripts/check-resources.py` 按这份名单检查 Manifest。依赖带进来的组件和移除的理由见 [android/THIRD_PARTY.md](../../android/THIRD_PARTY.md)。
 
 ## 构建
 

@@ -155,7 +155,8 @@ if manifest is not None:
         if element.get(TOOLS + "node") == "remove":
             removed.add(name)
         elif name not in {"android.permission.POST_NOTIFICATIONS", "android.permission.FOREGROUND_SERVICE", "android.permission.FOREGROUND_SERVICE_DATA_SYNC", "android.permission.FOREGROUND_SERVICE_MEDIA_PROCESSING",
-                          "android.permission.CAMERA", "android.permission.ACCESS_COARSE_LOCATION", "android.permission.ACCESS_FINE_LOCATION"}:
+                          "android.permission.CAMERA", "android.permission.ACCESS_COARSE_LOCATION", "android.permission.ACCESS_FINE_LOCATION",
+                          "android.permission.READ_EXTERNAL_STORAGE", "android.permission.READ_MEDIA_VIDEO", "android.permission.READ_MEDIA_VISUAL_USER_SELECTED", "android.permission.ACCESS_MEDIA_LOCATION"}:
             problem(f"manifest declares permission {name}")
     for name in ("android.permission.INTERNET", "android.permission.ACCESS_NETWORK_STATE", "android.permission.WAKE_LOCK", "android.permission.RECORD_AUDIO"):
         if name not in removed:
@@ -175,7 +176,7 @@ if rules is not None:
             problem(f"data_extraction_rules.xml: <{section}> must exclude {sorted(domains)} and include nothing")
 
 # 6. The third-party license texts are bundled.
-for name in ("components.txt", "Apache-2.0.txt", "MediaPipe-NOTICE.txt"):
+for name in ("components.txt", "Apache-2.0.txt", "MediaPipe-NOTICE.txt", "TinyCLIP.txt", "ONNXRuntime.txt", "ONNXRuntime-NOTICE.txt"):
     path = APP / "src/main/assets/licenses" / name
     if not path.is_file() or path.stat().st_size == 0:
         problem(f"assets/licenses/{name} is missing or empty")

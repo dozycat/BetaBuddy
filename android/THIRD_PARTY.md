@@ -46,3 +46,9 @@ MediaPipe 的 AAR 不带 R8 规则，`app/proguard-rules.pro` 整体保留 `com.
 - `MediaPipe-NOTICE.txt` — MediaPipe 原生库所含开源项目的声明，与 `ios/BetaBuddy/Resources/Licenses/MediaPipe-NOTICE.txt` 是同一个文件（取自 Google 发布的 MediaPipe Tasks 分发包）。
 
 没有分析、崩溃上报、广告或远程配置 SDK。Gradle wrapper（`gradle/wrapper/gradle-wrapper.jar`）是 Gradle 9.7.1 官方生成的，SHA-256 `7a9ce74cff467ca1bf60a4fcd9f05185acceda4d0f382434d393e17864262c5d`，与 gradle.org 公布的一致。
+
+
+## Optional offline library encoder (development branch)
+
+- `com.microsoft.onnxruntime:onnxruntime-android:1.23.2`, CPU execution, no new manifest permissions or components. Official AAR: https://repo.maven.apache.org/maven2/com/microsoft/onnxruntime/onnxruntime-android/1.23.2/onnxruntime-android-1.23.2.aar . SHA-256 `82048d1f462218adae4ba76477089ab0ba76093d84f733540066db1a8ba6b827`. The AAR manifest only declares minSdk 24; both ARM64 libraries have 16 KB ELF LOAD alignment. Telemetry is explicitly disabled on the environment; the app still has no INTERNET permission. JNI classes are retained in R8. MIT license and Microsoft's third-party notices are bundled as `ONNXRuntime.txt` / `ONNXRuntime-NOTICE.txt`, obtained from the publisher's 1.23.2 PyPI wheel (the GitHub tag files were unavailable during setup).
+- Optional image encoder: `wkcn/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M`, revision `a2a8c6eaa2549ad66eb7c31b85022bf58273a26c`, Microsoft MIT (`TinyCLIP.txt`). Source: https://huggingface.co/wkcn/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M . The private build exports a float32 ONNX image encoder; input is centre-cropped RGB 0–1, the model contains its own normalization. `scripts/install-library-model.sh` checks SHA-256 against the installed private policy, and the runtime verifies it again before loading. The exported weights and the classification policy are ignored local build inputs; no downloads occur in the app. This is an experimental classifier and has not passed independent real-video quality acceptance.

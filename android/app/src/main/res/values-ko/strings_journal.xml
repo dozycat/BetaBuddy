@@ -27,7 +27,7 @@
     <string name="journal_import_pick_title">등반 영상 선택</string>
     <string name="journal_import_ready">영상 준비 완료</string>
     <string name="journal_import_fetching">원본을 가져오는 중…</string>
-    <string name="journal_import_requirements">한 명, 전신 · 고정 카메라 · 최대 3분</string>
+    <string name="journal_import_requirements">한 명, 전신 · 고정 카메라 · 최대 20분</string>
     <string name="journal_import_pick_action">갤러리에서 선택</string>
     <string name="journal_import_name_label">이번 등반의 이름</string>
     <string name="journal_import_name_hint">예: 일요일의 보라색 문제</string>
@@ -38,7 +38,7 @@
     <string name="journal_import_unavailable">영상을 가져오지 못했습니다. 원본이 클라우드에 있다면 먼저 갤러리 앱에서 내려받으세요.</string>
     <string name="journal_error_missing_model">설치본에 자세 추정 모델이 없습니다. 앱을 다시 설치하세요.</string>
     <string name="journal_error_invalid_video">이 영상을 읽을 수 없습니다. 손상되지 않은 MOV 또는 MP4 파일을 선택하세요.</string>
-    <string name="journal_error_too_long">영상이 3분을 넘습니다. 먼저 갤러리 앱에서 한 번의 등반만 남기고 잘라 주세요.</string>
+    <string name="journal_error_too_long">영상이 20분을 넘습니다. 먼저 갤러리 앱에서 한 번의 등반만 남기고 잘라 주세요.</string>
     <string name="journal_error_too_large">영상이 500MB를 넘습니다. 먼저 갤러리 앱에서 자르거나 더 작은 크기로 내보내세요.</string>
     <string name="journal_error_no_pose">사람을 충분히 뚜렷하게 찾지 못했습니다. 밝은 곳에서 한 명의 전신이 나온 영상을 사용하세요.</string>
     <string name="journal_error_overheated">기기 온도가 높아 분석을 중지했습니다. 잠시 후 다시 시도하세요.</string>

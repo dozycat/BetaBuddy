@@ -94,6 +94,9 @@ data class Climb(
     /** Raw value is forward compatible; indoor, outdoor or unknown. */
     val environment: String? = null,
     val environmentAuto: Boolean? = null,
+    val gymAuto: Boolean? = null,
+    /** Opaque local media identity, never a path or uploaded identifier. */
+    val sourceAssetID: String? = null,
     val subjectAnchors: List<SubjectAnchor>? = null,
     val subjectRevision: Int? = null,
 ) {
@@ -214,8 +217,15 @@ data class Archive(
     val version: Int = 1,
     val climbs: List<Climb> = emptyList(),
     val folders: List<ClimbFolder> = emptyList(),
+    val libraryLedger: Map<String, LibraryReceipt> = emptyMap(),
     // Archives written by other builds may carry other keys; decoding ignores them.
 )
+
+/** Imported receipts outlive record deletion. Negative results expire after a source or policy change. */
+@Serializable
+data class LibraryReceipt(val sourceRevision: String, val classifierRevision: String, val imported: Boolean) {
+    fun covers(source: String, classifier: String): Boolean = imported || (sourceRevision == source && classifierRevision == classifier)
+}
 
 /** Stored sentinel for a climb without a grade. Kept as is so archives stay readable on both platforms. */
 const val UNGRADED_VALUE = "未标级"

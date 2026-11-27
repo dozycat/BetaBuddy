@@ -80,13 +80,14 @@ private const val ROUTE_REVIEW = "review:"
  * [analysisPack] is the gym pack in this build, if any; the replay offers its analysis page.
  */
 @Composable
-fun JournalScreen(onOpenSettings: () -> Unit, analysisPack: GymPack? = null, initialCapture: Boolean = false) {
+internal fun JournalScreen(onOpenSettings: () -> Unit, analysisPack: GymPack? = null, initialCapture: Boolean = false, library: LibraryImport = viewModel()) {
     val model: JournalViewModel = viewModel()
     var route by rememberSaveable { mutableStateOf(if (initialCapture) ROUTE_CAPTURE else ROUTE_LIST) }
     val climbs by model.climbs.collectAsState()
     val unreadable by model.storeUnreadable.collectAsState()
 
     when {
+        route == "library" -> LibraryImportScreen(library) { route = ROUTE_LIST }
         route == ROUTE_IMPORT -> ImportScreen(
             model = model,
             onClose = { model.closeImport(); route = ROUTE_LIST },
@@ -107,6 +108,7 @@ fun JournalScreen(onOpenSettings: () -> Unit, analysisPack: GymPack? = null, ini
             JournalList(
                 climbs = climbs, unreadable = unreadable, model = model,
                 onOpenSettings = onOpenSettings,
+                onLibrary = { route = "library" },
                 onCapture = { route = ROUTE_CAPTURE },
                 onImport = { route = ROUTE_IMPORT },
                 onOpen = { route = ROUTE_REVIEW + it.id },
@@ -121,6 +123,7 @@ fun JournalScreen(onOpenSettings: () -> Unit, analysisPack: GymPack? = null, ini
 private fun JournalList(
     climbs: List<Climb>?, unreadable: Boolean, model: JournalViewModel,
     onOpenSettings: () -> Unit, onCapture: () -> Unit, onImport: () -> Unit, onOpen: (Climb) -> Unit,
+    onLibrary: () -> Unit,
 ) {
     var filter by rememberSaveable { mutableStateOf(JournalFilter.ALL) }
     var search by rememberSaveable { mutableStateOf("") }
@@ -155,6 +158,7 @@ private fun JournalList(
         if (unreadable) {
             Text(stringResource(R.string.journal_store_unreadable), style = BB.Subheadline, color = DangerColor)
         }
+        if (!unreadable) TextButton(onClick = onLibrary,modifier = Modifier.testTag("libraryImport")) { Text(stringResource(R.string.library_title)) }
         if (climbs != null && !unreadable) FolderStrip(folders, folderId, { folderId = it }, { manage = true })
         when {
             climbs == null -> Unit // index still loading: show neither the empty state nor a list
@@ -204,6 +208,7 @@ private fun JournalList(
                             Text(stringResource(R.string.album_count, group.climbs.size), style = BB.Caption, color = BB.Muted)
                         }
                         Text(if (group.environment == "outdoor") stringResource(R.string.album_outdoor) else group.gymName ?: stringResource(R.string.album_no_gym), style = BB.Subheadline, color = BB.Muted)
+                        if (group.climbs.any { it.environmentAuto == true || it.gymAuto == true }) Text(stringResource(R.string.library_suggested),style = BB.Caption,color = BB.Muted)
                         for (climb in group.climbs) {
                             ClimbRow(climb, model.thumbnailFile(climb)) { onOpen(climb) }
                         }

@@ -230,7 +230,7 @@ fun PrivacyPolicyScreen(onBack: () -> Unit) {
 }
 
 /** The files under assets/licenses, in the order they are shown. */
-private val LICENSE_FILES = listOf("components.txt", "Apache-2.0.txt", "MediaPipe-NOTICE.txt")
+private val LICENSE_FILES = listOf("components.txt", "Apache-2.0.txt", "MediaPipe-NOTICE.txt", "TinyCLIP.txt", "ONNXRuntime.txt", "ONNXRuntime-NOTICE.txt")
 
 /**
  * The licenses of the third-party software in the app, bundled and read offline: the list of

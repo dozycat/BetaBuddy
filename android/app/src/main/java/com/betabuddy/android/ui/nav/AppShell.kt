@@ -60,6 +60,8 @@ import com.betabuddy.android.review.AnalysisQueueHost
 import com.betabuddy.android.gym.GymScreen
 import com.betabuddy.android.gym.GymSession
 import com.betabuddy.android.journal.JournalScreen
+import com.betabuddy.android.journal.LibraryImport
+import com.betabuddy.android.journal.LibraryImportHost
 import com.betabuddy.android.settings.LicensesScreen
 import com.betabuddy.android.settings.PrivacyPolicyScreen
 import com.betabuddy.android.settings.SettingsScreen
@@ -87,6 +89,8 @@ private object Routes {
 @Composable
 fun AppShell(gym: GymSession, initialTab: Int = Tabs.GYM, initialCapture: Boolean = false) {
     val navigation = rememberNavController()
+    val library: LibraryImport = viewModel()
+    LibraryImportHost(library)
     val openSettings = { navigation.open(Routes.SETTINGS) }
 
     // The gym page can ask for settings from its own menu (`openSettings`).
@@ -99,7 +103,7 @@ fun AppShell(gym: GymSession, initialTab: Int = Tabs.GYM, initialCapture: Boolea
 
     NavHost(navController = navigation, startDestination = Routes.HOME, modifier = Modifier.fillMaxSize().background(BB.Paper)) {
         composable(Routes.HOME) {
-            HomeScreen(gym = gym, initialTab = initialTab, initialCapture = initialCapture, onOpenSettings = openSettings)
+            HomeScreen(gym = gym, initialTab = initialTab, initialCapture = initialCapture, onOpenSettings = openSettings, library = library)
         }
         composable(Routes.SETTINGS) {
             SettingsScreen(
@@ -117,7 +121,7 @@ fun AppShell(gym: GymSession, initialTab: Int = Tabs.GYM, initialCapture: Boolea
 private fun NavHostController.open(route: String) = navigate(route) { launchSingleTop = true }
 
 @Composable
-private fun HomeScreen(gym: GymSession, initialTab: Int, initialCapture: Boolean, onOpenSettings: () -> Unit) {
+private fun HomeScreen(gym: GymSession, initialTab: Int, initialCapture: Boolean, onOpenSettings: () -> Unit, library: LibraryImport) {
     // The same logbook model the logbook tab uses: records made with the camera are analysed from here, whichever tab is in front.
     val journal: JournalViewModel = viewModel()
     val debug = BuildConfig.DEBUG
@@ -149,7 +153,7 @@ private fun HomeScreen(gym: GymSession, initialTab: Int, initialCapture: Boolean
                             .background(BB.Paper)
                             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)),
                     ) {
-                        JournalScreen(onOpenSettings = onOpenSettings, analysisPack = gym.pack, initialCapture = initialCapture)
+                        JournalScreen(onOpenSettings = onOpenSettings, analysisPack = gym.pack, initialCapture = initialCapture, library = library)
                     }
                 }
             }
