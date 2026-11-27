@@ -66,6 +66,7 @@ struct ReviewView: View {
     @State private var confirmDelete = false
     @State private var organizing = false
     @State private var analysing = false
+    @State private var selectingSubject = false
     /// Pose recognition was started from “分析这一趟”; open the analysis page when it finishes.
     @State private var openAfterPose = false
     @State private var seekAfterAnalysis: Double?
@@ -100,6 +101,10 @@ struct ReviewView: View {
             } else {
                 replay
             }
+            if SubjectResolver.available {
+                Button { playback.pause(); selectingSubject = true } label: { Label("选择攀爬者", systemImage: "person.crop.circle") }
+                    .buttonStyle(RouteButtonStyle(tone: .paper)).accessibilityIdentifier("chooseSubject")
+            }
             Toggle("这趟完攀了", isOn: $sent).tint(BB.ink).accessibilityIdentifier("sentToggle")
             if analysisPack != nil { analysisEntry }
             if current.pendingAnalysis != nil {
@@ -128,6 +133,8 @@ struct ReviewView: View {
                     }.accessibilityLabel("更多操作")
                 }
             }
+            .fullScreenCover(isPresented: $selectingSubject) { SubjectSelectionView(climb: current, store: store) }
+            .onChange(of: current.subjectRevision) { _, _ in editPlan = nil; openAfterPose = false }
             .sheet(isPresented: $organizing) { OrganizeClimbView(climb: current) }
             .fullScreenCover(isPresented: $analysing, onDismiss: {
                 // “看视频里这一刻”: back on the clip, at that moment, paused.
@@ -150,6 +157,7 @@ struct ReviewView: View {
                 guard pending == nil, openAfterPose else { return }
                 openAfterPose = false
                 if current.analysis.hasWorldLandmarks { playback.pause(); analysing = true }
+                else if current.analysis.hasSubjectCandidates { selectingSubject = true }
             }
             .onAppear { sent = current.sent; editPlan = store.editPlan(for: current); playback.load(store.file(climb.videoName)) }
             .onDisappear { playback.unload() }
@@ -262,6 +270,7 @@ struct ReviewView: View {
         // Opening the page here does the work; the same record is not also analysed out of sight.
         analysisQueue.cancel(climb.id)
         if current.analysis.hasWorldLandmarks { analysing = true; return }
+        if current.analysis.hasSubjectCandidates { selectingSubject = true; return }
         do { try store.requestAnalysis(current); openAfterPose = true }
         catch { store.error = error.localizedDescription }
     }

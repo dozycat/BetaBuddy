@@ -40,7 +40,7 @@ struct ClipStills: Sendable {
 // A single worker owns decoder, Core Image context, and model. Never infer on MainActor.
 actor VideoAnalyzer {
     private static let maximumDurationSeconds: Double = 20 * 60
-    func analyze(url: URL, quality: AnalysisQuality,
+    func analyze(url: URL, quality: AnalysisQuality, subjectAnchors: [SubjectAnchor] = [],
                  progress: @escaping @Sendable (Double) async -> Void) async throws -> PoseAnalysis {
         try Task.checkCancellation()
         guard let model = Bundle.main.path(forResource: "pose_landmarker_full", ofType: "task") else { throw AnalysisError.missingModel }
@@ -59,7 +59,8 @@ actor VideoAnalyzer {
         // Fixed CPU delegate: safe on simulator and deterministic baseline for thermal profiling.
         options.baseOptions.delegate = .CPU
         options.runningMode = .video
-        options.numPoses = 1
+        let chooseSubject = SubjectResolver.available
+        options.numPoses = chooseSubject ? 4 : 1
         // MediaPipe defaults: raising these can miss the climber
         // and initialize video tracking on a high-contrast background false positive.
         options.minPoseDetectionConfidence = 0.5
@@ -75,6 +76,7 @@ actor VideoAnalyzer {
         defer { reader.cancelReading() }
         let context = CIContext(options: [.cacheIntermediates: false])
         var frames: [PoseFrame] = []
+        var people: [SubjectSample] = []
         var nextTime = 0.0, sampled = 0, lastTimestamp = -1
         while reader.status == .reading {
             try Task.checkCancellation()
@@ -91,16 +93,29 @@ actor VideoAnalyzer {
                 lastTimestamp = timestamp
                 let result = try landmarker.detect(videoFrame: MPImage(uiImage: UIImage(cgImage: cgImage)), timestampInMilliseconds: timestamp)
                 sampled += 1
-                if let points = result.landmarks.first, points.count == 33 {
+                var candidates: [SubjectCandidate] = []
+                for (person, points) in result.landmarks.enumerated() where points.count == 33 {
                     let joints = points.map { Joint(x: rounded4(Double($0.x)), y: rounded4(Double($0.y)), confidence: rounded4(min($0.visibility?.doubleValue ?? 0, $0.presence?.doubleValue ?? 0))) }
                     var frame = PoseFrame(time: time, joints: joints)
-                    if let world = result.worldLandmarks.first, world.count == 33 {
-                        frame.world = world.map { point in
+                    if result.worldLandmarks.indices.contains(person), result.worldLandmarks[person].count == 33 {
+                        frame.world = result.worldLandmarks[person].map { point in
                             [Double(point.x), Double(point.y), Double(point.z), point.visibility?.doubleValue ?? 0].map { $0.isFinite ? rounded4($0) : 0 }
                         }
                     }
-                    if frame.hasReliableTorso { frames.append(frame) }
+                    guard frame.hasReliableTorso else { continue }
+                    if !chooseSubject { frames.append(frame); continue }
+                    let valid = joints.filter(\.valid)
+                    guard let left = valid.map(\.x).min(), let right = valid.map(\.x).max(),
+                          let top = valid.map(\.y).min(), let bottom = valid.map(\.y).max(), right > left, bottom > top else { continue }
+                    let bounds = SubjectBounds(x: left, y: top, width: right-left, height: bottom-top)
+                    // Samples come from the torso rather than face; used only for local continuity.
+                    let torso = [joints[11], joints[12], joints[23], joints[24]]
+                    let tx = torso.map(\.x).min()!, ty = torso.map(\.y).min()!
+                    let tw = torso.map(\.x).max()! - tx, th = torso.map(\.y).max()! - ty
+                    let colour = Self.appearance(image: cgImage, bounds: SubjectBounds(x: tx, y: ty, width: tw, height: th))
+                    candidates.append(SubjectCandidate(id: "\(timestamp)-\(person)", bounds: bounds, appearance: colour, pose: frame))
                 }
+                if chooseSubject { people.append(SubjectSample(time: time, candidates: candidates)) }
                 return (false, time)
             }
             if step.finished { break }
@@ -108,9 +123,32 @@ actor VideoAnalyzer {
         }
         try Task.checkCancellation()
         if reader.status == .failed { throw reader.error ?? AnalysisError.invalidVideo }
-        guard frames.count >= 3 else { throw AnalysisError.noPose }
+        var analysis = PoseAnalysis(frames: frames, sampledFrames: sampled, duration: duration, aspectRatio: aspect)
+        if chooseSubject {
+            guard people.contains(where: { !$0.candidates.isEmpty }) else { throw AnalysisError.noPose }
+            analysis.people = people
+            analysis = try await SubjectResolver().resolve(analysis, anchors: subjectAnchors)
+        } else if frames.count < 3 { throw AnalysisError.noPose }
         await progress(1)
-        return PoseAnalysis(frames: frames, sampledFrames: sampled, duration: duration, aspectRatio: aspect)
+        return analysis
+    }
+
+    private static func appearance(image: CGImage, bounds: SubjectBounds) -> [Double] {
+        guard bounds.valid, let crop = image.cropping(to: CGRect(x: bounds.x * Double(image.width), y: bounds.y * Double(image.height),
+            width: bounds.width * Double(image.width), height: bounds.height * Double(image.height))) else { return [] }
+        var pixels = [UInt8](repeating: 0, count: 4 * 4 * 4)
+        let valid = pixels.withUnsafeMutableBytes { raw -> Bool in
+            guard let context = CGContext(data: raw.baseAddress, width: 4, height: 4, bitsPerComponent: 8, bytesPerRow: 16,
+                space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return false }
+            context.interpolationQuality = .medium
+            context.draw(crop, in: CGRect(x: 0, y: 0, width: 4, height: 4))
+            return true
+        }
+        guard valid else { return [] }
+        // Average each row: stable under small pose shifts, no retained crop or facial descriptor.
+        return (0..<4).flatMap { row in (0..<3).map { channel in
+            rounded4((0..<4).reduce(0.0) { $0 + Double(pixels[(row * 4 + $1) * 4 + channel]) } / (4 * 255))
+        } }
     }
 
     static func inferenceImage(buffer: CVPixelBuffer, transform: CGAffineTransform,

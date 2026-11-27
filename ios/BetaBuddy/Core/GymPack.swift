@@ -417,7 +417,7 @@ enum AnalysisCommand: Sendable {
     /// `capture` is the capture page's plan for a record made with the in-app camera, handed back as it was stored.
     /// `discipline` is the user's own choice, when they made one; the page then does not guess.
     /// `duration` is the clip's real length in seconds, for pages that plan against it.
-    case begin(id: String, width: Int, height: Int, climber: [String: Double]?, capture: String? = nil, discipline: Discipline? = nil, duration: Double? = nil)
+    case begin(id: String, width: Int, height: Int, climber: [String: Double]?, capture: String? = nil, discipline: Discipline? = nil, duration: Double? = nil, subjectLocked: Bool = false)
     case addFrame(index: Int, time: Double, jpegBase64: String)
     case addPoses([PoseFrame])
     /// A small, frequent still for finding the climber by motion; packs without the call ignore it.
@@ -435,6 +435,7 @@ enum AnalysisCommand: Sendable {
         var capture: String?
         var discipline: String?
         var duration: Double?
+        var subjectLocked: Bool?
     }
     private struct Pose: Encodable {
         var t: Double
@@ -451,9 +452,9 @@ enum AnalysisCommand: Sendable {
 
     var script: String {
         let (function, arguments): (String, [String]) = switch self {
-        case .begin(let id, let width, let height, let climber, let capture, let discipline, let duration):
+        case .begin(let id, let width, let height, let climber, let capture, let discipline, let duration, let subjectLocked):
             ("begin", [Self.literal(Meta(id: id, w: width, h: height, climber: climber?.isEmpty == false ? climber : nil, capture: capture?.isEmpty == false ? capture : nil,
-                                         discipline: discipline?.rawValue, duration: duration.flatMap { $0.isFinite && $0 > 0 ? rounded4($0) : nil }))])
+                                         discipline: discipline?.rawValue, duration: duration.flatMap { $0.isFinite && $0 > 0 ? rounded4($0) : nil }, subjectLocked: subjectLocked ? true : nil))])
         case .addFrame(let index, let time, let jpegBase64):
             ("addFrame", [Self.literal(index), Self.literal(rounded4(time)), Self.literal(jpegBase64)])
         case .addPoses(let frames):

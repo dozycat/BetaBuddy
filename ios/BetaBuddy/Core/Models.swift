@@ -27,6 +27,8 @@ struct PoseAnalysis: Codable, Sendable {
     var sampledFrames: Int
     var duration: Double
     var aspectRatio: Double
+    var people: [SubjectSample]? = nil
+    var subject: SubjectResolution? = nil
     /// False for records analysed before world landmarks were kept, and for clips not analysed yet.
     var hasWorldLandmarks: Bool { frames.contains(where: \.hasWorldLandmarks) }
     func nearestFrame(to time: Double) -> PoseFrame? {
@@ -69,6 +71,9 @@ struct Climb: Codable, Identifiable, Sendable {
     /// Photo-library identity is local only; the import ledger survives deletion of this record.
     var sourceAssetID: String? = nil
     var gymAuto: Bool? = nil
+    var subjectAnchors: [SubjectAnchor]? = nil
+    /// Changes whenever the user saves another subject. Old asynchronous results are rejected.
+    var subjectRevision: Int? = nil
     var setting: ClimbEnvironment { environment.flatMap(ClimbEnvironment.init(rawValue:)) ?? .unknown }
     var style: Discipline? { discipline.flatMap(Discipline.init(rawValue:)) }
     /// What the user chose themselves, for handing to the analysis page.

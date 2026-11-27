@@ -18,6 +18,8 @@ When you record inside the app, it uses the back camera to record video. It does
 
 If you allow location access, the app asks the system for your location once on the capture screen, to order the gym directory that ships inside the app by distance, on the device. The location is not saved and does not leave the device. Without it, recording and choosing a gym work as before.
 
+When choosing a climber, the app detects candidate people on the device and keeps poses, coarse clothing-colour samples, and the times and positions you select for tracking and correction within that video. It does not perform face recognition or identify people across videos. Original person crops are not retained and the background is not changed. Choosing another person invalidates the previous analysis and edit. Deleting the record also deletes its person data.
+
 2. Model and network
 The pose model ships inside the app and runs on the device. The app does not download models and does not call any cloud AI or large language model. If you pick a video that exists only in iCloud, the system may download the original first; that is part of Apple's Photos service. App Store downloads, purchases, restore transactions, system diagnostics and system services follow Apple's settings and policies. Apple handles payment details; BetaBuddy checks the purchase entitlement with StoreKit on the device.
 

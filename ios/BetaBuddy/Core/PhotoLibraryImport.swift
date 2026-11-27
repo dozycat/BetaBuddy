@@ -134,7 +134,7 @@ final class PhotoLibraryImport: NSObject, ObservableObject, PHPhotoLibraryChange
     }
     func stop() { rescan = false; work?.cancel() }
     func scan() {
-        guard enabled, hasAccess, foreground, !running, let store else { return }
+        guard enabled, hasAccess, foreground, !running, let store, !store.cameraOpen, !store.selectionOpen else { return }
         running = true; error = nil; checked = 0; imported = 0; unavailable = 0
         work = Task { [weak self] in
             guard let self else { return }
@@ -155,7 +155,7 @@ final class PhotoLibraryImport: NSObject, ObservableObject, PHPhotoLibraryChange
                 total = assets.count
                 for index in 0..<assets.count {
                     try Task.checkCancellation()
-                    guard enabled, foreground, !store.cameraOpen else { return }
+                    guard enabled, foreground, !store.cameraOpen, !store.selectionOpen else { return }
                     authorization = PHPhotoLibrary.authorizationStatus(for: .readWrite)
                     guard hasAccess else { updateObserver(); return }
                     let asset = assets.object(at: index)

@@ -61,6 +61,9 @@ struct BetaBuddyApp: App {
                     await CaptureRecovery.sweep(store: store, analysisAvailable: GymPack.current?.supportsAnalysis == true)
                     store.resumeAnalysis(); library.refresh(); await membership.refreshEntitlement()
                 }
+                .onChange(of: store.selectionOpen) { _, open in
+                    if open { library.stop() } else { library.refresh() }
+                }
                 .onChange(of: store.cameraOpen) { _, open in
                     if open { library.stop() } else { library.refresh() }
                 }

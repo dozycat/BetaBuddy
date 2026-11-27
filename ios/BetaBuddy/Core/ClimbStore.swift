@@ -16,6 +16,7 @@ final class ClimbStore: ObservableObject {
     private var mayAnalyze = true
     /// The capture screen is framing or recording; nothing is analysed meanwhile.
     @Published private(set) var cameraOpen = false
+    @Published private(set) var selectionOpen = false
     /// Records that have a saved result from the pack's analysis page (`<id>.analysis.json`).
     @Published private(set) var analysisResults: Set<UUID> = []
     static let analysisResultSuffix = ".analysis.json"
@@ -41,9 +42,8 @@ final class ClimbStore: ObservableObject {
                 archive = try JSONDecoder().decode(Archive.self, from: Data(contentsOf: index))
                 guard archive.version == 1 else { throw CocoaError(.fileReadCorruptFile) }
             }
-            let names = (try? FileManager.default.contentsOfDirectory(atPath: self.root.path)) ?? []
-            analysisResults = Set(names.compactMap { $0.hasSuffix(Self.analysisResultSuffix) ? UUID(uuidString: String($0.dropLast(Self.analysisResultSuffix.count))) : nil })
-            editPlans = Set(names.compactMap { $0.hasSuffix(Self.editPlanSuffix) ? UUID(uuidString: String($0.dropLast(Self.editPlanSuffix.count))) : nil })
+            analysisResults = Set(archive.climbs.filter { FileManager.default.fileExists(atPath: analysisResultFile($0.id).path) }.map(\.id))
+            editPlans = Set(archive.climbs.filter { FileManager.default.fileExists(atPath: editPlanFile($0.id).path) }.map(\.id))
         } catch {
             canWrite = false // Never overwrite an unreadable archive with an empty one.
             self.error = String(localized: "本地记录无法读取，已保留原文件。请检查存储空间或重新启动。", bundle: AppLanguage.bundle)
@@ -117,18 +117,24 @@ final class ClimbStore: ObservableObject {
     }
 
     func delete(_ climb: Climb) throws {
+        let resultFile = analysisResultFile(climb.id), editFile = editPlanFile(climb.id)
         var next = archive
         next.climbs.removeAll { $0.id == climb.id }
         try persist(next)
         if activeAnalysis == climb.id { analysisWork?.cancel() }
         try? FileManager.default.removeItem(at: file(climb.videoName))
         try? FileManager.default.removeItem(at: file(climb.thumbnailName))
-        try? FileManager.default.removeItem(at: analysisResultFile(climb.id))
+        try? FileManager.default.removeItem(at: resultFile)
         try? FileManager.default.removeItem(at: capturePlanFile(climb.id))
-        try? FileManager.default.removeItem(at: editPlanFile(climb.id))
+        try? FileManager.default.removeItem(at: editFile)
         EditFiles.remove(for: climb.id)
         analysisResults.remove(climb.id)
         editPlans.remove(climb.id)
+        // A process may have stopped after advancing the selection revision but before deleting
+        // old caches. Remove every file owned by this record, including those obsolete versions.
+        for name in (try? FileManager.default.contentsOfDirectory(atPath: root.path)) ?? [] where name.hasPrefix("\(climb.id).") {
+            try? FileManager.default.removeItem(at: file(name))
+        }
     }
 
     // MARK: Records made with the in-app camera
@@ -179,7 +185,11 @@ final class ClimbStore: ObservableObject {
 
     // MARK: Result of the pack's analysis page
 
-    private func analysisResultFile(_ id: UUID) -> URL { file("\(id)" + Self.analysisResultSuffix) }
+    private func derivedFile(_ id: UUID, suffix: String) -> URL {
+        let revision = archive.climbs.first { $0.id == id }?.subjectRevision ?? 0
+        return file("\(id)" + (revision == 0 ? "" : ".s\(revision)") + suffix)
+    }
+    private func analysisResultFile(_ id: UUID) -> URL { derivedFile(id, suffix: Self.analysisResultSuffix) }
 
     /// The page's result exactly as it handed it over, or `nil` when there is none.
     func analysisResult(for climb: Climb) -> String? {
@@ -189,7 +199,8 @@ final class ClimbStore: ObservableObject {
 
     /// Kept next to the clip, written atomically, inside the directory that is excluded from backup.
     /// The page sends a result again after the user adjusts it; each one replaces the last.
-    func saveAnalysisResult(_ json: String, for id: UUID) throws {
+    func saveAnalysisResult(_ json: String, for id: UUID, expectedSubjectRevision: Int? = nil) throws {
+        if let expectedSubjectRevision, (archive.climbs.first { $0.id == id }?.subjectRevision ?? 0) != expectedSubjectRevision { return }
         guard archive.climbs.contains(where: { $0.id == id }) else { return }   // Deleted while the page was open.
         guard canWrite else { throw CocoaError(.fileWriteNoPermission) }
         try Data(json.utf8).write(to: analysisResultFile(id), options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
@@ -204,7 +215,7 @@ final class ClimbStore: ObservableObject {
 
     // MARK: Render plan and discipline that come with a result
 
-    private func editPlanFile(_ id: UUID) -> URL { file("\(id)" + Self.editPlanSuffix) }
+    private func editPlanFile(_ id: UUID) -> URL { derivedFile(id, suffix: Self.editPlanSuffix) }
 
     /// The plan that came with the latest result, when it is one this build can render.
     func editPlan(for climb: Climb) -> EditPlan? {
@@ -213,7 +224,8 @@ final class ClimbStore: ObservableObject {
     }
 
     /// Kept as the page gave it, next to the result it came with. A result without a plan removes the old one.
-    func saveEditPlan(_ json: String?, for id: UUID) throws {
+    func saveEditPlan(_ json: String?, for id: UUID, expectedSubjectRevision: Int? = nil) throws {
+        if let expectedSubjectRevision, (archive.climbs.first { $0.id == id }?.subjectRevision ?? 0) != expectedSubjectRevision { return }
         guard let json, !json.isEmpty, archive.climbs.contains(where: { $0.id == id }) else {
             try? FileManager.default.removeItem(at: editPlanFile(id))
             EditFiles.remove(for: id)
@@ -304,9 +316,32 @@ final class ClimbStore: ObservableObject {
         try persist(next)
     }
 
+    /// The saved selection governs all future analysis. Caches use the new revision even if
+    /// the process stops before old files can be removed. An in-flight old result cannot revive them.
+    func selectSubject(_ climb: Climb, analysis: PoseAnalysis, anchors: [SubjectAnchor]) throws {
+        var next = archive
+        guard let index = next.climbs.firstIndex(where: { $0.id == climb.id }),
+              next.climbs[index].subjectRevision == climb.subjectRevision,
+              analysis.subject != nil, analysis.hasSubjectCandidates else { throw CocoaError(.fileWriteUnknown) }
+        let oldResult = analysisResultFile(climb.id), oldEdit = editPlanFile(climb.id)
+        next.climbs[index].subjectRevision = (climb.subjectRevision ?? 0) + 1
+        next.climbs[index].subjectAnchors = anchors.isEmpty ? nil : anchors
+        next.climbs[index].analysis = analysis
+        next.climbs[index].pendingAnalysis = nil
+        next.climbs[index].capture?.analysisQueued = false
+        try persist(next)
+        if activeAnalysis == climb.id { analysisWork?.cancel() }
+        analysisResults.remove(climb.id); editPlans.remove(climb.id)
+        analysisMessages[climb.id] = nil
+        try? FileManager.default.removeItem(at: oldResult)
+        try? FileManager.default.removeItem(at: oldEdit)
+        EditFiles.remove(for: climb.id)
+    }
+
     func replaceAnalysis(_ climb: Climb, analysis: PoseAnalysis) throws {
         var next = archive
         guard let index = next.climbs.firstIndex(where: { $0.id == climb.id }) else { return }
+        guard next.climbs[index].subjectRevision == climb.subjectRevision else { return }
         next.climbs[index].analysis = analysis
         next.climbs[index].pendingAnalysis = nil
         try persist(next)
@@ -343,7 +378,7 @@ final class ClimbStore: ObservableObject {
     }
 
     private func startNextAnalysis() {
-        guard mayAnalyze, analysisWork == nil,
+        guard mayAnalyze, !selectionOpen, analysisWork == nil,
               let climb = archive.climbs.first(where: { $0.pendingAnalysis != nil }) else { return }
         activeAnalysis = climb.id
         analysisProgress[climb.id] = 0
@@ -362,7 +397,7 @@ final class ClimbStore: ObservableObject {
             let poseBegan = Date()
             #endif
             do {
-                let result = try await VideoAnalyzer().analyze(url: file(climb.videoName), quality: AnalysisQuality(rawValue: climb.pendingAnalysis ?? "") ?? .balanced) { value in
+                let result = try await VideoAnalyzer().analyze(url: file(climb.videoName), quality: AnalysisQuality(rawValue: climb.pendingAnalysis ?? "") ?? .balanced, subjectAnchors: climb.subjectAnchors ?? []) { value in
                     await self.setAnalysisProgress(climb.id, value: value)
                 }
                 try Task.checkCancellation()
@@ -378,6 +413,7 @@ final class ClimbStore: ObservableObject {
             } catch is CancellationError {
                 // Explicit stop clears the request; expiration keeps it for the next foreground.
             } catch {
+                guard let current = archive.climbs.first(where: { $0.id == climb.id }), current.subjectRevision == climb.subjectRevision else { return }
                 #if DEBUG
                 if climb.capture != nil { CaptureDiagnostics.event("pose", ["record": climb.id.uuidString, "error": error.localizedDescription]) }
                 #endif
@@ -389,6 +425,11 @@ final class ClimbStore: ObservableObject {
     }
 
     private func setAnalysisProgress(_ id: UUID, value: Double) { analysisProgress[id] = value }
+
+    func setSubjectSelectionOpen(_ open: Bool) {
+        selectionOpen = open
+        if open { pauseAnalysisForBackgroundExpiration() } else { resumeAnalysis() }
+    }
 
     func pauseAnalysisForBackgroundExpiration() {
         mayAnalyze = false

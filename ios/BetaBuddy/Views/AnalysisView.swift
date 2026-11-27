@@ -24,6 +24,9 @@ final class AnalysisSession: NSObject, ObservableObject, WKNavigationDelegate, W
     private let pack: GymPack
     private let climb: Climb
     private let store: ClimbStore
+    private var selectionIsCurrent: Bool {
+        store.climbs.contains { $0.id == climb.id && $0.subjectRevision == climb.subjectRevision }
+    }
     private var started = false
     private var pageReady = false
     private var feed: Task<Void, Never>?
@@ -110,6 +113,7 @@ final class AnalysisSession: NSObject, ObservableObject, WKNavigationDelegate, W
 
     /// A saved result is shown as it is. Otherwise the clip is prepared and handed to the page.
     private func present() async {
+        guard selectionIsCurrent else { report(false); return }
         if let saved = store.analysisResult(for: climb) {
             phase = .shown
             await call(.show(saved))
@@ -128,7 +132,7 @@ final class AnalysisSession: NSObject, ObservableObject, WKNavigationDelegate, W
             // A record made with the in-app camera brings the capture page's plan; any other has none.
             guard await call(.begin(id: climb.id.uuidString, width: stills.width, height: stills.height, climber: store.analysisClimber,
                                     capture: store.capturePlan(for: climb), discipline: store.climbs.first { $0.id == climb.id }?.chosenStyle,
-                                    duration: climb.analysis.duration)) else {
+                                    duration: climb.analysis.duration, subjectLocked: climb.analysis.subject != nil)) else {
                 phase = .failed("")
                 note("page has no begin()", error: true, status: "noBegin")
                 report(false)
@@ -140,7 +144,7 @@ final class AnalysisSession: NSObject, ObservableObject, WKNavigationDelegate, W
                 await call(.addFrame(index: index, time: frame.time, jpegBase64: frame.jpegBase64))
             }
             // Small, frequent stills as well: in a wide fixed shot the page finds the climber by what moves.
-            if let track = try? await VideoAnalyzer().trackStills(url: store.file(climb.videoName)) {
+            if climb.analysis.subject == nil, let track = try? await VideoAnalyzer().trackStills(url: store.file(climb.videoName)) {
                 for frame in track.frames {
                     try Task.checkCancellation()
                     guard await call(.addTrackFrame(time: frame.time, jpegBase64: frame.jpegBase64)) else { break }   // An older pack has no use for them.
@@ -188,14 +192,15 @@ final class AnalysisSession: NSObject, ObservableObject, WKNavigationDelegate, W
             feed?.cancel()
             feed = Task { await present() }
         case .result(let id, let json, let climber, let planUse, let edit, let discipline):
+            guard selectionIsCurrent else { stop(); report(false); return }
             // After showing a saved result the page has no id to give back; this web view only ever serves this record.
             guard id.isEmpty || id == climb.id.uuidString else { return }
-            do { try store.saveAnalysisResult(json, for: climb.id) }
+            do { try store.saveAnalysisResult(json, for: climb.id, expectedSubjectRevision: climb.subjectRevision ?? 0) }
             catch { store.error = error.localizedDescription }
             if !climber.isEmpty { store.analysisClimber = climber }
             try? store.setPlanUse(planUse, for: climb.id)
             // The render plan belongs to this result; a result without one leaves none behind.
-            try? store.saveEditPlan(store.analysisResults.contains(climb.id) ? edit : nil, for: climb.id)
+            try? store.saveEditPlan(store.analysisResults.contains(climb.id) ? edit : nil, for: climb.id, expectedSubjectRevision: climb.subjectRevision ?? 0)
             if let discipline { try? store.setAutomaticDiscipline(discipline.kind, for: climb.id) }
             let shift = planUse?.shift.map { ["dx": $0.dx as Any, "dy": $0.dy as Any, "rot": $0.rot as Any, "scale": $0.scale as Any] }
             note("result kept; capture plan \(planUse.map { "used \($0.used) reason \($0.reason ?? "-") start \($0.start ?? "-") finish \($0.finish ?? "-")" } ?? "not mentioned")",
@@ -204,11 +209,12 @@ final class AnalysisSession: NSObject, ObservableObject, WKNavigationDelegate, W
             report(store.analysisResults.contains(climb.id))
         case .seek(let time): seekRequest = time
         case .failed(let code, let message, let discipline, let edit):
+            guard selectionIsCurrent else { stop(); report(false); return }
             // The page is showing its own explanation; no result is saved and the page stays open.
             // What it made of the climbing style is still kept, as a guess the user can change, and so is
             // a render plan it could make without the analysis (following the climber).
             if let discipline { try? store.setAutomaticDiscipline(discipline.kind, for: climb.id) }
-            if let edit { try? store.saveEditPlan(edit, for: climb.id) }
+            if let edit { try? store.saveEditPlan(edit, for: climb.id, expectedSubjectRevision: climb.subjectRevision ?? 0) }
             note("page could not analyse: \(code) — \(message)", status: "failed", ["code": code, "message": message])
             report(false)
         case .pageError(let text):

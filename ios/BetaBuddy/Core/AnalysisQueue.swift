@@ -20,6 +20,7 @@ final class AnalysisQueue: ObservableObject {
     private var pageWatch: AnyCancellable?
     private var timeout: Task<Void, Never>?
     private var suspended = false
+    private var runningRevision: Int?
     /// Records whose request could not be cleared; they are not tried again in this run of the app.
     private var settled: Set<UUID> = []
     /// Long enough for a twenty-minute clip on a slow phone; a page that takes longer is given up on.
@@ -30,6 +31,9 @@ final class AnalysisQueue: ObservableObject {
         self.pack = pack?.supportsAnalysis == true ? pack : nil
         // Both publish before they change; look again once they have.
         store.$archive.receive(on: DispatchQueue.main).sink { [weak self] _ in self?.advance() }.store(in: &watching)
+        store.$selectionOpen.receive(on: DispatchQueue.main).sink { [weak self] open in
+            if open { self?.halt() } else { self?.advance() }
+        }.store(in: &watching)
         store.$cameraOpen.receive(on: DispatchQueue.main).sink { [weak self] open in
             if open { self?.halt() } else { self?.advance() }
         }.store(in: &watching)
@@ -55,10 +59,12 @@ final class AnalysisQueue: ObservableObject {
         session = nil
         webView = nil
         running = nil
+        runningRevision = nil
     }
 
     private func advance() {
-        guard !suspended, !store.cameraOpen, session == nil else { return }
+        if let running, store.climbs.first(where: { $0.id == running })?.subjectRevision != runningRevision { halt() }
+        guard !suspended, !store.cameraOpen, !store.selectionOpen, session == nil else { return }
         for climb in store.climbs where climb.capture?.analysisQueued == true && climb.pendingAnalysis == nil && !settled.contains(climb.id) {
             // Already analysed, no page to do it, or pose recognition found nobody (or was stopped):
             // the request is done with. The record keeps its own “分析这一趟”.
@@ -80,6 +86,7 @@ final class AnalysisQueue: ObservableObject {
         let session = AnalysisSession(pack: pack, climb: climb, store: store)
         self.session = session
         running = climb.id
+        runningRevision = climb.subjectRevision
         session.onOutcome = { [weak self] succeeded in self?.finish(climb.id, succeeded) }
         pageWatch = session.$webView.sink { [weak self] view in self?.webView = view }
         session.start()
