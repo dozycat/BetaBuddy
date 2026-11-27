@@ -1,0 +1,8 @@
+/* Existing analysis page, presentation only. No synthetic analysis is injected. */
+:root{--paper:#fff;--ink:#4b4b4b;--lime:#58cc02;--lilac:#ddf4ff;--mute:#888;--line:#e5e5e5;--top:0px}
+html,body{background:#fff;font-family:ui-rounded,"SF Pro Rounded",-apple-system,"PingFang SC",sans-serif;color:#4b4b4b}
+#ttl{display:none}#busy{margin:55px 24px}#busy b{font-size:20px;font-weight:800}#busyS{font-family:inherit;font-size:12px;opacity:1;color:#888}#bar{height:12px;border-radius:8px;background:#e5e5e5;width:80%}#bar i{background:#58cc02;border-radius:8px}
+button{font-weight:750;border-radius:14px}button:focus-visible{outline:3px solid #1cb0f6;outline-offset:3px}
+.tabs button,#zoom,#figB,#seek{background:#fff;border:2px solid #e5e5e5;border-radius:13px;box-shadow:0 3px 0 #e5e5e5;color:#777}.tabs button.on{background:#ddf4ff;border-color:#84d8ff;color:#147fae;box-shadow:0 3px 0 #84d8ff}
+#stage{border-radius:18px;background:#16212b}.stepper .ico{background:#58cc02;color:#fff;box-shadow:0 4px 0 #46a302;border-radius:14px}.stepper .ico:active{translate:0 3px;box-shadow:0 1px 0 #46a302}#rng::-webkit-slider-thumb{background:#58cc02;border-color:#fff;box-shadow:0 2px 0 #46a302}#rng::-webkit-slider-runnable-track{height:6px;border-radius:4px}#marks i{background:#1cb0f6}
+#take button,#take .co{border:2px solid #e5e5e5;border-radius:14px}#take .co>button{border:0}#take .co.on,#take button.on{border-color:#84d8ff;background:#f2fbff;box-shadow:none}#take .bd{background:#ddf4ff;color:#147fae;border-radius:7px}#take .co .vs{border-left:2px solid #e5e5e5;color:#1686b8}#coach .card{border:2px solid #e5e5e5;border-radius:16px;background:#fff}.note{color:#888}#sNote.hit{background:#e6f8d9;color:#4f8621}

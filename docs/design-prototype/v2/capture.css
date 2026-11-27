@@ -1,0 +1,139 @@
+/* Camera viewfinder: full-bleed frame, controls floating on the edges. */
+.camera-native .statusbar{position:absolute;top:0;left:0;right:0;background:transparent;color:#fff;z-index:8;pointer-events:none}
+.camera-native .safe-bottom{position:absolute;bottom:0;left:0;right:0;background:transparent;z-index:8;pointer-events:none}
+.camera-native .safe-bottom span{background:#ffffffb0}
+.camera-native .camera-island{background:#000}
+.camera-native #native-screen{background:#111}
+
+.cam{--cam-accent:#ff7a3d;position:relative;height:100%;overflow:hidden;background:#1b1d21;color:#fff;font-family:-apple-system,"SF Pro Display","PingFang SC","Helvetica Neue",sans-serif;user-select:none;-webkit-user-select:none}
+.cam button{font-family:inherit;color:inherit}
+.cam svg{display:block}
+.cam-view{position:absolute;inset:0;transition:filter .3s,transform .45s cubic-bezier(.3,.7,.2,1)}
+.cam-wall{width:100%;height:100%}
+.cam.is-front .cam-view{filter:blur(1.5px) brightness(.75);transform:scaleX(-1)}
+.cam-rope{animation:cam-sway 5s ease-in-out infinite;transform-origin:50% 4%}
+@keyframes cam-sway{50%{transform:rotate(.5deg)}}
+.cam::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(#000a,#0000 22%,#0000 62%,#000c)}
+
+/* Subject frame and scan sweep */
+.cam-frame{stroke:var(--cam-accent);opacity:.9;transition:opacity .3s}
+.cam-scan{position:absolute;left:0;right:0;height:120px;top:-120px;pointer-events:none;opacity:0;background:linear-gradient(#0000,color-mix(in srgb,var(--cam-accent) 22%,transparent) 85%,var(--cam-accent) 99%,#0000)}
+.cam:has(.cam-disc.scanning) .cam-scan{opacity:1;animation:cam-scan 1.2s cubic-bezier(.45,0,.55,1) infinite}
+@keyframes cam-scan{to{top:100%}}
+
+/* Top: two translucent pills */
+.cam-top{position:absolute;z-index:3;top:52px;left:12px;right:12px;display:flex;align-items:center;gap:8px;transition:opacity .25s,transform .25s}
+.cam-pill{display:flex;align-items:center;gap:8px;height:50px;border-radius:25px;border:1px solid #ffffff1f;background:#16181ccc;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);padding:0 14px;transition:transform .15s}
+.cam-pill:active,.cam-icon:active,.cam-album:active{transform:scale(.96)}
+.cam-pill svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.cam-gym{min-width:0;flex:0 1 auto;text-align:left}
+.cam-gym>span{display:flex;flex-direction:column;min-width:0;line-height:1.15}
+.cam-gym small{font-size:11px;color:#ffffffa8;white-space:nowrap}
+.cam-gym b{font-size:16px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cam-gym>svg:last-child{width:16px;height:16px;color:#ffffffa0}
+.cam-disc{margin-left:auto;flex-shrink:0;white-space:nowrap;padding:0 14px 0 6px;gap:10px}
+.cam-disc b{font-size:17px;font-weight:700;padding-right:2px}
+.cam-badge{height:38px;min-width:64px;padding:0 12px;border-radius:19px;display:flex;align-items:center;justify-content:center;font:800 12px/1 -apple-system,"SF Pro Text",sans-serif;letter-spacing:.12em;background:var(--cam-accent);color:#1b1d21}
+.cam-badge.manual{background:#ffffff26;color:#fff;letter-spacing:0;font-size:13px}
+.cam-disc.scanning{padding-left:14px}
+.cam-dots{display:flex;gap:4px}
+.cam-dots i{width:6px;height:6px;border-radius:50%;background:var(--cam-accent);animation:cam-dot 1s infinite}
+.cam-dots i:nth-child(2){animation-delay:.15s}.cam-dots i:nth-child(3){animation-delay:.3s}
+@keyframes cam-dot{50%{opacity:.25;transform:translateY(-2px)}}
+.cam-icon{width:44px;height:44px;border-radius:50%;border:1px solid #ffffff1f;background:#16181ccc;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform .15s}
+.cam-icon svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.cam-close{width:38px;height:38px}
+.cam-close svg{width:16px;height:16px}
+
+/* Discipline menu */
+.cam-menu{position:absolute;right:0;top:58px;width:214px;padding:6px;border-radius:18px;background:#1d2025f2;border:1px solid #ffffff1a;-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);box-shadow:0 18px 40px #0008;animation:cam-pop .18s cubic-bezier(.2,.8,.3,1);transform-origin:90% 0}
+.cam-menu button{display:flex;align-items:center;gap:10px;width:100%;min-height:48px;padding:6px 12px;border:0;border-radius:12px;background:transparent;text-align:left}
+.cam-menu button:hover{background:#ffffff0f}
+.cam-menu button:first-child{border-bottom:1px solid #ffffff14;border-radius:12px 12px 4px 4px;margin-bottom:4px}
+.cam-menu span{flex:1;display:flex;flex-direction:column;font-size:15px;font-weight:650}
+.cam-menu small{font-size:11px;font-weight:500;color:#ffffff80;margin-top:1px}
+.cam-menu svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.cam-menu button[aria-checked=true]{color:var(--cam-accent)}
+@keyframes cam-pop{from{opacity:0;transform:scale(.94) translateY(-6px)}}
+
+/* Reason hint */
+.cam-hint{position:absolute;z-index:2;top:114px;left:50%;max-width:calc(100% - 32px);transform:translate(-50%,-6px);padding:9px 14px;border-radius:14px;white-space:nowrap;background:#16181cd9;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);font-size:12px;line-height:1.4;text-align:center;color:#ffffffe0;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s}
+.cam-hint small{display:block;font-size:11px;color:#ffffff80;margin-top:2px}
+.cam-hint.show{opacity:1;transform:translate(-50%,0)}
+
+/* Recording timer bar */
+.cam-recbar{position:absolute;z-index:3;top:54px;left:50%;transform:translate(-50%,-12px);opacity:0;pointer-events:none;display:flex;align-items:center;gap:9px;height:38px;max-width:calc(100% - 28px);padding:0 14px;border-radius:19px;background:#16181ccc;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);font-size:12px;white-space:nowrap;transition:opacity .25s,transform .25s}
+.cam-recbar i{width:9px;height:9px;border-radius:50%;background:#ff4b3a;animation:cam-blink 1.2s steps(2) infinite;flex-shrink:0}
+.cam-recbar b{font:700 15px/1 ui-monospace,"SF Mono",monospace;font-variant-numeric:tabular-nums}
+.cam-recbar span{color:#ffffffb8;overflow:hidden;text-overflow:ellipsis}
+@keyframes cam-blink{50%{opacity:.2}}
+.is-rec .cam-top{opacity:0;transform:translateY(-14px);pointer-events:none}
+.is-rec .cam-recbar{opacity:1;transform:translate(-50%,0)}
+.is-rec .cam-frame{opacity:0}
+
+/* Bottom: grade wheel, album, shutter, flip */
+.cam-bottom{position:absolute;z-index:2;left:0;right:0;bottom:24px;padding:0 0 10px}
+.cam-grade-label{text-align:center;font-size:12px;color:#ffffffb0;letter-spacing:.04em;transition:opacity .25s}
+.cam-grade-label span{margin:0 4px;opacity:.6}
+.cam-pointer{width:2px;height:9px;border-radius:2px;background:var(--cam-accent);margin:7px auto 0}
+.cam-wheel{position:relative;height:56px;margin:0 0 14px;perspective:520px;cursor:grab;touch-action:none;outline:none;transition:opacity .25s}
+.cam-wheel:active{cursor:grabbing}
+.cam-wheel:focus-visible{box-shadow:inset 0 0 0 2px #ffffff40;border-radius:12px}
+.wheel-item{position:absolute;left:50%;top:50%;border:0;background:transparent;padding:4px 6px;white-space:nowrap;font:700 21px/1 -apple-system,"SF Pro Display","Helvetica Neue",sans-serif;font-variant-numeric:tabular-nums;letter-spacing:-.01em;color:#fff;will-change:transform,opacity;cursor:inherit}
+.wheel-item.on{color:var(--cam-accent);font-size:29px;font-weight:800;text-shadow:0 2px 14px #0007}
+.cam-controls{display:flex;align-items:center;justify-content:space-between;padding:0 34px}
+.cam-album{width:56px;height:56px;border-radius:14px;border:2px solid #ffffffd0;background:#ffffff14;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;transition:transform .15s}
+.cam-album svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round}
+.cam-album span{font:800 15px/1 -apple-system,"SF Pro Display",sans-serif;font-variant-numeric:tabular-nums}
+.cam-flip{width:56px;height:56px}
+.cam-flip svg{width:24px;height:24px;transition:transform .45s}
+.is-front .cam-flip svg{transform:rotate(180deg)}
+
+/* Shutter: a white jug hold with a bolt hole */
+.cam-shutter{position:relative;width:86px;height:86px;border-radius:50%;border:3px solid #ffffffe6;background:transparent;padding:7px;display:flex;align-items:center;justify-content:center;transition:transform .15s,border-color .25s}
+.cam-shutter:active{transform:scale(.94)}
+.cam-shutter svg{width:100%;height:100%;filter:drop-shadow(0 3px 6px #0006)}
+.cam-shutter .jug{fill:#f4f1ea;transition:fill .25s}
+.cam-shutter .hole{fill:#1b1d21}
+.is-rec .cam-shutter{border-color:#ff5a36}
+.is-rec .cam-shutter .jug{fill:#ff5a36}
+.is-rec .cam-shutter .hole{fill:#fff}
+.is-rec .cam-shutter::before{content:"";position:absolute;inset:-9px;border-radius:50%;border:2px solid #ff5a36;animation:cam-breathe 1.8s ease-in-out infinite;pointer-events:none}
+@keyframes cam-breathe{0%,100%{opacity:.15;transform:scale(.96)}50%{opacity:.75;transform:scale(1.04);box-shadow:0 0 22px #ff5a3680}}
+.is-rec .cam-grade-label,.is-rec .cam-pointer,.is-rec .cam-wheel,.is-rec .cam-album,.is-rec .cam-flip{opacity:0;pointer-events:none}
+.cam-album,.cam-flip{transition:opacity .25s,transform .15s}
+
+/* Gym sheet dropping from the top */
+.cam-scrim{position:absolute;inset:0;z-index:5;background:#0009;animation:cam-fade .2s}
+.cam-sheet{position:absolute;z-index:6;top:0;left:0;right:0;padding:56px 16px 10px;border-radius:0 0 28px 28px;background:#1d2025;border-bottom:1px solid #ffffff14;box-shadow:0 20px 50px #000a;animation:cam-drop .3s cubic-bezier(.2,.85,.25,1)}
+@keyframes cam-drop{from{transform:translateY(-100%)}}
+@keyframes cam-fade{from{opacity:0}}
+.cam-sheet-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.cam-sheet-head b{font-size:18px}
+.cam-sheet-head button{border:0;background:transparent;color:var(--cam-accent);font-size:15px;font-weight:700;min-height:44px;padding:0 4px}
+.cam-search{display:flex;align-items:center;gap:8px;height:44px;padding:0 12px;border-radius:12px;background:#ffffff12}
+.cam-search svg{width:18px;height:18px;fill:none;stroke:#ffffff90;stroke-width:2;stroke-linecap:round}
+.cam-search input{flex:1;min-width:0;border:0;background:transparent;color:#fff;font-size:15px;outline:none}
+.cam-search input::placeholder{color:#ffffff66}
+.cam-filters{display:flex;gap:6px;margin:10px 0 4px;overflow-x:auto;scrollbar-width:none}
+.cam-filters button{flex-shrink:0;height:34px;padding:0 13px;border-radius:17px;border:1px solid #ffffff24;background:transparent;font-size:13px;color:#ffffffc0}
+.cam-filters button.on{background:#fff;color:#1b1d21;border-color:#fff;font-weight:700}
+.cam-drum-wrap{position:relative;height:210px;margin:4px -16px 0}
+.cam-drum{position:absolute;inset:0;perspective:420px;cursor:grab;touch-action:none;outline:none;-webkit-mask:linear-gradient(#0000,#000 28%,#000 72%,#0000);mask:linear-gradient(#0000,#000 28%,#000 72%,#0000)}
+.cam-drum .wheel-item{display:flex;align-items:baseline;gap:10px;font-size:17px;font-weight:600;color:#ffffffd8}
+.cam-drum .wheel-item small{font-size:12px;font-weight:500;color:#ffffff70}
+.cam-drum .wheel-item.on{font-size:20px;font-weight:750;color:#fff;text-shadow:none}
+.cam-drum .wheel-item.on small{color:var(--cam-accent)}
+.cam-drum-band{position:absolute;left:16px;right:16px;top:50%;height:44px;margin-top:-22px;border-radius:12px;background:#ffffff10;border:1px solid #ffffff14}
+.cam-empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:0 24px;text-align:center;pointer-events:none}
+.cam-empty:empty{display:none}
+.cam-drum-wrap:has(.cam-empty:not(:empty)) .cam-drum-band{display:none}
+.cam-empty p{font-size:13px;color:#ffffff90}
+.cam-empty button{pointer-events:auto;min-height:44px;padding:0 16px;border-radius:22px;border:0;background:var(--cam-accent);color:#1b1d21;font-size:14px;font-weight:750}
+.cam-note{font-size:11px;color:#ffffff70;text-align:center;margin:6px 0 8px}
+.cam-sheet-grip{width:38px;height:4px;border-radius:3px;background:#ffffff40;margin:0 auto}
+
+.inspector .cam-sound-toggle{display:flex;align-items:center;gap:8px}
+
+@media(prefers-reduced-motion:reduce){.cam-rope,.cam-scan,.cam-dots i,.cam-recbar i,.is-rec .cam-shutter::before{animation:none!important}}
+@media(max-width:350px){.cam-controls{padding:0 20px}.cam-gym{max-width:55%}}

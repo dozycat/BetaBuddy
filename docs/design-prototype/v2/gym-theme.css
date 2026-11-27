@@ -1,0 +1,38 @@
+/* Presentation layer only. Selectors belong to the existing GymPack UI.
+   No model, renderer, camera, solver, route or gesture implementation is changed. */
+:root{--paper:#fff;--ink:#4b4b4b;--lime:#58cc02;--lilac:#ddf4ff;--card:#fff;--line:#e5e5e5;--dim:#777;--soft:#f7f7f7;--red:#ea5757;--dur:.22s}
+html,body{font-family:ui-rounded,"SF Pro Rounded",-apple-system,"PingFang SC",sans-serif;background:#fff;color:#4b4b4b}
+button{border:2px solid #e5e5e5;border-radius:16px;background:#fff;color:#4b4b4b;font-weight:800;box-shadow:0 3px 0 #e5e5e5;transition:background .14s,box-shadow .14s,translate .14s;padding:0 13px;min-height:44px}
+button:active{background:#f7f7f7;box-shadow:0 0 0 #e5e5e5;translate:0 3px}
+button.on{background:#ddf4ff;border-color:#84d8ff;color:#1479a8;box-shadow:0 3px 0 #84d8ff}
+button:focus-visible{outline:3px solid #1cb0f6;outline-offset:3px}
+#top{padding-top:8px;gap:7px}
+#wallpill,#venuebtn,#morebtn{border-radius:16px;box-shadow:0 3px 0 #e5e5e5;border:2px solid #e5e5e5}
+#wallpill{font-size:1rem;letter-spacing:0}
+#badge{background:#f7f7f7;border:0;color:#777;font-size:.65rem;border-radius:6px;padding:3px 6px}
+#sheet{background:#fff;border-top:2px solid #e5e5e5;border-radius:26px 26px 0 0;box-shadow:0 -4px 16px #00000006}
+#grab i{background:#d3d3d3;opacity:1;width:38px;height:5px}
+#mini{padding-left:16px;padding-right:16px}
+#mrow{gap:10px;min-height:52px}#mrow b{color:#4b4b4b;font-size:1.0625rem;font-weight:850;letter-spacing:0}
+#mrow .cdot{width:18px;height:18px;border:2px solid #fff;box-shadow:0 0 0 2px #e5e5e5}
+#mswap{border-radius:13px;color:#1686b8;font-weight:800;box-shadow:0 3px 0 #e5e5e5}#mswap.cta{background:#58cc02;border-color:#58cc02;color:#fff;box-shadow:0 4px 0 #46a302}
+#mctl{padding-bottom:4px;gap:6px}#mctl button{border-radius:15px;height:44px}
+#playbtn{background:#58cc02;color:#fff;border-color:#58cc02;box-shadow:0 4px 0 #46a302}#playbtn:active{box-shadow:none;translate:0 4px}
+input[type=range]{accent-color:#58cc02}#scrub{height:35px}
+#tabs{gap:0;border-bottom:2px solid #e5e5e5;padding:0 10px 3px}#tabs button{box-shadow:none;border:0;border-radius:0;background:transparent;min-height:48px;font-size:.8125rem;color:#777;border-bottom:3px solid transparent}
+#tabs button.on{color:#1599d6;border-bottom:3px solid #1cb0f6;background:transparent}#tabs button:active{translate:0 0}
+#camctl button{border:2px solid #e5e5e5;box-shadow:0 3px 0 #e5e5e5;border-radius:15px;font-size:.75rem;color:#777}#camctl button.on{background:#ddf4ff;color:#1479a8;border-color:#84d8ff;box-shadow:0 3px 0 #84d8ff}
+#wallseg,#filters,#presets,#catpresets{padding-bottom:5px}#wallseg button,#presets button,#catpresets button{border:2px solid #e5e5e5;border-radius:15px}#wallseg button.on,#presets button.on,#catpresets button.on{border:2px solid #84d8ff;background:#ddf4ff;color:#1479a8}
+#filters button{border:2px solid #e5e5e5;border-radius:13px;font-weight:750}#filters button.on{border-color:#84d8ff;color:#1479a8;background:#ddf4ff}
+ul#rlist li{background:#fff;border:2px solid #e5e5e5;border-radius:16px;margin-bottom:9px;min-height:66px;padding:10px 12px}ul#rlist li.on{background:#ddf4ff;border:2px solid #84d8ff}ul#rlist li .gr{background:#f7f7f7;color:#777;border-radius:8px;padding:5px 8px}ul#rlist li.on .gr{background:#fff;color:#1479a8}
+ol#steps li{border:2px solid transparent;border-radius:14px;margin-bottom:4px;min-height:48px}ol#steps li.cur{border-color:#84d8ff;background:#ddf4ff;color:#1479a8}ol#steps li .bar i{background:#1cb0f6}.stat div{border:2px solid #e5e5e5;background:#fff;border-radius:13px}.stat b{color:#1cb0f6}.stat span{font-size:.65rem}
+.fold{border:2px solid #e5e5e5;border-radius:16px}.fold>.fh{box-shadow:none}.fold>.fh:active{translate:0 0}.seg2{gap:10px;padding-bottom:4px}.seg2 button{border:2px solid #e5e5e5;border-radius:14px}.seg2 button.on{border:2px solid #84d8ff}
+#venuelist button{border:2px solid #e5e5e5;margin-bottom:10px}#venuelist button.on{border:2px solid #84d8ff}.label.route{background:#fff;border:2px solid #58cc02;color:#388b00;border-radius:10px;box-shadow:0 2px 0 #46a302;font-weight:800}
+#hintbox{background:#fff;border:2px solid #e5e5e5;border-radius:22px;box-shadow:0 5px 0 #e5e5e5;color:#4b4b4b}#hintbox button.go{background:#58cc02;color:#fff;border-color:#58cc02;box-shadow:0 4px 0 #46a302}#hintbox .dots i.on{background:#58cc02}
+#toast{background:#4b4b4b;color:#fff;border-radius:13px;font-weight:650}#loading{background:#fff;color:#777}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{transition:none!important;animation:none!important}}
+/* The wall and holds retain their original materials; only labels and the scene backdrop change. */
+.label:not(.route){background:#fff;color:#1686b8;border:2px solid #bce7fb;border-radius:12px;box-shadow:0 3px 0 #bce7fb;font-weight:800;padding:3px 9px}
+
+.warn{background:#f2faff;border:2px solid #ddf4ff;color:#64899b;font-weight:600;line-height:1.6}
+[data-preview-member]{font-size:10px;color:#b87817;background:#fff2d5;border-radius:6px;padding:3px 6px;margin-left:6px}

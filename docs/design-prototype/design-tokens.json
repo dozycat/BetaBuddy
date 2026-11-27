@@ -1,0 +1,47 @@
+{
+  "name": "BetaBuddy / Clip In",
+  "status": "design-proposal",
+  "color": {
+    "paper": "#F8F8F4",
+    "surface": "#FFFFFF",
+    "ink": "#202721",
+    "muted": "#687067",
+    "line": "#D8DDD5",
+    "soft": "#E9ECE7",
+    "action": "#FA724B",
+    "buddy": "#D8F36A",
+    "illustrationBlue": "#819CBC",
+    "player": "#141917",
+    "playerSurface": "#1D2420",
+    "playerText": "#F8F8F4",
+    "playerMuted": "#AEB7AE"
+  },
+  "spacing": [4, 8, 12, 16, 20, 24, 32],
+  "radius": {"input": 10, "button": 13, "panel": 18, "sheet": 25},
+  "typography": {
+    "family": "platform-system",
+    "display": {"size": 32, "weight": 800, "tracking": -1.6},
+    "section": {"size": 18, "weight": 700},
+    "body": {"size": 16, "weight": 400},
+    "control": {"size": 14, "weight": 600},
+    "metadata": {"size": 12, "weight": 400},
+    "grade": {"size": 30, "weight": 750, "family": "monospace"}
+  },
+  "interaction": {
+    "minTouchIOS": 44,
+    "minTouchAndroid": 48,
+    "pressScale": 0.96,
+    "pressDurationMs": 150,
+    "sheetDurationMs": 250,
+    "navigationDurationMs": 220,
+    "reducedMotion": true
+  },
+  "media": {
+    "fit": "contain",
+    "cropOriginal": false,
+    "controlsOutsideFrame": true,
+    "focusMode": true,
+    "overlayMascot": false,
+    "darkSurface": true
+  }
+}

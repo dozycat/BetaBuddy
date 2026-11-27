@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BetaBuddy · 一起向上</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='14' y='4' width='36' height='56' rx='18' fill='%231cb0f6'/%3E%3Crect x='25' y='20' width='14' height='27' rx='7' fill='white'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="app.css"><link rel="stylesheet" href="capture.css"><script src="/config.js"></script><script src="/icons.js"></script>
+</head>
+<body>
+<main id="bb-v2">
+<header class="work-head"><div class="wordmark"><span class="brand-hook"></span>betabuddy<span class="revision">DESIGN 02</span></div><span class="work-note">多邻国式的轻快 · BetaBuddy 的真实功能</span></header>
+<div class="workbench">
+<aside class="page-directory"><h1>一起向上。</h1><p class="intro">新的界面，原来的 3D 岩馆。</p><div class="platform-picker" aria-label="平台"><button class="active" data-platform="ios">iOS</button><button data-platform="android">Android</button></div><nav id="page-nav" aria-label="设计页面"></nav></aside>
+<section class="device" aria-label="BetaBuddy 手机预览">
+<div class="statusbar"><span>9:41</span><span class="camera-island"></span><span class="status-symbols">▮▮▮　▰</span></div>
+<div class="app-viewport"><div id="gym-host" class="gym-host"><iframe id="gym-frame" title="现有 BetaBuddy 3D 岩馆" src="/gym/index.html?hint=0&amp;lang=zh-Hans" allow="fullscreen"></iframe><div id="gym-loading" class="gym-loading"><div class="spinner"></div><b>正在打开原有 3D 岩馆</b></div></div><div id="native-screen"></div><div id="overlay-root"></div></div>
+<nav id="app-tabs" class="app-tabs" aria-label="主导航"></nav><div class="safe-bottom"><span></span></div>
+</section>
+<aside class="inspector"><div class="inspector-title">设计说明</div><h2 id="detail-title"></h2><p id="detail-copy"></p><div class="inspector-rule"></div><div class="inspector-title">对应现有实现</div><div id="source-files"></div><div id="state-controls"></div><div class="inspector-rule"></div><div class="palette"><i style="background:#1cb0f6"></i><i style="background:#58cc02"></i><i style="background:#ffb444"></i><i style="background:#ddf4ff"></i><i style="background:#fff"></i></div><p class="small">白底、圆润形状、明确的按钮厚度。锁扣是自己的角色，不复制 Duo。</p><div id="brand-character"></div><p class="preview-boundary">本地设计预览。3D 来自现有数据包；拍摄、分析、剪辑与支付的原生能力未在浏览器中实现。</p></aside>
+</div>
+<footer class="work-footer">参考现有 SwiftUI / Compose 逻辑 · 数据包留在本机 · 无发布、无上传</footer>
+</main>
+<input type="file" id="video-file" accept="video/*" hidden>
+<script src="capture.js"></script><script src="app.js"></script>
+</body></html>
