@@ -88,4 +88,21 @@
     <string name="journal_edit_working">Editing…</string>
     <string name="journal_edit_failed">Couldn’t make the edit: %1$s. Try again.</string>
     <string name="journal_edit_note">Edited automatically; may be off.</string>
+
+    <string name="subject_title">Choose climber</string>
+    <string name="subject_instruction">Scrub to a clear moment and tap an outline. If tracking is uncertain after an obstruction, tap again at a clearer moment to correct it.</string>
+    <string name="subject_save">Save</string>
+    <string name="subject_auto">Select automatically</string>
+    <string name="subject_person">Person %1$d</string>
+    <string name="subject_play">Play</string>
+    <string name="subject_pause">Pause</string>
+    <string name="subject_working">Finding people in the video…</string>
+    <string name="subject_empty">No person selected yet. Tap one in the video.</string>
+    <string name="subject_missing">The person is uncertain at this moment. Tracking will not switch to someone else.</string>
+    <string name="subject_automatic">Selected automatically. Tap someone else to change it.</string>
+    <string name="subject_manual">Tracking your selection.</string>
+    <string name="subject_gaps">The person is unconfirmed in parts of the video. Scrub to those moments to select them again.</string>
+    <string name="subject_unresolved">Some selections could not be matched. Tap the person again at a clear moment.</string>
+    <string name="subject_reanalyze">Changing the person requires a new analysis.</string>
+    <string name="subject_retry">Try again</string>
 </resources>

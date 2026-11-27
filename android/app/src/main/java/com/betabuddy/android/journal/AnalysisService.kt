@@ -44,6 +44,7 @@ class AnalysisService : Service() {
         manager.createNotificationChannel(NotificationChannel(CHANNEL, getString(R.string.journal_analysis_start), NotificationManager.IMPORTANCE_LOW))
         // Pose recognition gives way to the camera: the running one is stopped, its request is kept.
         scope.launch { CameraGate.open.collect { open -> if (open) active?.cancel() } }
+        scope.launch { SubjectGate.open.collect { open -> if (open) active?.cancel() } }
         val notification = notification()
         if (Build.VERSION.SDK_INT >= 35) {
             startForeground(NOTIFICATION, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROCESSING)
@@ -81,7 +82,7 @@ class AnalysisService : Service() {
             try {
                 while (true) {
                     // The in-app camera is in use: requests stay in the archive and start again when it lets go.
-                    if (CameraGate.open.value) {
+                    if ((CameraGate.open.value || SubjectGate.open.value)) {
                         mutableState.value = ReanalysisUiState()
                         break
                     }
@@ -93,7 +94,9 @@ class AnalysisService : Service() {
                     active = launch {
                         try {
                             val quality = AnalysisQuality.entries.firstOrNull { it.name.lowercase(Locale.ROOT) == climb.pendingAnalysis } ?: AnalysisQuality.BALANCED
-                            val result = VideoAnalyzer(this@AnalysisService).analyze(store.file(climb.videoName), quality, cameraClip = climb.capture != null) { progress ->
+                            val resolver = com.betabuddy.android.pose.SubjectResolver(this@AnalysisService)
+                            val collectSubjects = resolver.available()
+                            val detected = VideoAnalyzer(this@AnalysisService).analyze(store.file(climb.videoName), quality, cameraClip = climb.capture != null, collectSubjects = collectSubjects) { progress ->
                                 scope.launch {
                                     if (activeId == climb.id && mutableState.value.busy) {
                                         mutableState.value = ReanalysisUiState(climbId = climb.id, busy = true, progress = progress)
@@ -101,6 +104,7 @@ class AnalysisService : Service() {
                                     }
                                 }
                             }
+                            val result = if (collectSubjects) resolver.resolve(detected,climb.subjectAnchors.orEmpty()) else detected
                             ensureActive()
                             withContext(Dispatchers.IO) { store.replaceAnalysis(climb, result) }
                             mutableState.value = ReanalysisUiState(climbId = climb.id, message = UiMessage(R.string.journal_reanalyze_done))
@@ -175,7 +179,7 @@ class AnalysisService : Service() {
         }
 
         internal fun start(context: Context) {
-            if (CameraGate.open.value) return   // Picked up when the camera closes.
+            if ((CameraGate.open.value || SubjectGate.open.value)) return   // Picked up when the camera closes.
             try {
                 context.startForegroundService(Intent(context, AnalysisService::class.java))
             } catch (_: RuntimeException) {

@@ -45,8 +45,10 @@ data class PoseAnalysis(
     val people: List<SubjectSample>? = null,
     val peopleReference: String? = null,
     val subject: SubjectResolution? = null,
+    val subjectPositions: List<SubjectPosition>? = null,
 ) {
     val hasSubjectCandidates: Boolean get() = people?.any { it.candidates.isNotEmpty() } ?: (peopleReference != null)
+    val hasSelectedSubject: Boolean get() = !subjectPositions.isNullOrEmpty() || (subject != null && frames.isNotEmpty())
 
     /** False for records analysed before world landmarks were kept, and for clips not analysed yet. */
     val hasWorldLandmarks: Boolean

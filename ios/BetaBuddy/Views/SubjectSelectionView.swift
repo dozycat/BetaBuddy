@@ -175,10 +175,10 @@ struct SubjectSelectionView: View {
                     if session.analysis == nil || session.refining { ProgressView(value: session.progress); Text("正在找视频里的人…") }
                     else { ProgressView() }
                 } else if let analysis = session.analysis {
-                    if analysis.frames.isEmpty { Text("暂未选定人物，请在画面里点选。").foregroundStyle(BB.muted) }
+                    if !analysis.hasSelectedSubject { Text("暂未选定人物，请在画面里点选。").foregroundStyle(BB.muted) }
                     else if selectedID == nil { Text("这一刻未确认人物，不会自动换成别人。").font(.caption).foregroundStyle(BB.muted) }
                     else { Text(session.anchors.isEmpty ? "自动选中，可点选其他人。" : "已按你的选择跟踪。").font(.caption).foregroundStyle(BB.muted) }
-                    if !analysis.frames.isEmpty && analysis.subject?.picks.contains(where: { $0.personID == nil }) == true {
+                    if analysis.hasSelectedSubject && analysis.subject?.picks.contains(where: { $0.personID == nil }) == true {
                         Text("部分片段尚未确认人物，可拖到那些位置补选。").font(.caption).foregroundStyle(BB.muted)
                     }
                     if (analysis.subject?.unresolved ?? 0) > 0 { Text("有选人标记未能对上，请在看清人物的位置重新点选。").font(.caption).foregroundStyle(BB.muted) }
@@ -193,7 +193,7 @@ struct SubjectSelectionView: View {
                             guard let analysis = session.analysis else { return }
                             do { try store.selectSubject(climb, analysis: analysis, anchors: session.anchors); dismiss() }
                             catch { saveError = error.localizedDescription }
-                        }.disabled(session.busy || session.analysis?.frames.isEmpty != false)
+                        }.disabled(session.busy || session.analysis?.hasSelectedSubject != true)
                             .accessibilityIdentifier("saveSubject")
                     }
                 }

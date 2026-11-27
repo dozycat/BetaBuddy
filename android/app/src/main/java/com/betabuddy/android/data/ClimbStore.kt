@@ -38,6 +38,7 @@ class ClimbStore(val root: File) {
                 val loaded = json.decodeFromString(Archive.serializer(), index.readText(Charsets.UTF_8))
                 if (loaded.version != 1) throw IOException("Unsupported archive version ${loaded.version}")
                 state.value = loaded
+                if (loaded.climbs.any { it.analysis.people != null }) persist(loaded)
             }
             // Left behind only if a write was interrupted before the rename.
             file("$INDEX_NAME.tmp").delete()
@@ -56,8 +57,28 @@ class ClimbStore(val root: File) {
     @Synchronized
     private fun persist(next: Archive) {
         if (!canWrite) throw IOException("The archive could not be read and is kept as it is")
-        writeAtomically(file(INDEX_NAME), json.encodeToString(Archive.serializer(), next).toByteArray(Charsets.UTF_8))
-        state.value = next
+        val created = mutableListOf<File>()
+        try {
+            val prepared = next.copy(climbs = next.climbs.map { climb ->
+                val samples = climb.analysis.people ?: return@map climb
+                val reference = newId()
+                val target = SubjectCandidateStorage.file(root,climb.id,reference)
+                created += target
+                writeAtomically(target,SubjectCandidateStorage.encode(samples))
+                climb.copy(analysis = climb.analysis.copy(people = null,peopleReference = reference))
+            })
+            writeAtomically(file(INDEX_NAME), json.encodeToString(Archive.serializer(), prepared).toByteArray(Charsets.UTF_8))
+            val previous = state.value
+            state.value = prepared
+            previous.climbs.forEach { old ->
+                val reference = old.analysis.peopleReference ?: return@forEach
+                if (prepared.climbs.firstOrNull { it.id == old.id }?.analysis?.peopleReference != reference)
+                    runCatching { SubjectCandidateStorage.file(root,old.id,reference).delete() }
+            }
+        } catch (error: Exception) {
+            created.forEach { it.delete() }
+            throw error
+        }
     }
 
     private fun writeAtomically(target: File, bytes: ByteArray) {
@@ -115,7 +136,7 @@ class ClimbStore(val root: File) {
             file(thumbnailName).writeBytes(thumbnail)
             if (climb.capture?.hasPlan == true && capturePlan != null) writeAtomically(file(id + CAPTURE_PLAN_SUFFIX), capturePlan.toByteArray(Charsets.UTF_8))
             persist(state.value.copy(climbs = state.value.climbs + climb))
-            return climb
+            return state.value.climbs.first { it.id == id }
         } catch (error: Exception) {
             if (moved) runCatching { move(file(videoName), stagedVideo) }
             file(thumbnailName).delete()
@@ -130,9 +151,7 @@ class ClimbStore(val root: File) {
         persist(state.value.copy(climbs = state.value.climbs.filterNot { it.id == climb.id }))
         owned(climb.videoName)?.delete()
         owned(climb.thumbnailName)?.delete()
-        analysisResultFile(climb.id)?.delete()
-        editPlanFile(climb.id)?.delete()
-        capturePlanFile(climb.id)?.delete()
+        root.listFiles { _, name -> name.startsWith(climb.id + ".") }?.forEach { it.delete() }
     }
 
     // Records made with the in-app camera
@@ -163,7 +182,8 @@ class ClimbStore(val root: File) {
 
     /** What the analysis page said it did with this record's capture plan, kept with the record. */
     @Synchronized
-    fun setPlanUse(id: String, use: CapturePlanUse) {
+    fun setPlanUse(id: String, use: CapturePlanUse, expectedSubjectRevision: Int? = null) {
+        if (expectedSubjectRevision != null && !isSubjectCurrent(id,expectedSubjectRevision)) return
         val capture = state.value.climbs.firstOrNull { it.id == id }?.capture ?: return
         val next = capture.copy(planUse = use)
         if (next == capture) return
@@ -188,12 +208,17 @@ class ClimbStore(val root: File) {
 
     // Result of the pack's analysis page. The text is the page's own format: kept and handed back as it is.
 
-    private fun analysisResultFile(id: String): File? = owned(id + ANALYSIS_RESULT_SUFFIX)
+    private fun derivedName(id: String, suffix: String): String? {
+        val climb = state.value.climbs.firstOrNull { it.id == id } ?: return null
+        return id + (climb.subjectRevision?.let { ".s$it" } ?: "") + suffix
+    }
+    private fun analysisResultFile(id: String): File? = derivedName(id,ANALYSIS_RESULT_SUFFIX)?.let(::owned)
+    fun isSubjectCurrent(id: String, revision: Int): Boolean = state.value.climbs.any { it.id == id && (it.subjectRevision ?: 0) == revision }
 
     /** Ids of the climbs that have a saved result. */
     fun analysisResultIds(): Set<String> {
         val names = root.list()?.toSet().orEmpty()
-        return state.value.climbs.mapNotNullTo(mutableSetOf()) { climb -> climb.id.takeIf { it + ANALYSIS_RESULT_SUFFIX in names } }
+        return state.value.climbs.mapNotNullTo(mutableSetOf()) { climb -> climb.id.takeIf { derivedName(it,ANALYSIS_RESULT_SUFFIX) in names } }
     }
 
     /** The page's result exactly as it handed it over, or null when there is none. */
@@ -209,8 +234,9 @@ class ClimbStore(val root: File) {
      * (deleted while the page was open) and nothing was written.
      */
     @Synchronized
-    fun saveAnalysisResult(id: String, json: String): Boolean {
+    fun saveAnalysisResult(id: String, json: String, expectedSubjectRevision: Int? = null): Boolean {
         if (state.value.climbs.none { it.id == id }) return false
+        if (expectedSubjectRevision != null && !isSubjectCurrent(id,expectedSubjectRevision)) return false
         if (!canWrite) throw IOException("The archive could not be read and is kept as it is")
         val target = analysisResultFile(id) ?: throw IOException("Unusable record id")
         writeAtomically(target, json.toByteArray(Charsets.UTF_8))
@@ -225,7 +251,7 @@ class ClimbStore(val root: File) {
 
     // The analysis page's plan for an automatic edit. The page's own format: kept as it arrived.
 
-    private fun editPlanFile(id: String): File? = owned(id + EDIT_PLAN_SUFFIX)
+    private fun editPlanFile(id: String): File? = derivedName(id,EDIT_PLAN_SUFFIX)?.let(::owned)
 
     /** The plan exactly as the page handed it over, or null when there is none. */
     fun editPlan(id: String): String? = try {
@@ -239,8 +265,9 @@ class ClimbStore(val root: File) {
      * without one (the plan of an earlier result then goes). Nothing is written for a record that is gone.
      */
     @Synchronized
-    fun saveEditPlan(id: String, plan: String?) {
+    fun saveEditPlan(id: String, plan: String?, expectedSubjectRevision: Int? = null) {
         if (state.value.climbs.none { it.id == id }) return
+        if (expectedSubjectRevision != null && !isSubjectCurrent(id,expectedSubjectRevision)) return
         val target = editPlanFile(id) ?: throw IOException("Unusable record id")
         if (plan.isNullOrEmpty()) { target.delete(); return }
         if (!canWrite) throw IOException("The archive could not be read and is kept as it is")
@@ -253,7 +280,8 @@ class ClimbStore(val root: File) {
      * the other scale the judgement is not stored at all, and everything stays as it was.
      */
     @Synchronized
-    fun setAutomaticDiscipline(id: String, discipline: String) {
+    fun setAutomaticDiscipline(id: String, discipline: String, expectedSubjectRevision: Int? = null) {
+        if (expectedSubjectRevision != null && !isSubjectCurrent(id,expectedSubjectRevision)) return
         if (!Discipline.valid(discipline)) return
         val climb = state.value.climbs.firstOrNull { it.id == id } ?: return
         if (climb.chosenDiscipline != null) return
@@ -329,10 +357,35 @@ class ClimbStore(val root: File) {
     @Synchronized
     fun replaceAnalysis(climb: Climb, analysis: PoseAnalysis) {
         val current = state.value
-        if (current.climbs.none { it.id == climb.id }) return
+        if (!isSubjectCurrent(climb.id,climb.subjectRevision ?: 0)) return
         persist(current.copy(climbs = current.climbs.map {
             if (it.id == climb.id) it.copy(analysis = analysis, pendingAnalysis = null) else it
         }))
+    }
+
+    /** Missing/corrupt candidate caches can be regenerated from the original video. */
+    @Synchronized
+    fun subjectAnalysis(id: String): PoseAnalysis? {
+        val analysis = state.value.climbs.firstOrNull { it.id == id }?.analysis ?: return null
+        if (analysis.people != null) return analysis
+        val reference = analysis.peopleReference ?: return analysis
+        return try { analysis.copy(people = SubjectCandidateStorage.read(root,id,reference)) }
+        catch (_: Exception) { analysis.copy(people = null,peopleReference = null) }
+    }
+
+    /** Commit the identity and invalidate all results together; late work keeps its old revision. */
+    @Synchronized
+    fun selectSubject(climb: Climb, analysis: PoseAnalysis, anchors: List<SubjectAnchor>) {
+        require(isSubjectCurrent(climb.id,climb.subjectRevision ?: 0)) { "Selection changed while this screen was open" }
+        require(analysis.subject != null && analysis.hasSubjectCandidates)
+        val oldResult = analysisResultFile(climb.id); val oldEdit = editPlanFile(climb.id)
+        persist(state.value.copy(climbs = state.value.climbs.map {
+            if (it.id == climb.id) it.copy(analysis = analysis, subjectAnchors = anchors.takeIf { it.isNotEmpty() },
+                subjectRevision = (it.subjectRevision ?: 0)+1, pendingAnalysis = null,
+                capture = it.capture?.copy(analysisQueued = null,planUse = null),
+                discipline = if (it.disciplineAuto == true) null else it.discipline, disciplineAuto = null) else it
+        }))
+        oldResult?.delete(); oldEdit?.delete()
     }
 
     /** A stored name is only ever resolved to a file directly inside [root]. */

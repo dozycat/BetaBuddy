@@ -28,6 +28,7 @@ import com.betabuddy.android.gym.PackWebView
 import com.betabuddy.android.i18n.AppLanguage
 import com.betabuddy.android.journal.AnalysisDesk
 import com.betabuddy.android.journal.AnalysisQueuePolicy
+import com.betabuddy.android.journal.SubjectGate
 import com.betabuddy.android.journal.CameraGate
 import com.betabuddy.android.journal.JournalViewModel
 import com.betabuddy.android.journal.UiMessage
@@ -154,6 +155,7 @@ internal fun AnalysisQueueHost(model: JournalViewModel, pack: GymPack?, packFile
     val climbs by model.climbs.collectAsState()
     val results by model.analysisResults.collectAsState()
     val cameraOpen by CameraGate.open.collectAsState()
+    val subjectOpen by SubjectGate.open.collectAsState()
     val owner = LocalLifecycleOwner.current
     var foreground by remember { mutableStateOf(owner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) }
     DisposableEffect(owner, queue) {
@@ -163,8 +165,8 @@ internal fun AnalysisQueueHost(model: JournalViewModel, pack: GymPack?, packFile
     }
     // `running` is read so that the next record is looked at when one is done.
     val open by AnalysisDesk.open.collectAsState()
-    LaunchedEffect(queue, climbs, results, cameraOpen, foreground, queue.running, open) {
-        climbs?.let { queue.advance(it, results, paused = cameraOpen || !foreground, open = open) }
+    LaunchedEffect(queue, climbs, results, cameraOpen, subjectOpen, foreground, queue.running, open) {
+        climbs?.let { queue.advance(it, results, paused = cameraOpen || subjectOpen || !foreground, open = open) }
     }
     queue.webView?.let { webView ->
         key(webView) {

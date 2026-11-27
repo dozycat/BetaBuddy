@@ -26,6 +26,8 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 /**
  * Hosts the pack's analysis page for one climb, for as long as the page is on screen. The app's
@@ -84,6 +86,7 @@ internal class AnalysisSession(
     private var host: PackWebView? = null
     private var ready = false
     private var feed: Job? = null
+    private var subjectRevision: Int? = null
     private val saving = Mutex() // results are written in the order they arrived
 
     fun open() {
@@ -131,8 +134,9 @@ internal class AnalysisSession(
                 }
                 // After showing a saved result the page no longer names the record; it is still this one.
                 is AnalysisMessage.Result -> if (message.id.isEmpty() || message.id == climbId) {
+                    val revision = subjectRevision ?: return
                     scope.launch {
-                        val saved = saving.withLock { model.saveAnalysisResult(climbId, message.json, message.climber, message.capture, message.edit, message.discipline) }
+                        val saved = saving.withLock { model.saveAnalysisResult(climbId, message.json, message.climber, message.capture, message.edit, message.discipline, revision) }
                             .onFailure { Log.e(TAG, "result not saved", it) }
                         onOutcome?.invoke(saved.isSuccess)
                     }
@@ -140,12 +144,13 @@ internal class AnalysisSession(
                 is AnalysisMessage.Seek -> onSeek(message.time)
                 // The page is already showing why. Nothing is saved and the page stays open.
                 is AnalysisMessage.Error -> {
+                    val revision = subjectRevision ?: return
                     Log.i(TAG, "analysis page could not analyse: ${message.code}")
                     // No result, but what the page made of the climbing style is kept as a guess.
-                    message.discipline?.let { guess -> scope.launch { model.setAutomaticDiscipline(climbId, guess) } }
+                    message.discipline?.let { guess -> scope.launch { model.setAutomaticDiscipline(climbId, guess, revision) } }
                     // Nor is a plan for an automatic edit lost for want of a result. An error without one
                     // leaves a plan stored earlier where it is.
-                    message.edit?.let { plan -> scope.launch { model.saveEditPlan(climbId, plan) } }
+                    message.edit?.let { plan -> scope.launch { model.saveEditPlan(climbId, plan, revision) } }
                     onOutcome?.invoke(false)
                 }
                 // Anything else is ignored, except a script error before the page ever came up.
@@ -171,6 +176,9 @@ internal class AnalysisSession(
     }
 
     private suspend fun start() {
+        val snapshot = model.currentClimb(climbId) ?: return
+        subjectRevision = snapshot.subjectRevision ?: 0
+        val selected = snapshot.analysis.subject != null
         val saved = model.analysisResult(climbId)
         if (saved != null) {
             host?.evaluate(AnalysisScript.show(saved))
@@ -193,7 +201,7 @@ internal class AnalysisSession(
             val (width, height) = FrameGeometry.displaySize(info.width, info.height, info.rotation)
             val (frameWidth, frameHeight) = AnalysisFeed.frameSize(width, height)
             // A record made with the in-app camera brings the capture page's plan; any other has none.
-            host?.evaluate(AnalysisScript.begin(climbId, width, height, model.analysisClimber(), model.capturePlan(climbId), model.chosenDiscipline(climbId), duration))
+            host?.evaluate(AnalysisScript.begin(climbId, width, height, model.analysisClimber(), model.capturePlan(climbId), model.chosenDiscipline(climbId), duration, subjectLocked = selected))
             var index = 0
             val delivered = AnalysisFrames.extract(video, AnalysisFeed.frameTimes(duration), frameWidth, frameHeight) { time, jpeg ->
                 withContext(Dispatchers.Main) { host?.evaluate(AnalysisScript.addFrame(index++, time, jpeg)) }
@@ -203,8 +211,15 @@ internal class AnalysisSession(
                 onOutcome?.invoke(false)
                 return
             }
-            sendTrackFrames(duration, width, height)
-            val stored = poses()
+            if (!selected) sendTrackFrames(duration, width, height)
+            for (batch in snapshot.analysis.subjectPositions.orEmpty().chunked(40)) {
+                if (!taken(AnalysisScript.addSubjectPositions(Json.encodeToString(batch)))) {
+                    failure = Failure.Page
+                    onOutcome?.invoke(false)
+                    return
+                }
+            }
+            val stored = if (selected) snapshot.analysis.frames else poses()
             for (batch in withContext(Dispatchers.Default) { AnalysisFeed.poseBatches(stored) }) host?.evaluate(AnalysisScript.addPoses(batch))
             host?.evaluate(AnalysisScript.run())
         } finally {

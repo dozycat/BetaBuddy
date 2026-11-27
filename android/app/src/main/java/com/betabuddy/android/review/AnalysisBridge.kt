@@ -105,7 +105,7 @@ object AnalysisScript {
      * for this record, if they did; the page then does not judge it again. [duration] is how long
      * the clip really is, in seconds.
      */
-    fun begin(id: String, width: Int, height: Int, climber: String?, capture: String? = null, discipline: String? = null, duration: Double? = null): String {
+    fun begin(id: String, width: Int, height: Int, climber: String?, capture: String? = null, discipline: String? = null, duration: Double? = null, subjectLocked: Boolean = false): String {
         val measurements = climber?.let { text -> try { Json.parseToJsonElement(text) as? JsonObject } catch (error: Exception) { null } }
         val meta = buildJsonObject {
             put("id", id)
@@ -114,6 +114,7 @@ object AnalysisScript {
             if (measurements != null) put("climber", measurements)
             if (!capture.isNullOrEmpty()) put("capture", capture)
             if (Discipline.valid(discipline)) put("discipline", discipline)
+            if (subjectLocked) put("subjectLocked",true)
             if (duration != null && duration.isFinite() && duration > 0) put("duration", duration)
         }
         return call("begin", literal(meta.toString()))
@@ -135,6 +136,8 @@ object AnalysisScript {
 
     /** [batch] is the JSON text of an array from [AnalysisFeed.poseBatches]; the page parses it. */
     fun addPoses(batch: String): String = call("addPoses", string(batch))
+
+    fun addSubjectPositions(batch: String): String = call("addSubjectPositions",string(batch))
 
     fun run(): String = call("run", "")
 

@@ -12,18 +12,39 @@ actor SubjectResolver {
         var anchors: [SubjectAnchor]
     }
     struct RegionMatch: Decodable, Sendable { var id: String?; var stop: Bool }
+    private func regionPolicy() throws -> JSContext {
+        if let regionContext { return regionContext }
+        guard let pack = GymPack.current, let context = JSContext() else { throw CocoaError(.fileReadCorruptFile) }
+        context.evaluateScript(try String(contentsOf: pack.directory.appendingPathComponent("subject.js"), encoding: .utf8))
+        guard context.exception == nil else { throw CocoaError(.fileReadCorruptFile) }
+        regionContext = context
+        return context
+    }
+    func acceptTracking(previous: SubjectCandidate, candidate: SubjectCandidate, seed: SubjectCandidate, delta: Double) throws -> Bool {
+        struct Observation: Encodable {
+            var bounds: SubjectBounds
+            var appearance: [Double]
+            var tracking: SubjectTracking?
+            init(_ candidate: SubjectCandidate) {
+                bounds = candidate.bounds; appearance = candidate.appearance; tracking = candidate.tracking
+            }
+        }
+        struct Input: Encodable { var previous: Observation; var candidate: Observation; var seed: Observation; var dt: Double }
+        let context = try regionPolicy()
+        let input = Input(previous: Observation(previous), candidate: Observation(candidate), seed: Observation(seed), dt: delta)
+        let text = String(decoding: try JSONEncoder().encode(input), as: UTF8.self)
+        let function = context.evaluateScript("(function(json) { return BetaBuddySubject.acceptTracking(JSON.parse(json)); })")
+        let result = function?.call(withArguments: [text])
+        guard context.exception == nil, let result, result.isBoolean else { throw CocoaError(.fileReadCorruptFile) }
+        return result.toBool()
+    }
     func matchRegion(previous: SubjectCandidate, candidates: [SubjectCandidate], delta: Double) throws -> RegionMatch {
         struct RegionInput: Encodable { var previous: SubjectCandidate; var candidates: [SubjectCandidate]; var dt: Double }
-        if regionContext == nil {
-            guard let pack = GymPack.current, let context = JSContext() else { throw CocoaError(.fileReadCorruptFile) }
-            context.evaluateScript(try String(contentsOf: pack.directory.appendingPathComponent("subject.js"), encoding: .utf8))
-            guard context.exception == nil else { throw CocoaError(.fileReadCorruptFile) }
-            regionContext = context
-        }
+        let context = try regionPolicy()
         let json = String(decoding: try JSONEncoder().encode(RegionInput(previous: previous, candidates: candidates, dt: delta)), as: UTF8.self)
-        let function = regionContext?.evaluateScript("(function(json) { return JSON.stringify(BetaBuddySubject.matchRegion(JSON.parse(json))); })")
+        let function = context.evaluateScript("(function(json) { return JSON.stringify(BetaBuddySubject.matchRegion(JSON.parse(json))); })")
         let result = function?.call(withArguments: [json])
-        guard regionContext?.exception == nil else { throw CocoaError(.fileReadCorruptFile) }
+        guard context.exception == nil else { throw CocoaError(.fileReadCorruptFile) }
         guard let text = result?.toString() else { throw CocoaError(.fileReadCorruptFile) }
         return try JSONDecoder().decode(RegionMatch.self, from: Data(text.utf8))
     }

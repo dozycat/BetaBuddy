@@ -19,6 +19,13 @@ object CameraGate {
     }
 }
 
+/** Foreground identity selection has its own inference work; queued jobs wait. */
+object SubjectGate {
+    private val state = MutableStateFlow(false)
+    val open: StateFlow<Boolean> = state.asStateFlow()
+    fun set(open: Boolean) { state.value = open }
+}
+
 /**
  * The records whose analysis page the user has open right now. One record is never analysed
  * twice at once: the queue leaves these alone, and stops its own run of one the moment the user
@@ -58,7 +65,7 @@ object AnalysisQueuePolicy {
         for (climb in climbs) {
             if (climb.capture?.analysisQueued != true || climb.pendingAnalysis != null || climb.id in settled) continue
             // Already analysed, no page to do it, or pose recognition found nobody (or was stopped).
-            if (!hasPage || climb.id in results || !climb.analysis.hasWorldLandmarks) return Step.Settle(climb.id)
+            if (!hasPage || climb.id in results || !(climb.analysis.hasWorldLandmarks || climb.analysis.hasSelectedSubject)) return Step.Settle(climb.id)
             return Step.Run(climb)
         }
         return Step.Wait

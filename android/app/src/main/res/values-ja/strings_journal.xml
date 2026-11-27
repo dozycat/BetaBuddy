@@ -88,4 +88,21 @@
     <string name="journal_edit_working">編集中…</string>
     <string name="journal_edit_failed">編集できませんでした：%1$s。もう一度お試しください。</string>
     <string name="journal_edit_note">自動編集のため、ずれることがあります。</string>
+
+    <string name="subject_title">クライマーを選ぶ</string>
+    <string name="subject_instruction">人物がよく見える場面に移動し、輪郭をタップしてください。遮られた後に追跡が不確かな場合は、見える場面でもう一度タップして修正できます。</string>
+    <string name="subject_save">保存</string>
+    <string name="subject_auto">自動で選ぶ</string>
+    <string name="subject_person">人物 %1$d</string>
+    <string name="subject_play">再生</string>
+    <string name="subject_pause">一時停止</string>
+    <string name="subject_working">動画内の人物を検出中…</string>
+    <string name="subject_empty">人物が未選択です。動画内でタップしてください。</string>
+    <string name="subject_missing">この場面では人物を確認できません。別の人には切り替えません。</string>
+    <string name="subject_automatic">自動で選択しました。別の人をタップして変更できます。</string>
+    <string name="subject_manual">選んだ人物を追跡しています。</string>
+    <string name="subject_gaps">人物を確認できていない区間があります。その位置に移動して選び直せます。</string>
+    <string name="subject_unresolved">対応づけできない選択があります。人物がよく見える場面でもう一度タップしてください。</string>
+    <string name="subject_reanalyze">人物を変更すると再解析が必要です。</string>
+    <string name="subject_retry">もう一度試す</string>
 </resources>

@@ -23,6 +23,17 @@ final class SubjectSelectionTests: XCTestCase {
         var wrong = result; wrong.picks[0].personID = "missing"
         XCTAssertThrowsError(try original.selecting(wrong))
     }
+    func testSelectedRegionKeepsPositionWithoutInventingPose() throws {
+        var original = analysis()
+        original.people![0].candidates[1].pose.joints = []
+        let selected = try original.selecting(.init(schema: 1, picks: [.init(time: 0, personID: "b"), .init(time: 1, personID: nil)], manual: true, unresolved: 0))
+        XCTAssertTrue(selected.frames.isEmpty)
+        XCTAssertTrue(selected.hasSelectedSubject)
+        XCTAssertEqual(selected.subjectPositions?.count, 1)
+        XCTAssertEqual(selected.subjectPositions?.first?.bounds.x, 0.6)
+        original.people![0].candidates[1].pose.time = 1
+        XCTAssertThrowsError(try original.selecting(selected.subject!))
+    }
     func testChangingSelectionInvalidatesCachesAndRejectsStaleResultsAcrossRelaunch() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: root) }
@@ -127,7 +138,7 @@ final class SubjectSelectionTests: XCTestCase {
             XCTAssertTrue(selected.frames.contains { $0.time < result.anchor.time }, "Selection must also cover detected frames before the chosen moment")
             XCTAssertTrue(selected.frames.contains { $0.time > result.anchor.time }, "Selection must also cover detected frames after the chosen moment")
         }
-        print("Manual region: selected=\(selected.frames.count)/\(selected.sampledFrames), seconds=\(Date().timeIntervalSince(start))")
+        print("Manual region: positions=\(selected.subjectPositions?.count ?? 0), poses=\(selected.frames.count)/\(selected.sampledFrames), seconds=\(Date().timeIntervalSince(start))")
         if let output = env["BB_SUBJECT_OUTPUT"] { try JSONEncoder().encode(selected).write(to: URL(fileURLWithPath: output)) }
     }
 }

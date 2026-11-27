@@ -420,6 +420,7 @@ enum AnalysisCommand: Sendable {
     case begin(id: String, width: Int, height: Int, climber: [String: Double]?, capture: String? = nil, discipline: Discipline? = nil, duration: Double? = nil, subjectLocked: Bool = false)
     case addFrame(index: Int, time: Double, jpegBase64: String)
     case addPoses([PoseFrame])
+    case addSubjectPositions([SubjectPosition])
     /// A small, frequent still for finding the climber by motion; packs without the call ignore it.
     case addTrackFrame(time: Double, jpegBase64: String)
     case run
@@ -466,6 +467,8 @@ enum AnalysisCommand: Sendable {
             })])
         case .addTrackFrame(let time, let jpegBase64):
             ("addTrackFrame", [Self.literal(rounded4(time)), Self.literal(jpegBase64)])
+        case .addSubjectPositions(let positions):
+            ("addSubjectPositions", [Self.literal(positions.filter { $0.time.isFinite && $0.bounds.valid })])
         case .run: ("run", [])
         case .show(let json): ("show", [Self.literal(json)])
         }

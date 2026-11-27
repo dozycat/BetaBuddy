@@ -120,8 +120,10 @@ internal fun ReviewScreen(climb: Climb, model: JournalViewModel, analysisPack: G
     val editRevision by model.editRevision.collectAsState()
     val editPlan by produceState<EditPlan?>(null, climb.id, editRevision) { value = model.editPlan(climb.id) }
     var editOpen by rememberSaveable(climb.id) { mutableStateOf(false) }
+    var subjectOpen by rememberSaveable(climb.id) { mutableStateOf(false) }
+    val subjectAvailable = remember { com.betabuddy.android.pose.SubjectResolver(context).available() }
     // Poses the page can use → open it. Otherwise recognise the pose first; the page opens when that is done.
-    val usablePoses = remember(analysis) { analysis.hasWorldLandmarks }
+    val usablePoses = remember(analysis) { analysis.hasWorldLandmarks || analysis.hasSelectedSubject }
     val startAnalysis: () -> Unit = {
         playback.pause()
         if (usablePoses) analysisOpen = true else { requestNotifications(); model.analyzeWhenPoseReady(climb) }
@@ -237,6 +239,10 @@ internal fun ReviewScreen(climb: Climb, model: JournalViewModel, analysisPack: G
             }
         }
 
+        if (subjectAvailable) OutlineButton(stringResource(R.string.subject_title),Modifier.fillMaxWidth().testTag("chooseSubject")) {
+            playback.pause(); subjectOpen = true
+        }
+
         // Pose recognition, the first step of the analysis: progress while it runs, and how it ended.
         if (climb.pendingAnalysis != null || reanalysis?.message != null) {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -259,6 +265,8 @@ internal fun ReviewScreen(climb: Climb, model: JournalViewModel, analysisPack: G
         failure?.let { Text(it.text(), style = BB.Caption, color = DangerColor, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) }
         OutlineButton(stringResource(R.string.journal_delete), Modifier.fillMaxWidth().testTag("deleteClimb"), color = DangerColor) { confirmDelete = true }
     }
+
+    if (subjectOpen) SubjectSelectionScreen(climb,model) { subjectOpen = false }
 
     if (analysisOpen && analysisPack != null && analysisUrl != null) {
         val poses = rememberUpdatedState(analysis.frames)

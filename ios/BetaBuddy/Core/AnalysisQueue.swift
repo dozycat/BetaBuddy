@@ -68,7 +68,7 @@ final class AnalysisQueue: ObservableObject {
         for climb in store.climbs where climb.capture?.analysisQueued == true && climb.pendingAnalysis == nil && !settled.contains(climb.id) {
             // Already analysed, no page to do it, or pose recognition found nobody (or was stopped):
             // the request is done with. The record keeps its own “分析这一趟”.
-            guard let pack, !store.analysisResults.contains(climb.id), climb.analysis.hasWorldLandmarks else {
+            guard let pack, !store.analysisResults.contains(climb.id), (climb.analysis.hasWorldLandmarks || climb.analysis.hasSelectedSubject) else {
                 #if DEBUG
                 CaptureDiagnostics.event("analysisQueue", ["record": climb.id.uuidString, "outcome": "skipped",
                                                            "why": pack == nil ? "no analysis page" : store.analysisResults.contains(climb.id) ? "already analysed" : "nobody found in the clip"])

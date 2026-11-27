@@ -312,7 +312,7 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
         val climb = archive.climbs.firstOrNull { it.id == id }
         if (climb?.pendingAnalysis != null) return
         awaitingState.value = null
-        if (climb != null && climb.analysis.hasWorldLandmarks) poseReadyState.value = id
+        if (climb != null && (climb.analysis.hasWorldLandmarks || climb.analysis.hasSelectedSubject)) poseReadyState.value = id
     }
 
     /** The screen has acted on [poseReady], or is going away and no longer wants to be told. */
@@ -322,6 +322,18 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
     }
 
     suspend fun analysisResult(id: String): String? = withContext(Dispatchers.IO) { store().analysisResult(id) }
+    suspend fun currentClimb(id: String): Climb? = withContext(Dispatchers.IO) { store().climbs.firstOrNull { it.id == id } }
+    suspend fun subjectAnalysis(id: String): com.betabuddy.android.data.PoseAnalysis? = withContext(Dispatchers.IO) { store().subjectAnalysis(id) }
+
+    suspend fun selectSubject(climb: Climb, analysis: com.betabuddy.android.data.PoseAnalysis, anchors: List<com.betabuddy.android.data.SubjectAnchor>): Result<Unit> {
+        AnalysisService.cancel(getApplication(),climb.id)
+        return withContext(Dispatchers.IO) {
+            runCatching { store().selectSubject(climb,analysis,anchors); EditFiles.clear(getApplication(),climb.id) }
+        }.onSuccess {
+            resultsState.update { it - climb.id }; editRevisionState.update { it + 1 }
+            queueMessageState.update { it - climb.id }; forgetAnalysisIntent(climb.id)
+        }
+    }
 
     /**
      * Keeps what the page handed back: the result next to the clip, replacing an earlier one, and
@@ -333,27 +345,29 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
         edit: String? = null,
         /** What the page judged the climb to be. Kept only while the user has not said so themselves. */
         discipline: String? = null,
+        expectedSubjectRevision: Int? = null,
     ): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
-            if (store().saveAnalysisResult(id, json)) resultsState.update { it + id }
-            store().saveEditPlan(id, edit)
+            if (!store().saveAnalysisResult(id, json, expectedSubjectRevision)) return@runCatching
+            resultsState.update { it + id }
+            store().saveEditPlan(id, edit, expectedSubjectRevision)
             editRevisionState.update { it + 1 }
-            if (discipline != null) store().setAutomaticDiscipline(id, discipline)
+            if (discipline != null) store().setAutomaticDiscipline(id, discipline, expectedSubjectRevision)
             // Whether the page went by the capture plan is kept with the record, as the page said it.
-            if (planUse != null) store().setPlanUse(id, planUse)
+            if (planUse != null) store().setPlanUse(id, planUse, expectedSubjectRevision)
             if (climber != null) preferences.edit { putString(KEY_ANALYSIS_CLIMBER, climber) }
         }
     }
 
     /** What the page made of the climbing style when it could not analyse the clip. Never replaces the user's choice. */
     /** A plan for an automatic edit that came without a result (the page could not analyse, but could still plan an edit). */
-    suspend fun saveEditPlan(id: String, plan: String) {
-        withContext(Dispatchers.IO) { runCatching { store().saveEditPlan(id, plan) } }
+    suspend fun saveEditPlan(id: String, plan: String, expectedSubjectRevision: Int? = null) {
+        withContext(Dispatchers.IO) { runCatching { store().saveEditPlan(id, plan, expectedSubjectRevision) } }
         editRevisionState.update { it + 1 }
     }
 
-    suspend fun setAutomaticDiscipline(id: String, discipline: String) {
-        withContext(Dispatchers.IO) { runCatching { store().setAutomaticDiscipline(id, discipline) } }
+    suspend fun setAutomaticDiscipline(id: String, discipline: String, expectedSubjectRevision: Int? = null) {
+        withContext(Dispatchers.IO) { runCatching { store().setAutomaticDiscipline(id, discipline, expectedSubjectRevision) } }
     }
 
     /** The capture page's plan for a record made with the in-app camera, or null. */

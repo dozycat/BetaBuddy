@@ -23,6 +23,15 @@ struct SubjectCandidate: Codable, Sendable, Identifiable {
     /// Generic, low-resolution clothing colour samples, kept on this device with the poses.
     var appearance: [Double]
     var pose: PoseFrame
+    var tracking: SubjectTracking? = nil
+}
+struct SubjectTracking: Codable, Sendable {
+    var token: String
+    var confidence: Double
+}
+struct SubjectPosition: Codable, Sendable {
+    var time: Double
+    var bounds: SubjectBounds
 }
 struct SubjectSample: Codable, Sendable {
     var time: Double
@@ -49,17 +58,22 @@ struct SubjectResolution: Codable, Sendable {
 
 extension PoseAnalysis {
     var hasSubjectCandidates: Bool { people?.contains { !$0.candidates.isEmpty } ?? (peopleReference != nil) }
+    var hasSelectedSubject: Bool { subjectPositions?.isEmpty == false || (subject != nil && !frames.isEmpty) }
     /// Only exact candidate ids returned by the policy may become the selected poses.
     /// Missing samples stay missing; never fall back to the first person in a frame.
     func selecting(_ result: SubjectResolution) throws -> PoseAnalysis {
         guard result.schema == 1, let people, result.picks.count == people.count else { throw CocoaError(.fileReadCorruptFile) }
         var copy = self
-        copy.frames = try zip(people, result.picks).compactMap { sample, pick in
+        let selected: [SubjectCandidate] = try zip(people, result.picks).compactMap { sample, pick in
             guard abs(sample.time - pick.time) < 0.0001 else { throw CocoaError(.fileReadCorruptFile) }
             guard let id = pick.personID else { return nil }
             guard let candidate = sample.candidates.first(where: { $0.id == id }) else { throw CocoaError(.fileReadCorruptFile) }
-            return candidate.pose
+            guard candidate.bounds.valid, candidate.pose.time.isFinite,
+                  abs(candidate.pose.time - sample.time) < 0.0001 else { throw CocoaError(.fileReadCorruptFile) }
+            return candidate
         }
+        copy.frames = selected.map(\.pose).filter(\.hasReliableTorso)
+        copy.subjectPositions = selected.map { SubjectPosition(time: $0.pose.time, bounds: $0.bounds) }
         copy.subject = result
         return copy
     }

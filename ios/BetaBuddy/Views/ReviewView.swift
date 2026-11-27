@@ -156,7 +156,7 @@ struct ReviewView: View {
             .onChange(of: current.pendingAnalysis) { _, pending in
                 guard pending == nil, openAfterPose else { return }
                 openAfterPose = false
-                if current.analysis.hasWorldLandmarks { playback.pause(); analysing = true }
+                if current.analysis.hasWorldLandmarks || current.analysis.hasSelectedSubject { playback.pause(); analysing = true }
                 else if current.analysis.hasSubjectCandidates { selectingSubject = true }
             }
             .onAppear { sent = current.sent; editPlan = store.editPlan(for: current); playback.load(store.file(climb.videoName)) }
@@ -269,7 +269,7 @@ struct ReviewView: View {
         playback.pause()
         // Opening the page here does the work; the same record is not also analysed out of sight.
         analysisQueue.cancel(climb.id)
-        if current.analysis.hasWorldLandmarks { analysing = true; return }
+        if current.analysis.hasWorldLandmarks || current.analysis.hasSelectedSubject { analysing = true; return }
         if current.analysis.hasSubjectCandidates { selectingSubject = true; return }
         do { try store.requestAnalysis(current); openAfterPose = true }
         catch { store.error = error.localizedDescription }

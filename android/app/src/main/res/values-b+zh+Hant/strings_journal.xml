@@ -88,4 +88,21 @@
     <string name="journal_edit_working">正在剪輯…</string>
     <string name="journal_edit_failed">沒能剪出來：%1$s，可以再試一次。</string>
     <string name="journal_edit_note">自動剪輯，可能剪錯。</string>
+
+    <string name="subject_title">選擇攀爬者</string>
+    <string name="subject_instruction">拖到看清人物的位置，點一下圈線。遮擋後辨識不準時，可在新的位置再點一次修正。</string>
+    <string name="subject_save">儲存</string>
+    <string name="subject_auto">自動選擇</string>
+    <string name="subject_person">人物 %1$d</string>
+    <string name="subject_play">播放</string>
+    <string name="subject_pause">暫停</string>
+    <string name="subject_working">正在找影片裡的人…</string>
+    <string name="subject_empty">暫未選定人物，請在畫面裡點選。</string>
+    <string name="subject_missing">這一刻未確認人物，不會自動換成別人。</string>
+    <string name="subject_automatic">自動選中，可點選其他人。</string>
+    <string name="subject_manual">已按你的選擇追蹤。</string>
+    <string name="subject_gaps">部分片段尚未確認人物，可拖到那些位置補選。</string>
+    <string name="subject_unresolved">有選人標記未能對上，請在看清人物的位置重新點選。</string>
+    <string name="subject_reanalyze">更換人物後，需要重新分析。</string>
+    <string name="subject_retry">再試一次</string>
 </resources>

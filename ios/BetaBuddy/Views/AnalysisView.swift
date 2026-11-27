@@ -151,6 +151,13 @@ final class AnalysisSession: NSObject, ObservableObject, WKNavigationDelegate, W
                 }
             }
             let poses = climb.analysis.frames
+            let positions = climb.analysis.subjectPositions ?? []
+            for start in stride(from: 0, to: positions.count, by: AnalysisCommand.poseBatch) {
+                try Task.checkCancellation()
+                guard await call(.addSubjectPositions(Array(positions[start..<min(positions.count,start+AnalysisCommand.poseBatch)]))) else {
+                    throw CocoaError(.fileReadCorruptFile)
+                }
+            }
             for start in stride(from: 0, to: poses.count, by: AnalysisCommand.poseBatch) {
                 try Task.checkCancellation()
                 await call(.addPoses(Array(poses[start..<min(poses.count, start + AnalysisCommand.poseBatch)])))

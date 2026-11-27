@@ -31,6 +31,8 @@ struct PoseAnalysis: Codable, Sendable {
     /// The full candidate set lives beside this record, loaded only while choosing a person.
     var peopleReference: UUID? = nil
     var subject: SubjectResolution? = nil
+    /// Positions are independent of pose visibility; they can drive the camera without invented joints.
+    var subjectPositions: [SubjectPosition]? = nil
     /// False for records analysed before world landmarks were kept, and for clips not analysed yet.
     var hasWorldLandmarks: Bool { frames.contains(where: \.hasWorldLandmarks) }
     func nearestFrame(to time: Double) -> PoseFrame? {
