@@ -262,3 +262,6 @@ Optional development model installation follows the private pack installation: `
 The selection page keeps the video above a separately scrolling control area, including while adjusting the four outline sliders. Drawing previews the region; tracking requires an explicit action, and Save stays disabled until tracking resolves a subject. The original background remains visible. Background interruption and Retry repeat the pending operation, including its manual region, rather than silently restarting automatic selection. Older jobs cannot replace the current selection.
 
 Selection was exercised on a real reference clip at normal and 200% system font size, including stop/resume, save and reopen. Edit rendering was checked through an actual output failure, retry, intermediate progress and cancellation at both font sizes; cancellation removed temporary output and retained the original. Progress exposes an accessibility range. These checks do not replace TalkBack, natural occlusion, independent classification or real-device quality validation; see the shared validation record above.
+
+
+相册分类配置当前支持 schema 1／2。schema 1 未提供图像模式时维持中心裁切，schema 2 必须指定支持的模式；可按配置保留全画面，或在每个时间点同时检查中心与全画面。双视图只能贡献一票，环境冲突时弃权，不增加时间证据。文本向量和策略仍由私有包提供。28 段原生对照候选有改善，也有两条新增漏检；另两段室外原生检查只通过一段。矩阵失败按实保存，尚不代表分类质量验收，详细结果见上述开发记录。

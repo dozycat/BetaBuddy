@@ -21,6 +21,32 @@ class LibraryImportTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
     private val context = instrumentation.targetContext
 
+    @Test fun optionalClassifierVideoMatrix() = runBlocking {
+        val name = InstrumentationRegistry.getArguments().getString("libraryMatrix")
+        assumeTrue("Local evaluation matrix not supplied",name != null)
+        val input = org.json.JSONObject(File(context.filesDir,name!!).readText()).getJSONArray("clips")
+        assertTrue(input.length()>0)
+        val rows = org.json.JSONArray(); val failures = mutableListOf<String>()
+        withContext(Dispatchers.IO) {
+            LibraryClassifier(context).use { classifier ->
+                for (i in 0 until input.length()) {
+                    val clip=input.getJSONObject(i); val id=clip.getString("id")
+                    val expected=if (clip.isNull("expected")) null else clip.getString("expected")
+                    val start=System.nanoTime()
+                    val result=org.json.JSONObject().put("id",id).put("expected",expected ?: org.json.JSONObject.NULL)
+                    try {
+                        val actual=classifier.classify(context,android.net.Uri.fromFile(File(context.filesDir,clip.getString("path"))))
+                        result.put("actual",actual ?: org.json.JSONObject.NULL)
+                        if (actual!=expected) failures += "$id: expected $expected, got $actual"
+                    } catch (failure: Exception) { result.put("error",failure.toString()); failures += "$id: $failure" }
+                    result.put("seconds",(System.nanoTime()-start)/1e9); rows.put(result)
+                }
+                File(context.getExternalFilesDir(null),"library-classifier-matrix.json").writeText(org.json.JSONObject().put("revision",classifier.revision).put("clips",rows).toString(2))
+            }
+        }
+        assertTrue(failures.joinToString("\n"),failures.isEmpty())
+    }
+
     @Test fun encoderRejectsBlankVideoAndClosesResources() = runBlocking {
         val bitmap = Bitmap.createBitmap(320,480,Bitmap.Config.ARGB_8888).apply { eraseColor(Color.DKGRAY) }
         val clip = File(context.cacheDir,"library-negative-${System.nanoTime()}.mp4")

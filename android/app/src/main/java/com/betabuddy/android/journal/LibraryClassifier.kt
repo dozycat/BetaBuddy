@@ -8,6 +8,8 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Rect
+import android.graphics.RectF
+import android.graphics.Color
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import com.betabuddy.android.data.ClimbStore
@@ -57,21 +59,33 @@ internal class LibraryClassifier(context: Context) : Closeable {
                 val time = (duration * 1000 * (i + .5) / config.samples).toLong()
                 val frame = reader.getScaledFrameAtTime(time, MediaMetadataRetriever.OPTION_CLOSEST, maxOf(1,(width*scale).toInt()), maxOf(1,(height*scale).toInt()))
                     ?: error("Video frame unavailable")
-                try { votes += config.tag(embedding(frame)) } finally { frame.recycle() }
+                try {
+                    val views = config.imageModes.map { mode ->
+                        coroutineContext.ensureActive()
+                        config.tag(embedding(frame,mode))
+                    }
+                    votes += config.frameVote(views)
+                } finally { frame.recycle() }
             }
             coroutineContext.ensureActive()
             return config.decision(votes)
         } finally { reader.release() }
     }
 
-    /** Model includes normalization; input is centre-cropped RGB 0…1 in CHW order. */
-    internal fun embedding(frame: Bitmap): List<Double> {
+    /** Model includes normalization; policy chooses image framing, RGB 0…1 in CHW order. */
+    internal fun embedding(frame: Bitmap, mode: String = "center"): List<Double> {
         val side = minOf(frame.width,frame.height)
         val x = (frame.width-side)/2; val y = (frame.height-side)/2
         val image = Bitmap.createBitmap(224,224,Bitmap.Config.ARGB_8888)
         val pixels = IntArray(224*224)
         try {
-            Canvas(image).drawBitmap(frame,Rect(x,y,x+side,y+side),Rect(0,0,224,224),Paint(Paint.FILTER_BITMAP_FLAG))
+            val canvas = Canvas(image)
+            canvas.drawColor(Color.BLACK)
+            val source = if (mode == "center") Rect(x,y,x+side,y+side) else Rect(0,0,frame.width,frame.height)
+            val scale = 224f/maxOf(frame.width,frame.height)
+            val width = frame.width*scale; val height = frame.height*scale
+            val target = if (mode == "fit") RectF((224-width)/2,(224-height)/2,(224+width)/2,(224+height)/2) else RectF(0f,0f,224f,224f)
+            canvas.drawBitmap(frame,source,target,Paint(Paint.FILTER_BITMAP_FLAG))
             image.getPixels(pixels,0,224,0,0,224,224)
         } finally { image.recycle() }
         val input = FloatArray(pixels.size*3)

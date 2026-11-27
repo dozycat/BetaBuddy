@@ -18,6 +18,14 @@ class LibraryPolicyTest {
         assertEquals("a",policy.decision(listOf("a",null,"a","b","a")))
         assertThrows(IllegalArgumentException::class.java) { policy.copy(minimumVotes = 6).validate() }
         assertThrows(IllegalArgumentException::class.java) { policy.copy(androidModel = policy.androidModel.copy(file = "../model")).validate() }
+        assertEquals("a",policy.frameVote(listOf("a","a")))
+        assertEquals("b",policy.frameVote(listOf(null,"b")))
+        assertNull(policy.frameVote(listOf("a","b")))
+        assertNull(policy.decision(listOf(policy.frameVote(listOf("a","a")),null,null,null,null)))
+        assertThrows(IllegalArgumentException::class.java) { policy.copy(schema=2).validate() }
+        policy.copy(schema=2,imageResize="centerAndFit").validate()
+        assertEquals(listOf("center","fit"),policy.copy(imageResize="centerAndFit").imageModes)
+        assertThrows(IllegalArgumentException::class.java) { policy.copy(imageResize="unsupported").validate() }
     }
     @Test fun onlyIndoorVideoCoordinatesCanSuggestAGym() {
         val origin = LibraryMetadata.location("+31.1000+121.2000+5.0/")!!

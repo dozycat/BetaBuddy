@@ -68,6 +68,39 @@ final class LibraryImportTests: XCTestCase {
         XCTAssertNil(policy.tag(for: [Double.nan, 0]))
         XCTAssertNil(policy.decision(["a", "a", nil, "b", nil]))
         XCTAssertEqual(policy.decision(["a", "a", nil, "a", "b"]), "a")
+        XCTAssertEqual(policy.frameVote(["a", "a"]), "a")
+        XCTAssertEqual(policy.frameVote([nil, "b"]), "b")
+        XCTAssertNil(policy.frameVote(["a", "b"]))
+        XCTAssertNil(policy.decision([policy.frameVote(["a", "a"]), nil, nil, nil, nil]))
+        var invalid = policy; invalid.schema = 2
+        XCTAssertThrowsError(try invalid.validate())
+        invalid.imageResize = "centerAndFit"; XCTAssertNoThrow(try invalid.validate())
+        XCTAssertEqual(invalid.imageModes.count, 2)
+        invalid.imageResize = "unsupported"; XCTAssertThrowsError(try invalid.validate())
+    }
+
+    /// Optional labelled media matrix; the attachment records misses as well as matches.
+    func testOptionalClassifierVideoMatrix() async throws {
+        guard let path = ProcessInfo.processInfo.environment["BB_LIBRARY_MATRIX"] else { throw XCTSkip("Local evaluation matrix not supplied") }
+        let input = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: URL(fileURLWithPath: path))) as? [String: Any])
+        let clips = try XCTUnwrap(input["clips"] as? [[String: Any]])
+        XCTAssertFalse(clips.isEmpty)
+        let engine = try LibraryClassifier(pack: XCTUnwrap(GymPack.current))
+        var rows: [[String: Any]] = []
+        for clip in clips {
+            let id = try XCTUnwrap(clip["id"] as? String), file = try XCTUnwrap(clip["path"] as? String)
+            let expected = clip["expected"] as? String, start = Date()
+            do {
+                let actual = try await engine.classify(AVURLAsset(url: URL(fileURLWithPath: file)))
+                rows.append(["id": id, "expected": expected as Any? ?? NSNull(), "actual": actual as Any? ?? NSNull(), "seconds": Date().timeIntervalSince(start)])
+                XCTAssertEqual(actual, expected, "Evaluation clip \(id)")
+            } catch {
+                rows.append(["id": id, "error": error.localizedDescription]); XCTFail("Evaluation clip \(id): \(error)")
+            }
+        }
+        let data = try JSONSerialization.data(withJSONObject: ["revision": engine.revision, "clips": rows], options: [.prettyPrinted,.sortedKeys])
+        let attachment = XCTAttachment(data: data, uniformTypeIdentifier: "public.json")
+        attachment.name = "Native library classifier matrix"; attachment.lifetime = .keepAlways; add(attachment)
     }
 
     /// Real model and real PhotoKit; optional because the private pack and footage are not in git.

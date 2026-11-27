@@ -14,9 +14,21 @@ struct LibraryClassifierConfig: Decodable {
     var minimumScore: Double
     var minimumMargin: Double
     var prototypes: [Prototype]
+    var imageResize: String? = nil
+
+    var imageModes: [VNImageCropAndScaleOption] {
+        switch imageResize {
+        case "fit": return [.scaleFit]
+        case "stretch": return [.scaleFill]
+        case "centerAndFit": return [.centerCrop, .scaleFit]
+        default: return [.centerCrop]
+        }
+    }
 
     func validate() throws {
-        guard schema == 1, model == "LibraryImageEncoder", (3...20).contains(samples),
+        guard (1...2).contains(schema), schema == 1 || imageResize != nil,
+              imageResize == nil || ["center", "fit", "stretch", "centerAndFit"].contains(imageResize!),
+              model == "LibraryImageEncoder", (3...20).contains(samples),
               (1...samples).contains(minimumVotes), minimumScore.isFinite, minimumMargin.isFinite,
               (-1...1).contains(minimumScore), (0...2).contains(minimumMargin),
               let width = prototypes.first?.vector.count, width > 0, width <= 4096,
@@ -40,6 +52,11 @@ struct LibraryClassifierConfig: Decodable {
         guard let best = sorted.first, best.value >= minimumVotes,
               sorted.count == 1 || best.value > sorted[1].value else { return nil }
         return best.key
+    }
+    /// Several views of one frame still count as one observation; disagreement abstains.
+    func frameVote(_ votes: [String?]) -> String? {
+        let tags = Set(votes.compactMap { $0 })
+        return tags.count == 1 ? tags.first : nil
     }
 }
 
@@ -76,13 +93,18 @@ actor LibraryClassifier {
             try Task.checkCancellation()
             let time = duration * (Double(sample) + 0.5) / Double(config.samples)
             let (image, _) = try await generator.image(at: CMTime(seconds: time, preferredTimescale: 600))
-            let request = VNCoreMLRequest(model: model)
-            request.imageCropAndScaleOption = .centerCrop
-            try VNImageRequestHandler(cgImage: image).perform([request])
-            guard let result = request.results?.compactMap({ $0 as? VNCoreMLFeatureValueObservation }).first,
-                  let vector = result.featureValue.multiArrayValue else { throw AnalysisError.invalidVideo }
-            let embedding = (0..<vector.count).map { vector[$0].doubleValue }
-            votes.append(config.tag(for: embedding))
+            var views: [String?] = []
+            for mode in config.imageModes {
+                try Task.checkCancellation()
+                let request = VNCoreMLRequest(model: model)
+                request.imageCropAndScaleOption = mode
+                try VNImageRequestHandler(cgImage: image).perform([request])
+                guard let result = request.results?.compactMap({ $0 as? VNCoreMLFeatureValueObservation }).first,
+                      let vector = result.featureValue.multiArrayValue else { throw AnalysisError.invalidVideo }
+                let embedding = (0..<vector.count).map { vector[$0].doubleValue }
+                views.append(config.tag(for: embedding))
+            }
+            votes.append(config.frameVote(views))
         }
         try Task.checkCancellation()
         return config.decision(votes)
