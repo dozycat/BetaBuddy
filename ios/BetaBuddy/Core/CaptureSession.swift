@@ -48,6 +48,8 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
     @Published var gymName = "" { didSet { if gymName != oldValue { venueChanged() } } }
     /// Set with `pickGrade`. Until the user has picked one, a recognised problem's grade is filled in.
     @Published private(set) var grade = ungradedValue
+    /// How this attempt is climbed, as the user chose it. `nil` leaves it to the analysis page, whose guess can be wrong.
+    @Published private(set) var discipline: Discipline?
 
     let source: CaptureSource
     private let store: ClimbStore
@@ -618,11 +620,24 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
         gradePrefilled = false
     }
 
+    /// The user's own choice of discipline, or `nil` to leave it to the analysis. A grade of the
+    /// other scale goes back to ungraded; one of the same scale is kept.
+    func pickDiscipline(_ value: Discipline?) {
+        guard phase == .framing else { return }
+        #if DEBUG
+        mark("pickDiscipline", ["discipline": value?.rawValue as Any])
+        #endif
+        discipline = value
+        let kept = GradeScale.kept(grade, for: value)
+        if kept != grade { grade = kept; gradePrefilled = false; gradePicked = false }
+        fillInGrade()
+    }
+
     /// Until the user has picked a grade, the recognised problem's is filled in, visibly; when
     /// that problem goes away again, so does its grade.
     private func fillInGrade() {
         guard !gradePicked, phase == .framing else { return }
-        if let known = recognised?.albumGrade {
+        if let known = recognised?.albumGrade, GradeScale.kept(known, for: discipline) == known {
             if grade != known { grade = known }
             gradePrefilled = true
         } else if gradePrefilled {
@@ -730,7 +745,7 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
             // analysis. Nothing is analysed until this has succeeded.
             let climb = try store.save(title: "", grade: grade, sent: false, note: "", stagedVideo: clip.url, thumbnail: thumbnail, analysis: playback,
                                        gymId: gymId, gymName: gymName, climbedAt: clip.started, pendingAnalysis: AnalysisQuality.balanced.rawValue,
-                                       capture: info, capturePlan: plan)
+                                       capture: info, capturePlan: plan, discipline: discipline)
             heldClip = nil
             try? FileManager.default.removeItem(at: CaptureRecovery.draftURL(for: clip.url))
             #if DEBUG
@@ -758,7 +773,7 @@ final class CaptureSession: NSObject, ObservableObject, WKNavigationDelegate, WK
     /// Kept next to the clip while it is being recorded, so that it can become a record even if the app does not live to save it.
     private func writeDraft() {
         guard let movie = recorder?.url ?? heldClip?.url, let began = recordingStarted else { return }
-        CaptureRecovery.write(CaptureDraft(started: began, gymId: gymId, gymName: gymName, grade: grade, info: makeInfo(), plan: plan), for: movie)
+        CaptureRecovery.write(CaptureDraft(started: began, gymId: gymId, gymName: gymName, grade: grade, info: makeInfo(), plan: plan, discipline: discipline?.rawValue), for: movie)
     }
 
     /// Gives up a clip that could not be saved.

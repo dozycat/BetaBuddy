@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import AudioToolbox
 
 /// Shows a source's preview layer, uncropped.
 private struct CapturePreview: UIViewRepresentable {
@@ -18,67 +19,6 @@ private struct CapturePreview: UIViewRepresentable {
         return view
     }
     func updateUIView(_ view: Surface, context: Context) { if view.content !== layer { view.content = layer } }
-}
-
-/// What the capture page recognised, drawn over the picture: the chosen colour's holds, with the
-/// start and finish marked. Dashed outlines are the page's own guesses; solid ones were set by the user.
-private struct CaptureOverlay: View {
-    var holds: [CaptureAssessment.Hold]
-    var size: CGSize
-    private func path(_ hold: CaptureAssessment.Hold) -> Path {
-        if hold.poly.count >= 3 {
-            var path = Path()
-            path.addLines(hold.poly.map { CGPoint(x: $0.x * size.width, y: $0.y * size.height) })
-            path.closeSubpath()
-            return path
-        }
-        let rect = CGRect(x: hold.box.minX * size.width, y: hold.box.minY * size.height, width: hold.box.width * size.width, height: hold.box.height * size.height)
-        return Path(roundedRect: rect.insetBy(dx: -2, dy: -2), cornerRadius: 6)
-    }
-    private func color(_ role: CaptureRole) -> Color {
-        switch role {
-        case .startHand, .startFoot: BB.lime
-        case .finish: BB.lavender
-        default: .white
-        }
-    }
-    private func symbol(_ role: CaptureRole) -> String {
-        switch role {
-        case .startHand: "hand.raised.fill"
-        case .startFoot: "shoeprints.fill"
-        default: "flag.checkered"
-        }
-    }
-    var body: some View {
-        ZStack(alignment: .topLeading) {
-            Canvas { context, _ in
-                for hold in holds {
-                    let outline = path(hold)
-                    let marked = hold.role != .hold
-                    // Thin for plain holds: a board can have a hundred of them, and the holds must stay visible.
-                    context.stroke(outline, with: .color(.black.opacity(0.65)), style: StrokeStyle(lineWidth: marked ? 5.5 : 3, lineJoin: .round))
-                    context.stroke(outline, with: .color(color(hold.role)),
-                                   style: StrokeStyle(lineWidth: marked ? 3 : 1.5, lineJoin: .round, dash: hold.user ? [] : [5, 4]))
-                }
-            }
-            // Start and finish also carry a word: colour alone does not say which is which.
-            ForEach(holds.filter { $0.role != .hold }) { hold in
-                HStack(spacing: 3) {
-                    Image(systemName: symbol(hold.role)).font(.system(size: 9, weight: .bold))
-                    // A guess says so; what the user marked carries a tick.
-                    Text(verbatim: hold.user ? CaptureText.role(hold.role) : CaptureText.guess(hold.role)).font(.system(size: 10, weight: .bold)).lineLimit(1)
-                    if hold.user { Image(systemName: "checkmark").font(.system(size: 8, weight: .black)) }
-                }
-                .padding(.horizontal, 6).padding(.vertical, 3)
-                .foregroundStyle(BB.ink).background(color(hold.role).opacity(hold.user ? 1 : 0.8), in: Capsule())
-                .fixedSize()
-                .position(x: min(max(hold.box.midX * size.width, 40), size.width - 40),
-                          y: max(hold.box.minY * size.height - 13, 10))
-            }
-        }
-        .frame(width: size.width, height: size.height)
-        .allowsHitTesting(false).accessibilityHidden(true)
-    }
 }
 
 #if DEBUG
@@ -185,6 +125,7 @@ struct CaptureView: View {
     @StateObject private var session: CaptureSession
     @StateObject private var locator = GymLocator()
     @State private var choosingGym = false
+    @State private var choosingDiscipline = false
     @State private var confirming = false
     /// What a tap on the picture marks. Starts on the start holds: those are what the page gets wrong most.
     @State private var tool = CaptureRole.startHand
@@ -298,6 +239,10 @@ struct CaptureView: View {
     var body: some View { screen }
     #endif
 
+    private var recording: Bool { session.phase == .recording }
+    /// The latest record, shown on the album button.
+    private var latest: Climb? { store.climbs.first }
+
     private var screen: some View {
         ZStack {
             // The capture page has nothing to show; it only has to stay alive and keep answering. It is
@@ -305,33 +250,40 @@ struct CaptureView: View {
             if let webView = session.webView {
                 GymWebView(webView: webView).allowsHitTesting(false).accessibilityHidden(true)
             }
-            BB.ink.ignoresSafeArea()
-            // Every row but the picture is kept low, so that the picture gets what is left: about four
-            // fifths of the screen's width on an ordinary iPhone. Nothing is drawn over the picture but the
-            // holds themselves: guidance sits above it (the finish is at the top of the wall), marking below it.
-            VStack(spacing: 6) {
+            Color.black.ignoresSafeArea()
+            // The whole picture, as large as the screen allows. Every control floats over its edges;
+            // nothing is drawn over the middle, where the climber is.
+            picture.ignoresSafeArea()
+            LinearGradient(stops: [.init(color: .black.opacity(0.55), location: 0), .init(color: .clear, location: 0.2),
+                                   .init(color: .clear, location: 0.6), .init(color: .black.opacity(0.75), location: 1)],
+                           startPoint: .top, endPoint: .bottom)
+                .ignoresSafeArea().allowsHitTesting(false)
+            VStack(spacing: 8) {
                 topBar
-                if let offered { offer(offered) }
-                if framing {
-                    #if DEBUG
-                    // A long press on the guidance line shows or hides the numbers.
-                    guidance.onLongPressGesture(minimumDuration: 1) { session.showsDebug.toggle() }
-                    #else
-                    guidance
-                    #endif
-                }
-                picture
-                if framing { notes }
-                bottomBar
-            }.padding(.horizontal, 10).padding(.vertical, 6)
+                Spacer(minLength: 0)
+                card
+                Spacer(minLength: 0)
+                if session.phase == .framing || recording { bottom }
+            }
+            .padding(.horizontal, 14).padding(.top, 4).padding(.bottom, 6)
+            if choosingDiscipline {
+                // A tap anywhere else closes the list.
+                Color.black.opacity(0.001).ignoresSafeArea()
+                    .onTapGesture { withAnimation(.snappy(duration: 0.2)) { choosingDiscipline = false } }
+                disciplineList
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                    .padding(.top, 60).padding(.trailing, 14)
+            }
         }
-        .foregroundStyle(BB.paper)
+        .foregroundStyle(.white)
         .statusBarHidden(true)
         .onAppear {
             UIApplication.shared.isIdleTimerDisabled = true   // The phone stands there while the user climbs.
             session.start()
             locator.locateIfAllowed()
+            pickNearest()
         }
+        .onChange(of: locator.fix) { pickNearest() }
         .onDisappear {
             // Not when the analysis page or the gym list merely covers this screen.
             guard viewing == nil, !choosingGym else { return }
@@ -357,95 +309,159 @@ struct CaptureView: View {
         }
     }
 
-    // MARK: Top: close, gym, grade
+    // MARK: Top: close, gym, discipline; while recording, the clock with what the take is labelled
+
+    private func close() {
+        // A clip that has not made it into the album is not dropped by closing the screen without a word.
+        if case .saveFailed = session.phase { confirmingDiscard = true } else { Task { await session.close(); dismiss() } }
+    }
+
+    /// How far the selected gym is, when the directory knows where it is and the phone where it is.
+    private var gymDistance: (text: String, nearest: Bool)? {
+        guard let id = session.gymId else { return nil }
+        let ranked = locator.suggestions().ranked
+        guard let item = ranked.first(where: { $0.gym.id == id }), let text = CaptureText.distance(item) else { return nil }
+        return (text, ranked.first?.gym.id == id)
+    }
+
+    /// With no gym chosen yet and the position already allowed, the nearest gym whose own position
+    /// the directory knows is selected. A gym already chosen is never replaced.
+    private func pickNearest() {
+        guard session.phase == .framing, session.gymId == nil, session.gymName.isEmpty,
+              let first = locator.suggestions().ranked.first, first.shown == .exact else { return }
+        choose(first.gym)
+    }
 
     private var topBar: some View {
         HStack(spacing: 8) {
-            Button {
-                // A clip that has not made it into the album is not dropped by closing the screen without a word.
-                if case .saveFailed = session.phase { confirmingDiscard = true } else { Task { await session.close(); dismiss() } }
-            } label: {
-                Image(systemName: "xmark").font(.system(size: 15, weight: .bold)).frame(width: 40, height: 40)
-                    .background(.white.opacity(0.14), in: Circle())
+            Button { close() } label: {
+                Image(systemName: "xmark").font(.system(size: 14, weight: .bold)).frame(width: 38, height: 38)
+                    .background(.black.opacity(0.5), in: Circle()).overlay(Circle().stroke(.white.opacity(0.12)))
             }.buttonStyle(.plain).accessibilityLabel(Text("关闭")).accessibilityIdentifier("captureClose")
-                .disabled(session.phase == .recording || session.phase == .saving)
-                .opacity(session.phase == .recording || session.phase == .saving ? 0.3 : 1)
-            if session.phase == .recording, let began = session.recordingStarted {
+                .disabled(recording || session.phase == .saving)
+                .opacity(recording ? 0.25 : session.phase == .saving ? 0.3 : 1)
+            if recording, let began = session.recordingStarted {
                 Spacer(minLength: 0)
                 TimelineView(.periodic(from: began, by: 0.5)) { context in
                     HStack(spacing: 8) {
-                        Circle().fill(.red).frame(width: 10, height: 10)
-                        Text("正在录").font(.subheadline.bold())
-                        Text(verbatim: clockText(context.date.timeIntervalSince(began))).font(.system(.subheadline, design: .monospaced).bold()).monospacedDigit()
+                        Circle().fill(Self.recordRed).frame(width: 9, height: 9)
+                        Text(verbatim: clockText(context.date.timeIntervalSince(began))).font(.system(.headline, design: .monospaced).bold()).monospacedDigit()
+                            .accessibilityLabel(Text("正在录")).accessibilityValue(Text(verbatim: clockText(context.date.timeIntervalSince(began))))
                             .accessibilityIdentifier("captureElapsed")
-                    }.padding(.horizontal, 14).frame(minHeight: 40).background(.white.opacity(0.14), in: Capsule())
+                        Text(verbatim: takeLabel).font(.caption).foregroundStyle(.white.opacity(0.75)).lineLimit(1)
+                    }.padding(.horizontal, 14).frame(minHeight: 38).background(.black.opacity(0.5), in: Capsule())
                 }
                 Spacer(minLength: 0)
-                Color.clear.frame(width: 40, height: 40)
+                Color.clear.frame(width: 38, height: 38)
             } else {
                 Button { choosingGym = true } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "mappin.and.ellipse")
-                        if session.gymName.isEmpty { Text("选择岩馆") } else { Text(verbatim: session.gymName) }
-                        Image(systemName: "chevron.down").font(.caption2.bold())
-                    }.font(.subheadline.bold()).lineLimit(1).padding(.horizontal, 12).frame(minHeight: 40)
-                        .frame(maxWidth: .infinity, alignment: .leading).background(.white.opacity(0.14), in: Capsule())
+                    HStack(spacing: 7) {
+                        Image(systemName: "mappin.and.ellipse").font(.system(size: 17, weight: .semibold))
+                        VStack(alignment: .leading, spacing: 0) {
+                            if let distance = gymDistance {
+                                Group { if distance.nearest { Text("最近 · \(distance.text)") } else { Text(verbatim: distance.text) } }
+                                    .font(.caption2).foregroundStyle(.white.opacity(0.7))
+                            }
+                            Group { if session.gymName.isEmpty { Text("选择岩馆") } else { Text(verbatim: session.gymName) } }
+                                .font(.subheadline.bold())
+                        }.lineLimit(1)
+                        Image(systemName: "chevron.down").font(.caption2.bold()).opacity(0.7)
+                    }.padding(.horizontal, 14).frame(minHeight: 48).background(.black.opacity(0.5), in: Capsule())
+                        .overlay(Capsule().stroke(.white.opacity(0.12)))
                 }.buttonStyle(.plain).disabled(session.phase != .framing).accessibilityIdentifier("captureGym")
-                Menu {
-                    Picker("线路难度", selection: Binding(get: { session.grade }, set: { session.pickGrade($0) })) {
-                        Text("未标级").tag(ungradedValue)
-                        // The camera records boulder problems: the logbook's bouldering scale, no discipline choice here.
-                        ForEach(GradeScale.boulder, id: \.self) { Text(verbatim: $0).tag($0) }
-                    }
-                } label: {
+                    .layoutPriority(-1)
+                Spacer(minLength: 0)
+                disciplineMenu
+            }
+        }
+    }
+
+    /// Automatic until the user picks one. “Automatic” only means the analysis page will guess after
+    /// the take; nothing on this screen recognises the discipline, and the menu says so.
+    private var disciplineMenu: some View {
+        Button { withAnimation(.snappy(duration: 0.2)) { choosingDiscipline.toggle() } } label: {
+            HStack(spacing: 8) {
+                Group { if session.discipline == nil { Text(verbatim: "AUTO") } else { Text("手动") } }
+                    .font(.system(size: 11, weight: .heavy)).tracking(session.discipline == nil ? 1.2 : 0)
+                    .padding(.horizontal, 10).frame(minHeight: 32)
+                    .foregroundStyle(session.discipline == nil ? BB.ink : .white)
+                    .background(session.discipline == nil ? Self.accent : .white.opacity(0.18), in: Capsule())
+                Group { if let kind = session.discipline { Text(Self.name(kind)) } else { Text("自动判断") } }
+                    .font(.subheadline.bold()).lineLimit(1).fixedSize()
+            }.padding(.leading, 7).padding(.trailing, 14).frame(minHeight: 48)
+                .background(.black.opacity(0.5), in: Capsule()).overlay(Capsule().stroke(.white.opacity(0.12)))
+        }
+        .buttonStyle(.plain)
+        .disabled(session.phase != .framing)
+        .accessibilityLabel(Text("攀爬方式"))
+        .accessibilityValue(session.discipline.map { Text(Self.name($0)) } ?? Text("自动判断"))
+        .accessibilityIdentifier("captureDiscipline")
+    }
+
+    /// Drops down under the discipline pill. Automatic first, with what it means.
+    private var disciplineList: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            disciplineRow(nil) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("自动判断").font(.subheadline.bold())
+                    Text("录完由分析来认，可能认错").font(.caption2).foregroundStyle(.white.opacity(0.6)).fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            Divider().overlay(.white.opacity(0.15)).padding(.vertical, 2)
+            ForEach(Discipline.allCases, id: \.self) { kind in
+                disciplineRow(kind) {
                     HStack(spacing: 6) {
-                        // A grade the user did not pick is marked as such.
-                        if session.gradePrefilled { Image(systemName: "wand.and.stars").font(.caption.bold()).foregroundStyle(BB.lime) }
-                        Text(verbatim: gradeText(session.grade))
-                        Image(systemName: "chevron.down").font(.caption2.bold())
-                    }.font(.subheadline.bold()).lineLimit(1).padding(.horizontal, 12).frame(minHeight: 40)
-                        .background(.white.opacity(0.14), in: Capsule())
-                }.disabled(session.phase != .framing).accessibilityLabel(Text("线路难度")).accessibilityValue(Text(verbatim: gradeText(session.grade)))
-                    .accessibilityIdentifier("captureGrade")
+                        Text(Self.name(kind)).font(.subheadline.bold())
+                        Group { if kind == .boulder { Text("V 等级") } else { Text(verbatim: "YDS") } }
+                            .font(.caption2).foregroundStyle(.white.opacity(0.5))
+                    }
+                }
             }
         }
+        .padding(6).frame(width: 220)
+        .background(Color(white: 0.11).opacity(0.96), in: RoundedRectangle(cornerRadius: 18))
+        .overlay(RoundedRectangle(cornerRadius: 18).stroke(.white.opacity(0.1)))
+        .shadow(color: .black.opacity(0.5), radius: 18, y: 10)
+        .transition(.scale(scale: 0.94, anchor: .topTrailing).combined(with: .opacity))
     }
 
-    @ViewBuilder
-    private func offer(_ offer: GymOffer) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: "location.fill").font(.caption)
-            switch offer {
-            case .ask:
-                Button { locator.ask() } label: {
-                    Text("按距离找附近的岩馆").font(.caption.bold()).frame(maxWidth: .infinity, alignment: .leading).frame(minHeight: 32).contentShape(Rectangle())
-                }.buttonStyle(.plain).accessibilityIdentifier("askLocationHere")
-                dismissOffer("ask")
-            case .here(let gym), .nearest(let gym), .guess(let gym):
-                Group {
-                    if case .guess = offer { Text("可能在：\(gym.gym.name)") }
-                    else { Text("离你最近：\(gym.gym.name) · \(CaptureText.distance(gym) ?? "")") }
-                }.font(.caption.bold()).lineLimit(1).minimumScaleFactor(0.8).frame(maxWidth: .infinity, alignment: .leading)
-                    .accessibilityIdentifier("gymOfferText")
-                Button { choose(gym.gym) } label: {
-                    // With a gym already selected this replaces it, and says so.
-                    Group { if case .here = offer, !session.gymName.isEmpty { Text("换成这家") } else { Text("选这家") } }
-                        .font(.caption.bold()).padding(.horizontal, 12).frame(minHeight: 28)
-                        .foregroundStyle(BB.ink).background(BB.lime, in: Capsule())
-                }.buttonStyle(.plain).accessibilityIdentifier("useNearestGym")
-                dismissOffer(gym.gym.id)
+    private func disciplineRow(_ kind: Discipline?, @ViewBuilder label: () -> some View) -> some View {
+        Button {
+            session.pickDiscipline(kind)
+            withAnimation(.snappy(duration: 0.2)) { choosingDiscipline = false }
+        } label: {
+            HStack {
+                label()
+                Spacer(minLength: 8)
+                if session.discipline == kind { Image(systemName: "checkmark").font(.footnote.bold()).foregroundStyle(Self.accent) }
             }
+            .padding(.horizontal, 12).frame(minHeight: 44).contentShape(Rectangle())
         }
-        .padding(.leading, 12).padding(.trailing, 2).padding(.vertical, 1)
-        .background(.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 12))
-    }
-    private func dismissOffer(_ key: String) -> some View {
-        Button { declined = key } label: {
-            Image(systemName: "xmark").font(.caption.bold()).frame(width: 32, height: 32)
-        }.buttonStyle(.plain).accessibilityLabel(Text("不用了")).accessibilityIdentifier("declineNearestGym")
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(session.discipline == kind ? [.isSelected] : [])
+        .accessibilityIdentifier("discipline-\(kind?.rawValue ?? "auto")")
     }
 
-    // MARK: Middle: the picture and what is drawn on it
+    private static func name(_ kind: Discipline) -> LocalizedStringKey {
+        switch kind {
+        case .boulder: "抱石"
+        case .toprope: "顶绳"
+        case .lead: "先锋"
+        }
+    }
+    private static func nameText(_ kind: Discipline) -> String {
+        switch kind {
+        case .boulder: String(localized: "抱石", bundle: AppLanguage.bundle)
+        case .toprope: String(localized: "顶绳", bundle: AppLanguage.bundle)
+        case .lead: String(localized: "先锋", bundle: AppLanguage.bundle)
+        }
+    }
+    /// What the take is labelled with, on the recording clock.
+    private var takeLabel: String {
+        [session.discipline.map(Self.nameText) ?? "", gradeText(session.grade), session.gymName].filter { !$0.isEmpty }.joined(separator: " · ")
+    }
+
+    // MARK: Middle: the picture, and what replaces the controls after a take
 
     private var picture: some View {
         GeometryReader { proxy in
@@ -458,210 +474,36 @@ struct CaptureView: View {
                 case .unavailable: unavailable(title: "这台设备没有可用的相机", detail: "仍然可以从相册导入拍好的视频。", settings: false)
                 case .starting, .running:
                     CapturePreview(layer: session.source.previewLayer)
-                    if session.phase == .framing || session.phase == .recording, session.color != nil, let holds = session.assessment?.holds {
-                        CaptureOverlay(holds: holds, size: size).opacity(session.phase == .recording ? 0.45 : 1)
-                    }
+                        .accessibilityElement().accessibilityLabel(Text("相机画面")).accessibilityIdentifier("capturePicture")
                     #if DEBUG
                     // Numbers for a first run on a phone. Debug builds only; never part of the release interface.
                     if session.showsDebug {
                         TimelineView(.periodic(from: .now, by: 1)) { _ in
                             Text(verbatim: session.debugText).font(.system(size: 9, weight: .semibold, design: .monospaced))
                                 .foregroundStyle(.white).padding(5).background(.black.opacity(0.6), in: RoundedRectangle(cornerRadius: 6))
-                                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading).padding(6)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading).padding(6)
                         }.allowsHitTesting(false).accessibilityIdentifier("captureDebug")
                     }
                     #endif
-                    if framing {
-                        // One tap marks the hold there as whatever is selected below the picture.
-                        Color.clear.contentShape(Rectangle())
-                            .gesture(SpatialTapGesture().onEnded { value in
-                                tapPicture(CGPoint(x: value.location.x / size.width, y: value.location.y / size.height))
-                            })
-                            .accessibilityElement().accessibilityLabel(Text(verbatim: CaptureText.role(tool))).accessibilityIdentifier("capturePicture")
-                    } else if session.phase == .saving {
-                        VStack(spacing: 14) { ProgressView().tint(BB.ink); Text("正在保存…").font(.headline) }
-                            .padding(24).foregroundStyle(BB.ink).background(BB.paper, in: RoundedRectangle(cornerRadius: 22))
-                    } else if case .saveFailed(let message) = session.phase {
-                        saveFailed(message)
-                    } else if let saved {
-                        savedCard(saved)
-                    }
                 }
             }
             .frame(width: size.width, height: size.height)
-            .clipShape(RoundedRectangle(cornerRadius: 18))
             .notingPictureFrame()
             .position(x: proxy.size.width / 2, y: proxy.size.height / 2)
         }
     }
 
-    /// One line: what to change, or that the position is good. Plus an indicator for the score.
     @ViewBuilder
-    private var guidance: some View {
-        let assessment = session.assessment
-        switch session.page {
-        case .unavailable:
-            pill(icon: "video", text: Text("这个版本没有机位检查和岩点识别，照常可以录。"), tone: .plain).accessibilityIdentifier("captureNoChecks")
-        case .failed:
-            pill(icon: "exclamationmark.triangle", text: Text("机位检查暂时用不了，照常可以录。"), tone: .plain).accessibilityIdentifier("captureNoChecks")
-        case .loading:
-            pill(icon: "viewfinder", text: Text("正在看画面…"), tone: .plain)
-        case .ready:
-            if let assessment {
-                HStack(spacing: 8) {
-                    if assessment.ready {
-                        // A remark that does not block is shown under the picture, see `notes`.
-                        pill(icon: "checkmark.circle.fill", text: Text("机位可以，开始吧"), tone: .ready)
-                            .accessibilityIdentifier("captureReady")
-                    } else if let hint = assessment.hint {
-                        pill(icon: hint.blocking ? "exclamationmark.triangle.fill" : "info.circle", text: Text(verbatim: CaptureText.line(hint)), tone: hint.blocking ? .blocked : .plain)
-                            .accessibilityIdentifier("captureHint").accessibilityValue(Text(verbatim: hint.code))
-                    } else {
-                        pill(icon: "hand.raised", text: Text("放稳手机，马上就好"), tone: .plain).accessibilityIdentifier("captureSettling")
-                    }
-                    if let score = assessment.score { quality(score) }
-                }
-            } else {
-                pill(icon: "viewfinder", text: Text("正在看画面…"), tone: .plain)
+    private var card: some View {
+        if session.camera == .starting || session.camera == .running {
+            if session.phase == .saving {
+                VStack(spacing: 14) { ProgressView().tint(BB.ink); Text("正在保存…").font(.headline) }
+                    .padding(24).foregroundStyle(BB.ink).background(BB.paper, in: RoundedRectangle(cornerRadius: 22))
+            } else if case .saveFailed(let message) = session.phase {
+                saveFailed(message)
+            } else if let saved {
+                savedCard(saved)
             }
-        }
-    }
-
-    private enum Tone { case plain, blocked, ready }
-    private func pill(icon: String, text: Text, tone: Tone) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 6) {
-            Image(systemName: icon).font(.footnote.bold())
-            text.font(.footnote.bold()).lineLimit(2).minimumScaleFactor(0.85).fixedSize(horizontal: false, vertical: true)
-        }
-        .padding(.horizontal, 10).padding(.vertical, 6).frame(maxWidth: .infinity, minHeight: 32, alignment: .leading)
-        .foregroundStyle(BB.ink)
-        .background(tone == .ready ? BB.lime : BB.paper, in: RoundedRectangle(cornerRadius: 12))
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(tone == .blocked ? Color.orange : .clear, lineWidth: 2))
-        .accessibilityElement(children: .combine)
-    }
-
-    /// Five segments, never a number: the score only orders camera positions.
-    private func quality(_ score: Double) -> some View {
-        let level = min(5, max(1, Int((score * 5).rounded(.up))))
-        return HStack(spacing: 2) {
-            ForEach(1...5, id: \.self) { index in
-                Capsule().fill(index <= level ? BB.lime : .white.opacity(0.3)).frame(width: 7, height: 12)
-            }
-        }
-        .padding(.horizontal, 8).frame(minHeight: 32).background(.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 12))
-        .accessibilityElement(children: .ignore).accessibilityLabel(Text("机位"))
-        .accessibilityValue(level >= 4 ? Text("好") : level >= 3 ? Text("一般") : Text("差"))
-        .accessibilityIdentifier("captureQuality")
-    }
-
-    /// The page has colours to choose from, or one is chosen: the row of chips is shown.
-    private var hasChips: Bool { framing && session.page == .ready && (!session.palette.isEmpty || session.color != nil) }
-
-    /// Under the picture, in small type: what the page has to say that does not block, what it
-    /// recognised, and what to tap next. The start comes first because the page's guess at it is the weakest.
-    @ViewBuilder
-    private var notes: some View {
-        if hasChips {
-            let assessment = session.assessment
-            VStack(alignment: .leading, spacing: 3) {
-                // Nothing blocks, but the page still has something to say. What it says about the start
-                // and the finish is already the business of the line below.
-                if let assessment, assessment.ready, let hint = assessment.hint, !["start_unclear", "finish_unclear"].contains(hint.code) {
-                    Label { Text(verbatim: CaptureText.line(hint)) } icon: { Image(systemName: "info.circle") }
-                        .font(.caption2.bold()).foregroundStyle(BB.lime).lineLimit(2).fixedSize(horizontal: false, vertical: true)
-                        .accessibilityElement(children: .combine)
-                        .accessibilityIdentifier("captureHint").accessibilityValue(Text(verbatim: hint.code))
-                }
-                if session.color != nil, let route = session.recognised {
-                    HStack(spacing: 8) {
-                        Text("认出来像是：\([route.title, route.grade ?? ""].filter { !$0.isEmpty }.joined(separator: " · "))")
-                            .font(.caption2.bold()).lineLimit(2).fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("captureRoute")
-                        Button { session.rejectRoute() } label: {
-                            Text("不是这条").font(.caption2.bold()).padding(.horizontal, 10).frame(minHeight: 26).background(.white.opacity(0.14), in: Capsule())
-                        }.buttonStyle(.plain).accessibilityIdentifier("captureRejectRoute")
-                    }
-                }
-                if session.gradePrefilled {
-                    Label("难度是按认出的线路填的，可以改。", systemImage: "wand.and.stars").font(.caption2.bold()).foregroundStyle(BB.lime)
-                        .lineLimit(2).fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("captureGradePrefilled")
-                }
-                prompt(assessment)
-            }.frame(maxWidth: .infinity, alignment: .leading)
-        }
-    }
-
-    /// Where the user is in marking the problem, in words. A value for tests says which.
-    private func prompt(_ assessment: CaptureAssessment?) -> some View {
-        // With a recognised problem the start and finish come from the pack's data, not from a guess at the picture.
-        let stage = session.tapMissed ? "missed" : session.color == nil ? "colour"
-            : assessment?.startConfirmed != true ? (session.recognised != nil ? "route" : "start")
-            : assessment?.finishConfirmed != true ? "finish" : "marked"
-        let text: Text = switch stage {
-        case "missed": Text("这里没有认出岩点。")
-        case "colour": Text("选你要爬的颜色")
-        case "start": Text("虚线是自动猜的，起步点常常猜错。点一下起步的手点。")
-        case "route": Text("起步和结束是按认出的这条线标的。不对的话，点一下岩点改。")
-        case "finish": Text("起步标好了。选“结束”，再点一下结束点。")
-        default: Text("起步和结束都标好了。其余虚线仍是自动猜的。")
-        }
-        return text.font(.caption2.bold()).lineLimit(2).minimumScaleFactor(0.9).fixedSize(horizontal: false, vertical: true)
-            .accessibilityIdentifier("capturePrompt").accessibilityValue(Text(verbatim: stage))
-    }
-
-    /// Swatches only: the page's name for a colour is right too rarely to print.
-    @ViewBuilder
-    private var swatches: some View {
-        ForEach(Array(session.palette.enumerated()), id: \.element.key) { index, swatch in
-            Button { pick(colour: swatch.key) } label: {
-                HStack(spacing: 6) {
-                    Circle().fill(Color(swatch.rgb)).frame(width: 24, height: 24).overlay(Circle().stroke(.white, lineWidth: 1.5))
-                    Text(verbatim: "\(swatch.count)").font(.caption.monospacedDigit())
-                }
-                .padding(.horizontal, 10).frame(minHeight: 40).background(.white.opacity(0.14), in: Capsule())
-            }.buttonStyle(.plain)
-                .accessibilityLabel(Text("颜色 \(index + 1)")).accessibilityValue(Text("\(swatch.count) 个岩点"))
-                .accessibilityIdentifier("captureColor-\(swatch.key)")
-        }
-    }
-
-    /// The chosen colour (tap it to choose again), then what a tap on the picture marks.
-    @ViewBuilder
-    private func tools(_ chosen: String, _ assessment: CaptureAssessment?) -> some View {
-        Button { session.selectColor(nil) } label: {
-            HStack(spacing: 5) {
-                Circle().fill(Color(session.palette.first { $0.key == chosen }?.rgb ?? [128, 128, 128])).frame(width: 24, height: 24)
-                    .overlay(Circle().stroke(.white, lineWidth: 1.5))
-                Image(systemName: "chevron.down").font(.caption2.bold())
-            }.padding(.horizontal, 8).frame(minHeight: 40).background(.white.opacity(0.14), in: Capsule())
-        }.buttonStyle(.plain).accessibilityLabel(Text("换颜色")).accessibilityIdentifier("captureChangeColour")
-        ForEach(CaptureRole.allCases, id: \.self) { role in
-            let selected = tool == role
-            Button { tool = role } label: {
-                HStack(spacing: 5) {
-                    Image(systemName: Self.symbol(role)).font(.caption.bold())
-                    Text(verbatim: CaptureText.role(role)).font(.caption.bold())
-                }
-                .padding(.horizontal, 10).frame(minHeight: 40)
-                .foregroundStyle(selected ? BB.ink : BB.paper)
-                .background(selected ? BB.lime : .white.opacity(0.14), in: Capsule())
-            }.buttonStyle(.plain).accessibilityAddTraits(selected ? [.isSelected] : [])
-                .accessibilityIdentifier("captureTool-\(role.rawValue)")
-        }
-        if assessment?.holds.contains(where: \.user) == true {
-            Button { session.resetCorrections() } label: {
-                Label("恢复自动识别", systemImage: "arrow.uturn.backward").font(.caption.bold())
-                    .padding(.horizontal, 10).frame(minHeight: 40).background(.white.opacity(0.14), in: Capsule())
-            }.buttonStyle(.plain).accessibilityIdentifier("captureResetMarks")
-        }
-    }
-
-    private static func symbol(_ role: CaptureRole) -> String {
-        switch role {
-        case .startHand: "hand.raised.fill"
-        case .startFoot: "shoeprints.fill"
-        case .finish: "flag.checkered"
-        case .hold: "plus.circle"
-        case .none: "minus.circle"
         }
     }
 
@@ -752,41 +594,208 @@ struct CaptureView: View {
         }
     }
 
-    // MARK: Bottom: record / stop
+    // MARK: Bottom: the grade wheel, then album and shutter
 
-    /// One row: on the left what there is to choose (colours, then what a tap marks), on the right the
-    /// record button, which stays where it is in every state.
-    private var bottomBar: some View {
-        HStack(spacing: 8) {
-            if hasChips {
-                ScrollView(.horizontal, showsIndicators: false) {
+    static let accent = Color(red: 1, green: 0.48, blue: 0.24)
+    static let recordRed = Color(red: 1, green: 0.35, blue: 0.21)
+
+    private var bottom: some View {
+        VStack(spacing: 10) {
+            if !recording {
+                VStack(spacing: 4) {
                     HStack(spacing: 6) {
-                        if let chosen = session.color { tools(chosen, session.assessment) } else { swatches }
+                        Text("难度")
+                        Text(verbatim: "·").opacity(0.6)
+                        if (session.discipline ?? .boulder) == .boulder { Text("V 等级") } else { Text(verbatim: "YDS") }
+                        // The grade was filled in from the problem the page recognised, not picked.
+                        if session.gradePrefilled {
+                            Image(systemName: "wand.and.stars").foregroundStyle(BB.lime).accessibilityIdentifier("captureGradePrefilled")
+                        }
+                    }.font(.caption).foregroundStyle(.white.opacity(0.7)).accessibilityHidden(true)
+                    Capsule().fill(Self.accent).frame(width: 2, height: 8).accessibilityHidden(true)
+                    GradeWheel(grades: [ungradedValue] + GradeScale.grades(for: session.discipline), selection: session.grade, accent: Self.accent) {
+                        session.pickGrade($0)
+                    }
+                    .frame(height: 52)
+                    .padding(.horizontal, -14)
+                }
+                .disabled(!framing)
+            }
+            HStack {
+                albumButton.opacity(recording ? 0 : 1).disabled(recording)
+                Spacer()
+                shutter
+                Spacer()
+                Color.clear.frame(width: 54, height: 54)
+            }.padding(.horizontal, 18)
+        }
+    }
+
+    /// The latest record, with its grade: a way back to the album.
+    private var albumButton: some View {
+        Button { Task { await session.close(); dismiss() } } label: {
+            ZStack {
+                if let latest, let image = UIImage(contentsOfFile: store.file(latest.thumbnailName).path) {
+                    Image(uiImage: image).resizable().scaledToFill().frame(width: 54, height: 54).clipped().overlay(Color.black.opacity(0.35))
+                    if latest.grade != ungradedValue {
+                        Text(verbatim: latest.grade).font(.system(size: 15, weight: .heavy)).monospacedDigit().minimumScaleFactor(0.6).padding(3)
+                    }
+                } else {
+                    Image(systemName: "photo").font(.system(size: 20, weight: .semibold))
+                }
+            }
+            .frame(width: 54, height: 54).background(.white.opacity(0.08))
+            .clipShape(RoundedRectangle(cornerRadius: 13))
+            .overlay(RoundedRectangle(cornerRadius: 13).stroke(.white.opacity(0.85), lineWidth: 2))
+        }.buttonStyle(.plain).accessibilityLabel(Text("攀爬册")).accessibilityIdentifier("captureAlbum")
+    }
+
+    /// The camera-position check shows only on the record button's ring: yellow-green when the page
+    /// finds nothing in the way, orange when something would keep the analysis from working (pressing
+    /// record then asks first, with the reason). Read out in full as the button's value.
+    private var ring: Color {
+        if recording { return Self.recordRed }
+        guard framing, session.page == .ready, let assessment = session.assessment else { return .white.opacity(0.9) }
+        if assessment.ready { return BB.lime }
+        return assessment.hint?.blocking == true ? Self.accent : .white.opacity(0.9)
+    }
+    private var positionNote: Text {
+        switch session.page {
+        case .unavailable: return Text("这个版本没有机位检查和岩点识别，照常可以录。")
+        case .failed: return Text("机位检查暂时用不了，照常可以录。")
+        case .loading: return Text("正在看画面…")
+        case .ready:
+            guard let assessment = session.assessment else { return Text("正在看画面…") }
+            if assessment.ready { return Text("机位可以，开始吧") }
+            if let hint = assessment.hint { return Text(verbatim: CaptureText.line(hint)) }
+            return Text("放稳手机，马上就好")
+        }
+    }
+
+    /// A white jug with its bolt hole; while recording it turns red and the hole becomes a stop square.
+    private var shutter: some View {
+        Button { if recording { pressStop() } else { pressRecord() } } label: {
+            ZStack {
+                if recording {
+                    TimelineView(.animation) { context in
+                        let phase = (sin(context.date.timeIntervalSinceReferenceDate * .pi / 0.9) + 1) / 2
+                        Circle().stroke(Self.recordRed, lineWidth: 2).frame(width: 92, height: 92)
+                            .scaleEffect(0.96 + 0.08 * phase).opacity(0.15 + 0.6 * phase)
                     }
                 }
-            } else if session.phase == .recording {
-                Text("手机放稳，去爬吧。爬完回来点停止。").font(.footnote.bold()).lineLimit(2).minimumScaleFactor(0.85)
-                    .fixedSize(horizontal: false, vertical: true).frame(maxWidth: .infinity, alignment: .leading)
-            } else {
-                Spacer(minLength: 0)
+                Circle().stroke(ring, lineWidth: 3)
+                    .frame(width: 80, height: 80)
+                JugShape().fill(recording ? Self.recordRed : Color(red: 0.96, green: 0.95, blue: 0.92))
+                    .frame(width: 60, height: 60).shadow(color: .black.opacity(0.35), radius: 4, y: 2)
+                if recording { RoundedRectangle(cornerRadius: 3).fill(.white).frame(width: 13, height: 13) }
+                else { Circle().fill(BB.ink).frame(width: 12, height: 12) }
             }
-            if session.phase == .recording {
-                Button { pressStop() } label: {
-                    ZStack {
-                        Circle().stroke(BB.paper, lineWidth: 3.5).frame(width: 56, height: 56)
-                        RoundedRectangle(cornerRadius: 6).fill(.red).frame(width: 24, height: 24)
-                    }.contentShape(Circle())
-                }.buttonStyle(.plain).accessibilityLabel(Text("停止并保存")).accessibilityIdentifier("captureStop")
-            } else {
-                Button { pressRecord() } label: {
-                    ZStack {
-                        Circle().stroke(session.assessment?.ready == true ? BB.lime : BB.paper, lineWidth: 3.5).frame(width: 56, height: 56)
-                        Circle().fill(.red).frame(width: 44, height: 44)
-                    }.contentShape(Circle())
-                }.buttonStyle(.plain).disabled(!framing).opacity(framing ? 1 : 0.3)
-                    .accessibilityLabel(Text("开始录")).accessibilityIdentifier("captureRecord")
+            .frame(width: 92, height: 92).contentShape(Circle())
+            .animation(.easeOut(duration: 0.2), value: recording)
+        }
+        .buttonStyle(.plain)
+        .disabled(!(framing || recording)).opacity(framing || recording ? 1 : 0.3)
+        .accessibilityLabel(recording ? Text("停止并保存") : Text("开始录"))
+        .accessibilityValue(recording ? Text(verbatim: "") : positionNote)
+        .accessibilityIdentifier(recording ? "captureStop" : "captureRecord")
+    }
+}
+
+/// A jug hold, drawn in a 64 × 64 box.
+private struct JugShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        let s = min(rect.width, rect.height) / 64
+        func p(_ x: CGFloat, _ y: CGFloat) -> CGPoint { CGPoint(x: rect.minX + x * s, y: rect.minY + y * s) }
+        var path = Path()
+        path.move(to: p(8, 33))
+        path.addCurve(to: p(32, 6), control1: p(7, 18), control2: p(17, 7))
+        path.addCurve(to: p(57, 25), control1: p(45, 5), control2: p(56, 13))
+        path.addCurve(to: p(56, 39), control1: p(57.6, 31), control2: p(55.4, 34))
+        path.addCurve(to: p(35, 58), control1: p(57, 48), control2: p(49, 57))
+        path.addCurve(to: p(8, 33), control1: p(19, 59), control2: p(9, 47))
+        path.closeSubpath()
+        return path
+    }
+}
+
+/// The grades as a turning drum: the one in the middle is chosen; the further from it, the smaller
+/// and fainter. Drag it, or tap a grade to turn to it. Each step clicks and taps the hand.
+private struct GradeWheel: View {
+    var grades: [String]
+    var selection: String
+    var accent: Color
+    var pick: (String) -> Void
+    /// How far the drum is being dragged, in points; zero at rest.
+    @State private var drag: CGFloat = 0
+    /// The grade last clicked past, so each step sounds once.
+    @State private var ticked: Int?
+    @State private var haptic = UISelectionFeedbackGenerator()
+    private let width: CGFloat = 78
+
+    private var index: Int { grades.firstIndex(of: selection) ?? 0 }
+    private func clamp(_ value: Int) -> Int { min(max(value, 0), grades.count - 1) }
+    /// Where the middle of the drum is, in grades.
+    private func position(_ drag: CGFloat) -> CGFloat { CGFloat(index) - drag / width }
+
+    private func tick(_ value: Int) {
+        guard value != ticked else { return }
+        ticked = value
+        AudioServicesPlaySystemSound(1104)
+        haptic.selectionChanged()
+    }
+    private func choose(_ value: Int) {
+        let value = clamp(value)
+        tick(value)
+        withAnimation(.snappy(duration: 0.3)) { drag = 0; pick(grades[value]) }
+    }
+
+    var body: some View {
+        let middle = position(drag)
+        let chosen = clamp(Int(middle.rounded()))
+        ZStack {
+            ForEach(Array(grades.enumerated()), id: \.element) { offset, grade in
+                let distance = CGFloat(offset) - middle
+                if abs(distance) < 4.5 {
+                    let far = min(abs(distance), 3)
+                    Text(verbatim: gradeText(grade))
+                        .font(.system(size: offset == chosen ? 28 : 21, weight: offset == chosen ? .heavy : .bold)).monospacedDigit()
+                        .minimumScaleFactor(0.5).lineLimit(1)
+                        .foregroundStyle(offset == chosen ? accent : .white)
+                        .frame(width: width, height: 52)
+                        .contentShape(Rectangle())
+                        .onTapGesture { choose(offset) }
+                        .rotation3DEffect(.degrees(Double(-distance) * 20), axis: (x: 0, y: 1, z: 0), perspective: 0.5)
+                        .scaleEffect(1 - far * 0.12)
+                        .opacity(1 - far * 0.3)
+                        .offset(x: distance * width * (1 - far * 0.05))
+                }
             }
-        }.frame(height: 60)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .contentShape(Rectangle())
+        .gesture(DragGesture(minimumDistance: 4)
+            .onChanged { value in
+                var moved = value.translation.width
+                // Past either end the drum gives a little and no more.
+                let low = CGFloat(index) * width, high = CGFloat(index - grades.count + 1) * width
+                if moved > low { moved = low + (moved - low) * 0.3 }
+                if moved < high { moved = high + (moved - high) * 0.3 }
+                drag = moved
+                tick(clamp(Int(position(moved).rounded())))
+            }
+            .onEnded { value in
+                let fling = max(-4 * width, min(4 * width, value.predictedEndTranslation.width - value.translation.width))
+                choose(Int(position(drag + fling).rounded()))
+            })
+        .onAppear { ticked = index; haptic.prepare() }
+        .onChange(of: selection) { _, _ in ticked = index }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("线路难度"))
+        .accessibilityValue(Text(verbatim: gradeText(selection)))
+        .accessibilityAdjustableAction { direction in
+            choose(direction == .increment ? index + 1 : index - 1)
+        }
+        .accessibilityIdentifier("captureGrade")
     }
 }
 

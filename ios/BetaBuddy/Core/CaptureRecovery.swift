@@ -9,6 +9,8 @@ struct CaptureDraft: Codable, Equatable {
     var grade: String
     var info: CaptureInfo
     var plan: String?
+    /// `Discipline` raw value the user chose on the capture screen; absent when it was left to the analysis.
+    var discipline: String? = nil
 }
 
 /// Recordings are written inside the store's own directory, not the system's temporary one, so that a
@@ -72,7 +74,7 @@ enum CaptureRecovery {
             do {
                 let climb = try store.save(title: "", grade: draft?.grade ?? ungradedValue, sent: false, note: "", stagedVideo: movie, thumbnail: thumbnail, analysis: playback,
                                            gymId: draft?.gymId, gymName: draft?.gymName, climbedAt: started, pendingAnalysis: AnalysisQuality.balanced.rawValue,
-                                           capture: info, capturePlan: draft?.plan)
+                                           capture: info, capturePlan: draft?.plan, discipline: draft?.discipline.flatMap(Discipline.init(rawValue:)))
                 try? manager.removeItem(at: draftURL(for: movie))
                 store.setAnalysisMessage(CaptureText.stop(.interrupted), for: climb.id)
                 adopted.append(climb.id)

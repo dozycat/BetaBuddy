@@ -59,17 +59,24 @@ final class CaptureUITests: XCTestCase {
         }
         return share
     }
-    /// The guidance line while it reports `code`.
-    @MainActor private func hint(_ app: XCUIApplication, _ code: String, timeout: TimeInterval = 40) -> XCUIElement {
-        let element = app.descendants(matching: .any).matching(NSPredicate(format: "identifier == 'captureHint' AND value == %@", code)).firstMatch
-        XCTAssertTrue(element.waitForExistence(timeout: timeout), "guidance never showed \(code)")
-        return element
+    /// The camera-position check is no longer a line on the screen: the record button's ring shows it,
+    /// and the button's value reads it out. Waits until it says `text`.
+    @MainActor private func position(_ app: XCUIApplication, _ text: String, timeout: TimeInterval = 40) {
+        let record = app.buttons["captureRecord"]
+        let said = XCTWaiter.wait(for: [expectation(for: NSPredicate(format: "value == %@", text), evaluatedWith: record)], timeout: timeout)
+        XCTAssertEqual(said, .completed, "the record button never said \(text)")
     }
-    /// The line under the picture while it is at `stage`.
-    @MainActor private func prompt(_ app: XCUIApplication, _ stage: String, timeout: TimeInterval = 10) -> XCUIElement {
-        let element = app.descendants(matching: .any).matching(NSPredicate(format: "identifier == 'capturePrompt' AND value == %@", stage)).firstMatch
-        XCTAssertTrue(element.waitForExistence(timeout: timeout), "the prompt never reached \(stage)")
-        return element
+    @MainActor private func pick(_ app: XCUIApplication, discipline id: String) {
+        app.buttons["captureDiscipline"].tap()
+        let item = app.buttons["discipline-" + id]
+        XCTAssertTrue(item.waitForExistence(timeout: 10))
+        item.tap()
+    }
+    /// One grade further on the wheel: a tap on the grade right of the middle turns to it.
+    @MainActor private func stepUp(_ wheel: XCUIElement, to value: String) {
+        wheel.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).withOffset(CGVector(dx: 78, dy: 0)).tap()
+        let reached = NSPredicate(format: "value == %@", value)
+        XCTAssertEqual(XCTWaiter.wait(for: [expectation(for: reached, evaluatedWith: wheel)], timeout: 3), .completed, "the wheel did not reach \(value)")
     }
     @MainActor private func removeNewestRecord(_ app: XCUIApplication, more: String, confirm: String) {
         app.buttons[more].tap()
@@ -99,26 +106,28 @@ final class CaptureUITests: XCTestCase {
         keep(app, "00-album-entry")
         record.tap()
 
-        // The stand-in's script: a blocking problem, one with a move, a code this app does not know, then ready.
-        XCTAssertEqual(hint(app, "too_dark").label, "画面太暗，换个亮一点的位置")
-        // Colours are swatches with a count; the page's names for them are not shown.
-        XCTAssertTrue(app.buttons["captureColor-yellow"].waitForExistence(timeout: 5))
-        XCTAssertEqual(app.buttons["captureColor-yellow"].label, "颜色 1"); XCTAssertEqual(app.buttons["captureColor-yellow"].value as? String, "6 个岩点")
-        XCTAssertEqual(prompt(app, "colour").label, "选你要爬的颜色")
+        // The nearest gym whose own position the directory knows is selected by itself, with how far it is.
+        let gym = app.buttons["captureGym"]
+        XCTAssertTrue(gym.waitForExistence(timeout: 10))
+        XCTAssertTrue(XCTWaiter.wait(for: [expectation(for: NSPredicate(format: "label CONTAINS %@", StandInPack.directoryGymName), evaluatedWith: gym)], timeout: 15) == .completed, gym.label)
+        XCTAssertTrue(gym.label.contains("最近"), gym.label)
+        // Nothing else on the screen: no guidance line, no colours, no marks, no recognised problem.
+        XCTAssertFalse(app.buttons["captureColor-yellow"].exists)
+        XCTAssertFalse(app.staticTexts["captureRoute"].exists)
+        XCTAssertFalse(app.buttons["useNearestGym"].exists)
+
+        // The stand-in's script, read from the record button: a blocking problem, one with a move, a code this app does not know, then ready.
+        position(app, "画面太暗，换个亮一点的位置")
         keep(app, "01-blocked")
-        XCTAssertEqual(hint(app, "cut_top").label, "上面出画了，往后退一点")
-        keep(app, "02-blocked-with-move")
-        XCTAssertEqual(hint(app, "lens_flare_2031").label, "换个机位试试")
-        keep(app, "03-unknown-code")
-        let ready = app.descendants(matching: .any)["captureReady"]
-        XCTAssertTrue(ready.waitForExistence(timeout: 40))
+        position(app, "上面出画了，往后退一点")
+        position(app, "换个机位试试")
+        position(app, "机位可以，开始吧")
         keep(app, "04-ready")
-        // No gym yet, so the offer row is there: the picture still gets most of the width.
-        XCTAssertGreaterThanOrEqual(pictureShare(app, "offer row, no colour"), 0.70)
+        XCTAssertGreaterThanOrEqual(pictureShare(app, "framing"), 0.95)
 
         // Gym: only gyms whose own position is known are ranked, nearest first; a station-level position
         // is shown as approximate; the rest of the city follows without distances.
-        app.buttons["captureGym"].tap()
+        gym.tap()
         let east = app.buttons["nearbyGym-syn:east"]
         XCTAssertTrue(east.waitForExistence(timeout: 5))
         let rows = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'nearbyGym-'")).allElementsBoundByIndex.map(\.identifier)
@@ -127,85 +136,37 @@ final class CaptureUITests: XCTestCase {
         XCTAssertTrue(app.buttons["nearbyGym-syn:station"].label.contains("约 1.5"), app.buttons["nearbyGym-syn:station"].label)
         XCTAssertTrue(app.staticTexts["© OpenStreetMap contributors"].exists)
         keep(app, "05-gym-by-distance")
-        app.swipeUp()
-        let district = app.buttons["cityGym-syn:district"]
-        XCTAssertTrue(district.waitForExistence(timeout: 5))
-        XCTAssertNil(district.label.rangeOfCharacter(from: .decimalDigits), district.label)
-        // Newer systems first expand the sheet; another swipe scrolls its list.
-        let allGyms = app.buttons["allGyms"]
-        for _ in 0..<3 where !allGyms.exists || !allGyms.isHittable { app.swipeUp() }
-        XCTAssertTrue(allGyms.waitForExistence(timeout: 5), app.debugDescription)
-        keep(app, "05b-gym-same-city")
-        app.buttons["取消"].tap()
-        // The gym right here is offered, not chosen: the selection only changes when the user says so.
-        XCTAssertTrue(app.buttons["captureGym"].label.contains("选择岩馆"), app.buttons["captureGym"].label)
-        XCTAssertTrue(app.buttons["useNearestGym"].waitForExistence(timeout: 5))
-        keep(app, "05c-nearest-gym-offered")
-        app.buttons["useNearestGym"].tap()
-        XCTAssertTrue(app.buttons["captureGym"].label.contains(StandInPack.directoryGymName))
-        XCTAssertFalse(app.buttons["useNearestGym"].exists)
-
-        // A gym that is one of the pack's venues starts the page's judgement over; this time, record against its advice.
-        _ = hint(app, "too_dark")
+        // Another gym: the page's judgement starts over; this time, record against its advice.
+        app.buttons["nearbyGym-syn:station"].tap()
+        XCTAssertTrue(gym.label.contains("只知道最近车站的岩馆"), gym.label)
+        position(app, "画面太暗，换个亮一点的位置")
         app.buttons["captureRecord"].tap()
         let anyway = app.buttons["recordAnyway"]
         XCTAssertTrue(anyway.waitForExistence(timeout: 5))
         keep(app, "06-ask-before-recording")
         cancelConfirmation(app, label: "再调一下机位")
         XCTAssertFalse(app.descendants(matching: .any)["captureElapsed"].exists)
-        XCTAssertTrue(ready.waitForExistence(timeout: 60))
+        // Back to the nearest one.
+        gym.tap()
+        XCTAssertTrue(east.waitForExistence(timeout: 5))
+        east.tap()
+        position(app, "机位可以，开始吧", timeout: 60)
 
-        // A colour: its holds are outlined, the guessed start and finish carry a question mark, and the
-        // screen asks for the start first. Marking is one tap on the picture, with what it marks chosen below.
-        app.buttons["captureColor-yellow"].tap()
-        XCTAssertTrue(app.buttons["captureTool-start_hand"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["captureTool-start_hand"].isSelected)
-        // The gym is one of the synthetic pack's venues, so the stand-in names a problem; it is shown as a guess that can be turned down.
-        let route = app.staticTexts["captureRoute"]
-        XCTAssertTrue(route.waitForExistence(timeout: 5))
-        XCTAssertEqual(route.label, "认出来像是：合成线路 黄 1 · V3")
-        XCTAssertTrue(app.buttons["captureRejectRoute"].exists)
-        // With a recognised problem the start is not a guess at the picture, and the screen does not call it one.
-        XCTAssertEqual(prompt(app, "route").label, "起步和结束是按认出的这条线标的。不对的话，点一下岩点改。")
-        // No grade picked yet: the problem's grade is filled in, and the screen says that it was.
-        XCTAssertTrue(app.staticTexts["captureGradePrefilled"].waitForExistence(timeout: 5))
-        XCTAssertEqual(app.buttons["captureGrade"].value as? String, "V3")
-        try await Task.sleep(for: .seconds(1))                       // The outlines come with the next assessment.
-        keep(app, "07-colour-guessed-start-finish")
-        XCTAssertGreaterThanOrEqual(pictureShare(app, "gym and colour chosen, problem recognised, grade filled in"), 0.70)
-        // “Not this one” moves to the page's next candidate; its grade is not a V grade and is only shown, not filled in.
-        app.buttons["captureRejectRoute"].tap()
-        let next = app.staticTexts.matching(NSPredicate(format: "identifier == 'captureRoute' AND label CONTAINS '黄 2'")).firstMatch
-        XCTAssertTrue(next.waitForExistence(timeout: 5))
-        XCTAssertEqual(next.label, "认出来像是：合成线路 黄 2 · 紫条 11–12")
-        XCTAssertFalse(app.staticTexts["captureGradePrefilled"].exists)
-        XCTAssertEqual(app.buttons["captureGrade"].value as? String, "未标级")
-        keep(app, "07b-next-candidate")
-        // The user's own grade.
-        app.buttons["captureGrade"].tap()
-        XCTAssertTrue(app.buttons["V4"].waitForExistence(timeout: 5))
-        app.buttons["V4"].tap()
-        // Turned down as well: nothing is recognised any more, and the start is a guess again.
-        app.buttons["captureRejectRoute"].tap()
-        XCTAssertEqual(prompt(app, "start").label, "虚线是自动猜的，起步点常常猜错。点一下起步的手点。")
-        XCTAssertFalse(app.staticTexts["captureRoute"].exists)
-        XCTAssertEqual(app.buttons["captureGrade"].value as? String, "V4")
-
-        let picture = app.descendants(matching: .any)["capturePicture"]
-        picture.coordinate(withNormalizedOffset: CGVector(dx: 0.30, dy: 0.80)).tap()
-        XCTAssertEqual(prompt(app, "finish").label, "起步标好了。选“结束”，再点一下结束点。")
-        keep(app, "08-start-marked")
-        app.buttons["captureTool-finish"].tap()
-        picture.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.6)).tap()
-        XCTAssertEqual(prompt(app, "marked").label, "起步和结束都标好了。其余虚线仍是自动猜的。")
-        XCTAssertTrue(app.buttons["captureResetMarks"].exists)
-        // A tap on bare wall marks nothing and says so.
-        picture.coordinate(withNormalizedOffset: CGVector(dx: 0.93, dy: 0.5)).tap()
-        XCTAssertEqual(prompt(app, "missed", timeout: 3).label, "这里没有认出岩点。")
-        _ = prompt(app, "marked")
-        keep(app, "09-start-and-finish-marked")
-        // The ordinary state: a gym and a colour chosen. The picture is about four fifths of the screen wide.
-        XCTAssertGreaterThanOrEqual(pictureShare(app, "gym and colour chosen"), 0.78)
+        // Discipline: automatic until picked; a rope discipline turns the wheel to YDS.
+        let discipline = app.buttons["captureDiscipline"]
+        let grade = app.descendants(matching: .any)["captureGrade"]
+        XCTAssertEqual(discipline.value as? String, "自动判断")
+        pick(app, discipline: "toprope")
+        XCTAssertEqual(discipline.value as? String, "顶绳")
+        XCTAssertEqual(XCTWaiter.wait(for: [expectation(for: NSPredicate(format: "value == %@", "未标级"), evaluatedWith: grade)], timeout: 5), .completed)
+        stepUp(grade, to: "5.5")
+        keep(app, "07-top-rope-yds")
+        // Back to automatic: the YDS grade does not fit the bouldering scale and goes back to ungraded.
+        pick(app, discipline: "auto")
+        XCTAssertEqual(XCTWaiter.wait(for: [expectation(for: NSPredicate(format: "value == %@", "未标级"), evaluatedWith: grade)], timeout: 5), .completed)
+        // The user's own grade, one step at a time on the wheel.
+        for value in ["V0", "V1", "V2", "V3", "V4"] { stepUp(grade, to: value) }
+        keep(app, "09-grade-picked")
 
         app.buttons["captureRecord"].tap()
         XCTAssertTrue(app.descendants(matching: .any)["captureElapsed"].waitForExistence(timeout: 5))
@@ -242,10 +203,7 @@ final class CaptureUITests: XCTestCase {
         let app = try await launch(language: "en", locale: "en_US", capture: false)
         XCTAssertTrue(app.buttons["recordClimb"].waitForExistence(timeout: 15))
         app.buttons["recordClimb"].tap()
-        let note = app.descendants(matching: .any)["captureNoChecks"]
-        XCTAssertTrue(note.waitForExistence(timeout: 15))
-        XCTAssertEqual(note.label, "This build has no camera-position check or hold recognition. Recording works as usual.")
-        XCTAssertFalse(app.buttons["captureColor-yellow"].exists)
+        position(app, "This build has no camera-position check or hold recognition. Recording works as usual.", timeout: 15)
         keep(app, "20-no-capture-page-en")
         app.buttons["captureRecord"].tap()                          // Nothing to ask: there is no judgement to go against.
         XCTAssertTrue(app.descendants(matching: .any)["captureElapsed"].waitForExistence(timeout: 5))
@@ -255,7 +213,7 @@ final class CaptureUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["captureSaved"].waitForExistence(timeout: 20))
         keep(app, "22-saved-en")
         app.buttons["captureAgain"].tap()
-        XCTAssertTrue(note.waitForExistence(timeout: 10))
+        position(app, "This build has no camera-position check or hold recognition. Recording works as usual.", timeout: 10)
         app.buttons["captureClose"].tap()
         XCTAssertTrue(app.buttons["recordClimb"].waitForExistence(timeout: 10))
         app.staticTexts["Today’s climb"].firstMatch.tap()
@@ -269,23 +227,15 @@ final class CaptureUITests: XCTestCase {
         let app = try await launch(language: "en", locale: "en_US", step: 3, extra: ["-debugCaptureOverlay", "YES"])
         XCTAssertTrue(app.buttons["recordClimb"].waitForExistence(timeout: 15))
         app.buttons["recordClimb"].tap()
-        XCTAssertTrue(app.descendants(matching: .any)["captureReady"].waitForExistence(timeout: 40))
+        position(app, "Position works. Go ahead")
         let numbers = app.staticTexts.matching(NSPredicate(format: "label CONTAINS 'fovH' AND label CONTAINS 'replies' AND label CONTAINS 'hand-over' AND label CONTAINS 'issues'")).firstMatch
         XCTAssertTrue(numbers.waitForExistence(timeout: 5))
         keep(app, "31-debug-overlay")
-        XCTAssertEqual(app.buttons["captureColor-red"].label, "Colour 3"); XCTAssertEqual(app.buttons["captureColor-red"].value as? String, "3 holds")
-        app.buttons["captureColor-red"].tap()
-        // Nothing blocks. The start is not known for this colour, and the screen asks for it; recording is allowed all the same.
-        XCTAssertEqual(prompt(app, "start").label, "Dashed outlines are automatic guesses, and the start is often guessed wrong. Tap the start hand holds.")
-        XCTAssertTrue(app.descendants(matching: .any)["captureReady"].exists)
         XCTAssertTrue(app.buttons["captureRecord"].isEnabled)
-        XCTAssertFalse(app.staticTexts["captureRoute"].exists)          // No gym chosen: nothing to recognise a problem in.
-        keep(app, "30-ready-start-not-marked-en")
+        XCTAssertEqual(app.buttons["captureDiscipline"].value as? String, "Auto")
+        keep(app, "30-ready-en")
         // A debug build leaves a picture of this screen on disk; here the preview itself comes out in it.
         XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS 'snapshot hierarchy'")).firstMatch.waitForExistence(timeout: 8))
-        // Back to the swatches to choose again.
-        app.buttons["captureChangeColour"].tap()
-        XCTAssertTrue(app.buttons["captureColor-blue"].waitForExistence(timeout: 5))
         app.buttons["captureClose"].tap()
     }
 
@@ -318,8 +268,7 @@ final class CaptureUITests: XCTestCase {
         let app = try await launch(language: "en", locale: "en_US", step: 3, extra: ["-debugCaptureOverlay", "YES", "-debugCaptureHidePreview", "YES"])
         XCTAssertTrue(app.buttons["recordClimb"].waitForExistence(timeout: 15))
         app.buttons["recordClimb"].tap()
-        XCTAssertTrue(app.descendants(matching: .any)["captureReady"].waitForExistence(timeout: 40))
-        app.buttons["captureColor-yellow"].tap()
+        position(app, "Position works. Go ahead")
         XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS 'snapshot composite'")).firstMatch.waitForExistence(timeout: 10))
         keep(app, "32-preview-hidden")
         // Long enough for one more picture with the outlines in it.
@@ -353,15 +302,6 @@ final class CaptureUITests: XCTestCase {
         XCTAssertTrue(record.wait(for: \.isEnabled, toEqual: true, timeout: 15))
         try await Task.sleep(for: .seconds(6))                       // Let a capture page, if the pack has one, say something first.
         keep(app, "50-installed-pack-framing")
-        // With a capture page: choose the first colour it offers. No hold is marked here: a blind tap marks
-        // whatever hold lies there as the start, the plan carries that, and the analysis then rightly finds no climb from it.
-        let swatch = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'captureColor-'")).firstMatch
-        if swatch.waitForExistence(timeout: 5) {
-            swatch.tap()
-            XCTAssertTrue(app.buttons["captureTool-start_hand"].waitForExistence(timeout: 5))
-            try await Task.sleep(for: .seconds(2))
-            keep(app, "50b-installed-pack-colour")
-        }
         record.tap()
         if app.buttons["recordAnyway"].waitForExistence(timeout: 2) { keep(app, "51-installed-pack-asked"); app.buttons["recordAnyway"].tap() }
         XCTAssertTrue(app.descendants(matching: .any)["captureElapsed"].waitForExistence(timeout: 5))
@@ -392,86 +332,33 @@ final class CaptureUITests: XCTestCase {
         removeNewestRecord(app, more: "更多操作", confirm: "删除这一趟")
     }
 
-    /// The real directory with a real (simulated) position, and the installed pack recognising a problem
-    /// in one of its own gyms. Needs a clip shot in such a gym and that gym's id in the directory, and the
-    /// simulator told where it is beforehand:
-    ///
-    ///     xcrun simctl privacy <device> grant location com.betabuddy.ios
-    ///     xcrun simctl location <device> set <lat>,<lon>
-    ///     TEST_RUNNER_BB_CAPTURE_CLIP=<clip> TEST_RUNNER_BB_CAPTURE_GYM_ID=<directory id> xcodebuild … test \
-    ///       -only-testing:BetaBuddyUITests/CaptureUITests/testInstalledPackRecognisesAProblemInOneOfItsGyms
-    @MainActor
-    func testInstalledPackRecognisesAProblemInOneOfItsGyms() async throws {
-        let environment = ProcessInfo.processInfo.environment
-        guard let clip = environment["BB_CAPTURE_CLIP"], FileManager.default.fileExists(atPath: clip),
-              let gym = environment["BB_CAPTURE_GYM_ID"], !gym.isEmpty else {
-            throw XCTSkip("Optional private clip from one of the pack's gyms, and that gym's directory id, are not supplied")
-        }
-        let app = XCUIApplication()
-        app.launchArguments = ["-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN", "-resetLanguage", "YES", "-initialTab", "1", "-debugCaptureVideo", clip,
-                               "-debugCaptureAttitude", "6,1,0.01", "-debugCaptureFieldOfView", "50"]
-        app.launch()
-        XCTAssertTrue(app.buttons["recordClimb"].waitForExistence(timeout: 15))
-        app.buttons["recordClimb"].tap()
-        XCTAssertTrue(app.buttons["captureGym"].waitForExistence(timeout: 10))
-        try await Task.sleep(for: .seconds(3))                       // One fix from the system.
-        keep(app, "60-real-directory-framing")
-        app.buttons["captureGym"].tap()
-        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'nearbyGym-'")).firstMatch.waitForExistence(timeout: 15),
-                      "No gym was ranked by distance: is location granted and set for this simulator?")
-        keep(app, "61-real-directory-nearby")
-        app.swipeUp()
-        keep(app, "62-real-directory-same-city")
-        app.swipeDown()
-        let row = app.buttons.matching(NSPredicate(format: "identifier == %@ OR identifier == %@", "nearbyGym-" + gym, "cityGym-" + gym)).firstMatch
-        if !row.waitForExistence(timeout: 3) { app.swipeUp() }
-        XCTAssertTrue(row.waitForExistence(timeout: 5), "The gym is not among those suggested here")
-        row.tap()
-        let swatch = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'captureColor-'")).firstMatch
-        XCTAssertTrue(swatch.waitForExistence(timeout: 20))
-        (environment["BB_CAPTURE_COLOUR"].map { app.buttons["captureColor-" + $0] } ?? swatch).tap()
-        let route = app.staticTexts["captureRoute"]
-        let found = route.waitForExistence(timeout: 30)
-        try await Task.sleep(for: .seconds(1))
-        keep(app, "63-real-route-recognised")
-        XCTAssertTrue(found, "The page recognised no problem")
-        let label = XCTAttachment(string: route.label); label.name = "Recognised problem as shown"; label.lifetime = .keepAlways; add(label)
-        app.buttons["captureClose"].tap()
-    }
-
-    /// With no gym chosen yet, the distance recommendation is on the screen itself; and when there is
-    /// no distance to go by, the list says which of three reasons it is.
+    /// A gym is only selected by itself when the directory knows where that gym is; otherwise the
+    /// pill stays empty. When there is no distance to go by, the list says which of three reasons it is.
     @MainActor
     func testGymOffersOnFirstUseAndWhyThereIsNoDistance() async throws {
-        // Nearest gym known only by its station: offered as a guess, not chosen.
+        // Nearest gym known only by its station: not chosen, and the list shows it as approximate.
         var app = try await launch(step: 2, location: "30.0115,120.0005")
         XCTAssertTrue(app.buttons["recordClimb"].waitForExistence(timeout: 15))
         app.buttons["recordClimb"].tap()
-        let text = app.staticTexts["gymOfferText"]
-        XCTAssertTrue(text.waitForExistence(timeout: 15))
-        XCTAssertEqual(text.label, "可能在：只知道最近车站的岩馆")
-        XCTAssertTrue(app.buttons["captureGym"].label.contains("选择岩馆"))
-        XCTAssertEqual(app.buttons["useNearestGym"].label, "选这家")
-        keep(app, "70-gym-guess-offered")
-        app.buttons["declineNearestGym"].tap()
-        XCTAssertFalse(text.waitForExistence(timeout: 1))
-        XCTAssertTrue(app.buttons["captureGym"].label.contains("选择岩馆"))
+        XCTAssertTrue(app.buttons["captureGym"].waitForExistence(timeout: 15))
+        try await Task.sleep(for: .seconds(3))                       // One fix from the system.
+        XCTAssertTrue(app.buttons["captureGym"].label.contains("选择岩馆"), app.buttons["captureGym"].label)
+        keep(app, "70-gym-guess-not-chosen")
         app.terminate()
 
-        // Never asked: one tap away, on the screen and in the list.
+        // Never asked: one tap away, in the list.
         app = try await launch(step: 2, location: "ask")
         app.buttons["recordClimb"].tap()
-        XCTAssertTrue(app.buttons["askLocationHere"].waitForExistence(timeout: 15))
-        keep(app, "71-location-not-asked")
+        XCTAssertTrue(app.buttons["captureGym"].waitForExistence(timeout: 15))
         app.buttons["captureGym"].tap()
         XCTAssertTrue(app.buttons["askLocation"].waitForExistence(timeout: 5))
+        keep(app, "71-location-not-asked")
         app.terminate()
 
         // Refused: nothing on the screen; the list says so and how to change it.
         app = try await launch(step: 2, location: "refused")
         app.buttons["recordClimb"].tap()
         XCTAssertTrue(app.buttons["captureGym"].waitForExistence(timeout: 15))
-        XCTAssertFalse(app.buttons["askLocationHere"].exists); XCTAssertFalse(app.staticTexts["gymOfferText"].exists)
         app.buttons["captureGym"].tap()
         XCTAssertTrue(app.staticTexts["locationRefused"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["打开系统设置"].exists)
@@ -498,7 +385,7 @@ final class CaptureUITests: XCTestCase {
         XCTAssertTrue(app.buttons["recordClimb"].waitForExistence(timeout: 15))
         let before = app.staticTexts.matching(identifier: "今天的攀爬").count        // Whatever earlier runs left in the album.
         app.buttons["recordClimb"].tap()
-        XCTAssertTrue(app.descendants(matching: .any)["captureReady"].waitForExistence(timeout: 40))
+        position(app, "机位可以，开始吧")
         app.buttons["captureRecord"].tap()
         XCTAssertTrue(app.descendants(matching: .any)["captureElapsed"].waitForExistence(timeout: 5))
         try await Task.sleep(for: .seconds(2))
