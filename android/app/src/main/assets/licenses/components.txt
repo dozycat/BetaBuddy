@@ -211,3 +211,10 @@ The MediaPipe Tasks native library is built from many open-source projects. Thei
 
 ONNX Runtime Android 1.23.2 — Microsoft and contributors. MIT license and third-party notices: ONNXRuntime.txt, ONNXRuntime-NOTICE.txt.
 TinyCLIP optional image encoder — Microsoft, MIT (TinyCLIP.txt). Model bundled locally; never downloaded at runtime.
+
+ViTTrack 2023sep — OpenCV Zoo, contributed by Pengyu Liu (GSoC 2023).
+Model source: https://github.com/opencv/opencv_zoo/tree/25f423d0e04c31a17254620e58febd7386da523b/models/object_tracking_vittrack
+Licensed under Apache License 2.0 (Apache-2.0.txt); model weights are unchanged.
+Generic preprocessing and output geometry adapted into Kotlin from OpenCV TrackerVit 4.12.0, authored by Pengyu Liu:
+https://github.com/opencv/opencv/blob/4.12.0/modules/video/src/tracking/tracker_vit.cpp
+These adapted files are SubjectBoxTracker.kt and RegionTrackerGeometry.kt. No OpenCV runtime is bundled.

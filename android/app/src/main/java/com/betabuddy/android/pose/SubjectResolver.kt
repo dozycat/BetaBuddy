@@ -6,6 +6,8 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import com.betabuddy.android.data.SubjectCandidate
+import com.betabuddy.android.data.PoseFrame
 import com.betabuddy.android.data.PoseAnalysis
 import com.betabuddy.android.data.SubjectAnchor
 import com.betabuddy.android.data.SubjectResolution
@@ -13,6 +15,7 @@ import com.betabuddy.android.data.SubjectSample
 import com.betabuddy.android.data.selecting
 import com.betabuddy.android.gym.GymManifest
 import java.io.ByteArrayInputStream
+import java.io.File
 import kotlin.coroutines.resume
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
@@ -36,58 +39,108 @@ class SubjectResolver(context: Context) {
 
     @Serializable private data class Input(val schema: Int = 1, val anchors: List<SubjectAnchor>, val samples: List<SubjectSample> = emptyList())
 
+    /** Recreate drawn regions from the original video before resolving saved choices. Full-frame
+     * pose detection alone can miss a small selected person, even when it finds other people. */
+    internal suspend fun analyze(video: File, quality: AnalysisQuality, cameraClip: Boolean = false,
+        anchors: List<SubjectAnchor>, progress: (Double) -> Unit): PoseAnalysis {
+        val regions = anchors.filter { it.region }
+        val passes = 1.0 + regions.size
+        var detected = try {
+            VideoAnalyzer(context).analyze(video,quality,cameraClip=cameraClip,collectSubjects=true) { progress(it/passes) }
+        } catch (failure: AnalysisException) {
+            if (failure.error != AnalysisError.NO_POSE || regions.isEmpty()) throw failure
+            val info = VideoAnalyzer.probe(video)
+            val size = FrameGeometry.displaySize(info.width,info.height,info.rotation)
+            PoseAnalysis(emptyList(),0,requireNotNull(info.durationSeconds),size.first.toDouble()/size.second,people=emptyList())
+        }
+        for ((index, anchor) in regions.withIndex()) {
+            detected = SubjectRegionAnalyzer(context).refine(video,detected,anchor.bounds,anchor.time) {
+                progress((index+1+it)/passes)
+            }.analysis
+        }
+        val result = resolve(detected,anchors)
+        progress(1.0)
+        return result
+    }
+
     suspend fun resolve(analysis: PoseAnalysis, anchors: List<SubjectAnchor>): PoseAnalysis = withTimeout(120_000) {
         val samples = requireNotNull(analysis.people)
-        val (source, input, chunks) = withContext(Dispatchers.Default) {
+        val (input, chunks) = withContext(Dispatchers.Default) {
             check(available()) { "Subject policy is missing" }
-            Triple(context.assets.open("gympack/subject.js").bufferedReader().use { it.readText() }, json.encodeToString(Input(anchors = anchors)),
+            Pair(json.encodeToString(Input(anchors = anchors)),
                 samples.chunked(32).map { chunk -> json.encodeToString(chunk.map { sample ->
                     sample.copy(candidates = sample.candidates.map { it.copy(pose = it.pose.copy(world = null)) })
                 }) })
         }
-        val encoded = execute(source, input, chunks)
+        val encoded = withPolicy { policy ->
+            policy.evaluate("window.__subject = JSON.parse(${JSONObject.quote(input)}); true")
+            for (chunk in chunks) {
+                coroutineContext.ensureActive()
+                check(policy.evaluate("window.__subject.samples.push(...JSON.parse(${JSONObject.quote(chunk)})); true") == "true")
+            }
+            json.decodeFromString<String>(policy.evaluate("JSON.stringify(BetaBuddySubject.resolve(window.__subject))"))
+        }
         withContext(Dispatchers.Default) {
             analysis.selecting(json.decodeFromString<SubjectResolution>(encoded))
         }
     }
 
-    @SuppressLint("SetJavaScriptEnabled")
-    private suspend fun execute(source: String, input: String, chunks: List<String>): String = withContext(Dispatchers.Main) {
-        val web = WebView(context)
-        try {
-            web.settings.apply {
-                javaScriptEnabled = true
-                blockNetworkLoads = true
-                allowFileAccess = false
-                allowContentAccess = false
-                domStorageEnabled = false
-                javaScriptCanOpenWindowsAutomatically = false
-                setGeolocationEnabled(false)
-            }
-            suspendCancellableCoroutine<Unit> { continuation ->
-                web.webViewClient = object : WebViewClient() {
-                    override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?) = true
-                    override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?) =
-                        WebResourceResponse("text/plain", "utf-8", ByteArrayInputStream(byteArrayOf()))
-                    override fun onPageFinished(view: WebView?, url: String?) {
-                        if (continuation.isActive) continuation.resume(Unit)
-                    }
-                }
-                web.loadDataWithBaseURL(null, "<!doctype html><title>Local selection</title>", "text/html", "utf-8", null)
-            }
-            suspend fun evaluate(script: String): String = suspendCancellableCoroutine { continuation ->
+    @Serializable private data class RegionInput(val previous: SubjectCandidate, val candidates: List<SubjectCandidate>, val dt: Double)
+    @Serializable private data class TrackingInput(val previous: SubjectCandidate, val candidate: SubjectCandidate, val seed: SubjectCandidate, val dt: Double)
+    @Serializable private data class Match(val id: String? = null, val stop: Boolean = false)
+
+    /** One isolated policy runtime per region pass, rather than a new WebView per frame. */
+    internal inner class Policy(private val web: WebView) {
+        suspend fun evaluate(script: String): String = withTimeout(15_000) { withContext(Dispatchers.Main) {
+            suspendCancellableCoroutine { continuation ->
                 web.evaluateJavascript(script) { value -> if (continuation.isActive) continuation.resume(value) }
             }
-            check(evaluate("$source; typeof BetaBuddySubject.resolve === 'function'") == "true") { "Invalid subject policy" }
-            evaluate("window.__subject = JSON.parse(${JSONObject.quote(input)}); true")
-            for (chunk in chunks) {
-                coroutineContext.ensureActive()
-                check(evaluate("window.__subject.samples.push(...JSON.parse(${JSONObject.quote(chunk)})); true") == "true")
-            }
-            val encoded = evaluate("JSON.stringify(BetaBuddySubject.resolve(window.__subject))")
-            json.decodeFromString<String>(encoded)
-        } finally {
-            web.stopLoading(); web.destroy()
+        } }
+        suspend fun matchRegion(previous: SubjectCandidate,candidates: List<SubjectCandidate>,delta: Double): String? {
+            val input = withContext(Dispatchers.Default) { json.encodeToString(RegionInput(previous,candidates,delta)) }
+            val result = evaluate("JSON.stringify(BetaBuddySubject.matchRegion(JSON.parse(${JSONObject.quote(input)})))")
+            return json.decodeFromString<Match>(json.decodeFromString<String>(result)).id
+        }
+        suspend fun accept(previous: SubjectCandidate,candidate: SubjectCandidate,seed: SubjectCandidate,delta: Double): Boolean {
+            fun compact(value: SubjectCandidate) = value.copy(pose = PoseFrame(value.pose.time,emptyList()))
+            val input = withContext(Dispatchers.Default) { json.encodeToString(TrackingInput(compact(previous),compact(candidate),compact(seed),delta)) }
+            return evaluate("BetaBuddySubject.acceptTracking(JSON.parse(${JSONObject.quote(input)}))") == "true"
+        }
+    }
+
+    @SuppressLint("SetJavaScriptEnabled")
+    internal suspend fun <T> withPolicy(action: suspend (Policy) -> T): T {
+        val source = withContext(Dispatchers.IO) {
+            check(available()) { "Subject policy is missing" }
+            context.assets.open("gympack/subject.js").bufferedReader().use { it.readText() }
+        }
+        return withContext(Dispatchers.Main) {
+            val web = WebView(context)
+            try {
+                web.settings.apply {
+                    javaScriptEnabled = true
+                    blockNetworkLoads = true
+                    allowFileAccess = false
+                    allowContentAccess = false
+                    domStorageEnabled = false
+                    javaScriptCanOpenWindowsAutomatically = false
+                    setGeolocationEnabled(false)
+                }
+                withTimeout(15_000) { suspendCancellableCoroutine<Unit> { continuation ->
+                    web.webViewClient = object : WebViewClient() {
+                        override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?) = true
+                        override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?) =
+                            WebResourceResponse("text/plain", "utf-8", ByteArrayInputStream(byteArrayOf()))
+                        override fun onPageFinished(view: WebView?, url: String?) {
+                            if (continuation.isActive) continuation.resume(Unit)
+                        }
+                    }
+                    web.loadDataWithBaseURL(null, "<!doctype html><title>Local selection</title>", "text/html", "utf-8", null)
+                } }
+                val policy = Policy(web)
+                check(policy.evaluate("$source; typeof BetaBuddySubject.resolve === 'function'") == "true") { "Invalid subject policy" }
+                action(policy)
+            } finally { web.stopLoading(); web.destroy() }
         }
     }
 }

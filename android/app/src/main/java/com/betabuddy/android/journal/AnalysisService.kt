@@ -96,7 +96,7 @@ class AnalysisService : Service() {
                             val quality = AnalysisQuality.entries.firstOrNull { it.name.lowercase(Locale.ROOT) == climb.pendingAnalysis } ?: AnalysisQuality.BALANCED
                             val resolver = com.betabuddy.android.pose.SubjectResolver(this@AnalysisService)
                             val collectSubjects = resolver.available()
-                            val detected = VideoAnalyzer(this@AnalysisService).analyze(store.file(climb.videoName), quality, cameraClip = climb.capture != null, collectSubjects = collectSubjects) { progress ->
+                            val onProgress: (Double) -> Unit = { progress ->
                                 scope.launch {
                                     if (activeId == climb.id && mutableState.value.busy) {
                                         mutableState.value = ReanalysisUiState(climbId = climb.id, busy = true, progress = progress)
@@ -104,7 +104,9 @@ class AnalysisService : Service() {
                                     }
                                 }
                             }
-                            val result = if (collectSubjects) resolver.resolve(detected,climb.subjectAnchors.orEmpty()) else detected
+                            val video = store.file(climb.videoName)
+                            val result = if (collectSubjects) resolver.analyze(video,quality,cameraClip=climb.capture != null,anchors=climb.subjectAnchors.orEmpty(),progress=onProgress)
+                                else VideoAnalyzer(this@AnalysisService).analyze(video,quality,cameraClip=climb.capture != null,progress=onProgress)
                             ensureActive()
                             withContext(Dispatchers.IO) { store.replaceAnalysis(climb, result) }
                             mutableState.value = ReanalysisUiState(climbId = climb.id, message = UiMessage(R.string.journal_reanalyze_done))

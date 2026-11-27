@@ -4,6 +4,8 @@ Android 版用到的第三方代码和文件。版本固定在 `gradle/libs.vers
 
 ## 随应用打包的文件
 
+- **ViTTrack（2023-09）** — OpenCV Zoo 的通用图像区域跟踪模型，由 Pengyu Liu 在 GSoC 2023 项目中贡献。`app/src/main/assets/object_tracking_vittrack_2023sep.onnx`，714,726 字节，SHA-256 `2990f0b7cd44d92afa48cd97db6de7be113fc1d9594fddb74e2725c10478e91d`，权重未改。固定来源：[OpenCV Zoo 25f423d](https://github.com/opencv/opencv_zoo/tree/25f423d0e04c31a17254620e58febd7386da523b/models/object_tracking_vittrack)，该目录为 Apache 2.0。预处理及输出几何由 [OpenCV 4.12.0 TrackerVit](https://github.com/opencv/opencv/blob/4.12.0/modules/video/src/tracking/tracker_vit.cpp) 改写为 Kotlin；运行时使用已有 ONNX Runtime CPU，不引入 OpenCV SDK。模型在加载前和单元测试中校验哈希；固定初始模板，仅跟踪用户圈选区域，不识别人脸。Apache 许可全文及来源说明随应用提供。
+
 - **Pose Landmarker Full float16，版本 1** — Google MediaPipe 模型包，`app/src/main/assets/pose_landmarker_full.task`，与 `ios/BetaBuddy/Resources/` 里的是同一个文件：https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task 。SHA-256 `5134a3aad27a58b93da0088d431f366da362b44e3ccfbe3462b3827a839011b1`（`PoseModelTest` 校验）。权重未改动。
 
 - **EfficientDet-Lite2 int8，版本 1** — Google MediaPipe 模型库里的目标检测模型（COCO 类别，这里只用「person」一类），`app/src/main/assets/efficientdet_lite2.tflite`：https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite2/int8/1/efficientdet_lite2.tflite （带版本号的地址，不是 `latest`）。7,515,971 字节，SHA-256 `b3f50554cb0ea559e90328845f7d9ba4d13c8bff372914d24e06bc8bb72fa896`（`PassersTest` 校验，运行时加载前再校验一次）。Apache 2.0，权重未改动。自动剪辑「消除路人」时在设备上用 CPU 找画面里的人，由应用里已有的 MediaPipe Tasks Vision 的 `ObjectDetector` 运行，没有新增 SDK。选型：在模拟器上拿同一张示例图缩到不同大小比过 Lite0（int8、float32）和 Lite2（int8、float16、float32）：Lite2 对小的人更稳，int8 与 float 的结果几乎一样而耗时不到一半、文件是三分之一。这只是一张图上的比较，不是准确率评测。

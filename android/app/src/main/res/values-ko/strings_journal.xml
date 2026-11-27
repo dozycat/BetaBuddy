@@ -105,4 +105,13 @@
     <string name="subject_unresolved">일부 선택을 연결하지 못했습니다. 사람이 잘 보이는 장면에서 다시 눌러 주세요.</string>
     <string name="subject_reanalyze">사람을 변경하면 다시 분석해야 합니다.</string>
     <string name="subject_retry">다시 시도</string>
+    <string name="subject_draw">표시되지 않았나요? 직접 둘러싸기</string>
+    <string name="subject_draw_cancel">둘러싸기 취소</string>
+    <string name="subject_draw_instruction">드래그하여 전신을 둘러싸세요. 미세 조정으로 위치와 크기를 바꿀 수도 있습니다.</string>
+    <string name="subject_draw_adjust">윤곽 미세 조정</string>
+    <string name="subject_draw_horizontal">좌우 위치</string>
+    <string name="subject_draw_vertical">상하 위치</string>
+    <string name="subject_draw_width">윤곽 너비</string>
+    <string name="subject_draw_height">윤곽 높이</string>
+    <string name="subject_draw_track">둘러싼 사람 추적</string>
 </resources>

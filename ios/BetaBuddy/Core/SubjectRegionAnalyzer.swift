@@ -21,13 +21,14 @@ actor SubjectRegionAnalyzer {
         defer { generator.cancelAllCGImageGeneration() }
         var samples = analysis.people ?? []
         if samples.isEmpty {
-            samples = (0..<max(1, Int(analysis.duration * 10))).map { SubjectSample(time: Double($0)/10, candidates: []) }
+            samples = (0..<max(1, Int(ceil(analysis.duration * 10)))).map { SubjectSample(time: Double($0)/10, candidates: []) }
         }
         let seedIndex = samples.indices.min { abs(samples[$0].time-time) < abs(samples[$1].time-time) }!
         let seedTime = samples[seedIndex].time
         let resolver = SubjectResolver(), token = UUID().uuidString
         func image(at index: Int) async throws -> CGImage {
             try Task.checkCancellation()
+            if ProcessInfo.processInfo.thermalState == .critical { throw AnalysisError.overheated }
             return try await generator.image(at: CMTime(seconds: samples[index].time, preferredTimescale: 600)).image
         }
         func detect(_ index: Int, image: CGImage, around region: SubjectBounds) throws -> [SubjectCandidate] {
@@ -98,7 +99,7 @@ actor SubjectRegionAnalyzer {
             }
         }
         try Task.checkCancellation()
-        var refined = analysis; refined.people = samples; refined.peopleReference = nil
+        var refined = analysis; refined.sampledFrames = samples.count; refined.people = samples; refined.peopleReference = nil
         await progress(1)
         return Result(analysis:refined,anchor:SubjectAnchor(time:seedTime,candidate:first))
     }

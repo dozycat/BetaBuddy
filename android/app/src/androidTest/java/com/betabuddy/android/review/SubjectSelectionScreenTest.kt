@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import androidx.activity.compose.setContent
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.geometry.Offset
 import androidx.lifecycle.ViewModelProvider
 import androidx.test.core.app.ActivityScenario
 import androidx.test.platform.app.InstrumentationRegistry
@@ -15,6 +16,8 @@ import com.betabuddy.android.data.*
 import com.betabuddy.android.journal.JournalGraph
 import com.betabuddy.android.journal.JournalViewModel
 import com.betabuddy.android.pose.SubjectResolver
+import com.betabuddy.android.pose.VideoAnalyzer
+import com.betabuddy.android.pose.FrameGeometry
 import com.betabuddy.android.ui.theme.BetaBuddyTheme
 import java.io.File
 import java.io.FileOutputStream
@@ -32,6 +35,52 @@ class SubjectSelectionScreenTest {
     private var scenario: ActivityScenario<MainActivity>? = null
     private var record: Climb? = null
     @After fun cleanup() { scenario?.close(); record?.let(store::delete) }
+
+    @Test fun drawPreviewTrackSaveAndReopenOnReference() {
+        val args = InstrumentationRegistry.getArguments()
+        val name = args.getString("subjectClip"); val raw = args.getString("regionBounds")
+        assumeTrue("Optional real reference and observed region",name != null && raw != null && SubjectResolver(context).available())
+        val bounds = raw!!.split(",").map(String::toFloat)
+        val video = File(context.cacheDir,"region-ui-${System.nanoTime()}.mp4")
+        File(context.filesDir,name!!).copyTo(video)
+        val info = VideoAnalyzer.probe(video)
+        val size = FrameGeometry.displaySize(info.width,info.height,info.rotation)
+        val input = PoseAnalysis(emptyList(),0,info.durationSeconds!!,size.first.toDouble()/size.second)
+        val climb = store.save("Region UI","Region UI",UNGRADED_VALUE,false,"",video,byteArrayOf(),input)
+        record = climb
+        scenario = ActivityScenario.launch(Intent(context,MainActivity::class.java).putExtra("initialTab",1).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        fun open(snapshot: Climb) { scenario!!.onActivity { activity ->
+            val model = ViewModelProvider(activity)[JournalViewModel::class.java]
+            activity.setContent { BetaBuddyTheme { SubjectSelectionScreen(snapshot,model) { activity.setContent {} } } }
+        } }
+        open(climb)
+        rule.onNodeWithTag("drawSubjectRegion").performScrollTo().performClick()
+        rule.onNodeWithTag("subjectRegionCanvas").performScrollTo().performTouchInput {
+            swipe(Offset(width*bounds[0],height*bounds[1]),Offset(width*(bounds[0]+bounds[2]),height*(bounds[1]+bounds[3])),500)
+        }
+        val out = File(context.getExternalFilesDir(null),"subject-region-shots").apply { mkdirs() }
+        fun screenshot(name: String) {
+            rule.waitForIdle(); Thread.sleep(250)
+            instrumentation.uiAutomation.takeScreenshot()?.let { bitmap ->
+                FileOutputStream(File(out,name)).use { bitmap.compress(Bitmap.CompressFormat.PNG,100,it) }; bitmap.recycle()
+            }
+        }
+        screenshot("preview.png")
+        rule.onNodeWithTag("trackSubjectRegion").performScrollTo().performClick()
+        rule.waitUntil(150_000) { runCatching { rule.onNodeWithTag("saveSubject").assertIsEnabled(); true }.getOrDefault(false) }
+        rule.onNodeWithTag("subjectStage").performScrollTo(); screenshot("tracked.png")
+        rule.onNodeWithTag("saveSubject").performScrollTo().performClick()
+        rule.waitUntil(10_000) { store.climbs.first { it.id == climb.id }.subjectRevision == 1 }
+        val saved = store.climbs.first { it.id == climb.id }
+        assertTrue(saved.subjectAnchors!!.single().region)
+        assertTrue(saved.analysis.subjectPositions!!.size >= input.duration*9)
+        assertEquals(bounds[0].toDouble(),saved.subjectAnchors!!.single().bounds.x,.025)
+        open(saved)
+        rule.waitUntil(30_000) { runCatching { rule.onNodeWithText(context.getString(R.string.subject_manual)).assertExists(); true }.getOrDefault(false) }
+        rule.onNodeWithTag("subjectStage").performScrollTo(); screenshot("reopened.png")
+        rule.onNodeWithText(context.getString(R.string.journal_cancel)).performScrollTo().performClick()
+        assertEquals(1,store.climbs.first { it.id == climb.id }.subjectRevision)
+    }
 
     @Test fun outlineTapSaveReopenAndCancelPreserveIdentity() {
         assumeTrue("Optional private policy",SubjectResolver(context).available())

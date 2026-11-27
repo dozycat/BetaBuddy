@@ -41,8 +41,11 @@ struct SubjectAnchor: Codable, Equatable, Sendable {
     var time: Double
     var bounds: SubjectBounds
     var appearance: [Double]
+    /// Absent in older records. A drawn region must be tracked again on reanalysis.
+    var region: Bool? = nil
     init(time: Double, candidate: SubjectCandidate) {
         self.time = time; bounds = candidate.bounds; appearance = candidate.appearance
+        region = candidate.tracking == nil ? nil : true
     }
 }
 struct SubjectPick: Codable, Equatable, Sendable {

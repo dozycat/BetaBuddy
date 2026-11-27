@@ -105,4 +105,13 @@
     <string name="subject_unresolved">有選人標記未能對上，請在看清人物的位置重新點選。</string>
     <string name="subject_reanalyze">更換人物後，需要重新分析。</string>
     <string name="subject_retry">再試一次</string>
+    <string name="subject_draw">未圈到？手動圈選</string>
+    <string name="subject_draw_cancel">取消圈選</string>
+    <string name="subject_draw_instruction">拖動圈住人物全身，也可用微調移動和調整圈線。</string>
+    <string name="subject_draw_adjust">微調圈線</string>
+    <string name="subject_draw_horizontal">左右位置</string>
+    <string name="subject_draw_vertical">上下位置</string>
+    <string name="subject_draw_width">圈線寬度</string>
+    <string name="subject_draw_height">圈線高度</string>
+    <string name="subject_draw_track">追蹤圈內的人</string>
 </resources>

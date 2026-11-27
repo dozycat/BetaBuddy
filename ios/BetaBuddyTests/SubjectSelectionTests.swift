@@ -4,6 +4,10 @@ import XCTest
 
 @MainActor
 final class SubjectSelectionTests: XCTestCase {
+    func testLegacyAnchorWithoutRegionStillLoads() throws {
+        let raw = #"{"time":0,"bounds":{"x":0.1,"y":0.1,"width":0.2,"height":0.6},"appearance":[]}"#
+        XCTAssertNil(try JSONDecoder().decode(SubjectAnchor.self, from: Data(raw.utf8)).region)
+    }
     private func analysis() -> PoseAnalysis {
         let pose = PoseFrame(time: 0, joints: Array(repeating: Joint(x: 0.3, y: 0.4, confidence: 1), count: 33))
         let a = SubjectCandidate(id: "a", bounds: .init(x: 0.2, y: 0.1, width: 0.2, height: 0.5), appearance: [0.1], pose: pose)
@@ -140,5 +144,18 @@ final class SubjectSelectionTests: XCTestCase {
         }
         print("Manual region: positions=\(selected.subjectPositions?.count ?? 0), poses=\(selected.frames.count)/\(selected.sampledFrames), seconds=\(Date().timeIntervalSince(start))")
         if let output = env["BB_SUBJECT_OUTPUT"] { try JSONEncoder().encode(selected).write(to: URL(fileURLWithPath: output)) }
+        XCTAssertEqual(result.anchor.region, true)
+        if env["BB_SUBJECT_REANALYZE"] == "1" {
+            let anchor = try JSONDecoder().decode(SubjectAnchor.self, from: JSONEncoder().encode(result.anchor))
+            let fresh = try await VideoAnalyzer().analyze(url: url, quality: .balanced, subjectAnchors: [anchor]) { _ in }
+            XCTAssertEqual(fresh.subject?.unresolved, 0)
+            let positions = try XCTUnwrap(fresh.subjectPositions)
+            XCTAssertGreaterThanOrEqual(positions.count, Int(Double(selected.people!.count) * 0.9))
+            let distance = positions.map { position in
+                let old = selected.subjectPositions!.min { abs($0.time-position.time) < abs($1.time-position.time) }!.bounds
+                return hypot(position.bounds.x-old.x, position.bounds.y-old.y)
+            }.reduce(0,+) / Double(max(1, positions.count))
+            XCTAssertLessThan(distance, 0.05, "Fresh analysis must keep the saved region")
+        }
     }
 }

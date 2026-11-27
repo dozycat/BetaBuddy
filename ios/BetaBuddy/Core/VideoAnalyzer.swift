@@ -60,6 +60,8 @@ actor VideoAnalyzer {
         options.baseOptions.delegate = .CPU
         options.runningMode = .video
         let chooseSubject = SubjectResolver.available
+        let regions = chooseSubject ? subjectAnchors.filter { $0.region == true } : []
+        let passes = Double(1 + regions.count)
         options.numPoses = chooseSubject ? 4 : 1
         // MediaPipe defaults: raising these can miss the climber
         // and initialize video tracking on a high-contrast background false positive.
@@ -119,14 +121,19 @@ actor VideoAnalyzer {
                 return (false, time)
             }
             if step.finished { break }
-            if let time = step.time, sampled % 5 == 0 { await progress(min(0.99, time / duration)) }
+            if let time = step.time, sampled % 5 == 0 { await progress(min(0.99, time / duration) / passes) }
         }
         try Task.checkCancellation()
         if reader.status == .failed { throw reader.error ?? AnalysisError.invalidVideo }
         var analysis = PoseAnalysis(frames: frames, sampledFrames: sampled, duration: duration, aspectRatio: aspect)
         if chooseSubject {
-            guard people.contains(where: { !$0.candidates.isEmpty }) else { throw AnalysisError.noPose }
+            guard !regions.isEmpty || people.contains(where: { !$0.candidates.isEmpty }) else { throw AnalysisError.noPose }
             analysis.people = people
+            for (index, anchor) in regions.enumerated() {
+                analysis = try await SubjectRegionAnalyzer().refine(url: url, analysis: analysis, bounds: anchor.bounds, at: anchor.time) { value in
+                    await progress((Double(index + 1) + value) / passes)
+                }.analysis
+            }
             analysis = try await SubjectResolver().resolve(analysis, anchors: subjectAnchors)
         } else if frames.count < 3 { throw AnalysisError.noPose }
         await progress(1)

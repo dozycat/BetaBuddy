@@ -105,4 +105,13 @@
     <string name="subject_unresolved">Some selections could not be matched. Tap the person again at a clear moment.</string>
     <string name="subject_reanalyze">Changing the person requires a new analysis.</string>
     <string name="subject_retry">Try again</string>
+    <string name="subject_draw">Not outlined? Draw a circle</string>
+    <string name="subject_draw_cancel">Cancel drawing</string>
+    <string name="subject_draw_instruction">Drag around the whole person, or use Adjust to move and resize the outline.</string>
+    <string name="subject_draw_adjust">Adjust outline</string>
+    <string name="subject_draw_horizontal">Horizontal position</string>
+    <string name="subject_draw_vertical">Vertical position</string>
+    <string name="subject_draw_width">Outline width</string>
+    <string name="subject_draw_height">Outline height</string>
+    <string name="subject_draw_track">Track this person</string>
 </resources>

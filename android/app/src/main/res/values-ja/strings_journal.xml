@@ -105,4 +105,13 @@
     <string name="subject_unresolved">対応づけできない選択があります。人物がよく見える場面でもう一度タップしてください。</string>
     <string name="subject_reanalyze">人物を変更すると再解析が必要です。</string>
     <string name="subject_retry">もう一度試す</string>
+    <string name="subject_draw">見つからない場合は手動で囲む</string>
+    <string name="subject_draw_cancel">囲むのをやめる</string>
+    <string name="subject_draw_instruction">ドラッグで全身を囲んでください。「微調整」で位置や大きさも変えられます。</string>
+    <string name="subject_draw_adjust">囲みを微調整</string>
+    <string name="subject_draw_horizontal">左右の位置</string>
+    <string name="subject_draw_vertical">上下の位置</string>
+    <string name="subject_draw_width">囲みの幅</string>
+    <string name="subject_draw_height">囲みの高さ</string>
+    <string name="subject_draw_track">囲んだ人を追跡</string>
 </resources>

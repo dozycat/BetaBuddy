@@ -29,7 +29,7 @@ class SelectedSubjectEditTest {
         assumeTrue(pack?.analysisUrl("en") != null)
         val input = ClimbStore.json.decodeFromString<PoseAnalysis>(File(context.filesDir,inputName!!).readText())
         val positions = requireNotNull(input.subjectPositions)
-        assertTrue(positions.size > input.frames.size)
+        assertTrue(positions.size >= input.frames.size)
         val staged = File(context.cacheDir,"selected-edit-${System.nanoTime()}.mp4")
         File(context.filesDir,clipName!!).copyTo(staged)
         val store = JournalGraph.store(context)

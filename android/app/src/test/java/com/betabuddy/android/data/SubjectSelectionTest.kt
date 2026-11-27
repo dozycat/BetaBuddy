@@ -4,6 +4,10 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class SubjectSelectionTest {
+    @Test fun legacyAnchorWithoutRegionStillLoads() {
+        val anchor = ClimbStore.json.decodeFromString<SubjectAnchor>("""{"time":0,"bounds":{"x":0.1,"y":0.1,"width":0.2,"height":0.6},"appearance":[]}""")
+        assertFalse(anchor.region)
+    }
     @Test fun selectedCandidateControlsPosesAndMissingSamplesStayMissing() {
         val a = SubjectCandidate("a", SubjectBounds(.1,.1,.2,.6), listOf(.2), PoseFrame(0.0, List(33) { Joint(.2,.3,1.0) }))
         val b = a.copy(id = "b", pose = a.pose.copy(joints = List(33) { Joint(.7,.4,1.0) }))
