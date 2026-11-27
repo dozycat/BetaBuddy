@@ -84,6 +84,9 @@ data class Climb(
     val discipline: String? = null,
     /** True while [discipline] is what the analysis page judged from the clip, not what the user chose. */
     val disciplineAuto: Boolean? = null,
+    /** Raw value is forward compatible; indoor, outdoor or unknown. */
+    val environment: String? = null,
+    val environmentAuto: Boolean? = null,
 ) {
     /** The discipline the user chose themselves; the analysis page is told it and does not judge again. */
     val chosenDiscipline: String? get() = discipline?.takeIf { disciplineAuto != true && Discipline.valid(it) }

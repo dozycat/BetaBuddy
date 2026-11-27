@@ -90,7 +90,7 @@ struct EditView: View {
             HStack {
                 Spacer()
                 Button { dismiss() } label: {
-                    Text("完成").font(.subheadline.bold()).padding(.horizontal, 16).frame(minHeight: 44)
+                    Text(file == nil ? "取消" : "完成").font(.subheadline.bold()).padding(.horizontal, 16).frame(minHeight: 44)
                         .background(BB.paper, in: Capsule()).overlay(Capsule().stroke(BB.line, lineWidth: 1.5))
                         .contentShape(Rectangle())
                 }.buttonStyle(.plain).accessibilityIdentifier("editDone")
@@ -101,10 +101,7 @@ struct EditView: View {
                 case .ready:
                     PlayerSurface(player: session.player).clipShape(RoundedRectangle(cornerRadius: 20)).accessibilityIdentifier("editResult")
                 case .rendering(let value):
-                    VStack(spacing: 14) {
-                        ProgressView(value: min(1, max(0, value))).tint(BB.lime).frame(maxWidth: 180)
-                        Text("正在剪辑…").font(.headline)
-                    }.foregroundStyle(BB.paper).accessibilityIdentifier("editRendering")
+                    BelayProgressView(progress: value).accessibilityIdentifier("editRendering")
                 case .failed(let message):
                     VStack(spacing: 14) {
                         Text(verbatim: message).font(.subheadline).multilineTextAlignment(.center).accessibilityIdentifier("editError")

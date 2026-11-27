@@ -63,6 +63,10 @@ struct Climb: Codable, Identifiable, Sendable {
     var discipline: String? = nil
     /// The discipline came from the analysis page, not from the user; a later result may replace it.
     var disciplineAuto: Bool? = nil
+    /// Raw value keeps archives readable if a later build adds another environment.
+    var environment: String? = nil
+    var environmentAuto: Bool? = nil
+    var setting: ClimbEnvironment { environment.flatMap(ClimbEnvironment.init(rawValue:)) ?? .unknown }
     var style: Discipline? { discipline.flatMap(Discipline.init(rawValue:)) }
     /// What the user chose themselves, for handing to the analysis page.
     var chosenStyle: Discipline? { disciplineAuto == true ? nil : style }
@@ -71,6 +75,42 @@ struct Climb: Codable, Identifiable, Sendable {
         if let id = gymId, !id.isEmpty { return "id:" + id }
         let name = gymName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         return name.isEmpty ? "" : "name:" + name
+    }
+}
+
+enum ClimbEnvironment: String, Codable, Sendable {
+    case indoor, outdoor, unknown
+}
+
+/// A day at one place. Recomputed from records, so changing the date or gym moves the clip
+/// immediately without creating, renaming or deleting the user's folders.
+struct JournalDayGroup: Identifiable {
+    struct ID: Hashable {
+        var day: Date
+        var gymKey: String
+        var environment: ClimbEnvironment
+    }
+    var id: ID
+    var climbs: [Climb]
+    var gymName: String? { climbs.lazy.compactMap(\.gymName).first { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty } }
+
+    static func make(_ climbs: [Climb], calendar: Calendar = .current) -> [JournalDayGroup] {
+        let buckets = Dictionary(grouping: climbs) { climb in
+            let environment: ClimbEnvironment = climb.setting == .outdoor ? .outdoor : (climb.gymKey.isEmpty ? climb.setting : .indoor)
+            return ID(day: calendar.startOfDay(for: climb.climbingDate),
+                      gymKey: environment == .outdoor ? "" : climb.gymKey, environment: environment)
+        }
+        return buckets.map { key, values in
+            JournalDayGroup(id: key, climbs: values.sorted {
+                if $0.climbingDate != $1.climbingDate { return $0.climbingDate > $1.climbingDate }
+                return $0.id.uuidString < $1.id.uuidString
+            })
+        }.sorted {
+            if $0.id.day != $1.id.day { return $0.id.day > $1.id.day }
+            let first = $0.climbs[0], second = $1.climbs[0]
+            if first.climbingDate != second.climbingDate { return first.climbingDate > second.climbingDate }
+            return first.id.uuidString < second.id.uuidString
+        }
     }
 }
 

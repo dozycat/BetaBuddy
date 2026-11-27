@@ -32,4 +32,5 @@
     <string name="album_optional_tags">このトライを整理（任意）</string>
     <string name="album_clear">絞り込みを解除</string>
     <string name="album_count">%1$d トライ</string>
+    <string name="album_outdoor">屋外</string>
 </resources>

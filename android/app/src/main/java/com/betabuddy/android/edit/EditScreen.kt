@@ -55,7 +55,6 @@ import androidx.media3.common.Player
 import com.betabuddy.android.R
 import com.betabuddy.android.journal.DangerColor
 import com.betabuddy.android.journal.OutlineButton
-import com.betabuddy.android.journal.ProgressBar
 import com.betabuddy.android.review.OverlayGeometry
 import com.betabuddy.android.review.Playback
 import com.betabuddy.android.ui.common.BigButton
@@ -175,7 +174,7 @@ internal fun EditScreen(session: EditSession, onDone: () -> Unit) {
                     Modifier.defaultMinSize(minWidth = 48.dp, minHeight = 48.dp).clip(CircleShape)
                         .clickable(role = Role.Button, onClick = onDone).padding(horizontal = 12.dp).testTag("editDone"),
                     contentAlignment = Alignment.Center,
-                ) { Text(stringResource(R.string.journal_import_done), style = BB.Subheadline, fontWeight = FontWeight.Bold) }
+                ) { Text(stringResource(if (state is EditSession.State.Ready) R.string.journal_import_done else R.string.journal_cancel), style = BB.Subheadline, fontWeight = FontWeight.Bold) }
             }
             Box(Modifier.weight(1f).fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Color.Black), contentAlignment = Alignment.Center) {
                 when (state) {
@@ -183,8 +182,7 @@ internal fun EditScreen(session: EditSession, onDone: () -> Unit) {
                     is EditSession.State.Working -> Column(
                         Modifier.padding(32.dp).testTag("editWorking"), verticalArrangement = Arrangement.spacedBy(12.dp), horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        Text(stringResource(R.string.journal_edit_working), style = BB.Subheadline, color = BB.Paper, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
-                        ProgressBar(state.progress)
+                        BelayProgress(state.progress)
                     }
                     is EditSession.State.Failed -> Column(
                         Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp), horizontalAlignment = Alignment.CenterHorizontally,

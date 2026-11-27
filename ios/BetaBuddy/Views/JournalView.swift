@@ -117,8 +117,22 @@ struct JournalView: View {
                     .background(BB.lavender, in: RoundedRectangle(cornerRadius: 22))
             } else {
                 LazyVStack(spacing: 12) {
-                    ForEach(climbs) { climb in
-                        NavigationLink { ReviewView(climb: climb) } label: { ClimbRow(climb: climb) }.buttonStyle(.plain)
+                    ForEach(JournalDayGroup.make(climbs)) { group in
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack(alignment: .firstTextBaseline) {
+                                Text(group.id.day, format: .dateTime.year().month().day()).font(.headline)
+                                Spacer(minLength: 8)
+                                Text(verbatim: String(group.climbs.count)).font(.caption.monospacedDigit()).foregroundStyle(BB.muted)
+                            }
+                            Group {
+                                if group.id.environment == .outdoor { Text("室外") }
+                                else if let name = group.gymName { Text(verbatim: name) }
+                                else { Text("未标岩馆") }
+                            }.font(.subheadline).foregroundStyle(BB.muted)
+                            ForEach(group.climbs) { climb in
+                                NavigationLink { ReviewView(climb: climb) } label: { ClimbRow(climb: climb) }.buttonStyle(.plain)
+                            }
+                        }.padding(.top, 8).accessibilityIdentifier("journalDayGroup")
                     }
                 }
             }

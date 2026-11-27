@@ -37,6 +37,7 @@
 		4D99CDDBE7CE57E5D7244976 /* MediaPipe-NOTICE.txt in Resources */ = {isa = PBXBuildFile; fileRef = 5F8BEA087D64A4AC0F592D1E /* MediaPipe-NOTICE.txt */; };
 		4E67E825C736460BBA887697 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 77C814BB7416DC2F64D2A84D /* Metal.framework */; };
 		50491818BADE91CF4D731005 /* CoreVideo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = ECA2166BDB77F73F38151758 /* CoreVideo.framework */; };
+		51CF2296F9B1CDA0D49AE86A /* BelayProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 631AA0575F7F54A63D044864 /* BelayProgressView.swift */; };
 		51E7629CC196B5F304B9D78E /* CaptureFlowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10F7C79F97CE12CD4B5773F5 /* CaptureFlowTests.swift */; };
 		52CABDEBFB38496FB2DFA289 /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03348833A75068E88ECDAE98 /* AboutView.swift */; };
 		53A1944C0FDC8102328CBD98 /* Abseil-LICENSE.txt in Resources */ = {isa = PBXBuildFile; fileRef = A7174767CB29C136B90F62BD /* Abseil-LICENSE.txt */; };
@@ -154,6 +155,7 @@
 		5C9F3BFB7EEED9BE808D1130 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
 		5E59D29ECD3A8595E76B9648 /* AudioToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioToolbox.framework; path = System/Library/Frameworks/AudioToolbox.framework; sourceTree = SDKROOT; };
 		5F8BEA087D64A4AC0F592D1E /* MediaPipe-NOTICE.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "MediaPipe-NOTICE.txt"; sourceTree = "<group>"; };
+		631AA0575F7F54A63D044864 /* BelayProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BelayProgressView.swift; sourceTree = "<group>"; };
 		6BC315278D0CDD9A78988A5F /* Localization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Localization.swift; sourceTree = "<group>"; };
 		743A912A78FF47442185E13B /* ImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportView.swift; sourceTree = "<group>"; };
 		743FE06F5D55799944FE0364 /* gyms-cn.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "gyms-cn.json"; sourceTree = "<group>"; };
@@ -359,6 +361,7 @@
 				03348833A75068E88ECDAE98 /* AboutView.swift */,
 				E1A3BE34FB4FA4B89AE39B85 /* AlbumViews.swift */,
 				494540B4B6EC6FBF8A07CD7D /* AnalysisView.swift */,
+				631AA0575F7F54A63D044864 /* BelayProgressView.swift */,
 				42A6F303EF87EE37EFBE4353 /* BrandMark.swift */,
 				35DC23E4270495BC729853F9 /* CaptureText.swift */,
 				0E0D69FCEF42E88B5A1A0989 /* CaptureView.swift */,
@@ -631,6 +634,7 @@
 				8548294E668EAD97253ED155 /* AnalysisQueue.swift in Sources */,
 				C76EB6C73ABAFCC5FBFD3A50 /* AnalysisView.swift in Sources */,
 				D741B5C787CA1E4CF6180C19 /* AppLanguage.swift in Sources */,
+				51CF2296F9B1CDA0D49AE86A /* BelayProgressView.swift in Sources */,
 				000BAAC2430D42701BFF962E /* BetaBuddyApp.swift in Sources */,
 				182C46AC97C9E8377CBDD99B /* BrandMark.swift in Sources */,
 				0EECD6E16FB3FAE15E7C6119 /* Capture.swift in Sources */,

@@ -197,8 +197,17 @@ private fun JournalList(
                         TextButton(onClick = { clearFilters() }) { Text(stringResource(R.string.album_clear)) }
                     }
                 }
-                for (climb in visible) {
-                    ClimbRow(climb, model.thumbnailFile(climb)) { onOpen(climb) }
+                for (group in JournalDayGroup.make(visible)) {
+                    Column(Modifier.fillMaxWidth().testTag("journalDayGroup"), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Text(group.day.format(java.time.format.DateTimeFormatter.ofLocalizedDate(java.time.format.FormatStyle.MEDIUM)), style = BB.Headline, modifier = Modifier.weight(1f))
+                            Text(stringResource(R.string.album_count, group.climbs.size), style = BB.Caption, color = BB.Muted)
+                        }
+                        Text(if (group.environment == "outdoor") stringResource(R.string.album_outdoor) else group.gymName ?: stringResource(R.string.album_no_gym), style = BB.Subheadline, color = BB.Muted)
+                        for (climb in group.climbs) {
+                            ClimbRow(climb, model.thumbnailFile(climb)) { onOpen(climb) }
+                        }
+                    }
                 }
             }
         }

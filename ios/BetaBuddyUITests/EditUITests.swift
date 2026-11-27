@@ -26,7 +26,8 @@ final class EditUITests: XCTestCase {
     func testDisciplineGradeScaleAndTheEditPage() async throws {
         try StandInPack.write(to: work)
         let photo = try XCTUnwrap(Bundle(for: Self.self).url(forResource: "pose", withExtension: "jpg").flatMap { UIImage(contentsOfFile: $0.path)?.cgImage })
-        let clip = try await SyntheticWallClip.make(width: 360, height: 640, seconds: 3, photo: photo)
+        // A longer, phone-sized clip leaves the real rendering state visible for its screenshot.
+        let clip = try await SyntheticWallClip.make(width: 720, height: 1280, seconds: 12, photo: photo)
         self.clip = clip
         let app = XCUIApplication()
         app.launchArguments = ["-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN", "-resetLanguage", "YES", "-initialTab", "1",
@@ -77,6 +78,7 @@ final class EditUITests: XCTestCase {
         if !edit.isHittable { app.swipeUp() }
         keep(app, "02-review-with-edit")
         edit.tap()
+        keep(app, "02b-edit-rendering")
 
         // The page: the switches on offer that the plan has data for (passer-by removal is not offered yet),
         // and either the result or why there is none.
