@@ -65,6 +65,7 @@
 		853C7F24965DA07BC9391C02 /* EditView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 986F0C7537A8CCE96F645D45 /* EditView.swift */; };
 		85453C6DD1EF245AAD250759 /* LocalTasksLogger.cc in Sources */ = {isa = PBXBuildFile; fileRef = 409A3404909ABC21AE90E6FD /* LocalTasksLogger.cc */; };
 		8548294E668EAD97253ED155 /* AnalysisQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75D4C08308B1484B7470C545 /* AnalysisQueue.swift */; };
+		887156ABF1B35FBB969172E3 /* SubjectRegionAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F9441C22E0D90BCF3413BF6 /* SubjectRegionAnalyzer.swift */; };
 		8AE427F7AAE12B9B763A6CAC /* ClimbStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2073A4BFD1C596095049FD6 /* ClimbStore.swift */; };
 		90B70792471CC4D71621EA3A /* EditRendererTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 366A105A5A4408DE5B707003 /* EditRendererTests.swift */; };
 		99F7A8890E725F89F85A2030 /* CoreImage.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A68FFDAADCD794A3E2BA9EB4 /* CoreImage.framework */; };
@@ -169,6 +170,7 @@
 		5C9F3BFB7EEED9BE808D1130 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
 		5E59D29ECD3A8595E76B9648 /* AudioToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioToolbox.framework; path = System/Library/Frameworks/AudioToolbox.framework; sourceTree = SDKROOT; };
 		5F8BEA087D64A4AC0F592D1E /* MediaPipe-NOTICE.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "MediaPipe-NOTICE.txt"; sourceTree = "<group>"; };
+		5F9441C22E0D90BCF3413BF6 /* SubjectRegionAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubjectRegionAnalyzer.swift; sourceTree = "<group>"; };
 		631AA0575F7F54A63D044864 /* BelayProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BelayProgressView.swift; sourceTree = "<group>"; };
 		6BC315278D0CDD9A78988A5F /* Localization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Localization.swift; sourceTree = "<group>"; };
 		743A912A78FF47442185E13B /* ImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportView.swift; sourceTree = "<group>"; };
@@ -359,6 +361,7 @@
 				45E5FD6427E53C33407C09A7 /* LibraryClassifier.swift */,
 				5952534D2D2EC74A3ACF8282 /* Models.swift */,
 				E60E0E8B9324117B4B77C1D4 /* PhotoLibraryImport.swift */,
+				5F9441C22E0D90BCF3413BF6 /* SubjectRegionAnalyzer.swift */,
 				AD939448F249D34445E20768 /* SubjectResolver.swift */,
 				79A50B5353BB07C5D5073080 /* SubjectSelection.swift */,
 				A70CE35583F94C8C3EE53F2E /* VideoAnalyzer.swift */,
@@ -700,6 +703,7 @@
 				64B4F869EFA81EEF760E823D /* Models.swift in Sources */,
 				1D076C70866676A034836D22 /* PhotoLibraryImport.swift in Sources */,
 				057EFDAB6648F3C43421E1D4 /* ReviewView.swift in Sources */,
+				887156ABF1B35FBB969172E3 /* SubjectRegionAnalyzer.swift in Sources */,
 				33459CA36E0254DAC54A2665 /* SubjectResolver.swift in Sources */,
 				2C02A00CAFB3788BA6B677CB /* SubjectSelection.swift in Sources */,
 				B1D27675986BA01516329F4D /* SubjectSelectionView.swift in Sources */,

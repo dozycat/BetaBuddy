@@ -42,6 +42,7 @@ final class ClimbStore: ObservableObject {
                 archive = try JSONDecoder().decode(Archive.self, from: Data(contentsOf: index))
                 guard archive.version == 1 else { throw CocoaError(.fileReadCorruptFile) }
             }
+            if archive.climbs.contains(where: { $0.analysis.people != nil }) { try persist(archive) }
             analysisResults = Set(archive.climbs.filter { FileManager.default.fileExists(atPath: analysisResultFile($0.id).path) }.map(\.id))
             editPlans = Set(archive.climbs.filter { FileManager.default.fileExists(atPath: editPlanFile($0.id).path) }.map(\.id))
         } catch {
@@ -55,9 +56,35 @@ final class ClimbStore: ObservableObject {
 
     private func persist(_ next: Archive) throws {
         guard canWrite else { throw CocoaError(.fileWriteNoPermission) }
-        let data = try JSONEncoder().encode(next)
-        try data.write(to: file("archive.json"), options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
-        archive = next
+        var stored = next
+        var created: [URL] = []
+        do {
+            for index in stored.climbs.indices {
+                guard let people = stored.climbs[index].analysis.people else { continue }
+                let reference = UUID()
+                let destination = SubjectCandidateStorage.file(root: root, record: stored.climbs[index].id, reference: reference)
+                try SubjectCandidateStorage.encode(people).write(to: destination, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+                created.append(destination)
+                stored.climbs[index].analysis.people = nil
+                stored.climbs[index].analysis.peopleReference = reference
+            }
+            let data = try JSONEncoder().encode(stored)
+            try data.write(to: file("archive.json"), options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+        } catch {
+            for url in created { try? FileManager.default.removeItem(at: url) }
+            throw error
+        }
+        let previous = archive
+        archive = stored
+        for climb in previous.climbs {
+            guard let reference = climb.analysis.peopleReference,
+                  stored.climbs.first(where: { $0.id == climb.id })?.analysis.peopleReference != reference else { continue }
+            try? FileManager.default.removeItem(at: SubjectCandidateStorage.file(root: root, record: climb.id, reference: reference))
+        }
+    }
+
+    func subjectAnalysis(for climb: Climb) async throws -> PoseAnalysis {
+        try await SubjectCandidateReader().load(climb.analysis, root: root, record: climb.id)
     }
 
     /// `capture` and `capturePlan` come from the in-app camera. The clip, its thumbnail, the plan and
@@ -93,7 +120,7 @@ final class ClimbStore: ObservableObject {
                 next.libraryLedger[sourceAssetID] = receipt
             }
             try persist(next)
-            return climb
+            return archive.climbs.first { $0.id == climb.id } ?? climb
         } catch {
             if FileManager.default.fileExists(atPath: file(videoName).path) {
                 try? FileManager.default.moveItem(at: file(videoName), to: stagedVideo)

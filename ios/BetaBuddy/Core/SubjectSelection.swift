@@ -7,6 +7,15 @@ struct SubjectBounds: Codable, Equatable, Sendable {
     var width: Double
     var height: Double
     var valid: Bool { [x, y, width, height].allSatisfy(\.isFinite) && x >= 0 && y >= 0 && width > 0 && height > 0 && x + width <= 1.0001 && y + height <= 1.0001 }
+    func expanded(by fraction: Double) -> SubjectBounds {
+        let left = max(0, x - width*fraction), top = max(0, y - height*fraction)
+        let right = min(1, x + width*(1+fraction)), bottom = min(1, y + height*(1+fraction))
+        return .init(x: left, y: top, width: right-left, height: bottom-top)
+    }
+    func overlap(_ other: SubjectBounds) -> Double {
+        let area = max(0, min(x+width, other.x+other.width)-max(x, other.x)) * max(0, min(y+height, other.y+other.height)-max(y, other.y))
+        return area / max(1e-9, width*height + other.width*other.height - area)
+    }
 }
 struct SubjectCandidate: Codable, Sendable, Identifiable {
     var id: String
@@ -39,7 +48,7 @@ struct SubjectResolution: Codable, Sendable {
 }
 
 extension PoseAnalysis {
-    var hasSubjectCandidates: Bool { people?.contains { !$0.candidates.isEmpty } == true }
+    var hasSubjectCandidates: Bool { people?.contains { !$0.candidates.isEmpty } ?? (peopleReference != nil) }
     /// Only exact candidate ids returned by the policy may become the selected poses.
     /// Missing samples stay missing; never fall back to the first person in a frame.
     func selecting(_ result: SubjectResolution) throws -> PoseAnalysis {
@@ -60,5 +69,29 @@ extension PoseAnalysis {
         while low < high { let mid = (low + high) / 2; if people[mid].time < time { low = mid + 1 } else { high = mid } }
         let indices = [low - 1, low].filter { people.indices.contains($0) }
         return indices.map { people[$0] }.min { abs($0.time-time) < abs($1.time-time) }.flatMap { abs($0.time-time) <= 0.16 ? $0 : nil }
+    }
+}
+
+/// Candidate poses can be much larger than the journal index. Files are immutable and the index
+/// points at one revision, so a failed save cannot replace the currently readable candidate set.
+enum SubjectCandidateStorage {
+    static func file(root: URL, record: UUID, reference: UUID) -> URL {
+        root.appendingPathComponent("\(record).subjects.\(reference).json.lzfse")
+    }
+    static func encode(_ people: [SubjectSample]) throws -> Data {
+        try (JSONEncoder().encode(people) as NSData).compressed(using: .lzfse) as Data
+    }
+}
+
+actor SubjectCandidateReader {
+    func load(_ analysis: PoseAnalysis, root: URL, record: UUID) throws -> PoseAnalysis {
+        try Task.checkCancellation()
+        guard analysis.people == nil, let reference = analysis.peopleReference else { return analysis }
+        let data = try Data(contentsOf: SubjectCandidateStorage.file(root: root, record: record, reference: reference))
+        let decoded = try (data as NSData).decompressed(using: .lzfse) as Data
+        var result = analysis
+        result.people = try JSONDecoder().decode([SubjectSample].self, from: decoded)
+        try Task.checkCancellation()
+        return result
     }
 }

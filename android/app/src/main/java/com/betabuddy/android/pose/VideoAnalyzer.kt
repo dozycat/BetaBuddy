@@ -13,6 +13,9 @@ import android.os.PowerManager
 import androidx.annotation.VisibleForTesting
 import com.betabuddy.android.data.Joint
 import com.betabuddy.android.data.PoseAnalysis
+import com.betabuddy.android.data.SubjectBounds
+import com.betabuddy.android.data.SubjectCandidate
+import com.betabuddy.android.data.SubjectSample
 import com.betabuddy.android.data.PoseFrame
 import com.betabuddy.android.data.rounded4
 import com.google.mediapipe.framework.image.BitmapImageBuilder
@@ -61,11 +64,13 @@ class VideoAnalyzer(context: Context) {
         video: File, quality: AnalysisQuality, useGpu: Boolean = false,
         /** The clip was recorded by the in-app camera: it may be longer and larger than an import. */
         cameraClip: Boolean = false,
+        /** Candidate collection is opt-in until the selection workflow is connected. */
+        collectSubjects: Boolean = false,
         progress: (Double) -> Unit,
     ): PoseAnalysis = serial.withLock {
         withContext(worker) {
             try {
-                run(video, quality, useGpu, cameraClip, progress)
+                run(video, quality, useGpu, cameraClip, collectSubjects, progress)
             } catch (error: CancellationException) {
                 throw error
             } catch (error: AnalysisException) {
@@ -77,7 +82,7 @@ class VideoAnalyzer(context: Context) {
         }
     }
 
-    private suspend fun run(video: File, quality: AnalysisQuality, useGpu: Boolean, cameraClip: Boolean, progress: (Double) -> Unit): PoseAnalysis {
+    private suspend fun run(video: File, quality: AnalysisQuality, useGpu: Boolean, cameraClip: Boolean, collectSubjects: Boolean, progress: (Double) -> Unit): PoseAnalysis {
         coroutineContext.ensureActive()
         val model = loadModel(context)
         val info = probe(video)
@@ -117,7 +122,7 @@ class VideoAnalyzer(context: Context) {
                 PoseLandmarker.PoseLandmarkerOptions.builder()
                     .setBaseOptions(baseOptions)
                     .setRunningMode(RunningMode.VIDEO)
-                    .setNumPoses(1)
+                    .setNumPoses(if (collectSubjects) 4 else 1)
                     // MediaPipe defaults: raising these can miss the climber and start video
                     // tracking on a high-contrast background false positive (see the iOS regression notes).
                     .setMinPoseDetectionConfidence(0.5f)
@@ -135,6 +140,7 @@ class VideoAnalyzer(context: Context) {
             val power = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
             val sampler = FrameSampler(quality.fps)
             val frames = ArrayList<PoseFrame>()
+            val people = ArrayList<SubjectSample>()
             val buffers = PlaneBuffers()
             var pixels = IntArray(0)
             var colour = ColourInfo.guess(info.width, info.height)
@@ -207,8 +213,9 @@ class VideoAnalyzer(context: Context) {
                         // Synchronous in video mode, so the single bitmap can be reused for the next frame.
                         val result = landmarker.detectForVideo(BitmapImageBuilder(converted).build(), sampler.timestampMs(time))
                         sampled += 1
-                        val points = result.landmarks().firstOrNull()
-                        if (points != null && points.size == 33) {
+                        val candidates = ArrayList<SubjectCandidate>()
+                        for ((person, points) in result.landmarks().withIndex()) {
+                            if (points.size != 33) continue
                             // Four decimals: a fraction of a pixel on screen, and a much smaller archive.
                             val joints = points.map { point ->
                                 val x = point.x().toDouble()
@@ -217,14 +224,31 @@ class VideoAnalyzer(context: Context) {
                                 if (x.isFinite() && y.isFinite() && confidence.isFinite()) Joint(rounded4(x), rounded4(y), rounded4(confidence)) else Joint(0.0, 0.0, 0.0)
                             }
                             // The same sample in the model's metric space, kept for the pack's analysis page.
-                            val world = result.worldLandmarks().firstOrNull()?.takeIf { it.size == 33 }?.map { point ->
+                            val world = result.worldLandmarks().getOrNull(person)?.takeIf { it.size == 33 }?.map { point ->
                                 val values = listOf(point.x(), point.y(), point.z(), point.visibility().orElse(0f)).map { it.toDouble() }
                                 if (values.all { it.isFinite() }) values.map(::rounded4) else listOf(0.0, 0.0, 0.0, 0.0)
                             }
                             val frame = PoseFrame(time, joints, world)
                             // Keep only samples whose shoulders and hips are reliable and inside the picture.
-                            if (frame.hasReliableTorso) frames.add(frame)
+                            if (!frame.hasReliableTorso) continue
+                            if (!collectSubjects) { frames.add(frame); continue }
+                            val valid = joints.filter { it.valid }
+                            val left = valid.minOf { it.x }; val top = valid.minOf { it.y }
+                            val bounds = SubjectBounds(left, top, valid.maxOf { it.x }-left, valid.maxOf { it.y }-top)
+                            if (!bounds.valid) continue
+                            val torso = listOf(joints[11], joints[12], joints[23], joints[24])
+                            val tx = torso.minOf { it.x }; val ty = torso.minOf { it.y }
+                            val tw = torso.maxOf { it.x }-tx; val th = torso.maxOf { it.y }-ty
+                            val appearance = (0..3).flatMap { row -> (0..2).map { channel ->
+                                rounded4((0..3).sumOf { column ->
+                                    val px = ((tx+tw*(column+.5)/4)*converted.width).toInt().coerceIn(0, converted.width-1)
+                                    val py = ((ty+th*(row+.5)/4)*converted.height).toInt().coerceIn(0, converted.height-1)
+                                    ((converted.getPixel(px,py) shr ((2-channel)*8)) and 255).toDouble()
+                                } / (4*255))
+                            } }
+                            candidates.add(SubjectCandidate("${(time*1000).toLong()}-$person", bounds, appearance, frame))
                         }
+                        if (collectSubjects) people.add(SubjectSample(time, candidates))
                         if (sampled % 5 == 0) progress(minOf(0.99, time / duration))
                     }
                     if (endOfStream) outputDone = true
@@ -234,9 +258,9 @@ class VideoAnalyzer(context: Context) {
             }
 
             coroutineContext.ensureActive()
-            if (frames.size < 3) throw AnalysisException(AnalysisError.NO_POSE)
+            if (if (collectSubjects) people.none { it.candidates.isNotEmpty() } else frames.size < 3) throw AnalysisException(AnalysisError.NO_POSE)
             progress(1.0)
-            return PoseAnalysis(frames = frames, sampledFrames = sampled, duration = duration, aspectRatio = aspect)
+            return PoseAnalysis(frames = frames, sampledFrames = sampled, duration = duration, aspectRatio = aspect, people = people.takeIf { collectSubjects })
         } finally {
             runCatching { openCodec?.stop() }
             runCatching { openCodec?.release() }

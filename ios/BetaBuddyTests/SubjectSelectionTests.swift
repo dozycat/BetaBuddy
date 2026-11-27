@@ -74,4 +74,60 @@ final class SubjectSelectionTests: XCTestCase {
             try JSONEncoder().encode(result).write(to: URL(fileURLWithPath: output))
         }
     }
+    func testCandidateArchiveLoadsOnDemandAndFailedIndexWriteKeepsPreviousSelection() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = ClimbStore(root: root)
+        let staged = root.appendingPathComponent("fixture.mov"); try Data([1]).write(to: staged)
+        var full = analysis()
+        let candidate = full.people![0].candidates[0]
+        full.people = (0..<600).map { index in
+            var c = candidate; c.id = "sample-\(index)"; c.pose.time = Double(index) / 10
+            return SubjectSample(time: c.pose.time, candidates: [c])
+        }
+        let saved = try store.save(title: "", grade: ungradedValue, sent: false, note: "", stagedVideo: staged, thumbnail: Data(), analysis: full)
+        XCTAssertNil(saved.analysis.people)
+        XCTAssertTrue(saved.analysis.hasSubjectCandidates)
+        let reference = try XCTUnwrap(saved.analysis.peopleReference)
+        let index = store.file("archive.json")
+        XCTAssertLessThan(try Data(contentsOf: index).count, 3000, "Journal metadata must not contain every candidate")
+        let reopened = ClimbStore(root: root)
+        XCTAssertNil(reopened.climbs[0].analysis.people)
+        let restored = try await reopened.subjectAnalysis(for: reopened.climbs[0])
+        XCTAssertEqual(restored.people?.count, 600)
+        XCTAssertEqual(restored.people?.last?.candidates[0].id, "sample-599")
+        // Make only the index unwritable after a new immutable sidecar can be written.
+        let backup = store.file("saved-index.json")
+        try FileManager.default.moveItem(at: index, to: backup)
+        try FileManager.default.createDirectory(at: index, withIntermediateDirectories: false)
+        XCTAssertThrowsError(try reopened.replaceAnalysis(saved, analysis: full))
+        XCTAssertEqual(reopened.climbs[0].analysis.peopleReference, reference)
+        let sidecars = try FileManager.default.contentsOfDirectory(atPath: root.path).filter { $0.contains(".subjects.") }
+        XCTAssertEqual(sidecars.count, 1, "A failed index write must remove only its new uncommitted file")
+        try FileManager.default.removeItem(at: index)
+        try FileManager.default.moveItem(at: backup, to: index)
+        try reopened.replaceAnalysis(saved, analysis: full)
+        XCTAssertNotEqual(reopened.climbs[0].analysis.peopleReference, reference)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: SubjectCandidateStorage.file(root: root, record: saved.id, reference: reference).path))
+        try reopened.delete(reopened.climbs[0])
+        XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath: root.path).filter { $0.contains(".subjects.") }.isEmpty)
+    }
+    func testManualRegionOnRealReference() async throws {
+        let env = ProcessInfo.processInfo.environment
+        guard let path = env["BB_SUBJECT_CLIP"], let region = env["BB_SUBJECT_REGION"], SubjectResolver.available else { throw XCTSkip("Optional private reference and region not supplied") }
+        let bounds = try JSONDecoder().decode(SubjectBounds.self, from: Data(region.utf8))
+        let url = URL(fileURLWithPath: path)
+        let base = try await VideoAnalyzer().analyze(url: url, quality: .balanced) { _ in }
+        let start = Date()
+        let result = try await SubjectRegionAnalyzer().refine(url: url, analysis: base, bounds: bounds, at: Double(env["BB_SUBJECT_TIME"] ?? "0") ?? 0) { _ in }
+        let selected = try await SubjectResolver().resolve(result.analysis, anchors: [result.anchor])
+        XCTAssertGreaterThan(selected.frames.count, 2)
+        XCTAssertEqual(selected.subject?.unresolved, 0)
+        if result.anchor.time > 0.5 && result.anchor.time < base.duration-0.5 {
+            XCTAssertTrue(selected.frames.contains { $0.time < result.anchor.time }, "Selection must also cover detected frames before the chosen moment")
+            XCTAssertTrue(selected.frames.contains { $0.time > result.anchor.time }, "Selection must also cover detected frames after the chosen moment")
+        }
+        print("Manual region: selected=\(selected.frames.count)/\(selected.sampledFrames), seconds=\(Date().timeIntervalSince(start))")
+        if let output = env["BB_SUBJECT_OUTPUT"] { try JSONEncoder().encode(selected).write(to: URL(fileURLWithPath: output)) }
+    }
 }

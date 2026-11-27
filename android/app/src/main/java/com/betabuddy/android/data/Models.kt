@@ -42,7 +42,12 @@ data class PoseAnalysis(
     val sampledFrames: Int,
     val duration: Double,
     val aspectRatio: Double,
+    val people: List<SubjectSample>? = null,
+    val peopleReference: String? = null,
+    val subject: SubjectResolution? = null,
 ) {
+    val hasSubjectCandidates: Boolean get() = people?.any { it.candidates.isNotEmpty() } ?: (peopleReference != null)
+
     /** False for records analysed before world landmarks were kept, and for clips not analysed yet. */
     val hasWorldLandmarks: Boolean
         get() = frames.any { it.hasWorldLandmarks }
@@ -87,6 +92,8 @@ data class Climb(
     /** Raw value is forward compatible; indoor, outdoor or unknown. */
     val environment: String? = null,
     val environmentAuto: Boolean? = null,
+    val subjectAnchors: List<SubjectAnchor>? = null,
+    val subjectRevision: Int? = null,
 ) {
     /** The discipline the user chose themselves; the analysis page is told it and does not judge again. */
     val chosenDiscipline: String? get() = discipline?.takeIf { disciplineAuto != true && Discipline.valid(it) }

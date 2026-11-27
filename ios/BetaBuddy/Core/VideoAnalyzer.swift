@@ -133,7 +133,7 @@ actor VideoAnalyzer {
         return analysis
     }
 
-    private static func appearance(image: CGImage, bounds: SubjectBounds) -> [Double] {
+    static func appearance(image: CGImage, bounds: SubjectBounds) -> [Double] {
         guard bounds.valid, let crop = image.cropping(to: CGRect(x: bounds.x * Double(image.width), y: bounds.y * Double(image.height),
             width: bounds.width * Double(image.width), height: bounds.height * Double(image.height))) else { return [] }
         var pixels = [UInt8](repeating: 0, count: 4 * 4 * 4)

@@ -28,6 +28,8 @@ struct PoseAnalysis: Codable, Sendable {
     var duration: Double
     var aspectRatio: Double
     var people: [SubjectSample]? = nil
+    /// The full candidate set lives beside this record, loaded only while choosing a person.
+    var peopleReference: UUID? = nil
     var subject: SubjectResolution? = nil
     /// False for records analysed before world landmarks were kept, and for clips not analysed yet.
     var hasWorldLandmarks: Bool { frames.contains(where: \.hasWorldLandmarks) }

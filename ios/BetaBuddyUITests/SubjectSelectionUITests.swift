@@ -19,9 +19,24 @@ final class SubjectSelectionUITests: XCTestCase {
         XCTAssertTrue(choose.waitForExistence(timeout: 10))
         if !choose.isHittable { app.swipeUp() }; choose.tap()
         let people = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'subject-'"))
-        XCTAssertTrue(people.firstMatch.waitForExistence(timeout: 60))
-        people.firstMatch.tap()
-        XCTAssertTrue(app.buttons["saveSubject"].wait(for: \.isEnabled, toEqual: true, timeout: 15))
+        if let region = ProcessInfo.processInfo.environment["BB_SUBJECT_REGION"],
+           let bounds = try JSONSerialization.jsonObject(with: Data(region.utf8)) as? [String: Double] {
+            let draw = app.buttons["drawSubjectRegion"]
+            XCTAssertTrue(draw.wait(for: \.isEnabled, toEqual: true, timeout: 60))
+            if !draw.isHittable { app.swipeUp() }; draw.tap()
+            let canvas = app.otherElements["subjectRegionCanvas"]
+            XCTAssertTrue(canvas.waitForExistence(timeout: 10))
+            let aspect = Double(ProcessInfo.processInfo.environment["BB_SUBJECT_ASPECT"] ?? "0.56666667")!
+            let width = min(canvas.frame.width, canvas.frame.height*aspect), height = width/aspect
+            let x = (canvas.frame.width-width)/2, y = (canvas.frame.height-height)/2
+            let start = canvas.coordinate(withNormalizedOffset: CGVector(dx: (x+width*bounds["x"]!)/canvas.frame.width, dy: (y+height*bounds["y"]!)/canvas.frame.height))
+            let end = canvas.coordinate(withNormalizedOffset: CGVector(dx: (x+width*(bounds["x"]!+bounds["width"]!))/canvas.frame.width, dy: (y+height*(bounds["y"]!+bounds["height"]!))/canvas.frame.height))
+            start.press(forDuration: 0.1, thenDragTo: end)
+        } else {
+            XCTAssertTrue(people.firstMatch.waitForExistence(timeout: 60))
+            people.firstMatch.tap()
+        }
+        XCTAssertTrue(app.buttons["saveSubject"].wait(for: \.isEnabled, toEqual: true, timeout: 120))
         let selected = XCTAttachment(screenshot: app.screenshot())
         selected.name = "Subject outline on the original video"; selected.lifetime = .keepAlways; add(selected)
         app.buttons["saveSubject"].tap()
