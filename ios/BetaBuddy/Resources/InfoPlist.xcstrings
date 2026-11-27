@@ -4,34 +4,34 @@
     "NSPhotoLibraryUsageDescription": {
       "extractionState": "manual",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Choose a climbing video to analyze on this iPhone."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "クライミング動画を選び、この iPhone で動きを解析します。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "등반 영상을 선택해 이 iPhone에서 동작을 분석합니다."
-          }
-        },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "选择攀爬视频，在这台 iPhone 上分析动作。"
+            "value": "开启自动收录后，在本机识别你授权的攀爬视频，并按拍摄时间和视频位置整理。不会修改原片或上传视频。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "選擇攀爬影片，在這支 iPhone 上分析動作。"
+            "value": "開啟自動收錄後，在本機辨識你授權的攀爬影片，並按拍攝時間和影片位置整理。不會修改原片或上傳影片。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When you enable automatic import, identify climbing videos you allow on this device and organize them by filming time and video location. Originals are not changed and videos are not uploaded."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動取り込みを有効にすると、許可したクライミング動画をこの端末で認識し、撮影日時と動画の位置情報で整理します。元の動画は変更せず、アップロードもしません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자동 가져오기를 켜면 허용한 등반 영상을 기기에서 인식하고 촬영 시간과 영상 위치로 정리합니다. 원본은 변경하지 않으며 영상을 업로드하지 않습니다."
           }
         }
       }

@@ -15,6 +15,7 @@
 		0EECD6E16FB3FAE15E7C6119 /* Capture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B87183700FC707A88F7A1FE /* Capture.swift */; };
 		1124280948F2454C8A8D2FC9 /* VideoAnalyzerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECCFE48838B717B182EE97DE /* VideoAnalyzerTests.swift */; };
 		182C46AC97C9E8377CBDD99B /* BrandMark.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42A6F303EF87EE37EFBE4353 /* BrandMark.swift */; };
+		1D076C70866676A034836D22 /* PhotoLibraryImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = E60E0E8B9324117B4B77C1D4 /* PhotoLibraryImport.swift */; };
 		1DF8E8AB37624057221AA670 /* pose.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 3AE7FD6F347167E06CDEEFD4 /* pose.jpg */; };
 		1E2C12C14F705C065580313A /* ImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 743A912A78FF47442185E13B /* ImportView.swift */; };
 		20DC5F18D14B2216D7FAD54A /* PrivacyPolicy.zh-Hans.txt in Resources */ = {isa = PBXBuildFile; fileRef = B7F8A85AA8EA646D83C5623B /* PrivacyPolicy.zh-Hans.txt */; };
@@ -43,12 +44,15 @@
 		53A1944C0FDC8102328CBD98 /* Abseil-LICENSE.txt in Resources */ = {isa = PBXBuildFile; fileRef = A7174767CB29C136B90F62BD /* Abseil-LICENSE.txt */; };
 		561FBAD7AD8BD705DB1DF130 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DBB55650FA0E8706EEAE41DD /* CoreGraphics.framework */; };
 		58B214EE189FD96A2974AEB3 /* EditRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47598F3CFABD120B60E73868 /* EditRenderer.swift */; };
+		5D1ACD54F24C8326B39B86B7 /* LibraryImportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3B228CAFF70BB720005F821 /* LibraryImportTests.swift */; };
 		64B4F869EFA81EEF760E823D /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5952534D2D2EC74A3ACF8282 /* Models.swift */; };
 		6764F737CC7561A0B829BC42 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 04252B4DF93CA2D2C02CB050 /* PrivacyInfo.xcprivacy */; };
 		68D0F5092E121988D583C49B /* gyms-cn.json in Resources */ = {isa = PBXBuildFile; fileRef = 743FE06F5D55799944FE0364 /* gyms-cn.json */; };
 		6AC53C07931B232E6CA053BC /* EditFlowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 136A30B363AE58039D32EFFE /* EditFlowTests.swift */; };
 		6BF92DA3CF14BCC36834000B /* capture-standin.html in Resources */ = {isa = PBXBuildFile; fileRef = 2B01E45A834F62541C0D5341 /* capture-standin.html */; };
+		6F0AD349F9A79DE63F58C9A2 /* LibraryClassifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45E5FD6427E53C33407C09A7 /* LibraryClassifier.swift */; };
 		70E9E608ADF6DC78E8C758E9 /* SyntheticWallClip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1830CB0EDF61461362D76978 /* SyntheticWallClip.swift */; };
+		726B030507AE94D2C9E59EE1 /* LibraryImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8EEBBE5D5EA93A3C5AEB8E9 /* LibraryImportView.swift */; };
 		76F7B642982F7D07FD4F24DC /* MediaPipe-LICENSE.txt in Resources */ = {isa = PBXBuildFile; fileRef = 927AD7E7BF0727CE96A51A25 /* MediaPipe-LICENSE.txt */; };
 		7B8ABEF9440F27BFDBF942D2 /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE5D647ABE46C906A386B5E4 /* DesignSystem.swift */; };
 		7BB1E9F7D93839BD55FB7A36 /* PrivacyPolicy.en.txt in Resources */ = {isa = PBXBuildFile; fileRef = C0A7C7799F417F30A48923EA /* PrivacyPolicy.en.txt */; };
@@ -61,6 +65,7 @@
 		90B70792471CC4D71621EA3A /* EditRendererTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 366A105A5A4408DE5B707003 /* EditRendererTests.swift */; };
 		99F7A8890E725F89F85A2030 /* CoreImage.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A68FFDAADCD794A3E2BA9EB4 /* CoreImage.framework */; };
 		9AA3934B0C6312A0A59C93B7 /* VideoAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70CE35583F94C8C3EE53F2E /* VideoAnalyzer.swift */; };
+		9CA6F7BBFD025586EC7D7DF5 /* TinyCLIP.txt in Resources */ = {isa = PBXBuildFile; fileRef = FB659A96F4FA8B856C8C0A88 /* TinyCLIP.txt */; };
 		A12147024A4CA862D346FE8B /* GymView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85F50739B83E9927D442985F /* GymView.swift */; };
 		A5F04A407DAACC93DBF3EB71 /* JournalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC6B978A0067117F43BF8620 /* JournalView.swift */; };
 		A625CD0F2C4E73A1A4A92E12 /* CaptureDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB1FE3CE91016E84266DD392 /* CaptureDiagnostics.swift */; };
@@ -69,6 +74,7 @@
 		ADB7801DC2438A7B6D4E7884 /* CoreMedia.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 95F7B89B57416C9C6E6F5B54 /* CoreMedia.framework */; };
 		B58E7B4AB8D0408915EBEF28 /* CaptureRecovery.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23B1E2CAC6C284CABB0D7218 /* CaptureRecovery.swift */; };
 		B5ED4035986D2A8E23F1DF3D /* capture-standin.html in Resources */ = {isa = PBXBuildFile; fileRef = 2B01E45A834F62541C0D5341 /* capture-standin.html */; };
+		BEDA3DF97B544A1DCAB95732 /* LibraryImportUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF6D179832DFA8912BC3CDEA /* LibraryImportUITests.swift */; };
 		BFF41156BA3A9A81EE253DAF /* MediaPipeTasksVision.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2EF79A2082843E4FAA12EB15 /* MediaPipeTasksVision.xcframework */; };
 		C10DC5618015D8E01BDF6172 /* AnalysisUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02A20D9113E8B8D5CE2AA7AF /* AnalysisUITests.swift */; };
 		C1251B80648D98A260A3801C /* ImportSaveUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E77E582DB0FAEFA48FF81EE2 /* ImportSaveUITests.swift */; };
@@ -144,6 +150,7 @@
 		409A3404909ABC21AE90E6FD /* LocalTasksLogger.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = LocalTasksLogger.cc; sourceTree = "<group>"; };
 		42A6F303EF87EE37EFBE4353 /* BrandMark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrandMark.swift; sourceTree = "<group>"; };
 		445811D9319624B389D3A244 /* Lifetime.storekit */ = {isa = PBXFileReference; path = Lifetime.storekit; sourceTree = "<group>"; };
+		45E5FD6427E53C33407C09A7 /* LibraryClassifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryClassifier.swift; sourceTree = "<group>"; };
 		47598F3CFABD120B60E73868 /* EditRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditRenderer.swift; sourceTree = "<group>"; };
 		494540B4B6EC6FBF8A07CD7D /* AnalysisView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalysisView.swift; sourceTree = "<group>"; };
 		4E647546AE9AC14BC8F5396E /* BetaBuddyUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = BetaBuddyUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -174,6 +181,7 @@
 		95F7B89B57416C9C6E6F5B54 /* CoreMedia.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMedia.framework; path = System/Library/Frameworks/CoreMedia.framework; sourceTree = SDKROOT; };
 		986F0C7537A8CCE96F645D45 /* EditView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditView.swift; sourceTree = "<group>"; };
 		9BCB614C8820A5FA6B1BC001 /* GymLocator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GymLocator.swift; sourceTree = "<group>"; };
+		A3B228CAFF70BB720005F821 /* LibraryImportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryImportTests.swift; sourceTree = "<group>"; };
 		A68FFDAADCD794A3E2BA9EB4 /* CoreImage.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreImage.framework; path = System/Library/Frameworks/CoreImage.framework; sourceTree = SDKROOT; };
 		A70CE35583F94C8C3EE53F2E /* VideoAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoAnalyzer.swift; sourceTree = "<group>"; };
 		A7174767CB29C136B90F62BD /* Abseil-LICENSE.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Abseil-LICENSE.txt"; sourceTree = "<group>"; };
@@ -190,13 +198,17 @@
 		C614D6B39B02159288ECC886 /* CatUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatUITests.swift; sourceTree = "<group>"; };
 		CB1FE3CE91016E84266DD392 /* CaptureDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureDiagnostics.swift; sourceTree = "<group>"; };
 		DBB55650FA0E8706EEAE41DD /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
+		DF6D179832DFA8912BC3CDEA /* LibraryImportUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryImportUITests.swift; sourceTree = "<group>"; };
 		E1A3BE34FB4FA4B89AE39B85 /* AlbumViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlbumViews.swift; sourceTree = "<group>"; };
+		E60E0E8B9324117B4B77C1D4 /* PhotoLibraryImport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoLibraryImport.swift; sourceTree = "<group>"; };
 		E77E582DB0FAEFA48FF81EE2 /* ImportSaveUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportSaveUITests.swift; sourceTree = "<group>"; };
 		ECA2166BDB77F73F38151758 /* CoreVideo.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreVideo.framework; path = System/Library/Frameworks/CoreVideo.framework; sourceTree = SDKROOT; };
 		ECCFE48838B717B182EE97DE /* VideoAnalyzerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoAnalyzerTests.swift; sourceTree = "<group>"; };
 		F16FB9A05EB0351A813E6732 /* NavigationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationTests.swift; sourceTree = "<group>"; };
 		F211F0052F6188FC6F05BE84 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		F42E95797193AFFFA0A2278A /* CaptureSupportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureSupportTests.swift; sourceTree = "<group>"; };
+		F8EEBBE5D5EA93A3C5AEB8E9 /* LibraryImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryImportView.swift; sourceTree = "<group>"; };
+		FB659A96F4FA8B856C8C0A88 /* TinyCLIP.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = TinyCLIP.txt; sourceTree = "<group>"; };
 		FC6B978A0067117F43BF8620 /* JournalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalView.swift; sourceTree = "<group>"; };
 		FCBC8222041AAD7969E6318C /* StandInPack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StandInPack.swift; sourceTree = "<group>"; };
 		FE5D647ABE46C906A386B5E4 /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
@@ -282,6 +294,7 @@
 				8721AC225C11AEADCCB6D063 /* Glog-LICENSE.txt */,
 				927AD7E7BF0727CE96A51A25 /* MediaPipe-LICENSE.txt */,
 				5F8BEA087D64A4AC0F592D1E /* MediaPipe-NOTICE.txt */,
+				FB659A96F4FA8B856C8C0A88 /* TinyCLIP.txt */,
 			);
 			path = Licenses;
 			sourceTree = "<group>";
@@ -333,7 +346,9 @@
 				47598F3CFABD120B60E73868 /* EditRenderer.swift */,
 				9BCB614C8820A5FA6B1BC001 /* GymLocator.swift */,
 				83D8408323F334B43C989559 /* GymPack.swift */,
+				45E5FD6427E53C33407C09A7 /* LibraryClassifier.swift */,
 				5952534D2D2EC74A3ACF8282 /* Models.swift */,
+				E60E0E8B9324117B4B77C1D4 /* PhotoLibraryImport.swift */,
 				A70CE35583F94C8C3EE53F2E /* VideoAnalyzer.swift */,
 			);
 			path = Core;
@@ -370,6 +385,7 @@
 				85F50739B83E9927D442985F /* GymView.swift */,
 				743A912A78FF47442185E13B /* ImportView.swift */,
 				FC6B978A0067117F43BF8620 /* JournalView.swift */,
+				F8EEBBE5D5EA93A3C5AEB8E9 /* LibraryImportView.swift */,
 				6BC315278D0CDD9A78988A5F /* Localization.swift */,
 				3FC04FB3A97368DF160C336E /* ReviewView.swift */,
 			);
@@ -387,6 +403,7 @@
 				366A105A5A4408DE5B707003 /* EditRendererTests.swift */,
 				04D26467BEEDD8CB1AE638D9 /* GymDirectoryTests.swift */,
 				A7318870BC8802A65E6F1001 /* GymPackTests.swift */,
+				A3B228CAFF70BB720005F821 /* LibraryImportTests.swift */,
 				594EB98E4EE6131FFD0E8988 /* LocalizationTests.swift */,
 				098503FA49B611AD0616C62D /* MembershipTests.swift */,
 				ECCFE48838B717B182EE97DE /* VideoAnalyzerTests.swift */,
@@ -404,6 +421,7 @@
 				C614D6B39B02159288ECC886 /* CatUITests.swift */,
 				51A2CDF62C7A11BA64291195 /* EditUITests.swift */,
 				E77E582DB0FAEFA48FF81EE2 /* ImportSaveUITests.swift */,
+				DF6D179832DFA8912BC3CDEA /* LibraryImportUITests.swift */,
 				F16FB9A05EB0351A813E6732 /* NavigationTests.swift */,
 			);
 			path = BetaBuddyUITests;
@@ -575,6 +593,7 @@
 				7BB1E9F7D93839BD55FB7A36 /* PrivacyPolicy.en.txt in Resources */,
 				20DC5F18D14B2216D7FAD54A /* PrivacyPolicy.zh-Hans.txt in Resources */,
 				F6D7FB90B021A91BE921D1C2 /* PrivacyPolicy.zh-Hant.txt in Resources */,
+				9CA6F7BBFD025586EC7D7DF5 /* TinyCLIP.txt in Resources */,
 				68D0F5092E121988D583C49B /* gyms-cn.json in Resources */,
 				415443B23940E5663A9BD537 /* pose_landmarker_full.task in Resources */,
 			);
@@ -600,7 +619,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -e\nDEST=\"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/GymPack\"\nrm -rf \"$DEST\"\nif [ -f \"$PROJECT_DIR/GymPack/manifest.json\" ]; then\n  cp -R \"$PROJECT_DIR/GymPack\" \"$DEST\"\n  find \"$DEST\" -name .DS_Store -delete\n  echo \"Bundled gym pack from $PROJECT_DIR/GymPack\"\nelse\n  echo \"note: No gym pack installed. The 岩馆 entry will show its empty state.\"\nfi\n";
+			shellScript = "set -e\nMODEL_DEST=\"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/LibraryImageEncoder.mlmodelc\"\nrm -rf \"$MODEL_DEST\"\nif [ -f \"$PROJECT_DIR/GymPack/library-classifier.json\" ] && [ ! -d \"$PROJECT_DIR/Vendor/LibraryImageEncoder.mlmodelc\" ]; then\n  echo \"error: Install the library image encoder for this pack before building.\" >&2\n  exit 1\nfi\nif [ -d \"$PROJECT_DIR/Vendor/LibraryImageEncoder.mlmodelc\" ]; then\n  cp -R \"$PROJECT_DIR/Vendor/LibraryImageEncoder.mlmodelc\" \"$MODEL_DEST\"\nfi\nDEST=\"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/GymPack\"\nrm -rf \"$DEST\"\nif [ -f \"$PROJECT_DIR/GymPack/manifest.json\" ]; then\n  cp -R \"$PROJECT_DIR/GymPack\" \"$DEST\"\n  find \"$DEST\" -name .DS_Store -delete\n  echo \"Bundled gym pack from $PROJECT_DIR/GymPack\"\nelse\n  echo \"note: No gym pack installed. The 岩馆 entry will show its empty state.\"\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -617,6 +636,7 @@
 				90B70792471CC4D71621EA3A /* EditRendererTests.swift in Sources */,
 				F8255E49A19A07759A685565 /* GymDirectoryTests.swift in Sources */,
 				3055DB323A34FC37D2A7A210 /* GymPackTests.swift in Sources */,
+				5D1ACD54F24C8326B39B86B7 /* LibraryImportTests.swift in Sources */,
 				07D0E8425853630B63AB89CF /* LocalizationTests.swift in Sources */,
 				A6CCE212361BF1F9111BB557 /* MembershipTests.swift in Sources */,
 				3051868C32F359501A4312D1 /* StandInPack.swift in Sources */,
@@ -656,10 +676,13 @@
 				A12147024A4CA862D346FE8B /* GymView.swift in Sources */,
 				1E2C12C14F705C065580313A /* ImportView.swift in Sources */,
 				A5F04A407DAACC93DBF3EB71 /* JournalView.swift in Sources */,
+				6F0AD349F9A79DE63F58C9A2 /* LibraryClassifier.swift in Sources */,
+				726B030507AE94D2C9E59EE1 /* LibraryImportView.swift in Sources */,
 				85453C6DD1EF245AAD250759 /* LocalTasksLogger.cc in Sources */,
 				CA64D940DD5A8D4DD526465A /* Localization.swift in Sources */,
 				C34B0F291B88E53C70AB0D81 /* MembershipStore.swift in Sources */,
 				64B4F869EFA81EEF760E823D /* Models.swift in Sources */,
+				1D076C70866676A034836D22 /* PhotoLibraryImport.swift in Sources */,
 				057EFDAB6648F3C43421E1D4 /* ReviewView.swift in Sources */,
 				9AA3934B0C6312A0A59C93B7 /* VideoAnalyzer.swift in Sources */,
 			);
@@ -675,6 +698,7 @@
 				FC3C142266B4F1FE1DADA9A0 /* CatUITests.swift in Sources */,
 				ED463D37140D854D159201EF /* EditUITests.swift in Sources */,
 				C1251B80648D98A260A3801C /* ImportSaveUITests.swift in Sources */,
+				BEDA3DF97B544A1DCAB95732 /* LibraryImportUITests.swift in Sources */,
 				DEEE5CE8148AAEC0D80107C9 /* NavigationTests.swift in Sources */,
 				3F1F5409115C1CE112F269B9 /* StandInPack.swift in Sources */,
 				7DA74689B41572870E9E3E72 /* SyntheticWallClip.swift in Sources */,
@@ -733,7 +757,8 @@
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSCameraUsageDescription = "拍下你的攀爬，在这台 iPhone 上检查机位并保存。录像只保存在这台设备上，除非你自己分享出去。";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "按距离推荐附近的岩馆。位置只在这台 iPhone 上使用，不保存，也不会离开设备。";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "选择攀爬视频，在这台 iPhone 上分析动作。";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "开启自动收录后，在本机识别你授权的攀爬视频，并按拍摄时间和视频位置整理。不会修改原片或上传视频。";
+				INFOPLIST_KEY_PHPhotoLibraryPreventAutomaticLimitedAccessAlert = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
@@ -912,7 +937,8 @@
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSCameraUsageDescription = "拍下你的攀爬，在这台 iPhone 上检查机位并保存。录像只保存在这台设备上，除非你自己分享出去。";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "按距离推荐附近的岩馆。位置只在这台 iPhone 上使用，不保存，也不会离开设备。";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "选择攀爬视频，在这台 iPhone 上分析动作。";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "开启自动收录后，在本机识别你授权的攀爬视频，并按拍摄时间和视频位置整理。不会修改原片或上传视频。";
+				INFOPLIST_KEY_PHPhotoLibraryPreventAutomaticLimitedAccessAlert = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;

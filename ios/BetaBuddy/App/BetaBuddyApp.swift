@@ -38,6 +38,7 @@ struct BetaBuddyApp: App {
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var store: ClimbStore
     @StateObject private var analysisQueue: AnalysisQueue
+    @StateObject private var library: PhotoLibraryImport
     @StateObject private var language = LanguageSettings()
     @StateObject private var membership = MembershipStore()
     init() {
@@ -45,11 +46,12 @@ struct BetaBuddyApp: App {
         try? FileManager.default.removeItem(at: EditFiles.root)
         let store = ClimbStore()
         _store = StateObject(wrappedValue: store)
+        _library = StateObject(wrappedValue: PhotoLibraryImport(store: store))
         _analysisQueue = StateObject(wrappedValue: AnalysisQueue(store: store))
     }
     var body: some Scene {
         WindowGroup {
-            RootView().environmentObject(store).environmentObject(analysisQueue).environmentObject(language).environmentObject(membership).tint(BB.ink).preferredColorScheme(.light)
+            RootView().environmentObject(library).environmentObject(store).environmentObject(analysisQueue).environmentObject(language).environmentObject(membership).tint(BB.ink).preferredColorScheme(.light)
                 .alert("暂时无法完成", isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) {
                     Button("知道了", role: .cancel) { store.error = nil }
                 } message: { Text(verbatim: store.error ?? "") }
@@ -57,9 +59,13 @@ struct BetaBuddyApp: App {
                 .task {
                     // A recording an earlier run did not live to save becomes a record now, before anything is analysed.
                     await CaptureRecovery.sweep(store: store, analysisAvailable: GymPack.current?.supportsAnalysis == true)
-                    store.resumeAnalysis(); await membership.refreshEntitlement()
+                    store.resumeAnalysis(); library.refresh(); await membership.refreshEntitlement()
+                }
+                .onChange(of: store.cameraOpen) { _, open in
+                    if open { library.stop() } else { library.refresh() }
                 }
                 .onChange(of: scenePhase) { _, phase in
+                    library.setForeground(phase == .active)
                     if phase == .active { store.resumeAnalysis(); analysisQueue.setSuspended(false); Task { await membership.load() } }
                     else if phase == .background { analysisQueue.setSuspended(true) }
                 }

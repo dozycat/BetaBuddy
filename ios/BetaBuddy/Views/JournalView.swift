@@ -5,6 +5,7 @@ struct JournalView: View {
     @EnvironmentObject private var membership: MembershipStore
     @State private var filter = 0
     @State private var importing = false
+    @State private var showingLibrary = false
 #if DEBUG
     /// `-debugOpenCapture YES` opens the camera straight away: a first run on a phone can then be started from a computer.
     @State private var capturing = UserDefaults.standard.bool(forKey: "debugOpenCapture")
@@ -102,6 +103,9 @@ struct JournalView: View {
                     }
                 }
             }
+            Button { showingLibrary = true } label: {
+                Label("相册自动收录", systemImage: "photo.on.rectangle.angled").font(.subheadline)
+            }.buttonStyle(.plain).accessibilityIdentifier("libraryImport")
             folderBar
             if store.climbs.isEmpty {
                 VStack(alignment: .leading, spacing: 16) {
@@ -126,7 +130,9 @@ struct JournalView: View {
                             }
                             Group {
                                 if group.id.environment == .outdoor { Text("室外") }
-                                else if let name = group.gymName { Text(verbatim: name) }
+                                else if let name = group.gymName {
+                                    HStack { Text(verbatim: name); if group.climbs.allSatisfy({ $0.gymAuto == true }) { Text("推荐").font(.caption2) } }
+                                }
                                 else { Text("未标岩馆") }
                             }.font(.subheadline).foregroundStyle(BB.muted)
                             ForEach(group.climbs) { climb in
@@ -143,6 +149,7 @@ struct JournalView: View {
                 if let selected = albumFilter.folderId, !folders.contains(where: { $0.id == selected }) { albumFilter.folderId = nil }
             }
             .sheet(isPresented: $importing) { ImportView() }
+            .sheet(isPresented: $showingLibrary) { LibraryImportView() }
             .fullScreenCover(isPresented: $capturing, onDismiss: {
                 if importAfterCapture { importAfterCapture = false; importing = true }
             }) {

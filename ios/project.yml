@@ -26,11 +26,12 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         ENABLE_USER_SCRIPT_SANDBOXING: NO
         INFOPLIST_KEY_CFBundleDisplayName: BetaBuddy
+        INFOPLIST_KEY_NSPhotoLibraryUsageDescription: 开启自动收录后，在本机识别你授权的攀爬视频，并按拍摄时间和视频位置整理。不会修改原片或上传视频。
+        INFOPLIST_KEY_PHPhotoLibraryPreventAutomaticLimitedAccessAlert: YES
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
         INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
-        INFOPLIST_KEY_NSPhotoLibraryUsageDescription: 选择攀爬视频，在这台 iPhone 上分析动作。
         INFOPLIST_KEY_NSCameraUsageDescription: 拍下你的攀爬，在这台 iPhone 上检查机位并保存。录像只保存在这台设备上，除非你自己分享出去。
         INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: 按距离推荐附近的岩馆。位置只在这台 iPhone 上使用，不保存，也不会离开设备。
         LOCALIZATION_PREFERS_STRING_CATALOGS: YES
@@ -48,6 +49,15 @@ targets:
         basedOnDependencyAnalysis: false
         script: |
           set -e
+          MODEL_DEST="$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/LibraryImageEncoder.mlmodelc"
+          rm -rf "$MODEL_DEST"
+          if [ -f "$PROJECT_DIR/GymPack/library-classifier.json" ] && [ ! -d "$PROJECT_DIR/Vendor/LibraryImageEncoder.mlmodelc" ]; then
+            echo "error: Install the library image encoder for this pack before building." >&2
+            exit 1
+          fi
+          if [ -d "$PROJECT_DIR/Vendor/LibraryImageEncoder.mlmodelc" ]; then
+            cp -R "$PROJECT_DIR/Vendor/LibraryImageEncoder.mlmodelc" "$MODEL_DEST"
+          fi
           DEST="$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/GymPack"
           rm -rf "$DEST"
           if [ -f "$PROJECT_DIR/GymPack/manifest.json" ]; then

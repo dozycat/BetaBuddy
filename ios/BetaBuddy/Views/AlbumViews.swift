@@ -182,6 +182,8 @@ struct OrganizeClimbView: View {
     @State private var discipline: Discipline
     /// The user picked a discipline here; one they only looked at stays as it was.
     @State private var disciplinePicked = false
+    @State private var environment: ClimbEnvironment
+    @State private var environmentPicked = false
     @State private var gymId: String?
     @State private var gymName: String
     @State private var climbedAt: Date
@@ -191,6 +193,7 @@ struct OrganizeClimbView: View {
         self.climb = climb
         _title = State(initialValue: climb.title); _grade = State(initialValue: climb.grade)
         _discipline = State(initialValue: climb.style ?? .boulder)
+        _environment = State(initialValue: climb.setting)
         _gymId = State(initialValue: climb.gymId); _gymName = State(initialValue: climb.gymName ?? "")
         _climbedAt = State(initialValue: climb.climbingDate); _folderId = State(initialValue: climb.folderId)
     }
@@ -202,6 +205,19 @@ struct OrganizeClimbView: View {
                     DisciplinePicker(discipline: $discipline, grade: $grade) { disciplinePicked = true }
                     GradePicker(grade: $grade, discipline: discipline)
                 }
+                Section {
+                    Picker("攀爬环境", selection: $environment) {
+                        Text("未确定").tag(ClimbEnvironment.unknown)
+                        Text("室内").tag(ClimbEnvironment.indoor)
+                        Text("室外").tag(ClimbEnvironment.outdoor)
+                    }.onChange(of: environment) { _, value in
+                        environmentPicked = true
+                        if value == .outdoor { gymId = nil; gymName = "" }
+                    }
+                    if climb.environmentAuto == true || climb.gymAuto == true {
+                        Text("环境和岩馆由自动识别推荐，请核对。").font(.caption).foregroundStyle(BB.muted)
+                    }
+                }
                 Section { AlbumMetadataFields(gymId: $gymId, gymName: $gymName, climbedAt: $climbedAt, folderId: $folderId) }
                 if let error { Text(verbatim: error).foregroundStyle(.red) }
             }.scrollContentBackground(.hidden).background(BB.paper)
@@ -212,7 +228,7 @@ struct OrganizeClimbView: View {
                         Button("保存") {
                             do {
                                 try store.organize(climb, title: title, grade: grade, gymId: gymId, gymName: gymName, climbedAt: climbedAt, folderId: folderId,
-                                                   discipline: disciplinePicked ? discipline : nil)
+                                                   discipline: disciplinePicked ? discipline : nil, environment: environmentPicked ? environment : nil)
                                 dismiss()
                             } catch { self.error = error.localizedDescription }
                         }

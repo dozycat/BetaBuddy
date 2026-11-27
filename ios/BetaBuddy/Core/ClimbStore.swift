@@ -62,7 +62,10 @@ final class ClimbStore: ObservableObject {
 
     /// `capture` and `capturePlan` come from the in-app camera. The clip, its thumbnail, the plan and
     /// the record are all on disk when this returns; nothing is analysed here.
-    func save(title: String, grade: String, sent: Bool, note: String, stagedVideo: URL, thumbnail: Data, analysis: PoseAnalysis, gymId: String? = nil, gymName: String? = nil, climbedAt: Date? = nil, folderId: UUID? = nil, pendingAnalysis: String? = nil, capture: CaptureInfo? = nil, capturePlan: String? = nil, discipline: Discipline? = nil) throws -> Climb {
+    func save(title: String, grade: String, sent: Bool, note: String, stagedVideo: URL, thumbnail: Data, analysis: PoseAnalysis, gymId: String? = nil, gymName: String? = nil, climbedAt: Date? = nil, folderId: UUID? = nil, pendingAnalysis: String? = nil, capture: CaptureInfo? = nil, capturePlan: String? = nil, discipline: Discipline? = nil, environment: ClimbEnvironment? = nil, sourceAssetID: String? = nil, libraryReceipt: LibraryReceipt? = nil) throws -> Climb {
+        if libraryReceipt != nil, let sourceAssetID, archive.libraryLedger[sourceAssetID]?.imported == true {
+            throw CocoaError(.fileWriteFileExists)
+        }
         let id = UUID()
         var capture = capture
         capture?.hasPlan = capturePlan?.isEmpty == false
@@ -70,7 +73,11 @@ final class ClimbStore: ObservableObject {
         capture?.summary = summary
         let videoName = "\(id).\(stagedVideo.pathExtension.isEmpty ? "mov" : stagedVideo.pathExtension)"
         let thumbnailName = "\(id).jpg"
-        let climb = Climb(id: id, date: Date(), title: String(title.trimmingCharacters(in: .whitespacesAndNewlines).prefix(60)), grade: grade, sent: sent, note: String(note.prefix(1000)), videoName: videoName, thumbnailName: thumbnailName, analysis: analysis, gymId: gymId, gymName: cleanGymName(gymName), climbedAt: climbedAt, folderId: validFolder(folderId), pendingAnalysis: pendingAnalysis, capture: capture, discipline: discipline?.rawValue)
+        var climb = Climb(id: id, date: Date(), title: String(title.trimmingCharacters(in: .whitespacesAndNewlines).prefix(60)), grade: grade, sent: sent, note: String(note.prefix(1000)), videoName: videoName, thumbnailName: thumbnailName, analysis: analysis, gymId: gymId, gymName: cleanGymName(gymName), climbedAt: climbedAt, folderId: validFolder(folderId), pendingAnalysis: pendingAnalysis, capture: capture, discipline: discipline?.rawValue)
+        climb.environment = environment?.rawValue
+        climb.environmentAuto = environment == nil ? nil : true
+        climb.sourceAssetID = sourceAssetID
+        climb.gymAuto = libraryReceipt != nil && gymId != nil ? true : nil
         do {
             try FileManager.default.moveItem(at: stagedVideo, to: file(videoName))
             try FileManager.default.setAttributes([.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication], ofItemAtPath: file(videoName).path)
@@ -80,6 +87,11 @@ final class ClimbStore: ObservableObject {
             }
             var next = archive
             next.climbs.append(climb)
+            if let sourceAssetID {
+                var receipt = libraryReceipt ?? LibraryReceipt(sourceRevision: "", classifierRevision: "", imported: true)
+                receipt.imported = true
+                next.libraryLedger[sourceAssetID] = receipt
+            }
             try persist(next)
             return climb
         } catch {
@@ -90,6 +102,18 @@ final class ClimbStore: ObservableObject {
             try? FileManager.default.removeItem(at: capturePlanFile(id))
             throw error
         }
+    }
+
+    func hasHandledAsset(_ id: String, source: String, classifier: String) -> Bool {
+        archive.climbs.contains { $0.sourceAssetID == id } ||
+        archive.libraryLedger[id]?.covers(source: source, classifier: classifier) == true
+    }
+
+    func recordLibraryNonmatch(_ id: String, source: String, classifier: String) throws {
+        guard archive.libraryLedger[id]?.imported != true else { return }
+        var next = archive
+        next.libraryLedger[id] = LibraryReceipt(sourceRevision: source, classifierRevision: classifier, imported: false)
+        try persist(next)
     }
 
     func delete(_ climb: Climb) throws {
@@ -257,7 +281,7 @@ final class ClimbStore: ObservableObject {
 
     /// `discipline` is given only when the user picked one in the form; it is theirs from then on.
     /// A grade of the other scale is cleared.
-    func organize(_ climb: Climb, title: String, grade: String, gymId: String?, gymName: String?, climbedAt: Date, folderId: UUID?, discipline: Discipline? = nil) throws {
+    func organize(_ climb: Climb, title: String, grade: String, gymId: String?, gymName: String?, climbedAt: Date, folderId: UUID?, discipline: Discipline? = nil, environment: ClimbEnvironment? = nil) throws {
         var next = archive
         guard let index = next.climbs.firstIndex(where: { $0.id == climb.id }) else { return }
         next.climbs[index].title = String(title.trimmingCharacters(in: .whitespacesAndNewlines).prefix(60))
@@ -266,6 +290,13 @@ final class ClimbStore: ObservableObject {
             next.climbs[index].disciplineAuto = nil
         }
         next.climbs[index].grade = GradeScale.kept(grade, for: next.climbs[index].style)
+        if next.climbs[index].gymId != gymId || next.climbs[index].gymName != cleanGymName(gymName) {
+            next.climbs[index].gymAuto = nil
+        }
+        if let environment {
+            next.climbs[index].environment = environment.rawValue
+            next.climbs[index].environmentAuto = nil
+        }
         next.climbs[index].gymId = gymId
         next.climbs[index].gymName = cleanGymName(gymName)
         next.climbs[index].climbedAt = climbedAt

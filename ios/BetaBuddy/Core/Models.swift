@@ -66,6 +66,9 @@ struct Climb: Codable, Identifiable, Sendable {
     /// Raw value keeps archives readable if a later build adds another environment.
     var environment: String? = nil
     var environmentAuto: Bool? = nil
+    /// Photo-library identity is local only; the import ledger survives deletion of this record.
+    var sourceAssetID: String? = nil
+    var gymAuto: Bool? = nil
     var setting: ClimbEnvironment { environment.flatMap(ClimbEnvironment.init(rawValue:)) ?? .unknown }
     var style: Discipline? { discipline.flatMap(Discipline.init(rawValue:)) }
     /// What the user chose themselves, for handing to the analysis page.
@@ -143,8 +146,9 @@ struct Archive: Codable {
     var version = 1
     var climbs: [Climb] = []
     var folders: [ClimbFolder] = []
+    var libraryLedger: [String: LibraryReceipt] = [:]
     // Keep version 1: these additive fields preserve existing video and analysis records.
-    private enum CodingKeys: String, CodingKey { case version, climbs, folders }
+    private enum CodingKeys: String, CodingKey { case version, climbs, folders, libraryLedger }
     init(version: Int = 1, climbs: [Climb] = [], folders: [ClimbFolder] = []) {
         self.version = version; self.climbs = climbs; self.folders = folders
     }
@@ -153,6 +157,18 @@ struct Archive: Codable {
         version = try values.decode(Int.self, forKey: .version)
         climbs = try values.decode([Climb].self, forKey: .climbs)
         folders = try values.decodeIfPresent([ClimbFolder].self, forKey: .folders) ?? []
+        libraryLedger = try values.decodeIfPresent([String: LibraryReceipt].self, forKey: .libraryLedger) ?? [:]
+    }
+}
+
+/// Successful imports remain handled even after editing the source or deleting the local record.
+/// A negative decision is reused only for the exact source revision and classifier configuration.
+struct LibraryReceipt: Codable, Equatable, Sendable {
+    var sourceRevision: String
+    var classifierRevision: String
+    var imported: Bool
+    func covers(source: String, classifier: String) -> Bool {
+        imported || (sourceRevision == source && classifierRevision == classifier)
     }
 }
 

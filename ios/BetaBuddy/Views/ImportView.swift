@@ -23,6 +23,7 @@ func stageVideo(_ source: URL) throws -> URL {
 @MainActor
 final class ImportModel: ObservableObject {
     @Published var selectedURL: URL?
+    private var sourceAssetID: String?
     @Published var climbedAt = Date()
     @Published var hasRecordingDate = false
     @Published var readingDate = false
@@ -32,7 +33,8 @@ final class ImportModel: ObservableObject {
     @Published var saved: Climb?
     private var work: Task<Void,Never>?
     private let analyzer = VideoAnalyzer()
-    func replace(_ url: URL) {
+    func replace(_ url: URL, sourceAssetID: String? = nil) {
+        self.sourceAssetID = sourceAssetID
         if let old = selectedURL { try? FileManager.default.removeItem(at:old) }
         readingDate = true
         selectedURL = url
@@ -57,7 +59,7 @@ final class ImportModel: ObservableObject {
                 let analysis = try await analyzer.videoSummary(url: url)
                 let thumbnail = try await analyzer.thumbnail(url:url)
                 try Task.checkCancellation()
-                saved = try store.save(title:title,grade:grade,sent:sent,note:"",stagedVideo:url,thumbnail:thumbnail,analysis:analysis,gymId:gymId,gymName:gymName,climbedAt:climbedAt,folderId:folderId,pendingAnalysis:nil,discipline:discipline)
+                saved = try store.save(title:title,grade:grade,sent:sent,note:"",stagedVideo:url,thumbnail:thumbnail,analysis:analysis,gymId:gymId,gymName:gymName,climbedAt:climbedAt,folderId:folderId,pendingAnalysis:nil,discipline:discipline,sourceAssetID:sourceAssetID)
                 selectedURL = nil
                 try? FileManager.default.removeItem(at:url)
             } catch is CancellationError {
@@ -130,7 +132,7 @@ struct ImportView: View {
                 do {
                     if let movie = try await photo.loadTransferable(type:ImportedMovie.self) {
                         if Task.isCancelled { try? FileManager.default.removeItem(at:movie.url) }
-                        else { model.replace(movie.url) }
+                        else { model.replace(movie.url, sourceAssetID: photo.itemIdentifier) }
                     } else { model.error = String(localized: "未能取得视频。若原片在 iCloud，请先在相册中下载。", bundle: AppLanguage.bundle) }
                 } catch { model.error = String(localized: "导入失败：\(error.localizedDescription)", bundle: AppLanguage.bundle) }
             }
