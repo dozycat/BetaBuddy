@@ -74,6 +74,16 @@ final class SubjectSelectionUITests: XCTestCase {
         }
         XCTAssertTrue(app.buttons["saveSubject"].wait(for: \.isEnabled, toEqual: true, timeout: 120))
         if automatic { XCTAssertTrue(app.buttons["automaticSubject"].isSelected) }
+        if ProcessInfo.processInfo.environment["BB_SUBJECT_GAPS"] == "1" {
+            let gap = app.buttons["nextSubjectGap"]
+            XCTAssertTrue(gap.waitForExistence(timeout: 10)); reveal(gap)
+            let slider = controls.sliders["视频进度"], previous = slider.value as? String
+            gap.tap()
+            let moved = XCTNSPredicateExpectation(predicate: NSPredicate { _,_ in slider.value as? String != previous }, object: nil)
+            wait(for: [moved], timeout: 3)
+            XCTAssertNotEqual(slider.value as? String, previous)
+            XCTAssertTrue(app.buttons["saveSubject"].isEnabled)
+        }
         let selected = XCTAttachment(screenshot: app.screenshot())
         selected.name = "Subject outline on the original video"; selected.lifetime = .keepAlways; add(selected)
         app.buttons["saveSubject"].tap()

@@ -88,7 +88,6 @@
     <string name="subject_pause">一時停止</string>
     <string name="subject_working">動画内の人物を検出中…</string>
     <string name="subject_empty">人物未選択</string>
-    <string name="subject_missing">未選択の区間あり</string>
     <string name="subject_gaps">未選択の区間あり</string>
     <string name="subject_unresolved">選び直す</string>
     <string name="subject_retry">もう一度試す</string>

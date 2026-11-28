@@ -9,6 +9,7 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.*
@@ -76,8 +77,10 @@ internal class SubjectSelectionSession(
                 climb.analysis.copy(people = emptyList(),peopleReference = null)
             }
         val resolver=SubjectResolver(context)
-        var selected=resolver.resolve(observations,anchors)
-        if(usedCache && anchors.isEmpty() && selected.needsSubjectRecovery) selected=resolver.recover(model.videoFile(climb),selected) { value ->
+        // Reopening an explicitly saved choice does not rerun inference or replace it.
+        val savedSelection=usedCache && (climb.subjectRevision ?: 0)>0 && observations.subject!=null && observations.hasSelectedSubject
+        var selected=if(savedSelection) observations else resolver.resolve(observations,anchors)
+        if(usedCache && !savedSelection && anchors.isEmpty() && selected.needsSubjectRecovery) selected=resolver.recover(model.videoFile(climb),selected) { value ->
             scope.launch { if(serial==generation) progress=value }
         }
         selected to anchors
@@ -137,6 +140,9 @@ internal fun SubjectSelectionScreen(climb: Climb, model: JournalViewModel, onDon
     var adjusting by remember { mutableStateOf(false) }
     var draft by remember { mutableStateOf(SubjectBounds(.35,.25,.30,.50)) }
     val analysis = session.analysis
+    val timeline = remember(analysis?.subject, analysis?.duration) {
+        analysis?.let { SubjectTimeline(it.subject?.picks.orEmpty(), it.duration) }
+    }
     val sample = analysis?.subjectSample(playback.time)
     val selected = analysis?.subject?.picks?.firstOrNull { sample != null && abs(it.time-sample.time) < .0001 }?.personID
     val duration = maxOf(.1,climb.analysis.duration)
@@ -230,11 +236,22 @@ internal fun SubjectSelectionScreen(climb: Climb, model: JournalViewModel, onDon
                         }
                     }
                     val sliderLabel = stringResource(R.string.journal_review_position_cd)
-                    Slider(value = playback.time.coerceIn(0.0,duration).toFloat(),onValueChange = { playback.pause(); playback.seek(it.toDouble()) },
-                        valueRange = 0f..duration.toFloat(),modifier = Modifier.semantics { contentDescription = sliderLabel })
+                    Column {
+                        Slider(value = playback.time.coerceIn(0.0,duration).toFloat(),onValueChange = { playback.pause(); playback.seek(it.toDouble()) },
+                            valueRange = 0f..duration.toFloat(),modifier = Modifier.semantics { contentDescription = sliderLabel },
+                            colors = SliderDefaults.colors(thumbColor=BB.Ink,activeTrackColor=BB.Ink,inactiveTrackColor=BB.Ink.copy(alpha=.12f)))
+                        if (timeline != null) Canvas(Modifier.fillMaxWidth().height(6.dp)) {
+                            drawRect(BB.Ink.copy(alpha=.12f))
+                            for (span in timeline.selected) drawRect(BB.Lime,
+                                topLeft=Offset((size.width*span.start/duration).toFloat(),0f),
+                                size=androidx.compose.ui.geometry.Size((size.width*(span.end-span.start)/duration).toFloat(),size.height))
+                            for (anchor in session.anchors) if (anchor.time.isFinite()) drawCircle(BB.Ink,3.dp.toPx(),
+                                center=Offset((size.width*(anchor.time/duration).coerceIn(0.0,1.0)).toFloat(),size.height/2))
+                        }
+                    }
                     FlowRow(Modifier.fillMaxWidth(),horizontalArrangement = Arrangement.spacedBy(8.dp),verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         GlyphButton(if(playback.playing) Glyph.Pause else Glyph.Play,stringResource(if (playback.playing) R.string.subject_pause else R.string.subject_play),{ playback.toggle(duration) })
-                        Text(clockText(playback.time),style = BB.Caption,modifier = Modifier.align(Alignment.CenterVertically))
+                        Text(clockText(playback.time),style = BB.Caption,modifier = Modifier.align(Alignment.CenterVertically).testTag("subjectTime"))
                         val automatic = !drawing && session.anchors.isEmpty() && analysis?.hasSelectedSubject == true
                         OutlineButton(stringResource(R.string.subject_auto),Modifier.testTag("automaticSubject").background(if(automatic) BB.Lime else Color.Transparent,RoundedCornerShape(14.dp)).semantics { this.selected = automatic },enabled = analysis != null && !session.busy) { playback.pause(); session.automatic() }
                         OutlineButton(stringResource(if (drawing) R.string.subject_draw_cancel else R.string.subject_draw),Modifier.testTag("drawSubjectRegion").background(if(drawing || session.anchors.isNotEmpty()) BB.Lime else Color.Transparent,RoundedCornerShape(14.dp)).semantics { this.selected = drawing || session.anchors.isNotEmpty() },enabled = !saving) {
@@ -246,11 +263,12 @@ internal fun SubjectSelectionScreen(climb: Climb, model: JournalViewModel, onDon
                         session.busy -> null
                         (analysis?.subject?.unresolved ?: 0) > 0 -> R.string.subject_unresolved
                         analysis?.hasSelectedSubject != true -> R.string.subject_empty
-                        selected == null -> R.string.subject_missing
-                        analysis.subject?.picks?.any { it.personID == null } == true -> R.string.subject_gaps
                         else -> null
                     }
                     if (status != null) Text(stringResource(status),style = BB.Caption,color = BB.Muted,modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+                    else if (!session.busy && !drawing) timeline?.nextGap(playback.time)?.let { target ->
+                        OutlineButton(stringResource(R.string.subject_gaps),Modifier.testTag("nextSubjectGap")) { playback.pause(); playback.seek(target) }
+                    }
                     if (session.busy) {
                         val progressLabel = stringResource(R.string.subject_working)
                         LinearProgressIndicator(progress = { session.progress.coerceIn(0.0,1.0).toFloat() },modifier = Modifier.fillMaxWidth().semantics { contentDescription = progressLabel })

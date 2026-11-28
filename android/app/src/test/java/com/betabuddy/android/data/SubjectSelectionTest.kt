@@ -5,6 +5,25 @@ import org.junit.Test
 import kotlinx.serialization.encodeToString
 
 class SubjectSelectionTest {
+    @Test fun missingIntervalsRemainVisibleAndNavigationWraps() {
+        val picks = (0 until 60).map { i -> SubjectPick(i/10.0, if (i in 10 until 20 || i in 40 until 50) null else "person") }
+        val timeline = SubjectTimeline(picks,6.0)
+        assertEquals(3,timeline.selected.size); assertEquals(2,timeline.gaps.size)
+        assertEquals(.95,timeline.gaps[0].start,.000001); assertEquals(1.95,timeline.gaps[0].end,.000001)
+        assertEquals(1.45,timeline.nextGap(0.0)!!,.000001)
+        assertEquals(4.45,timeline.nextGap(1.45)!!,.000001)
+        assertEquals(1.45,timeline.nextGap(4.45)!!,.000001)
+        assertNull(picks[10].personID)
+    }
+    @Test fun sparseObservationsDoNotBecomeContinuousCoverage() {
+        val sparse = SubjectTimeline(listOf(SubjectPick(0.0,"a"),SubjectPick(5.0,"b")),6.0)
+        assertEquals(2,sparse.selected.size); assertTrue(sparse.gaps[0].end-sparse.gaps[0].start>4)
+        val complete = SubjectTimeline((0 until 30).map { SubjectPick(it/10.0,"a") },3.0)
+        assertEquals(listOf(SubjectTimeline.Span(0.0,3.0)),complete.selected)
+        assertNull(complete.nextGap(0.0))
+        assertEquals(listOf(SubjectTimeline.Span(0.0,3.0)),SubjectTimeline(emptyList(),3.0).gaps)
+        assertTrue(SubjectTimeline(emptyList(),Double.NaN).gaps.isEmpty())
+    }
     @Test fun legacyAnchorWithoutRegionStillLoads() {
         val anchor = ClimbStore.json.decodeFromString<SubjectAnchor>("""{"time":0,"bounds":{"x":0.1,"y":0.1,"width":0.2,"height":0.6},"appearance":[]}""")
         assertFalse(anchor.region)

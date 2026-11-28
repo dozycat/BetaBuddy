@@ -3,6 +3,7 @@ import SwiftUI
 @MainActor
 final class SubjectSelectionSession: ObservableObject {
     @Published private(set) var analysis: PoseAnalysis?
+    @Published private(set) var timeline: SubjectTimeline?
     @Published private(set) var anchors: [SubjectAnchor]
     @Published private(set) var busy = false
     @Published private(set) var progress = 0.0
@@ -44,8 +45,12 @@ final class SubjectSelectionSession: ObservableObject {
                     let cached = try? await store.subjectAnalysis(for: climb)
                     try Task.checkCancellation()
                     if let cached, cached.people?.contains(where: { !$0.candidates.isEmpty }) == true {
-                        result = try await SubjectResolver().resolve(cached, anchors: anchors)
-                        if anchors.isEmpty && result.needsSubjectRecovery {
+                        let savedSelection = (climb.subjectRevision ?? 0) > 0 && cached.subject != nil && cached.hasSelectedSubject
+                        // Opening an explicitly saved choice must not rerun inference or
+                        // silently replace it. Automatic and reanalysis remain explicit actions.
+                        if savedSelection { result = cached }
+                        else { result = try await SubjectResolver().resolve(cached, anchors: anchors) }
+                        if !savedSelection && anchors.isEmpty && result.needsSubjectRecovery {
                             result=try await VideoAnalyzer().recoverSubject(url:source,analysis:result) { [weak self] value in await self?.setProgress(value,version:version) }
                         }
                     } else {
@@ -75,6 +80,7 @@ final class SubjectSelectionSession: ObservableObject {
                 try Task.checkCancellation()
                 guard generation == version else { return }
                 analysis = result; anchors = next
+                timeline = SubjectTimeline(picks: result.subject?.picks ?? [], duration: result.duration)
             } catch is CancellationError { }
             catch { if generation == version { self.error = error.localizedDescription } }
         }
@@ -128,8 +134,23 @@ struct SubjectSelectionView: View {
                             Button("跟踪") { playback.pause(); drawingRegion = false; session.refine(draft, at: playback.time) }
                                 .buttonStyle(RouteButtonStyle(tone: .lime)).accessibilityIdentifier("trackSubjectRegion")
                         }
-                        Slider(value: Binding(get: { playback.time }, set: { playback.pause(); playback.seek($0) }), in: 0...max(0.1, climb.analysis.duration))
-                            .tint(BB.ink).accessibilityLabel("视频进度")
+                        VStack(spacing: 0) {
+                            Slider(value: Binding(get: { playback.time }, set: { playback.pause(); playback.seek($0) }), in: 0...max(0.1, climb.analysis.duration))
+                                .tint(BB.ink).accessibilityLabel("视频进度")
+                            if let timeline = session.timeline {
+                                Canvas { context, size in
+                                    let duration = max(0.1, climb.analysis.duration)
+                                    context.fill(Path(CGRect(origin: .zero, size: size)), with: .color(BB.ink.opacity(0.12)))
+                                    for span in timeline.selected {
+                                        context.fill(Path(CGRect(x: size.width*span.start/duration, y: 0, width: size.width*(span.end-span.start)/duration, height: size.height)), with: .color(BB.lime))
+                                    }
+                                    for anchor in session.anchors where anchor.time.isFinite {
+                                        let x = size.width*min(1,max(0,anchor.time/duration))
+                                        context.fill(Path(ellipseIn: CGRect(x: x-3,y: 0,width: 6,height: 6)), with: .color(BB.ink))
+                                    }
+                                }.frame(height: 6).clipShape(Capsule()).accessibilityHidden(true)
+                            }
+                        }
                         ViewThatFits(in: .horizontal) {
                             HStack(spacing: 12) { playbackControls; Spacer(); selectionControls }
                             VStack(spacing: 12) {
@@ -143,7 +164,11 @@ struct SubjectSelectionView: View {
                         } else if let analysis = session.analysis {
                             if (analysis.subject?.unresolved ?? 0) > 0 { Text("请重新选人").font(.caption).foregroundStyle(BB.muted) }
                             else if !analysis.hasSelectedSubject { Text("未选人").foregroundStyle(BB.muted) }
-                            else if selectedID == nil || analysis.subject?.picks.contains(where: { $0.personID == nil }) == true { Text("待补选").font(.caption).foregroundStyle(BB.muted) }
+                            else if let target = session.timeline?.nextGap(after: playback.time), !drawingRegion {
+                                Button { playback.pause(); playback.seek(target) } label: {
+                                    Label("待补选", systemImage: "forward.end").font(.caption).frame(minHeight: 44)
+                                }.buttonStyle(.plain).accessibilityIdentifier("nextSubjectGap")
+                            }
                         }
                         if let error = saveError ?? session.error {
                             Text(verbatim: error).foregroundStyle(.red)
@@ -176,7 +201,7 @@ struct SubjectSelectionView: View {
             Button { playback.toggle(duration: climb.analysis.duration) } label: {
                 Image(systemName: playback.playing ? "pause.fill" : "play.fill").frame(width: 48, height: 44)
             }.buttonStyle(.plain).accessibilityLabel(playback.playing ? Text("暂停") : Text("播放"))
-            Text(verbatim: clockText(playback.time)).monospacedDigit().fixedSize()
+            Text(verbatim: clockText(playback.time)).monospacedDigit().fixedSize().accessibilityIdentifier("subjectTime")
         }
     }
 

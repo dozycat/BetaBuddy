@@ -88,7 +88,6 @@
     <string name="subject_pause">Pause</string>
     <string name="subject_working">Finding people in the video…</string>
     <string name="subject_empty">No person selected</string>
-    <string name="subject_missing">Selection gaps</string>
     <string name="subject_gaps">Selection gaps</string>
     <string name="subject_unresolved">Choose again</string>
     <string name="subject_retry">Try again</string>

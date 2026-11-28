@@ -64,6 +64,40 @@ struct SubjectResolution: Codable, Sendable {
     var recoveryRecommended: Bool? = nil
 }
 
+/// Display-only coverage of actual selections. It never fills missing observations.
+struct SubjectTimeline: Sendable {
+    struct Span: Equatable, Sendable {
+        var start: Double
+        var end: Double
+        var midpoint: Double { (start + end) / 2 }
+    }
+    var selected: [Span] = []
+    var gaps: [Span] = []
+    init(picks: [SubjectPick], duration: Double) {
+        guard duration.isFinite, duration > 0 else { return }
+        let samples = picks.filter { $0.time.isFinite && $0.time >= 0 && $0.time < duration }.sorted { $0.time < $1.time }
+        let steps = zip(samples, samples.dropFirst()).map { $1.time - $0.time }.filter { $0 > 0 }.sorted()
+        let cadence = min(0.32, steps.isEmpty ? 0.1 : steps[steps.count / 2])
+        for (index, sample) in samples.enumerated() where sample.personID != nil {
+            var start = max(0, sample.time - cadence / 2), end = min(duration, sample.time + cadence / 2)
+            if index == 0 && sample.time <= cadence { start = 0 }
+            if index == samples.count - 1 && duration - sample.time <= cadence * 1.5 { end = duration }
+            if let last = selected.last, start <= last.end + 0.000001 {
+                selected[selected.count - 1].end = max(last.end, end)
+            } else { selected.append(Span(start: start, end: end)) }
+        }
+        var cursor = 0.0
+        for span in selected {
+            if span.start > cursor + 0.000001 { gaps.append(Span(start: cursor, end: span.start)) }
+            cursor = span.end
+        }
+        if cursor < duration - 0.000001 { gaps.append(Span(start: cursor, end: duration)) }
+    }
+    func nextGap(after time: Double) -> Double? {
+        (gaps.first { $0.midpoint > time + 0.05 } ?? gaps.first)?.midpoint
+    }
+}
+
 extension PoseAnalysis {
     var hasSubjectCandidates: Bool { people?.contains { !$0.candidates.isEmpty } ?? (peopleReference != nil) }
     var hasSelectedSubject: Bool { subjectPositions?.isEmpty == false || (subject != nil && !frames.isEmpty) }

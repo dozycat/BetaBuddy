@@ -88,7 +88,6 @@
     <string name="subject_pause">일시 정지</string>
     <string name="subject_working">영상 속 사람을 찾는 중…</string>
     <string name="subject_empty">선택된 사람 없음</string>
-    <string name="subject_missing">선택 누락 구간</string>
     <string name="subject_gaps">선택 누락 구간</string>
     <string name="subject_unresolved">다시 선택</string>
     <string name="subject_retry">다시 시도</string>

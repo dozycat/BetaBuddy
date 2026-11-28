@@ -88,7 +88,6 @@
     <string name="subject_pause">暂停</string>
     <string name="subject_working">正在找视频里的人…</string>
     <string name="subject_empty">未选人</string>
-    <string name="subject_missing">待补选</string>
     <string name="subject_gaps">待补选</string>
     <string name="subject_unresolved">请重新选人</string>
     <string name="subject_retry">再试一次</string>

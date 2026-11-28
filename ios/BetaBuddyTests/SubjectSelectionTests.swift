@@ -94,6 +94,28 @@ final class SubjectSelectionTests: XCTestCase {
         return PoseAnalysis(frames: [], sampledFrames: 2, duration: 2, aspectRatio: 0.5,
             people: [.init(time: 0, candidates: [a,b]), .init(time: 1, candidates: [])])
     }
+    func testReopeningSavedPartialAutomaticSelectionDoesNotAnalyzeAgain() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = ClimbStore(root: root)
+        // Deliberately not a playable video: reopening must only read saved observations.
+        let staged = root.appendingPathComponent("saved.mp4"); try Data([0]).write(to: staged)
+        let resolution = SubjectResolution(schema: 1, picks: [.init(time: 0, personID: "b"), .init(time: 1, personID: nil)], manual: false, unresolved: 0, recoveryRecommended: true)
+        let selected = try analysis().selecting(resolution)
+        let climb = try store.save(title: "", grade: ungradedValue, sent: false, note: "", stagedVideo: staged, thumbnail: Data(), analysis: selected)
+        try store.selectSubject(climb, analysis: selected, anchors: [])
+        let saved = try XCTUnwrap(store.climbs.first)
+        let session = SubjectSelectionSession(climb: saved, store: store)
+        defer { session.stop() }
+        session.prepare()
+        let deadline = Date().addingTimeInterval(3)
+        while session.busy && Date() < deadline { try await Task.sleep(for: .milliseconds(20)) }
+        XCTAssertFalse(session.busy); XCTAssertNil(session.error)
+        XCTAssertEqual(session.analysis?.subject?.picks, resolution.picks)
+        XCTAssertEqual(session.analysis?.subject?.recoveryRecommended, true)
+        XCTAssertEqual(store.climbs.first?.subjectRevision, saved.subjectRevision)
+        XCTAssertFalse(try XCTUnwrap(session.timeline).gaps.isEmpty)
+    }
     func testRecoveryRequestPreservesSelectionAndLegacyRecords() throws {
         let legacy = #"{"schema":1,"picks":[{"time":0,"personID":"a"},{"time":1}],"manual":false,"unresolved":0}"#
         let resolution = try JSONDecoder().decode(SubjectResolution.self, from: Data(legacy.utf8))

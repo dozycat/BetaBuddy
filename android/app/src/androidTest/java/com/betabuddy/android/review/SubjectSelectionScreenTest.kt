@@ -37,6 +37,63 @@ class SubjectSelectionScreenTest {
     private var record: Climb? = null
     @After fun cleanup() { scenario?.close(); record?.let(store::delete) }
 
+    @Test fun savedPartialAutomaticSelectionReopensWithoutInference() {
+        val samples = (0 until 30).map { i ->
+            val time = i/10.0
+            SubjectSample(time,listOf(SubjectCandidate("person-$i",SubjectBounds(.2,.2,.2,.5),List(12) { .2 },PoseFrame(time,List(33) { Joint(.3,.4,1.0) }))))
+        }
+        val resolution = SubjectResolution(1,samples.mapIndexed { i,s -> SubjectPick(s.time,if(i<3) s.candidates[0].id else null) },false,0,true)
+        val selected = PoseAnalysis(emptyList(),30,3.0,.6,people=samples).selecting(resolution)
+        // Invalid media makes an accidental inference request observable.
+        val video=File(context.cacheDir,"saved-subject-${System.nanoTime()}.mp4").apply { writeBytes(byteArrayOf(0)) }
+        val initial=store.save("Saved UI","Saved UI",UNGRADED_VALUE,false,"",video,byteArrayOf(),selected)
+        record=initial; store.selectSubject(initial,selected,emptyList())
+        val saved=store.climbs.first { it.id==initial.id }
+        scenario=ActivityScenario.launch(Intent(context,MainActivity::class.java).putExtra("initialTab",1))
+        scenario!!.onActivity { activity ->
+            val model=ViewModelProvider(activity)[JournalViewModel::class.java]
+            activity.setContent { BetaBuddyTheme { SubjectSelectionScreen(saved,model) { activity.setContent {} } } }
+        }
+        rule.waitUntil(5_000) { runCatching { rule.onNodeWithTag("automaticSubject").assertIsSelected(); true }.getOrDefault(false) }
+        rule.onNodeWithTag("nextSubjectGap").assertExists()
+        rule.onNodeWithTag("saveSubject").assertIsEnabled()
+        assertEquals(resolution,store.climbs.first { it.id==saved.id }.analysis.subject)
+        assertEquals(saved.subjectRevision,store.climbs.first { it.id==saved.id }.subjectRevision)
+    }
+
+    @Test fun missingSelectionButtonSeeksWithoutSavingOrChangingThePerson() {
+        assumeTrue("Optional private policy",SubjectResolver(context).available())
+        val samples = (0 until 30).map { i ->
+            val time = i/10.0
+            SubjectSample(time,if (i in 10 until 20) emptyList() else listOf(
+                SubjectCandidate("person-$i",SubjectBounds(.2,.2,.2,.5),List(12) { .2 },PoseFrame(time,List(33) { Joint(.3,.4,1.0) }))))
+        }
+        val anchors = listOf(0,20).map { SubjectAnchor(samples[it].time,samples[it].candidates.single()) }
+        val selected = kotlinx.coroutines.runBlocking { SubjectResolver(context).resolve(PoseAnalysis(emptyList(),30,3.0,.6,people=samples),anchors) }
+        val video = File(context.cacheDir,"subject-gap-${System.nanoTime()}.mp4"); SyntheticWallClip.make(video)
+        val initial = store.save("Gap UI","Gap UI",UNGRADED_VALUE,false,"",video,byteArrayOf(),selected)
+        record=initial; store.selectSubject(initial,selected,anchors)
+        val saved=store.climbs.first { it.id==initial.id }
+        scenario=ActivityScenario.launch(Intent(context,MainActivity::class.java).putExtra("initialTab",1))
+        scenario!!.onActivity { activity ->
+            val model=ViewModelProvider(activity)[JournalViewModel::class.java]
+            activity.setContent { BetaBuddyTheme { SubjectSelectionScreen(saved,model) { activity.setContent {} } } }
+        }
+        rule.waitUntil(15_000) { runCatching { rule.onNodeWithTag("nextSubjectGap").assertExists(); true }.getOrDefault(false) }
+        rule.onNodeWithTag("nextSubjectGap").performScrollTo().performClick()
+        rule.waitUntil(5_000) { runCatching { rule.onNodeWithTag("subjectTime").assertTextEquals(clockText(1.45)); true }.getOrDefault(false) }
+        rule.onAllNodes(hasTestTag("subject-person-0")).assertCountEquals(0)
+        rule.onNodeWithTag("saveSubject").assertIsEnabled()
+        val unchanged=store.climbs.first { it.id==saved.id }
+        assertEquals(saved.subjectRevision,unchanged.subjectRevision)
+        assertEquals(anchors,unchanged.subjectAnchors)
+        assertEquals(selected.subject,unchanged.analysis.subject)
+        val out=File(context.getExternalFilesDir(null),"subject-gap-shots").apply { mkdirs() }
+        instrumentation.uiAutomation.takeScreenshot()?.let { bitmap ->
+            FileOutputStream(File(out,"gap.png")).use { bitmap.compress(Bitmap.CompressFormat.PNG,100,it) }; bitmap.recycle()
+        }
+    }
+
     @Test fun cachedUnresolvedPeopleRecoverAutomaticallyAndSaveWithoutManualAnchor() {
         val args=InstrumentationRegistry.getArguments()
         val clip=args.getString("subjectClip");val baseline=args.getString("subjectUnresolved")

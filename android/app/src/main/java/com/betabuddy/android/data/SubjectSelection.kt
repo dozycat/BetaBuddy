@@ -33,6 +33,40 @@ data class SubjectPick(val time: Double, val personID: String? = null)
 @Serializable
 data class SubjectResolution(val schema: Int, val picks: List<SubjectPick>, val manual: Boolean, val unresolved: Int, val recoveryRecommended: Boolean? = null)
 
+/** Display-only coverage of actual selections; never fills missing observations. */
+class SubjectTimeline(picks: List<SubjectPick>, duration: Double) {
+    data class Span(val start: Double, val end: Double) { val midpoint get() = (start + end) / 2 }
+    val selected: List<Span>
+    val gaps: List<Span>
+    init {
+        val selectedSpans = mutableListOf<Span>()
+        val missing = mutableListOf<Span>()
+        if (duration.isFinite() && duration > 0) {
+            val samples = picks.filter { it.time.isFinite() && it.time >= 0 && it.time < duration }.sortedBy { it.time }
+            val steps = samples.zipWithNext { a,b -> b.time-a.time }.filter { it > 0 }.sorted()
+            val cadence = minOf(.32, if (steps.isEmpty()) .1 else steps[steps.size / 2])
+            samples.forEachIndexed { index, sample ->
+                if (sample.personID != null) {
+                    var start = maxOf(0.0,sample.time-cadence/2); var end = minOf(duration,sample.time+cadence/2)
+                    if (index == 0 && sample.time <= cadence) start = 0.0
+                    if (index == samples.lastIndex && duration-sample.time <= cadence*1.5) end = duration
+                    val last = selectedSpans.lastOrNull()
+                    if (last != null && start <= last.end+.000001) selectedSpans[selectedSpans.lastIndex] = last.copy(end=maxOf(last.end,end))
+                    else selectedSpans += Span(start,end)
+                }
+            }
+            var cursor = 0.0
+            for (span in selectedSpans) {
+                if (span.start > cursor+.000001) missing += Span(cursor,span.start)
+                cursor = span.end
+            }
+            if (cursor < duration-.000001) missing += Span(cursor,duration)
+        }
+        selected = selectedSpans; gaps = missing
+    }
+    fun nextGap(after: Double): Double? = (gaps.firstOrNull { it.midpoint > after+.05 } ?: gaps.firstOrNull())?.midpoint
+}
+
 /** Candidate ids from the private policy are the only source of selected poses. */
 fun PoseAnalysis.selecting(result: SubjectResolution): PoseAnalysis {
     val samples = requireNotNull(people)
