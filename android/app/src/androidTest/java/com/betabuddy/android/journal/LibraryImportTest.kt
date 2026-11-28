@@ -5,6 +5,7 @@ import android.app.Application
 import android.content.ContentValues
 import android.graphics.Bitmap
 import android.graphics.Color
+import android.graphics.BitmapFactory
 import android.os.Build
 import android.provider.MediaStore
 import androidx.test.platform.app.InstrumentationRegistry
@@ -20,6 +21,52 @@ import org.junit.Test
 class LibraryImportTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
     private val context = instrumentation.targetContext
+
+    @Test fun optionalEncoderImageParity() = runBlocking {
+        val manifest = InstrumentationRegistry.getArguments().getString("encoderImages")
+        assumeTrue("Optional common decoded images not supplied", manifest != null)
+        val inputs = org.json.JSONArray(File(context.filesDir, manifest!!).readText())
+        assertTrue(inputs.length() > 0)
+        val rows = org.json.JSONArray()
+        withContext(Dispatchers.IO) {
+            LibraryClassifier(context).use { classifier ->
+                for (i in 0 until inputs.length()) {
+                    val input = inputs.getJSONObject(i)
+                    val image = requireNotNull(BitmapFactory.decodeFile(File(context.filesDir, input.getString("path")).path))
+                    try {
+                        val prepared = input.getBoolean("prepared")
+                        for (mode in if (prepared) listOf("prepared") else listOf("center", "fit")) {
+                            val expected = input.optJSONObject("views")?.getJSONArray(mode) ?: input.getJSONArray("expected")
+                            val vector = classifier.embedding(image, if (prepared) "stretch" else mode)
+                            assertEquals(expected.length(), vector.size)
+                            assertEquals(1.0, vector.sumOf { it*it }, .005)
+                            val cosine = vector.indices.sumOf { vector[it]*expected.getDouble(it) }
+                            rows.put(org.json.JSONObject().put("id", input.getString("id")).put("mode", mode)
+                                .put("embedding", org.json.JSONArray(vector)).put("cosine", cosine))
+                            assertTrue("Native sampling and encoder must agree: ${input.getString("id")}, $mode", cosine > .999)
+                        }
+                    } finally { image.recycle() }
+                }
+            }
+        }
+        File(context.getExternalFilesDir(null), "encoder-parity.json").writeText(rows.toString())
+    }
+
+    @Test fun samplingAveragesFineDetailAndKeepsPaddingColourAndOrientation() = runBlocking {
+        val width = 448; val height = 896
+        val image = Bitmap.createBitmap(width,height,Bitmap.Config.ARGB_8888)
+        try {
+            val checker = IntArray(width*height) { if ((it%width+it/width)%2 == 0) Color.BLACK else Color.WHITE }
+            image.setPixels(checker,0,width,0,0,width,height)
+            val pixels = LibraryClassifier.sampledPixels(image,"fit")
+            for (channel in 0..2) assertEquals(128/255.0,pixels[channel*224*224+112*224+112].toDouble(),1/255.0)
+            assertEquals(0f,pixels[112*224],0f)
+            image.setPixels(IntArray(width*height) { if (it/width < height/2) Color.RED else Color.BLUE },0,width,0,0,width,height)
+            val colours = LibraryClassifier.sampledPixels(image,"fit")
+            assertEquals(1f,colours[10*224+112],0f); assertEquals(0f,colours[2*224*224+10*224+112],0f)
+            assertEquals(0f,colours[210*224+112],0f); assertEquals(1f,colours[2*224*224+210*224+112],0f)
+        } finally { image.recycle() }
+    }
 
     @Test fun optionalClassifierVideoMatrix() = runBlocking {
         val name = InstrumentationRegistry.getArguments().getString("libraryMatrix")

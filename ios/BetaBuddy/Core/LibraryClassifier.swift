@@ -69,7 +69,7 @@ actor LibraryClassifier {
         let data = try Data(contentsOf: pack.directory.appendingPathComponent("library-classifier.json"))
         config = try JSONDecoder().decode(LibraryClassifierConfig.self, from: data)
         try config.validate()
-        revision = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+        revision = SHA256.hash(data: data + Data("|image-sampling-2".utf8)).map { String(format: "%02x", $0) }.joined()
         guard let resources else { throw CocoaError(.fileNoSuchFile) }
         let settings = MLModelConfiguration()
         #if targetEnvironment(simulator)
@@ -85,7 +85,7 @@ actor LibraryClassifier {
         guard duration.isFinite, duration > 0, duration <= 1200 else { throw AnalysisError.invalidVideo }
         let generator = AVAssetImageGenerator(asset: asset)
         generator.appliesPreferredTrackTransform = true
-        generator.maximumSize = CGSize(width: 960, height: 960)
+        generator.maximumSize = CGSize(width: 3840, height: 3840)
         generator.requestedTimeToleranceBefore = .zero
         generator.requestedTimeToleranceAfter = .zero
         var votes: [String?] = []
@@ -96,17 +96,83 @@ actor LibraryClassifier {
             var views: [String?] = []
             for mode in config.imageModes {
                 try Task.checkCancellation()
-                let request = VNCoreMLRequest(model: model)
-                request.imageCropAndScaleOption = mode
-                try VNImageRequestHandler(cgImage: image).perform([request])
-                guard let result = request.results?.compactMap({ $0 as? VNCoreMLFeatureValueObservation }).first,
-                      let vector = result.featureValue.multiArrayValue else { throw AnalysisError.invalidVideo }
-                let embedding = (0..<vector.count).map { vector[$0].doubleValue }
-                views.append(config.tag(for: embedding))
+                views.append(config.tag(for: try embedding(image, mode: mode)))
             }
             votes.append(config.frameVote(views))
         }
         try Task.checkCancellation()
         return config.decision(votes)
     }
+
+    func embedding(_ image: CGImage, mode: VNImageCropAndScaleOption) throws -> [Double] {
+        let request = VNCoreMLRequest(model: model)
+        request.imageCropAndScaleOption = .scaleFill
+        try VNImageRequestHandler(cgImage: try Self.sampledImage(image, mode: mode)).perform([request])
+        guard let result = request.results?.compactMap({ $0 as? VNCoreMLFeatureValueObservation }).first,
+              let vector = result.featureValue.multiArrayValue else { throw AnalysisError.invalidVideo }
+        return (0..<vector.count).map { vector[$0].doubleValue }
+    }
+
+    /// Scale-aware triangle filtering uses all source pixels covered by a reduced pixel.
+    /// Integer padding and RGB rounding match the other native encoder.
+    static func sampledImage(_ image: CGImage, mode: VNImageCropAndScaleOption) throws -> CGImage {
+        try Task.checkCancellation()
+        let width = image.width, height = image.height, side = min(width,height)
+        let sw = mode == .centerCrop ? side : width, sh = mode == .centerCrop ? side : height
+        let left = (width-sw)/2, top = (height-sh)/2
+        let scale = 224.0/Double(max(sw,sh))
+        let dw = mode == .scaleFit ? max(1,Int((Double(sw)*scale).rounded(.toNearestOrEven))) : 224
+        let dh = mode == .scaleFit ? max(1,Int((Double(sh)*scale).rounded(.toNearestOrEven))) : 224
+        let padX = Int((Double(224-dw)/2).rounded(.toNearestOrEven)), padY = Int((Double(224-dh)/2).rounded(.toNearestOrEven))
+        let space = CGColorSpace(name: CGColorSpace.sRGB)!
+        var pixels = [UInt8](repeating: 0, count: width*height*4)
+        let drawn = pixels.withUnsafeMutableBytes { bytes -> Bool in
+            guard let context = CGContext(data: bytes.baseAddress, width: width, height: height, bitsPerComponent: 8,
+                bytesPerRow: width*4, space: space, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return false }
+            context.interpolationQuality = .none
+            context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+            return true
+        }
+        guard drawn else { throw AnalysisError.invalidVideo }
+        let wx = weights(sw,dw), wy = weights(sh,dh)
+        var horizontal = [UInt8](repeating: 0, count: sh*dw*3)
+        for y in 0..<sh {
+            try Task.checkCancellation()
+            for x in 0..<dw { for channel in 0..<3 {
+                var value = 0.0
+                for (index, weight) in wx[x] { value += Double(pixels[((top+y)*width+left+index)*4+channel])*weight }
+                horizontal[(y*dw+x)*3+channel] = UInt8(clamping: Int(value+0.5))
+            } }
+        }
+        var result = [UInt8](repeating: 0, count: 224*224*4)
+        for i in 0..<(224*224) { result[i*4+3] = 255 }
+        for y in 0..<dh {
+            try Task.checkCancellation()
+            for x in 0..<dw { for channel in 0..<3 {
+                var value = 0.0
+                for (index, weight) in wy[y] { value += Double(horizontal[(index*dw+x)*3+channel])*weight }
+                result[((y+padY)*224+x+padX)*4+channel] = UInt8(clamping: Int(value+0.5))
+            } }
+        }
+        guard let provider = CGDataProvider(data: Data(result) as CFData),
+              let output = CGImage(width: 224, height: 224, bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: 224*4,
+                space: space, bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue),
+                provider: provider, decode: nil, shouldInterpolate: false, intent: .defaultIntent) else { throw AnalysisError.invalidVideo }
+        return output
+    }
+
+    private static func weights(_ source: Int, _ target: Int) -> [[(Int,Double)]] {
+        let scale = Double(source)/Double(target), radius = max(1,scale)
+        return (0..<target).map { output in
+            let center = (Double(output)+0.5)*scale
+            let lo = max(0,Int(floor(center-radius))), hi = min(source-1,Int(ceil(center+radius)))
+            let values: [(Int,Double)] = (lo...hi).compactMap { input in
+                let weight = max(0,1-abs(Double(input)+0.5-center)/radius)
+                return weight > 0 ? (input,weight) : nil
+            }
+            let sum = values.reduce(0) { $0+$1.1 }
+            return values.map { ($0.0,$0.1/sum) }
+        }
+    }
+
 }

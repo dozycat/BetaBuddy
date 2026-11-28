@@ -1,10 +1,61 @@
 import AVFoundation
 import Photos
+import ImageIO
+import Vision
 import XCTest
 @testable import BetaBuddy
 
 @MainActor
 final class LibraryImportTests: XCTestCase {
+    func testOptionalEncoderImageParity() async throws {
+        let env = ProcessInfo.processInfo.environment
+        guard let manifest = env["BB_ENCODER_IMAGES"], let output = env["BB_ENCODER_OUTPUT"] else {
+            throw XCTSkip("Optional common decoded images not supplied")
+        }
+        struct Input: Decodable { var id: String; var path: String; var prepared: Bool; var expected: [Double]; var views: [String: [Double]]? }
+        let inputs = try JSONDecoder().decode([Input].self, from: Data(contentsOf: URL(fileURLWithPath: manifest)))
+        XCTAssertFalse(inputs.isEmpty)
+        let engine = try LibraryClassifier(pack: XCTUnwrap(GymPack.current))
+        var rows: [[String: Any]] = []
+        for input in inputs {
+            let source = try XCTUnwrap(CGImageSourceCreateWithURL(URL(fileURLWithPath: input.path) as CFURL, nil))
+            let image = try XCTUnwrap(CGImageSourceCreateImageAtIndex(source, 0, nil))
+            let modes: [(String, VNImageCropAndScaleOption)] = input.prepared ? [("prepared", .scaleFill)] : [("center", .centerCrop), ("fit", .scaleFit)]
+            for (name, mode) in modes {
+                let vector = try await engine.embedding(image, mode: mode)
+                XCTAssertEqual(vector.count, input.expected.count)
+                XCTAssertEqual(vector.reduce(0) { $0+$1*$1 }, 1, accuracy: 0.005)
+                let expected = input.views?[name] ?? input.expected
+                let cosine = zip(vector, expected).reduce(0) { $0+$1.0*$1.1 }
+                rows.append(["id": input.id, "mode": name, "embedding": vector, "cosine": cosine])
+                XCTAssertGreaterThan(cosine, 0.999, "Native sampling and encoder must agree: \(input.id), \(name)")
+            }
+        }
+        try JSONSerialization.data(withJSONObject: rows, options: [.sortedKeys]).write(to: URL(fileURLWithPath: output))
+    }
+    func testImageSamplingAveragesFineDetailAndKeepsPaddingColourAndOrientation() throws {
+        let width = 448, height = 896, space = CGColorSpace(name: CGColorSpace.sRGB)!
+        func image(checker: Bool) throws -> CGImage {
+            var rgba = [UInt8](repeating: 0, count: width*height*4)
+            for y in 0..<height { for x in 0..<width {
+                let i = (y*width+x)*4
+                if checker { let value: UInt8 = (x+y)%2 == 0 ? 0 : 255; rgba[i] = value; rgba[i+1] = value; rgba[i+2] = value }
+                else { rgba[i+(y < height/2 ? 0 : 2)] = 255 }
+                rgba[i+3] = 255
+            } }
+            return try XCTUnwrap(CGImage(width: width, height: height, bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: width*4,
+                space: space, bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue),
+                provider: CGDataProvider(data: Data(rgba) as CFData)!, decode: nil, shouldInterpolate: false, intent: .defaultIntent))
+        }
+        let sampled = try LibraryClassifier.sampledImage(image(checker: true), mode: .scaleFit)
+        let pixels = try XCTUnwrap(sampled.dataProvider?.data) as Data
+        for channel in 0..<3 { XCTAssertEqual(Int(pixels[(112*224+112)*4+channel]), 128, accuracy: 1) }
+        XCTAssertEqual(pixels[(112*224)*4], 0)
+        let colour = try LibraryClassifier.sampledImage(image(checker: false), mode: .scaleFit)
+        let colours = try XCTUnwrap(colour.dataProvider?.data) as Data
+        XCTAssertEqual(colours[(10*224+112)*4], 255); XCTAssertEqual(colours[(10*224+112)*4+2], 0)
+        XCTAssertEqual(colours[(210*224+112)*4], 0); XCTAssertEqual(colours[(210*224+112)*4+2], 255)
+    }
     /// Run only on a dedicated simulator seeded by simctl, never on a personal library.
     func testOptionalSystemPhotoScopeAndImport() async throws {
         #if targetEnvironment(simulator)
