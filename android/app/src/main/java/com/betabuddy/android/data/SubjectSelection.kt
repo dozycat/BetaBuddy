@@ -31,7 +31,7 @@ data class SubjectAnchor(val time: Double, val bounds: SubjectBounds, val appear
 @Serializable
 data class SubjectPick(val time: Double, val personID: String? = null)
 @Serializable
-data class SubjectResolution(val schema: Int, val picks: List<SubjectPick>, val manual: Boolean, val unresolved: Int)
+data class SubjectResolution(val schema: Int, val picks: List<SubjectPick>, val manual: Boolean, val unresolved: Int, val recoveryRecommended: Boolean? = null)
 
 /** Candidate ids from the private policy are the only source of selected poses. */
 fun PoseAnalysis.selecting(result: SubjectResolution): PoseAnalysis {

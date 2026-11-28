@@ -62,7 +62,7 @@ class SubjectResolver(context: Context) {
             }.analysis
         }
         var result = resolve(detected,anchors)
-        if(canRecover && !result.hasSelectedSubject) {
+        if(canRecover && result.needsSubjectRecovery) {
             result=recover(video,result) { progress(.7+.3*it) }
         }
         if(!result.hasSubjectCandidates) throw AnalysisException(AnalysisError.NO_POSE)

@@ -57,11 +57,14 @@ struct SubjectResolution: Codable, Sendable {
     var picks: [SubjectPick]
     var manual: Bool
     var unresolved: Int
+    /// Optional policy request; older packs and records do not contain it.
+    var recoveryRecommended: Bool? = nil
 }
 
 extension PoseAnalysis {
     var hasSubjectCandidates: Bool { people?.contains { !$0.candidates.isEmpty } ?? (peopleReference != nil) }
     var hasSelectedSubject: Bool { subjectPositions?.isEmpty == false || (subject != nil && !frames.isEmpty) }
+    var needsSubjectRecovery: Bool { !hasSelectedSubject || subject?.recoveryRecommended == true }
     /// Only exact candidate ids returned by the policy may become the selected poses.
     /// Missing samples stay missing; never fall back to the first person in a frame.
     func selecting(_ result: SubjectResolution) throws -> PoseAnalysis {

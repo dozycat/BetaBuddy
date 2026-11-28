@@ -77,7 +77,7 @@ internal class SubjectSelectionSession(
             }
         val resolver=SubjectResolver(context)
         var selected=resolver.resolve(observations,anchors)
-        if(usedCache && anchors.isEmpty() && !selected.hasSelectedSubject) selected=resolver.recover(model.videoFile(climb),selected) { value ->
+        if(usedCache && anchors.isEmpty() && selected.needsSubjectRecovery) selected=resolver.recover(model.videoFile(climb),selected) { value ->
             scope.launch { if(serial==generation) progress=value }
         }
         selected to anchors
@@ -91,7 +91,7 @@ internal class SubjectSelectionSession(
         work {
             val serial=generation;val resolver=SubjectResolver(context)
             var selected=resolver.resolve(original,next)
-            if(next.isEmpty() && !selected.hasSelectedSubject) selected=resolver.recover(model.videoFile(climb),selected) { value ->
+            if(next.isEmpty() && selected.needsSubjectRecovery) selected=resolver.recover(model.videoFile(climb),selected) { value ->
                 scope.launch { if(serial==generation) progress=value }
             }
             selected to next

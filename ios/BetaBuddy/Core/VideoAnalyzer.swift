@@ -139,7 +139,7 @@ actor VideoAnalyzer {
                 }.analysis
             }
             analysis = try await SubjectResolver().resolve(analysis, anchors: subjectAnchors)
-            if recover && !analysis.hasSelectedSubject {
+            if recover && analysis.needsSubjectRecovery {
                 analysis=try await recoverSubject(url:url,analysis:analysis) { value in await progress(0.7+0.3*value) }
             }
             guard analysis.hasSubjectCandidates else { throw AnalysisError.noPose }

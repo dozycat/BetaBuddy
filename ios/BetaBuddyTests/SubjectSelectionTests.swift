@@ -90,6 +90,20 @@ final class SubjectSelectionTests: XCTestCase {
         return PoseAnalysis(frames: [], sampledFrames: 2, duration: 2, aspectRatio: 0.5,
             people: [.init(time: 0, candidates: [a,b]), .init(time: 1, candidates: [])])
     }
+    func testRecoveryRequestPreservesSelectionAndLegacyRecords() throws {
+        let legacy = #"{"schema":1,"picks":[{"time":0,"personID":"a"},{"time":1}],"manual":false,"unresolved":0}"#
+        let resolution = try JSONDecoder().decode(SubjectResolution.self, from: Data(legacy.utf8))
+        let selected = try analysis().selecting(resolution)
+        XCTAssertTrue(selected.hasSelectedSubject)
+        XCTAssertFalse(selected.needsSubjectRecovery)
+        var requested = resolution; requested.recoveryRecommended = true
+        let restored = try JSONDecoder().decode(SubjectResolution.self, from: JSONEncoder().encode(requested))
+        let recoverable = try analysis().selecting(restored)
+        XCTAssertTrue(recoverable.hasSelectedSubject)
+        XCTAssertTrue(recoverable.needsSubjectRecovery)
+        XCTAssertEqual(recoverable.subject?.picks, selected.subject?.picks)
+        XCTAssertTrue(analysis().needsSubjectRecovery)
+    }
     func testMissingSelectionNeverUsesAnotherPersonAndUnknownIDsAreRejected() throws {
         let original = analysis()
         let result = SubjectResolution(schema: 1, picks: [.init(time: 0, personID: "b"), .init(time: 1, personID: nil)], manual: true, unresolved: 0)

@@ -2,6 +2,7 @@ package com.betabuddy.android.data
 
 import org.junit.Assert.*
 import org.junit.Test
+import kotlinx.serialization.encodeToString
 
 class SubjectSelectionTest {
     @Test fun legacyAnchorWithoutRegionStillLoads() {
@@ -18,6 +19,16 @@ class SubjectSelectionTest {
         assertEquals("b",selected.subject!!.picks[0].personID)
         assertNull(original.subjectSample(.25))
         assertNotNull(original.subjectSample(.1))
+        assertFalse(selected.needsSubjectRecovery)
+        val requested = resolution.copy(recoveryRecommended = true)
+        val restored = ClimbStore.json.decodeFromString<SubjectResolution>(ClimbStore.json.encodeToString(requested))
+        val recoverable = original.selecting(restored)
+        assertTrue(recoverable.hasSelectedSubject)
+        assertTrue(recoverable.needsSubjectRecovery)
+        assertEquals(selected.subject!!.picks, recoverable.subject!!.picks)
+        assertTrue(original.needsSubjectRecovery)
+        val legacy = ClimbStore.json.decodeFromString<SubjectResolution>("""{"schema":1,"picks":[],"manual":false,"unresolved":0}""")
+        assertNull(legacy.recoveryRecommended)
         assertThrows(IllegalArgumentException::class.java) { original.selecting(resolution.copy(picks = listOf(SubjectPick(0.0,"unknown"),SubjectPick(.5)))) }
         assertThrows(IllegalArgumentException::class.java) { original.selecting(resolution.copy(picks = listOf(SubjectPick(.1,"b"),SubjectPick(.5)))) }
     }

@@ -45,7 +45,7 @@ final class SubjectSelectionSession: ObservableObject {
                     try Task.checkCancellation()
                     if let cached, cached.people?.contains(where: { !$0.candidates.isEmpty }) == true {
                         result = try await SubjectResolver().resolve(cached, anchors: anchors)
-                        if anchors.isEmpty && !result.hasSelectedSubject {
+                        if anchors.isEmpty && result.needsSubjectRecovery {
                             result=try await VideoAnalyzer().recoverSubject(url:source,analysis:result) { [weak self] value in await self?.setProgress(value,version:version) }
                         }
                     } else {
@@ -61,7 +61,7 @@ final class SubjectSelectionSession: ObservableObject {
                 case .resolve(let choices):
                     guard let analysis else { return }
                     result = try await SubjectResolver().resolve(analysis, anchors: choices)
-                    if choices.isEmpty && !result.hasSelectedSubject {
+                    if choices.isEmpty && result.needsSubjectRecovery {
                         result=try await VideoAnalyzer().recoverSubject(url:source,analysis:result) { [weak self] value in await self?.setProgress(value,version:version) }
                     }
                     next = choices
