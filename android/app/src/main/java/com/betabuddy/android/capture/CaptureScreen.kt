@@ -846,12 +846,12 @@ private fun AnalysisStatus(climb: Climb, model: JournalViewModel, onViewAnalysis
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         when {
             climb.pendingAnalysis != null -> {
-                Text(stringResource(R.string.capture_queued), style = BB.Caption, color = BB.Muted, modifier = Modifier.testTag("captureQueued"))
+                Text(stringResource(if (pose.climbId == climb.id && pose.busy) R.string.journal_analysis_background else R.string.journal_analysis_waiting), style = BB.Caption, color = BB.Muted, modifier = Modifier.testTag("captureQueued"))
                 ProgressBar(if (pose.climbId == climb.id && pose.busy) pose.progress else 0.0)
             }
             climb.capture?.analysisQueued == true -> Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 CircularProgressIndicator(color = BB.Ink, trackColor = BB.Line, strokeWidth = 2.dp, modifier = Modifier.size(16.dp))
-                Text(stringResource(R.string.capture_analysing), style = BB.Caption, color = BB.Muted, modifier = Modifier.testTag("captureAnalysing"))
+                Text(stringResource(R.string.journal_analysis_background), style = BB.Caption, color = BB.Muted, modifier = Modifier.testTag("captureAnalysing"))
             }
             climb.id in results -> Box(
                 Modifier.fillMaxWidth().defaultMinSize(minHeight = 48.dp).clip(RoundedCornerShape(14.dp)).background(BB.Lime)

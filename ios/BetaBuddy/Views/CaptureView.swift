@@ -578,11 +578,11 @@ struct CaptureView: View {
     private func analysisStatus(_ climb: Climb) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             if climb.pendingAnalysis != nil {
-                Text("先存好了。姿态识别接着在这台 iPhone 上做，可以放下手机。").font(.caption).foregroundStyle(BB.muted)
+                Text(store.analysisProgress[climb.id] == nil ? "等待分析…" : "正在分析…").font(.caption).foregroundStyle(BB.muted)
                     .fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("captureQueued")
                 ProgressView(value: store.analysisProgress[climb.id] ?? 0).tint(BB.ink)
             } else if climb.capture?.analysisQueued == true {
-                Text("姿态识别好了，正在分析这一趟…").font(.caption).foregroundStyle(BB.muted).accessibilityIdentifier("captureAnalysing")
+                Text("正在分析…").font(.caption).foregroundStyle(BB.muted).accessibilityIdentifier("captureAnalysing")
                 ProgressView().tint(BB.ink)
             } else if store.analysisResults.contains(climb.id) {
                 Button { viewing = climb } label: { Text("看分析").frame(maxWidth: .infinity) }

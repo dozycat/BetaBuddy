@@ -281,12 +281,18 @@ class CaptureScreenTest {
         assertNull(done.pendingAnalysis); assertNull(done.capture?.analysisQueued)
         assertTrue(done.analysis.hasWorldLandmarks)
         val result = Json.parseToJsonElement(store.analysisResult(saved.id)!!).jsonObject
+        assertEquals(done.analysis.subjectPositions.orEmpty().size, result.getValue("subjects").jsonPrimitive.content.toInt())
         assertEquals("the plan reaches the analysis page as it was stored", store.capturePlan(saved.id), result.getValue("capture").jsonPrimitive.content)
         assertTrue(result.getValue("poses").jsonPrimitive.content.toInt() > 0)
-        // The small pictures of the whole clip came too, about three a second, after the stills and before the run.
+        // A locked subject uses its stored positions; only the legacy path sends whole-frame tracking images.
         val tracks = result.getValue("tracks").jsonPrimitive.content.toInt()
-        assertTrue("track frames: $tracks for ${saved.analysis.duration} s", tracks >= (saved.analysis.duration * 2).toInt() && tracks <= (saved.analysis.duration * 3).toInt() + 2)
-        assertEquals("bftr", result.getValue("order").jsonPrimitive.content)
+        if (done.analysis.subject != null) {
+            assertEquals(0, tracks)
+            assertEquals("bfr", result.getValue("order").jsonPrimitive.content)
+        } else {
+            assertTrue("track frames: $tracks for ${saved.analysis.duration} s", tracks >= (saved.analysis.duration * 2).toInt() && tracks <= (saved.analysis.duration * 3).toInt() + 2)
+            assertEquals("bftr", result.getValue("order").jsonPrimitive.content)
+        }
         // What came with the result is kept too: the plan for an automatic edit as the page sent it. The
         // user had chosen no discipline, so the page was told none and judged one itself ("toprope"); but
         // the user had marked a V grade, and a guess never costs a grade: it is not stored, and the grade stays.

@@ -3,17 +3,13 @@
      only platform words (photo library, device, cloud) differ. Keep all five languages in step. -->
 <resources>
     <string name="journal_title">ログブック</string>
-    <string name="journal_tagline">無駄なトライはない。</string>
-    <string name="journal_empty_title">最初のトライは、\nここから。</string>
-    <string name="journal_empty_body">クライミングの動画を選んで、端末上で一手ずつ見直しましょう。</string>
-    <string name="journal_local_note">動画は端末内に · アカウント不要</string>
+    <string name="journal_empty_title">まだ記録がありません</string>
     <string name="journal_filter_cd">記録の絞り込み</string>
     <string name="journal_filter_all">すべて</string>
     <string name="journal_filter_sent">完登</string>
     <string name="journal_filter_projecting">トライ中</string>
     <string name="journal_search_hint">課題・グレード・ジムを探す</string>
     <string name="journal_no_match_title">一致する記録はまだありません。</string>
-    <string name="journal_no_match_body">別の絞り込みや検索語を試してください。</string>
     <string name="journal_row_sent">✓ 完登</string>
     <string name="journal_row_projecting">↗ トライ中</string>
     <string name="journal_ungraded">グレードなし</string>
@@ -23,11 +19,9 @@
     <string name="journal_cancel">キャンセル</string>
     <string name="journal_import_nav_title">トライを記録</string>
     <string name="journal_import_done">完了</string>
-    <string name="journal_import_headline">このトライを、\n次のヒントに。</string>
     <string name="journal_import_pick_title">クライミング動画を選ぶ</string>
     <string name="journal_import_ready">動画の準備ができました</string>
     <string name="journal_import_fetching">元の映像を取得中…</string>
-    <string name="journal_import_requirements">1 人・全身 · 固定カメラ · 最長 20 分</string>
     <string name="journal_import_pick_action">ギャラリーから選ぶ</string>
     <string name="journal_import_name_label">このトライの名前</string>
     <string name="journal_import_name_hint">例：日曜の紫の課題</string>
@@ -67,11 +61,9 @@
     <string name="journal_delete_confirm">動画、解析、メモを削除しますか？この操作は取り消せません。</string>
     <string name="journal_delete_failed">削除できませんでした：%1$s</string>
     <string name="journal_climbed_at">登った日時</string>
-    <string name="journal_recording_date_found">動画の撮影日時を入力しました。変更できます。</string>
-    <string name="journal_recording_date_missing">撮影日時を取得できなかったため、現在の日時を入力しました。変更できます。</string>
     <string name="journal_save_climb">このトライを保存</string>
     <string name="journal_saving_video">動画を保存中…</string>
-    <string name="journal_analysis_background">解析中です。この画面を離れても続行します。</string>
+    <string name="journal_analysis_background">分析中…</string>
     <string name="journal_analysis_deferred">アプリに戻ると解析をやり直します。</string>
     <string name="journal_analysis_waiting">解析待ち…</string>
 

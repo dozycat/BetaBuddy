@@ -192,7 +192,8 @@ final class CaptureUITests: XCTestCase {
         XCTAssertTrue(app.buttons["captureGym"].waitForExistence(timeout: 10))
         XCTAssertTrue(app.buttons["captureGym"].label.contains(StandInPack.directoryGymName))
         app.buttons["captureClose"].tap()
-        app.staticTexts[StandInPack.directoryGymName].firstMatch.tap()
+        // The gym name is the day group's heading; open the recorded attempt itself.
+        app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'V4'")).firstMatch.tap()
         XCTAssertTrue(app.staticTexts["playbackClock"].waitForExistence(timeout: 10))
         keep(app, "13-review")
         removeNewestRecord(app, more: "更多操作", confirm: "删除这一趟")

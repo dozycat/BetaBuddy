@@ -362,7 +362,7 @@ struct AlbumFilterView: View {
                         }), in: ...Date(), displayedComponents: .date)
                         DatePicker("结束日期", selection: Binding(get: { filter.endDate ?? Date() }, set: { filter.endDate = $0 }), in: (filter.startDate ?? Date())...Date(), displayedComponents: .date)
                     }
-                } footer: { Text("按攀爬当天筛选；旧记录默认使用导入日期，可以在回看页修改。") }
+                }
             }.scrollContentBackground(.hidden).background(BB.paper)
                 .navigationTitle("筛选记录").navigationBarTitleDisplayMode(.inline)
                 .toolbar {

@@ -3,17 +3,13 @@
      only platform words (photo library, device, cloud) differ. Keep all five languages in step. -->
 <resources>
     <string name="journal_title">攀爬册</string>
-    <string name="journal_tagline">没有白爬的一趟。</string>
-    <string name="journal_empty_title">第一趟，\n从这里开始。</string>
-    <string name="journal_empty_body">选一段攀爬视频，在手机上回看每一步。</string>
-    <string name="journal_local_note">视频留在手机里 · 无需账号</string>
+    <string name="journal_empty_title">还没有攀爬记录</string>
     <string name="journal_filter_cd">记录筛选</string>
     <string name="journal_filter_all">全部</string>
     <string name="journal_filter_sent">已完攀</string>
     <string name="journal_filter_projecting">还在尝试</string>
     <string name="journal_search_hint">找线路、难度或岩馆</string>
     <string name="journal_no_match_title">这里还没有匹配的记录。</string>
-    <string name="journal_no_match_body">试试其他筛选条件或搜索词。</string>
     <string name="journal_row_sent">✓ 已完攀</string>
     <string name="journal_row_projecting">↗ 还在尝试</string>
     <string name="journal_ungraded">未标级</string>
@@ -23,11 +19,9 @@
     <string name="journal_cancel">取消</string>
     <string name="journal_import_nav_title">记录攀爬</string>
     <string name="journal_import_done">完成</string>
-    <string name="journal_import_headline">把这一趟，\n变成下一次的灵感。</string>
     <string name="journal_import_pick_title">选择攀爬视频</string>
     <string name="journal_import_ready">视频已就绪</string>
     <string name="journal_import_fetching">正在取回原片…</string>
-    <string name="journal_import_requirements">单人全身 · 固定机位 · 最长 20 分钟</string>
     <string name="journal_import_pick_action">从相册选择</string>
     <string name="journal_import_name_label">这一趟的名字</string>
     <string name="journal_import_name_hint">例如：周日的紫色线路</string>
@@ -67,11 +61,9 @@
     <string name="journal_delete_confirm">删除原片、分析和笔记？此操作无法撤销。</string>
     <string name="journal_delete_failed">未能删除：%1$s</string>
     <string name="journal_climbed_at">攀爬时间</string>
-    <string name="journal_recording_date_found">已读取视频拍摄时间，可手动修改。</string>
-    <string name="journal_recording_date_missing">未读取到拍摄时间，默认使用当前时间，可手动修改。</string>
     <string name="journal_save_climb">保存这一趟</string>
     <string name="journal_saving_video">正在保存视频…</string>
-    <string name="journal_analysis_background">正在分析，可离开此页面。</string>
+    <string name="journal_analysis_background">正在分析…</string>
     <string name="journal_analysis_deferred">等待返回应用后重新分析。</string>
     <string name="journal_analysis_waiting">等待分析…</string>
 

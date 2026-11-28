@@ -50,7 +50,6 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.betabuddy.android.R
 import com.betabuddy.android.data.Discipline
 import com.betabuddy.android.data.GradeScale
@@ -60,7 +59,6 @@ import com.betabuddy.android.ui.common.BBIcons
 import com.betabuddy.android.ui.common.BigButton
 import com.betabuddy.android.ui.common.ColorCard
 import com.betabuddy.android.ui.common.PaperPage
-import com.betabuddy.android.ui.common.Stamp
 import com.betabuddy.android.ui.theme.BB
 
 /** Stored grade values of a boulder: the "no grade" sentinel, then V0–V16. Set by the user; never inferred. */
@@ -108,12 +106,8 @@ internal fun ImportScreen(model: JournalViewModel, onClose: () -> Unit, onSaved:
             Text(stringResource(R.string.journal_import_nav_title), style = BB.Headline, modifier = Modifier.weight(1f))
             OutlineButton(stringResource(R.string.journal_import_done), Modifier.testTag("importDone"), enabled = !locked, onClick = onClose)
         }
-        Stamp("A NEW ATTEMPT")
-        Text(
-            stringResource(if (state.busy) R.string.journal_saving_video else R.string.journal_import_headline),
-            style = BB.display(29.sp),
-        )
         if (state.busy) {
+            Text(stringResource(R.string.journal_saving_video), style = BB.Headline)
             androidx.compose.material3.CircularProgressIndicator(color = BB.Ink)
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(22.dp)) {
@@ -132,7 +126,6 @@ internal fun ImportScreen(model: JournalViewModel, onClose: () -> Unit, onSaved:
                                 ),
                                 style = BB.Headline, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                             )
-                            Text(stringResource(R.string.journal_import_requirements), style = BB.Caption, color = BB.Muted)
                         }
                     }
                     FilledButton(stringResource(R.string.journal_import_pick_action), Modifier.testTag("pickVideo"), enabled = !state.importing) {
@@ -149,7 +142,6 @@ internal fun ImportScreen(model: JournalViewModel, onClose: () -> Unit, onSaved:
                     DisciplinePicker(discipline) { discipline = it; grade = GradeScale.fitting(grade, it) }
                     GradePicker(grade, discipline) { grade = it }
                     ClimbDateTimeField(climbedOn) { climbedOn = it }
-                    Text(stringResource(if (state.recordingDateMillis != null) R.string.journal_recording_date_found else R.string.journal_recording_date_missing), style = BB.Caption, color = BB.Muted)
                     TextButton(onClick = { organizing = !organizing }) { Text(stringResource(R.string.album_optional_tags)) }
                     if (organizing) MetadataFields(model, gymId, gymName, climbedOn, folderId,
                         { id, name -> gymId = id; gymName = name }, { climbedOn = it }, { folderId = it }, showDate = false)

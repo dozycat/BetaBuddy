@@ -6,11 +6,12 @@
 (() => {
   'use strict';
   const post = message => { try { window.webkit.messageHandlers.gym.postMessage(message); } catch (error) {} };
-  let meta = null, frames = 0, poses = 0, last = 0, tracks = 0, order = '';
+  let meta = null, frames = 0, poses = 0, subjects = 0, last = 0, tracks = 0, order = '';
   window.BetaBuddyAnalysis = {
-    begin(m) { meta = m; frames = 0; poses = 0; last = 0; tracks = 0; order = 'b'; },
+    begin(m) { meta = m; frames = 0; poses = 0; subjects = 0; last = 0; tracks = 0; order = 'b'; },
     addFrame(index, t) { frames += 1; if (t > last) last = t; if (!order.endsWith('f')) order += 'f'; },
     addTrackFrame(t, jpeg) { tracks += 1; if (!order.endsWith('t')) order += 't'; },
+    addSubjectPositions(list) { subjects += (typeof list === 'string' ? JSON.parse(list) : list).length; },
     addPoses(list) { poses += (typeof list === 'string' ? JSON.parse(list) : list).length; },
     run() {
       if (!meta) return;
@@ -24,7 +25,7 @@
         plate: { times: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9].map(f => f * duration) }, marks: [] };
       const discipline = meta.discipline ? { kind: meta.discipline, sure: true } : { kind: 'toprope', sure: false };
       post({ type: 'analysisResult', id: meta.id, climber: { height: 170 }, edit, discipline,
-             json: JSON.stringify({ v: 1, standIn: true, w: meta.w, h: meta.h, frames, poses, tracks, order: order + 'r', capture: meta.capture === undefined ? null : meta.capture,
+             json: JSON.stringify({ v: 1, standIn: true, w: meta.w, h: meta.h, frames, poses, subjects, tracks, order: order + 'r', capture: meta.capture === undefined ? null : meta.capture,
                                     discipline: meta.discipline === undefined ? null : meta.discipline }) });
     },
     show() {}, setClimber() {}, state() { return { meta, frames, poses }; }

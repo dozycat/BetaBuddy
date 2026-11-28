@@ -59,8 +59,7 @@
     <string name="capture_save_discard">この録画を破棄する</string>
     <string name="capture_saved_title">ログブックに保存しました</string>
     <string name="capture_again">もう一本撮る</string>
-    <string name="capture_queued">先に保存しました。姿勢の認識はこのスマートフォン上で続きます。端末は置いて大丈夫です。</string>
-    <string name="capture_analysing">姿勢の認識が終わりました。このトライを分析中…</string>
+    <string name="capture_analysing">分析中…</string>
     <string name="capture_analysis_done">このトライの分析ができました。開くと見られます。</string>
     <string name="capture_analysis_failed">このトライは自動で分析できませんでした。リプレイ画面からもう一度試せます。</string>
     <string name="capture_plan_not_used">分析できました。撮影前に指定したホールドとスタート・ゴールは今回は使われていません。カメラの位置が指定時と合いませんでした。</string>

@@ -109,7 +109,7 @@ struct ReviewView: View {
             if analysisPack != nil { analysisEntry }
             if current.pendingAnalysis != nil {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text(store.analysisProgress[climb.id] == nil ? "等待分析…" : "正在分析，可离开此页面。")
+                    Text(store.analysisProgress[climb.id] == nil ? "等待分析…" : "正在分析…")
                     ProgressView(value: store.analysisProgress[climb.id] ?? 0)
                     Button("停止重新分析") { store.cancelAnalysis(current) }
                         .buttonStyle(RouteButtonStyle(tone: .paper))

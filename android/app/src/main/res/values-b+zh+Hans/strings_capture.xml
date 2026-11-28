@@ -59,8 +59,7 @@
     <string name="capture_save_discard">放弃这段录像</string>
     <string name="capture_saved_title">已保存到攀爬册</string>
     <string name="capture_again">再拍一趟</string>
-    <string name="capture_queued">先存好了。姿态识别接着在这台手机上做，可以放下手机。</string>
-    <string name="capture_analysing">姿态识别好了，正在分析这一趟…</string>
+    <string name="capture_analysing">正在分析…</string>
     <string name="capture_analysis_done">这一趟分析好了，打开就能看。</string>
     <string name="capture_analysis_failed">这一趟没能自动分析，可以在回看页再试。</string>
     <string name="capture_plan_not_used">分析好了。取景时标的岩点和起步、结束点这次没有用上：机位和取景时对不上。</string>

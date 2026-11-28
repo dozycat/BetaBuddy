@@ -170,11 +170,6 @@ struct ImportView: View {
                     VStack(alignment: .leading, spacing: 12) { sourceButtons(expanded: true) }
                 }.disabled(model.importing)
                 if model.importing { ProgressView() }
-                DisclosureGroup("视频要求") {
-                    Text("单人全身 · 固定机位 · 最长 20 分钟")
-                        .font(.subheadline).foregroundStyle(BB.muted)
-                        .frame(maxWidth: .infinity, alignment: .leading).padding(.top, 8)
-                }.font(.subheadline)
             }.padding(20).frame(maxWidth:.infinity,alignment:.leading).background(BB.lime,in:RoundedRectangle(cornerRadius:22))
             VStack(alignment:.leading,spacing:14) {
                 Text("这一趟的名字").font(.caption.bold())
@@ -190,8 +185,6 @@ struct ImportView: View {
             DatePicker("攀爬时间", selection: $model.climbedAt, displayedComponents: [.date, .hourAndMinute])
                 .accessibilityIdentifier("climbedAt")
             if model.readingDate { ProgressView() }
-            else { Text(model.hasRecordingDate ? "已读取视频拍摄时间，可手动修改。" : "未读取到拍摄时间，默认使用当前时间，可手动修改。")
-                .font(.caption).foregroundStyle(BB.muted) }
             DisclosureGroup("收好这一趟（可选）") {
                 VStack(spacing: 14) {
                     AlbumMetadataFields(gymId: $gymId, gymName: $gymName, climbedAt: $model.climbedAt, folderId: $folderId, showsDate: false)

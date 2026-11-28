@@ -59,8 +59,7 @@
     <string name="capture_save_discard">Discard this recording</string>
     <string name="capture_saved_title">Saved to the logbook</string>
     <string name="capture_again">Record another</string>
-    <string name="capture_queued">Saved first. Pose recognition carries on on this phone; you can put the phone down.</string>
-    <string name="capture_analysing">Pose recognition is done. Analysing this attempt…</string>
+    <string name="capture_analysing">Analyzing…</string>
     <string name="capture_analysis_done">This attempt has been analysed. Open it to have a look.</string>
     <string name="capture_analysis_failed">This attempt could not be analysed automatically. You can try again from the replay page.</string>
     <string name="capture_plan_not_used">Analysed. The holds, start and finish marked while framing were not used this time: the camera position does not match the framing.</string>

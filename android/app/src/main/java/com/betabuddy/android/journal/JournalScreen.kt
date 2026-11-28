@@ -152,10 +152,7 @@ private fun JournalList(
             Text("betabuddy", style = BB.display(23.sp), modifier = Modifier.weight(1f)) // brand mark, not translated
             CircleIconButton(BBIcons.Sliders, stringResource(R.string.settings_title), onOpenSettings, Modifier.testTag("about"))
         }
-        Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
-            Text(stringResource(R.string.journal_title), style = BB.display(34.sp))
-            Text(stringResource(R.string.journal_tagline), style = BB.Body, color = BB.Muted)
-        }
+        Text(stringResource(R.string.journal_title), style = BB.display(34.sp))
         if (unreadable) {
             Text(stringResource(R.string.journal_store_unreadable), style = BB.Subheadline, color = DangerColor)
         }
@@ -167,18 +164,15 @@ private fun JournalList(
                 // No demo records are injected: the empty state leads to the first import.
                 ColorCard(BB.Lavender) {
                     Text(stringResource(R.string.journal_empty_title), style = BB.Title)
-                    Text(stringResource(R.string.journal_empty_body), style = BB.Body, color = BB.Muted)
                     // Recording with the in-app camera is the main way in; a clip shot elsewhere is imported.
                     BigButton(stringResource(R.string.capture_action), onCapture, Modifier.testTag("captureClimb"), icon = BBIcons.Video)
                     OutlineButton(stringResource(R.string.capture_import_action), Modifier.fillMaxWidth().testTag("importClimb"), onClick = onImport)
                 }
-                LocalNote()
             }
             else -> {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     BigButton(stringResource(R.string.capture_action), onCapture, Modifier.testTag("captureClimb"), icon = BBIcons.Video)
                     OutlineButton(stringResource(R.string.capture_import_action), Modifier.fillMaxWidth().testTag("importClimb"), onClick = onImport)
-                    LocalNote()
                 }
                 FilterBar(filter) { filter = it }
                 SearchField(search) { search = it }
@@ -198,7 +192,6 @@ private fun JournalList(
                 if (visible.isEmpty()) {
                     ColorCard(BB.Lavender, spacing = 12.dp) {
                         Text(stringResource(R.string.journal_no_match_title), style = BB.Title3)
-                        Text(stringResource(R.string.journal_no_match_body), style = BB.Body, color = BB.Muted)
                         TextButton(onClick = { clearFilters() }) { Text(stringResource(R.string.album_clear)) }
                     }
                 }
@@ -219,15 +212,6 @@ private fun JournalList(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun LocalNote() {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(BBIcons.Lock, contentDescription = null, tint = BB.Muted, modifier = Modifier.size(14.dp))
-        Spacer(Modifier.width(6.dp))
-        Text(stringResource(R.string.journal_local_note), style = BB.Caption, fontWeight = FontWeight.Medium, color = BB.Muted)
     }
 }
 
@@ -298,10 +282,8 @@ private fun ClimbRow(climb: Climb, thumbnail: File, onClick: () -> Unit) {
                 Text("${gradeText(climb.grade)}  /  ${clockText(climb.analysis.duration)}", style = BB.mono(12.sp, FontWeight.Bold, 0.sp))
                 CaptureColourLabel(climb)
             }
-            Text(dateText(climb.climbedAtMillis, withYear = false), style = BB.Caption, color = BB.Muted)
             if (climb.pendingAnalysis != null) Text(stringResource(R.string.journal_analysis_background), style = BB.Caption, color = BB.Muted)
             else if (climb.capture?.analysisQueued == true) Text(stringResource(R.string.capture_analysing), style = BB.Caption, color = BB.Muted)
-            if (!climb.gymName.isNullOrBlank()) Text(climb.gymName, style = BB.Caption, color = BB.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
             // The status is words plus a mark, never colour alone.
             Text(
                 stringResource(if (climb.sent) R.string.journal_row_sent else R.string.journal_row_projecting),

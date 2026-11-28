@@ -212,15 +212,13 @@ struct ClimbRow: View {
             VStack(alignment:.leading,spacing:6) {
                 Text(verbatim:climb.displayTitle).font(.headline).lineLimit(2)
                 Text(verbatim:"\(gradeText(climb.grade))  /  \(clockText(climb.analysis.duration))").font(.system(size:12,weight:.bold,design:.monospaced))
-                Text(climb.climbingDate,format:.dateTime.month().day()).font(.caption).foregroundStyle(BB.muted)
-                if !climb.shortGymName.isEmpty { Text(verbatim: climb.shortGymName).font(.caption).foregroundStyle(BB.muted).lineLimit(1) }
                 CaptureColourLabel(capture: climb.capture)
                 if climb.pendingAnalysis != nil {
-                    Text(store.analysisProgress[climb.id] == nil ? "等待分析…" : "正在分析，可离开此页面。").font(.caption).foregroundStyle(BB.muted)
+                    Text(store.analysisProgress[climb.id] == nil ? "等待分析…" : "正在分析…").font(.caption).foregroundStyle(BB.muted)
                     ProgressView(value: store.analysisProgress[climb.id] ?? 0)
                 }
                 else if climb.capture?.analysisQueued == true {
-                    Text("正在分析这一趟…").font(.caption).foregroundStyle(BB.muted)
+                    Text("正在分析…").font(.caption).foregroundStyle(BB.muted)
                 }
                 if let message = store.analysisMessages[climb.id] { Text(verbatim: message).font(.caption).foregroundStyle(BB.muted) }
                 Text(climb.sent ? "✓ 已完攀" : "↗ 还在尝试").font(.caption.bold())
