@@ -155,7 +155,7 @@ actor VideoAnalyzer {
         let seeds=try await SubjectResolver().proposedRegions(proposals)
         var result=analysis
         for (index,seed) in seeds.enumerated() {
-            result=try await worker.refine(url:url,analysis:result,bounds:seed.bounds,at:seed.time) { value in
+            result=try await worker.refine(url:url,analysis:result,bounds:seed.bounds,at:seed.time,preserveExistingRegions:false) { value in
                 await progress(1.0/3+2.0/3*(Double(index)+value)/Double(seeds.count))
             }.analysis
         }

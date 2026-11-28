@@ -26,6 +26,10 @@ class SubjectRegionTest {
             val refined = SubjectRegionAnalyzer(context).refine(clip, selected, seed.bounds, seed.time) {}
             anchors += refined.anchor
             selected = SubjectResolver(context).resolve(refined.analysis, anchors)
+            for (anchor in anchors) {
+                val seed = selected.people!!.first { kotlin.math.abs(it.time-anchor.time) < .0001 }
+                assertTrue("A correction must preserve earlier tracked seeds", seed.candidates.any { it.id == anchor.candidateID })
+            }
             File(out, "step$index.json").writeText(ClimbStore.json.encodeToString(selected))
             assertEquals(0, selected.subject!!.unresolved)
         }

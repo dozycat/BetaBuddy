@@ -43,9 +43,12 @@ struct SubjectAnchor: Codable, Equatable, Sendable {
     var appearance: [Double]
     /// Absent in older records. A drawn region must be tracked again on reanalysis.
     var region: Bool? = nil
+    /// A hint for the current candidate archive; fresh inference must still match the recorded region.
+    var candidateID: String? = nil
     init(time: Double, candidate: SubjectCandidate) {
         self.time = time; bounds = candidate.bounds; appearance = candidate.appearance
         region = candidate.tracking == nil ? nil : true
+        candidateID = candidate.id
     }
 }
 struct SubjectPick: Codable, Equatable, Sendable {

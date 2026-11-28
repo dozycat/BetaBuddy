@@ -52,7 +52,7 @@ actor SubjectRegionAnalyzer {
         }
         return samples
     }
-    func refine(url: URL, analysis: PoseAnalysis, bounds: SubjectBounds, at time: Double,
+    func refine(url: URL, analysis: PoseAnalysis, bounds: SubjectBounds, at time: Double, preserveExistingRegions: Bool = true,
                 progress: @escaping @Sendable (Double) async -> Void) async throws -> Result {
         guard bounds.valid, let path = Bundle.main.path(forResource: "pose_landmarker_full", ofType: "task") else { throw AnalysisError.missingModel }
         let options = PoseLandmarkerOptions()
@@ -111,7 +111,8 @@ actor SubjectRegionAnalyzer {
             return candidate
         }
         func keep(_ candidate: SubjectCandidate, at index: Int) {
-            samples[index].candidates.removeAll { $0.bounds.overlap(candidate.bounds) > 0.5 }
+            // A later correction must not erase another explicitly tracked region.
+            samples[index].candidates.removeAll { (!preserveExistingRegions || $0.tracking == nil) && $0.bounds.overlap(candidate.bounds) > 0.5 }
             samples[index].candidates.append(candidate)
         }
         let seedImage = try await image(at:seedIndex)

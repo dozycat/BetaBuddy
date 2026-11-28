@@ -76,7 +76,7 @@ class SubjectResolver(context: Context) {
         val seeds=proposedRegions(proposals)
         var result=analysis
         for((index,seed) in seeds.withIndex()) {
-            result=worker.refine(video,result,seed.bounds,seed.time) { progress(1.0/3+2.0/3*(index+it)/seeds.size) }.analysis
+            result=worker.refine(video,result,seed.bounds,seed.time,preserveExistingRegions=false) { progress(1.0/3+2.0/3*(index+it)/seeds.size) }.analysis
         }
         result=resolve(result,emptyList());progress(1.0)
         return result

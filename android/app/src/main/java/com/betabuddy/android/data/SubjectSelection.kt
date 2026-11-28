@@ -25,8 +25,8 @@ data class SubjectPosition(val time: Double, val bounds: SubjectBounds)
 @Serializable
 data class SubjectSample(val time: Double, val candidates: List<SubjectCandidate>)
 @Serializable
-data class SubjectAnchor(val time: Double, val bounds: SubjectBounds, val appearance: List<Double>, val region: Boolean = false) {
-    constructor(time: Double, candidate: SubjectCandidate) : this(time, candidate.bounds, candidate.appearance, candidate.tracking != null)
+data class SubjectAnchor(val time: Double, val bounds: SubjectBounds, val appearance: List<Double>, val region: Boolean = false, val candidateID: String? = null) {
+    constructor(time: Double, candidate: SubjectCandidate) : this(time, candidate.bounds, candidate.appearance, candidate.tracking != null, candidate.id)
 }
 @Serializable
 data class SubjectPick(val time: Double, val personID: String? = null)

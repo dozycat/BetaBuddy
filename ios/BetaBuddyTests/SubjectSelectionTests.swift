@@ -17,6 +17,10 @@ final class SubjectSelectionTests: XCTestCase {
             let refined = try await SubjectRegionAnalyzer().refine(url: url, analysis: selected, bounds: seed.bounds, at: seed.time) { _ in }
             anchors.append(refined.anchor)
             selected = try await SubjectResolver().resolve(refined.analysis, anchors: anchors)
+            for anchor in anchors {
+                let seed = try XCTUnwrap(selected.people?.first { abs($0.time-anchor.time) < 0.0001 })
+                XCTAssertTrue(seed.candidates.contains { $0.id == anchor.candidateID }, "A correction must preserve earlier tracked seeds")
+            }
             try JSONEncoder().encode(selected).write(to: URL(fileURLWithPath: output + ".step\(index).json"))
             XCTAssertEqual(selected.subject?.unresolved, 0)
         }

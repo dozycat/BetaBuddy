@@ -80,7 +80,7 @@ internal class SubjectRegionAnalyzer(context: Context) {
         } finally { detector?.close();reader.release() }
     } }
 
-    suspend fun refine(video: File,analysis: PoseAnalysis,bounds: SubjectBounds,time: Double,progress: suspend (Double) -> Unit): Result = serial.withLock {
+    suspend fun refine(video: File,analysis: PoseAnalysis,bounds: SubjectBounds,time: Double,preserveExistingRegions: Boolean = true,progress: suspend (Double) -> Unit): Result = serial.withLock {
         require(bounds.valid && analysis.duration.isFinite() && analysis.duration > 0)
         SubjectResolver(context).withPolicy { policy -> withContext(worker) {
             val samples = (analysis.people?.takeIf { it.isNotEmpty() }
@@ -147,7 +147,8 @@ internal class SubjectRegionAnalyzer(context: Context) {
                     return poses.firstOrNull { it.id == match }?.let { candidate.copy(pose = it.pose) } ?: candidate
                 }
                 fun keep(candidate: SubjectCandidate,index: Int) {
-                    samples[index] = samples[index].copy(candidates = samples[index].candidates.filter { it.bounds.overlap(candidate.bounds) <= .5 }+candidate)
+                    // Keep earlier tracked regions so a later correction cannot erase them.
+                    samples[index] = samples[index].copy(candidates = samples[index].candidates.filter { (preserveExistingRegions && it.tracking != null) || it.bounds.overlap(candidate.bounds) <= .5 }+candidate)
                 }
                 seedImage = image(seedIndex)
                 val first = candidate(seedIndex,SubjectBoxTracker.Observation(bounds,1.0),seedImage)
