@@ -1,6 +1,6 @@
 # iOS 1.10.0 (24)
 
-状态（2026-11-28）：构建 24 正式归档已完成，尚未上传或提审。导出 App Store IPA 时 Xcode 报 No Accounts 和缺少分发证书；App Store Connect 两个现有网页会话刷新后均回到登录框，等待恢复发布账户。用户已授权完成后直接正式发布，不需要再次确认发布意图。
+状态（2026-11-28）：构建 24 正式归档及 App Store 签名 IPA 已准备，尚未上传或提审。用户恢复 Xcode 登录后，Organizer 已完成 Apple 云端签名，但在生成 IPA 的 Symbols 复制步骤遇到系统 rsync 与 Homebrew rsync 的参数冲突。保留云端签名产物，用系统 ditto 复制生成的 Symbols 并封装 IPA，签名、App Store 描述文件、版本和包内资源核验通过。Xcode 重启后账户列表再次为空，网页也仍显示登录框，等待恢复发布会话。用户已授权完成后直接正式发布，不需要再次确认发布意图。
 
 内置数据包 1.10.2；Android 同步为 1.10.0（4），正式签名 APK 和 AAB 已生成，未上传商店。产物、验证及失败日志均在本机忽略目录 `ios/build/1.10.0/`。
 
@@ -24,6 +24,12 @@
 
 ## 待发布凭证恢复后
 
-1. 核对 App Store Connect 当前版本，恢复 Xcode 发布账户并导出 IPA。
+1. 核对 App Store Connect 当前版本并恢复 Xcode 发布账户；解决 Organizer 的 rsync 复制冲突后上传。已封装的 App Store 签名 IPA、符号和校验记录保留在本机产物目录。
 2. 上传构建，等待处理；填写本版更新说明，核对选择的是 1.10.0（24）。
 3. 提交正式审核并设置审核通过后自动发布；保留现有评分。保存页面回执后才能记录为已提审。
+
+## IPA 封装核验
+
+- 来源为 Organizer 本次生成并完成 Apple 云端签名的 Payload；没有重新签名或修改可执行文件。系统 ditto 复制生成的 Symbols 并压缩 Root 内容。
+- `codesign --verify --deep --strict` 通过；描述文件不含设备名单，调试权限关闭；版本为 1.10.0（24）。包内 GymPack 的 27 个资源及清单与安装源一致。
+- 本机记录为 `cloud-signed-24-verification.json`；尚无上传成功或提审回执，不能将 IPA 准备完成视为发布完成。
