@@ -68,3 +68,5 @@ android/.gympack.*/
 # Optional locally exported image encoder, validated against the private pack's policy.
 android/app/src/main/assets/library-image-encoder.onnx
 android/app/src/main/assets/.library-model-*
+# Local support-site deployment state.
+services/support-site/.wrangler/
