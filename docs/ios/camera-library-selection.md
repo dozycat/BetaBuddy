@@ -205,3 +205,11 @@
 - 3840×2160、三分钟的合成单色视频在两端完成处理并拒绝，未出现内存退出。它不代表真实长片、手机发热或真实设备性能已验证。新增可选图片检查不包含仓库内素材；首次 iOS 运行因夹具尚未生成完成失败，准备完成后重跑通过。
 - 最终代码的 iOS PhotoKit、Android MediaStore 真实正例收录／停止／去重／删除后不回流通过；iOS 凭证兼容与细纹检查也通过。Swift 核心 37 项、Android JVM 202 项、309 条五语言资源、两端构建和 Android lint 通过。lint 首次指出大图取帧缺少显式 API 27 分支，补齐后通过；老 Android 的正常尺寸片段使用兼容取帧接口，尚未追加老系统设备运行。
 - 界面保持精简；此轮只改通用图像处理、验证工具与记录，未合并、推送或发布。
+
+
+## 2026-11-28 · 精简页面的实际读屏操作
+
+- Android「自动收录」文字与开关合成一个可操作行，整行可点，最小高度 48 dp。TalkBack 不再把同一句名称停两次；没有添加可见说明。
+- API 35 模拟器启用已安装的 TalkBack 15.0，实际通过右滑找到开关、双击开启／关闭，再找到「完成」并激活。无障碍焦点和设置变更均有断言，最终截图已查看；结束后恢复原有系统读屏设置。
+- 可选入口为 `LibraryTalkBackTest.optionalTalkBackSwipesReachAndActivateLibraryControls`，传 `talkBack=1`，仅用于事先开启 TalkBack 并授权视频的专用模拟器。测试不使用 Compose 的受控时钟，也不关闭读屏服务；手势进入系统无障碍输入过滤器。前两次检查分别因受控时钟未展示目标页面、普通事件注入绕过读屏而失败，修正测试方式后通过。平台测试接口的行为依据 [AOSP UiAutomation](https://android.googlesource.com/platform/frameworks/base/+/refs/heads/android14-release/core/java/android/app/UiAutomation.java)。
+- 最终普通相册页面开关／退出检查、202 项 JVM、309 条五语资源、Debug／测试 APK 构建与 lint 通过。本轮未改 iOS 代码。此处验证手势操作与焦点，不代表听验了语音输出；选人、剪辑的实际读屏以及 iOS VoiceOver 仍未完成。没有合并、推送或发布。

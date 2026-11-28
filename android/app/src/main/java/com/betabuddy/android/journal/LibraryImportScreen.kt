@@ -7,6 +7,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -14,6 +15,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -53,12 +55,15 @@ internal fun LibraryImportScreen(model: LibraryImport, onClose: () -> Unit) {
             TextButton(onClick = onClose) { Text(stringResource(R.string.album_done)) }
         }
         ColorCard(BB.Lime) {
-            Row(Modifier.fillMaxWidth(),verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                Text(enabledLabel,modifier = Modifier.weight(1f))
-                Switch(state.enabled,onCheckedChange = { enabled ->
+            Row(
+                Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("libraryImportToggle").toggleable(value = state.enabled, role = Role.Switch, onValueChange = { enabled ->
                     model.setEnabled(enabled)
                     if (enabled && state.access == LibraryAccess.NONE) permissions.launch(LibraryPermission.request())
-                },modifier = Modifier.testTag("libraryImportToggle").semantics { contentDescription = enabledLabel })
+                }),
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+            ) {
+                Text(enabledLabel,modifier = Modifier.weight(1f))
+                Switch(state.enabled,onCheckedChange = null)
             }
             if (state.enabled && state.access == LibraryAccess.NONE) {
                 Text(stringResource(R.string.library_access_error))
