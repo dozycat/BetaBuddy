@@ -42,7 +42,7 @@ struct LibraryImportView: View {
                                 .font(.caption).foregroundStyle(BB.muted)
                         }
                         if let error = library.error { Text(verbatim: error).foregroundStyle(.red) }
-                    }.accessibilityIdentifier("libraryImportStatus")
+                    }.accessibilityElement(children: .contain).accessibilityIdentifier("libraryImportStatus")
                 }
             }.navigationTitle("扫相册").navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .confirmationAction) { Button("完成") { dismiss() } } }

@@ -10,6 +10,50 @@ import org.junit.Assume.assumeTrue
 import org.junit.Test
 
 class SubjectRegionTest {
+    @Test fun realOcclusionCorrectionsSurviveSerializationAndReanalysis() = runBlocking {
+        val args = InstrumentationRegistry.getArguments()
+        val name = args.getString("subjectClip"); val fixture = args.getString("subjectCorrections")
+        assumeTrue("Optional observed correction fixture", name != null && fixture != null)
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val clip = File(context.filesDir, name!!)
+        val seeds = ClimbStore.json.decodeFromString<List<SubjectAnchor>>(File(context.filesDir, fixture!!).readText())
+        assertTrue(seeds.size >= 2)
+        val info = VideoAnalyzer.probe(clip); val size = FrameGeometry.displaySize(info.width, info.height, info.rotation)
+        var selected = PoseAnalysis(emptyList(), 0, info.durationSeconds!!, size.first.toDouble()/size.second)
+        val anchors = mutableListOf<SubjectAnchor>()
+        val out = File(context.getExternalFilesDir(null), "subject-corrections").apply { mkdirs() }
+        for ((index, seed) in seeds.withIndex()) {
+            val refined = SubjectRegionAnalyzer(context).refine(clip, selected, seed.bounds, seed.time) {}
+            anchors += refined.anchor
+            selected = SubjectResolver(context).resolve(refined.analysis, anchors)
+            File(out, "step$index.json").writeText(ClimbStore.json.encodeToString(selected))
+            assertEquals(0, selected.subject!!.unresolved)
+        }
+        fun checkSeeds(analysis: PoseAnalysis) {
+            args.getString("subjectMissing")?.split(",")?.map(String::toDouble)?.let { interval ->
+                require(interval.size == 2)
+                assertTrue("Ambiguous occlusion must not become an accepted object track",
+                    analysis.subjectPositions!!.none { it.time >= interval[0] && it.time <= interval[1] })
+                assertTrue(analysis.frames.none { it.time >= interval[0] && it.time <= interval[1] })
+            }
+            for (seed in seeds) {
+                val position = analysis.subjectPositions!!.minBy { kotlin.math.abs(it.time-seed.time) }
+                assertEquals(seed.time, position.time, .15)
+                assertTrue("Correction must select the observed target", position.bounds.overlap(seed.bounds) > .4)
+            }
+        }
+        checkSeeds(selected)
+        File(out, "analysis.json").writeText(ClimbStore.json.encodeToString(selected))
+        val encoded = ClimbStore.json.encodeToString(anchors.toList())
+        File(out, "anchors.json").writeText(encoded)
+        val restored = ClimbStore.json.decodeFromString<List<SubjectAnchor>>(encoded)
+        assertEquals(anchors, restored)
+        val fresh = SubjectResolver(context).analyze(clip, AnalysisQuality.BALANCED, anchors = restored) {}
+        assertEquals(0, fresh.subject!!.unresolved)
+        checkSeeds(fresh)
+        File(out, "reanalyzed.json").writeText(ClimbStore.json.encodeToString(fresh))
+        println("Real corrections: ${anchors.size} anchors, ${selected.subjectPositions!!.size} positions, ${selected.frames.size} poses; reanalysis ${fresh.subjectPositions!!.size} positions")
+    }
     @Test fun obscuredTargetStaysMissingUntilAnExplicitCorrection() = runBlocking {
         val args = InstrumentationRegistry.getArguments()
         val name = args.getString("subjectGapClip")

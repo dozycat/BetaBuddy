@@ -4,6 +4,50 @@ import XCTest
 
 @MainActor
 final class SubjectSelectionTests: XCTestCase {
+    func testOptionalRealOcclusionCorrectionsSurviveSavingAndReanalysis() async throws {
+        let env = ProcessInfo.processInfo.environment
+        guard let path = env["BB_SUBJECT_CLIP"], let fixture = env["BB_SUBJECT_CORRECTIONS"],
+              let output = env["BB_SUBJECT_OUTPUT"], SubjectResolver.available else { throw XCTSkip("Optional observed correction fixture") }
+        let seeds = try JSONDecoder().decode([SubjectAnchor].self, from: Data(contentsOf: URL(fileURLWithPath: fixture)))
+        XCTAssertGreaterThanOrEqual(seeds.count, 2)
+        let url = URL(fileURLWithPath: path)
+        var selected = try await VideoAnalyzer().videoSummary(url: url)
+        var anchors: [SubjectAnchor] = []
+        for (index, seed) in seeds.enumerated() {
+            let refined = try await SubjectRegionAnalyzer().refine(url: url, analysis: selected, bounds: seed.bounds, at: seed.time) { _ in }
+            anchors.append(refined.anchor)
+            selected = try await SubjectResolver().resolve(refined.analysis, anchors: anchors)
+            try JSONEncoder().encode(selected).write(to: URL(fileURLWithPath: output + ".step\(index).json"))
+            XCTAssertEqual(selected.subject?.unresolved, 0)
+        }
+        func checkSeeds(_ analysis: PoseAnalysis) throws {
+            for seed in seeds {
+                let position = try XCTUnwrap(analysis.subjectPositions?.min { abs($0.time-seed.time) < abs($1.time-seed.time) })
+                XCTAssertEqual(position.time, seed.time, accuracy: 0.15)
+                XCTAssertGreaterThan(position.bounds.overlap(seed.bounds), 0.4, "Correction must select the observed target")
+            }
+        }
+        try checkSeeds(selected)
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = ClimbStore(root: root)
+        let staged = root.appendingPathComponent("reference.mp4")
+        try FileManager.default.copyItem(at: url, to: staged)
+        let record = try store.save(title: "", grade: ungradedValue, sent: false, note: "", stagedVideo: staged,
+            thumbnail: Data(), analysis: selected)
+        try store.selectSubject(record, analysis: selected, anchors: anchors)
+        let reopened = ClimbStore(root: root)
+        let saved = try XCTUnwrap(reopened.climbs.first)
+        XCTAssertEqual(saved.subjectAnchors, anchors)
+        try checkSeeds(try await reopened.subjectAnalysis(for: saved))
+        try JSONEncoder().encode(selected).write(to: URL(fileURLWithPath: output))
+        try JSONEncoder().encode(anchors).write(to: URL(fileURLWithPath: output + ".anchors.json"))
+        let fresh = try await VideoAnalyzer().analyze(url: reopened.file(saved.videoName), quality: .balanced, subjectAnchors: saved.subjectAnchors!) { _ in }
+        XCTAssertEqual(fresh.subject?.unresolved, 0)
+        try checkSeeds(fresh)
+        try JSONEncoder().encode(fresh).write(to: URL(fileURLWithPath: output + ".reanalyzed.json"))
+        print("Real corrections: \(anchors.count) anchors, \(selected.subjectPositions?.count ?? 0) positions, \(selected.frames.count) poses; reanalysis \(fresh.subjectPositions?.count ?? 0) positions")
+    }
     func testOptionalTiledCandidateProbe() async throws {
         let env=ProcessInfo.processInfo.environment
         guard let path=env["BB_SUBJECT_CLIP"], let output=env["BB_SUBJECT_PROBE"] else { throw XCTSkip("Local candidate probe not supplied") }

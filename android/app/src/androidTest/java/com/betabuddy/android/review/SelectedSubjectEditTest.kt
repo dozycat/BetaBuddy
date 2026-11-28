@@ -34,8 +34,12 @@ class SelectedSubjectEditTest {
         File(context.filesDir,clipName!!).copyTo(staged)
         val store = JournalGraph.store(context)
         val saved = store.save("Selected edit","Selected edit",UNGRADED_VALUE,false,"",staged,byteArrayOf(),input)
-        val person = input.people!!.first().candidates.first { it.id == input.subject!!.picks.first().personID }
-        store.selectSubject(saved,input,if(input.subject?.manual == false) emptyList() else listOf(SubjectAnchor(0.0,person)))
+        val pick = input.subject!!.picks.first { it.personID != null }
+        val person = input.people!!.first { kotlin.math.abs(it.time-pick.time) < .0001 }.candidates.first { it.id == pick.personID }
+        val anchors = args.getString("subjectAnchors")?.let {
+            ClimbStore.json.decodeFromString<List<SubjectAnchor>>(File(context.filesDir,it).readText())
+        } ?: if(input.subject?.manual == false) emptyList() else listOf(SubjectAnchor(pick.time,person))
+        store.selectSubject(saved,input,anchors)
         val scope = CoroutineScope(SupervisorJob()+Dispatchers.Main.immediate)
         var session: AnalysisSession? = null
         var scenario: ActivityScenario<MainActivity>? = null
@@ -52,6 +56,13 @@ class SelectedSubjectEditTest {
             }
             assertTrue(plan.cameraTrack); assertTrue(plan.camera.size > 2)
             assertTrue(plan.trim.second-plan.trim.first > input.duration*.9)
+            if (args.getString("expectCamera") == "wide") {
+                assertTrue("This close reference should retain the full scene across the occlusion", plan.camera.all {
+                    kotlin.math.abs(it.s-1) < .0001 && kotlin.math.abs(it.cx-.5) < .0001 && kotlin.math.abs(it.cy-.5) < .0001
+                })
+            } else {
+                assertTrue("A full-frame fallback alone cannot prove following", plan.camera.any { it.s > 1.05 })
+            }
             for (position in positions) {
                 val window = CameraPath.window(plan.camera,position.time,linear = true)
                 val half = .5/window.s; val b = position.bounds

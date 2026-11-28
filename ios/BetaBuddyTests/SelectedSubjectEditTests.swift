@@ -19,10 +19,14 @@ final class SelectedSubjectEditTests: XCTestCase {
         let store = ClimbStore(root:root.appendingPathComponent("store"))
         let summary = try await VideoAnalyzer().videoSummary(url:staged)
         let record = try store.save(title:"",grade:ungradedValue,sent:false,note:"",stagedVideo:staged,thumbnail:Data(),analysis:summary,capture:CaptureInfo(analysisQueued:false))
-        let first = try XCTUnwrap(selected.people?.first)
-        let id = try XCTUnwrap(selected.subject?.picks.first?.personID)
+        let pick = try XCTUnwrap(selected.subject?.picks.first { $0.personID != nil })
+        let first = try XCTUnwrap(selected.people?.first { abs($0.time-pick.time) < 0.0001 })
+        let id = try XCTUnwrap(pick.personID)
         let candidate = try XCTUnwrap(first.candidates.first { $0.id == id })
-        let anchors = selected.subject?.manual == false ? [] : [SubjectAnchor(time:first.time,candidate:candidate)]
+        let anchors: [SubjectAnchor]
+        if let path = env["BB_SUBJECT_ANCHORS"] {
+            anchors = try JSONDecoder().decode([SubjectAnchor].self, from: Data(contentsOf: URL(fileURLWithPath: path)))
+        } else { anchors = selected.subject?.manual == false ? [] : [SubjectAnchor(time:first.time,candidate:candidate)] }
         try store.selectSubject(record,analysis:selected,anchors:anchors)
         try store.setAnalysisQueued(record.id,true)
         let queue = AnalysisQueue(store:store,pack:pack)
@@ -37,7 +41,12 @@ final class SelectedSubjectEditTests: XCTestCase {
         XCTAssertTrue(plan.tracksSubject)
         XCTAssertGreaterThan(plan.camera.count,2)
         XCTAssertGreaterThan(plan.trim.upperBound-plan.trim.lowerBound,selected.duration * 0.9)
-        XCTAssertTrue(plan.camera.contains { $0.s > 1.05 },"A full-frame fallback alone cannot prove following")
+        if env["BB_EXPECT_CAMERA"] == "wide" {
+            XCTAssertTrue(plan.camera.allSatisfy { abs($0.s-1) < 0.0001 && abs($0.cx-0.5) < 0.0001 && abs($0.cy-0.5) < 0.0001 },
+                          "This close reference should retain the full scene across the occlusion")
+        } else {
+            XCTAssertTrue(plan.camera.contains { $0.s > 1.05 },"A full-frame fallback alone cannot prove following")
+        }
         for position in positions where plan.trim.contains(position.time) {
             let window = EditWindow.at(position.time,keys:plan.camera,linear:plan.tracksSubject)
             let box = position.bounds

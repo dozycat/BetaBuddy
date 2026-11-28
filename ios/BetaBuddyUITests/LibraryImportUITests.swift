@@ -28,7 +28,8 @@ final class LibraryImportUITests: XCTestCase {
                 XCTAssertTrue(app.buttons["libraryAllowedVideos"].waitForExistence(timeout: 10))
                 app.buttons["libraryAllowedVideos"].tap()
             }
-            let label = mode == "limited" ? "Video, thirty seconds," : "Video, five seconds,"
+            let seconds = ProcessInfo.processInfo.environment["BB_PHOTOS_PICK_SECONDS"] ?? "five"
+            let label = mode == "limited" ? "Video, thirty seconds," : "Video, \(seconds) seconds,"
             let video = app.images.matching(NSPredicate(format: "label BEGINSWITH %@", label)).firstMatch
             XCTAssertTrue(video.waitForExistence(timeout: 10))
             video.tap()
